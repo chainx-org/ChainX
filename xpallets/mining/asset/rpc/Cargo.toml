@@ -9,12 +9,12 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "1.3.4" }
-jsonrpc-core = { version = "14.2.0", features = ["arbitrary_precision"] }
-jsonrpc-core-client = { version = "14.2.0", features = ["arbitrary_precision"] }
-jsonrpc-derive = "14.2.2"
+jsonrpc-core = { version = "15.0.0", features = ["arbitrary_precision"] }
+jsonrpc-core-client = { version = "15.0.0", features = ["arbitrary_precision"] }
+jsonrpc-derive = "15.0.0"
 
-sp-api = "2.0.0-rc6"
-sp-runtime = "2.0.0-rc6"
-sp-blockchain = "2.0.0-rc6"
+sp-api = "2.0.0"
+sp-runtime = "2.0.0"
+sp-blockchain = "2.0.0"
 
 xpallet-mining-asset-rpc-runtime-api = { path = "./runtime-api" }

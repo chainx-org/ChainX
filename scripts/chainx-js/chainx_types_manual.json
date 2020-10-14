@@ -70,6 +70,7 @@
         "is_online": "bool",
         "restrictions": "AssetRestrictions"
     },
+    "WithdrawalRecordId": "u32",
     "WithdrawalState": {
         "_enum": [
             "Applying",
@@ -131,21 +132,9 @@
         ]
     },
     "BtcAddress": "Text",
-    "BtcCompact": "u32",
-    "BtcHeader": {
-        "version": "u32",
-        "previous_header_hash": "H256",
-        "merkle_root_hash": "H256",
-        "time": "u32",
-        "bits": "BtcCompact",
-        "nonce": "u32"
-    },
+    "BtcHeader": "Vec<u8>",
     "BtcTransaction": "Vec<u8>",
-    "BtcPartialMerkleTree": {
-        "tx_count": "u32",
-        "hashes": "Vec<H256>",
-        "bits": "Vec<bool>"
-    },
+    "BtcPartialMerkleTree": "Vec<u8>",
     "BtcRelayedTxInfo": {
         "block_hash": "H256",
         "merkle_proof": "BtcPartialMerkleTree"
@@ -259,9 +248,10 @@
     },
     "OrderInfo": "Order",
     "HandicapInfo": "Handicap",
+    "FullIdentification": "ValidatorId",
     "Price": "Balance",
     "WithdrawalRecordOf": "WithdrawalRecord",
-    "WithdrawalRecordForRpc": {
+    "RpcWithdrawalRecord": {
         "asset_id": "AssetId",
         "applicant": "AccountId",
         "balance": "Balance",

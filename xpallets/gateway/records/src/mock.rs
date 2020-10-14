@@ -13,8 +13,7 @@ use sp_runtime::{
 use chainx_primitives::AssetId;
 use xpallet_assets::AssetRestrictions;
 use xpallet_assets_registrar::AssetInfo;
-pub use xpallet_protocol::X_BTC;
-pub use xpallet_protocol::X_ETH;
+pub use xpallet_protocol::{X_BTC, X_ETH};
 
 /// The AccountId alias in this test module.
 pub(crate) type AccountId = u64;
@@ -57,7 +56,7 @@ impl frame_system::Trait for Test {
     type MaximumBlockLength = MaximumBlockLength;
     type AvailableBlockRatio = AvailableBlockRatio;
     type Version = ();
-    type ModuleToIndex = ();
+    type PalletInfo = ();
     type AccountData = pallet_balances::AccountData<Balance>;
     type OnNewAccount = ();
     type OnKilledAccount = ();
@@ -68,6 +67,7 @@ parameter_types! {
     pub const ExistentialDeposit: u64 = 0;
 }
 impl pallet_balances::Trait for Test {
+    type MaxLocks = ();
     type Balance = Balance;
     type DustRemoval = ();
     type Event = ();

@@ -12,7 +12,8 @@ use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 
 use xpallet_gateway_records_rpc_runtime_api::{
-    AssetId, Chain, Withdrawal, WithdrawalState, XGatewayRecordsApi as GatewayRecordsRuntimeApi,
+    AssetId, Chain, Withdrawal, WithdrawalRecordId, WithdrawalState,
+    XGatewayRecordsApi as GatewayRecordsRuntimeApi,
 };
 use xpallet_support::try_addr;
 
@@ -38,7 +39,7 @@ pub trait XGatewayRecordsApi<BlockHash, AccountId, Balance, BlockNumber> {
     fn withdrawal_list(
         &self,
         at: Option<BlockHash>,
-    ) -> Result<BTreeMap<u32, WithdrawalRecordForRpc<AccountId, Balance, BlockNumber>>>;
+    ) -> Result<BTreeMap<WithdrawalRecordId, RpcWithdrawalRecord<AccountId, Balance, BlockNumber>>>;
 
     /// Return current withdraw list for a chain(include Applying and Processing withdraw state)
     #[rpc(name = "xgatewayrecords_withdrawalListByChain")]
@@ -46,7 +47,7 @@ pub trait XGatewayRecordsApi<BlockHash, AccountId, Balance, BlockNumber> {
         &self,
         chain: Chain,
         at: Option<BlockHash>,
-    ) -> Result<BTreeMap<u32, WithdrawalRecordForRpc<AccountId, Balance, BlockNumber>>>;
+    ) -> Result<BTreeMap<WithdrawalRecordId, RpcWithdrawalRecord<AccountId, Balance, BlockNumber>>>;
 
     /// Return current pending withdraw list for a chain
     #[rpc(name = "xgatewayrecords_pendingWithdrawalList")]
@@ -54,7 +55,7 @@ pub trait XGatewayRecordsApi<BlockHash, AccountId, Balance, BlockNumber> {
         &self,
         chain: Chain,
         at: Option<BlockHash>,
-    ) -> Result<BTreeMap<u32, WithdrawalRecordForRpc<AccountId, Balance, BlockNumber>>>;
+    ) -> Result<BTreeMap<WithdrawalRecordId, RpcWithdrawalRecord<AccountId, Balance, BlockNumber>>>;
 }
 
 impl<C, Block, AccountId, Balance, BlockNumber>
@@ -73,7 +74,7 @@ where
     fn withdrawal_list(
         &self,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<BTreeMap<u32, WithdrawalRecordForRpc<AccountId, Balance, BlockNumber>>> {
+    ) -> Result<BTreeMap<u32, RpcWithdrawalRecord<AccountId, Balance, BlockNumber>>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
         api.withdrawal_list(&at)
@@ -89,7 +90,7 @@ where
         &self,
         chain: Chain,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<BTreeMap<u32, WithdrawalRecordForRpc<AccountId, Balance, BlockNumber>>> {
+    ) -> Result<BTreeMap<u32, RpcWithdrawalRecord<AccountId, Balance, BlockNumber>>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
         api.withdrawal_list_by_chain(&at, chain)
@@ -100,11 +101,12 @@ where
             })
             .map_err(runtime_error_into_rpc_err)
     }
+
     fn pending_withdrawal_list(
         &self,
         chain: Chain,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<BTreeMap<u32, WithdrawalRecordForRpc<AccountId, Balance, BlockNumber>>> {
+    ) -> Result<BTreeMap<u32, RpcWithdrawalRecord<AccountId, Balance, BlockNumber>>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
         api.withdrawal_list_by_chain(&at, chain)
@@ -125,7 +127,7 @@ where
 
 #[derive(PartialEq, Eq, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct WithdrawalRecordForRpc<AccountId, Balance, BlockNumber> {
+pub struct RpcWithdrawalRecord<AccountId, Balance, BlockNumber> {
     pub asset_id: AssetId,
     pub applicant: AccountId,
     pub balance: Balance,
@@ -136,10 +138,10 @@ pub struct WithdrawalRecordForRpc<AccountId, Balance, BlockNumber> {
 }
 
 impl<AccountId, Balance, BlockNumber> From<Withdrawal<AccountId, Balance, BlockNumber>>
-    for WithdrawalRecordForRpc<AccountId, Balance, BlockNumber>
+    for RpcWithdrawalRecord<AccountId, Balance, BlockNumber>
 {
     fn from(record: Withdrawal<AccountId, Balance, BlockNumber>) -> Self {
-        WithdrawalRecordForRpc {
+        RpcWithdrawalRecord {
             asset_id: record.asset_id,
             applicant: record.applicant,
             balance: record.balance,

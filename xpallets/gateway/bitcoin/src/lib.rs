@@ -4,6 +4,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+#[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 pub mod header;
 mod tests;
@@ -20,7 +21,7 @@ use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult, DispatchResultWithPostInfo, PostDispatchInfo},
     ensure,
-    traits::{Currency, EnsureOrigin, UnixTime},
+    traits::{EnsureOrigin, UnixTime},
     weights::Pays,
 };
 use frame_system::{ensure_root, ensure_signed};
@@ -29,7 +30,7 @@ use orml_utilities::with_transaction_result;
 
 // ChainX
 use chainx_primitives::{AddrStr, AssetId};
-use xpallet_assets::{Chain, ChainT, WithdrawalLimit};
+use xpallet_assets::{BalanceOf, Chain, ChainT, WithdrawalLimit};
 use xpallet_gateway_common::{
     traits::{AddrBinding, ChannelBinding, Extractable, TrusteeSession},
     trustees::bitcoin::BtcTrusteeAddrInfo,
@@ -69,10 +70,6 @@ macro_rules! native {
         )
     };
 }
-
-pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
-    <T as frame_system::Trait>::AccountId,
->>::Balance;
 
 pub trait Trait: xpallet_assets::Trait + xpallet_gateway_records::Trait {
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
@@ -164,14 +161,17 @@ decl_error! {
 }
 
 decl_event!(
-    pub enum Event<T> where
+    pub enum Event<T>
+    where
         <T as frame_system::Trait>::AccountId,
         Balance = BalanceOf<T>
-        {
+    {
         /// block hash
         InsertHeader(H256),
         /// tx hash, block hash, tx type
         ProcessTx(H256, H256, BtcTxState),
+        /// Unclaimed deposit tx
+        UnclaimedDeposit(H256),
         /// who, balance, txhsah, Chain Addr
         DepositPending(AccountId, Balance, H256, AddrStr),
         /// create withdraw tx, who proposal, withdrawal list id
@@ -200,7 +200,7 @@ decl_storage! {
         /// block hash list for a height, include forked header hash
         pub BlockHashFor get(fn block_hash_for): map hasher(twox_64_concat) u32 => Vec<H256>;
         /// mark this blockhash is in mainchain
-        pub MainChain get(fn main_chain): map hasher(identity) H256 => Option<()>;
+        pub MainChain get(fn main_chain): map hasher(identity) H256 => bool;
         /// all valid blockheader (include forked blockheader)
         pub Headers get(fn headers): map hasher(identity) H256 => Option<BtcHeaderInfo>;
 
@@ -233,6 +233,7 @@ decl_storage! {
     }
     add_extra_genesis {
         config(genesis_hash): H256;
+        config(genesis_trustees): Vec<T::AccountId>;
         build(|config| {
             let genesis_header = config.genesis_info.0;
             let genesis_hash = genesis_header.hash();
@@ -259,14 +260,14 @@ decl_storage! {
 
             Headers::insert(&genesis_hash, header_info);
             BlockHashFor::insert(&genesis_index.height, vec![genesis_hash]);
-            MainChain::insert(&genesis_hash, ());
+            MainChain::insert(&genesis_hash, true);
 
             BestIndex::put(genesis_index);
-            // ConfirmedIndex::put(genesis_index);
 
-            Module::<T>::deposit_event(RawEvent::InsertHeader(
-                genesis_hash,
-            ));
+            // init trustee (not this action should ha)
+            if !config.genesis_trustees.is_empty() {
+                T::TrusteeSessionProvider::genesis_trustee(Module::<T>::chain(), &config.genesis_trustees);
+            }
         })
     }
 }
@@ -581,10 +582,7 @@ impl<T: Trait> Module<T> {
         // ensure the tx should belong to the main chain, means should submit mainchain tx,
         // e.g. a tx may be packed in main chain block, and forked chain block, only submit main chain tx
         // could pass the verify.
-        ensure!(
-            Self::main_chain(&tx.block_hash).is_some(),
-            Error::<T>::UnconfirmedTx
-        );
+        ensure!(Self::main_chain(&tx.block_hash), Error::<T>::UnconfirmedTx);
         // if ConfirmedIndex not set, due to confirm height not beyond genesis height
         let confirmed = Self::confirmed_index().ok_or(Error::<T>::UnconfirmedTx)?;
         let height = header_info.height;

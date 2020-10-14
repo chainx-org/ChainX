@@ -17,6 +17,7 @@ use sp_runtime::{
 
 use chainx_primitives::{AssetId, BlockNumber};
 use xpallet_assets::{AssetInfo, AssetRestrictions, Chain};
+use xpallet_protocol::{BTC_DECIMALS, PCX, PCX_DECIMALS, X_BTC, X_DOT};
 
 /// The AccountId alias in this test module.
 pub(crate) type AccountId = u64;
@@ -63,7 +64,7 @@ impl frame_system::Trait for Test {
     type MaximumBlockLength = MaximumBlockLength;
     type AvailableBlockRatio = AvailableBlockRatio;
     type Version = ();
-    type ModuleToIndex = ();
+    type PalletInfo = ();
     type AccountData = pallet_balances::AccountData<Balance>;
     type OnNewAccount = ();
     type OnKilledAccount = ();
@@ -78,6 +79,7 @@ impl Get<Balance> for ExistentialDeposit {
 }
 
 impl pallet_balances::Trait for Test {
+    type MaxLocks = ();
     type Balance = Balance;
     type Event = ();
     type DustRemoval = ();
@@ -124,11 +126,9 @@ thread_local! {
 #[derive(Default)]
 pub struct ExtBuilder;
 
-const PCX_DECIMALS: u8 = 8;
-
 fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
     (
-        xpallet_protocol::PCX,
+        PCX,
         AssetInfo::new::<Test>(
             b"PCX".to_vec(),
             b"Polkadot ChainX".to_vec(),
@@ -146,12 +146,12 @@ fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
 
 pub(crate) fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {
     (
-        xpallet_protocol::X_BTC,
+        X_BTC,
         AssetInfo::new::<Test>(
             b"X-BTC".to_vec(),
             b"X-BTC".to_vec(),
             Chain::Bitcoin,
-            8,
+            BTC_DECIMALS,
             b"ChainX's cross-chain Bitcoin".to_vec(),
         )
         .unwrap(),
@@ -194,22 +194,8 @@ impl ExtBuilder {
         .assimilate_storage(&mut storage);
 
         let trading_pairs = vec![
-            (
-                xpallet_protocol::PCX,
-                xpallet_protocol::X_BTC,
-                9,
-                2,
-                100000,
-                true,
-            ),
-            (
-                xpallet_protocol::X_DOT,
-                xpallet_protocol::PCX,
-                4,
-                2,
-                100000,
-                true,
-            ),
+            (PCX, X_BTC, 9, 2, 100000, true),
+            (X_DOT, PCX, 4, 2, 100000, true),
         ];
 
         let _ = GenesisConfig::<Test> {

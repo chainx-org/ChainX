@@ -13,7 +13,7 @@ pub mod serde_hex {
         T: AsRef<[u8]>,
     {
         let output = hex::encode(value);
-        serializer.serialize_str(&output)
+        serializer.serialize_str(&format!("0x{:}", output))
     }
 
     /// A deserializer that first encodes the argument as a hex-string
@@ -22,6 +22,11 @@ pub mod serde_hex {
         D: de::Deserializer<'de>,
     {
         let data = String::deserialize(deserializer)?;
+        let data = if data.starts_with("0x") {
+            &data[2..]
+        } else {
+            &data[..]
+        };
         let hex = hex::decode(data).map_err(de::Error::custom)?;
         Ok(hex)
     }
@@ -62,8 +67,11 @@ mod tests {
 
         let test = HexTest(b"0123456789".to_vec());
         let ser = serde_json::to_string(&test).unwrap();
-        assert_eq!(ser, "\"30313233343536373839\"");
+        assert_eq!(ser, "\"0x30313233343536373839\"");
         let de = serde_json::from_str::<HexTest>(&ser).unwrap();
+        assert_eq!(de, test);
+        // without 0x
+        let de = serde_json::from_str::<HexTest>("\"30313233343536373839\"").unwrap();
         assert_eq!(de, test);
     }
 

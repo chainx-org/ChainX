@@ -126,7 +126,7 @@
         "lockedUntil": "BlockNumber"
     },
     "ValidatorLedger": {
-        "total": "Balance",
+        "totalNomination": "Balance",
         "lastTotalVoteWeight": "WeightType",
         "lastTotalVoteWeightUpdate": "BlockNumber"
     },
@@ -194,14 +194,7 @@
     "AssetRestrictions": {
         "mask": "u32"
     },
-    "BtcHeader": {
-        "version": "u32",
-        "previousHeaderHash": "H256",
-        "merkleRootHash": "H256",
-        "time": "u32",
-        "bits": "BtcCompact",
-        "nonce": "u32"
-    },
+    "BtcHeader": "Vec<u8>",
     "BtcNetwork": {
         "_enum": [
             "Mainnet",
@@ -249,6 +242,7 @@
         "isOnline": "bool",
         "restrictions": "AssetRestrictions"
     },
+    "WithdrawalRecordId": "u32",
     "WithdrawalState": {
         "_enum": [
             "Applying",
@@ -303,13 +297,8 @@
         "hotAddress": "BtcTrusteeAddrInfo",
         "coldAddress": "BtcTrusteeAddrInfo"
     },
-    "BtcCompact": "u32",
     "BtcTransaction": "Vec<u8>",
-    "BtcPartialMerkleTree": {
-        "txCount": "u32",
-        "hashes": "Vec<H256>",
-        "bits": "Vec<bool>"
-    },
+    "BtcPartialMerkleTree": "Vec<u8>",
     "BtcRelayedTxInfo": {
         "blockHash": "H256",
         "merkleProof": "BtcPartialMerkleTree"
@@ -398,8 +387,9 @@
     "String": "Text",
     "Balance": "u128",
     "MiningPower": "u128",
+    "FullIdentification": "ValidatorId",
     "WithdrawalRecordOf": "WithdrawalRecord",
-    "WithdrawalRecordForRpc": {
+    "RpcWithdrawalRecord": {
         "assetId": "AssetId",
         "applicant": "AccountId",
         "balance": "Balance",

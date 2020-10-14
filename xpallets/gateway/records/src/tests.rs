@@ -10,13 +10,13 @@ use frame_system::RawOrigin;
 fn test_normal() {
     ExtBuilder::default().build_and_execute(|| {
         // deposit
-        assert_ok!(XRecords::deposit(&ALICE, &X_BTC, 100));
+        assert_ok!(XRecords::deposit(&ALICE, X_BTC, 100));
         assert_eq!(XAssets::usable_balance(&ALICE, &X_BTC), 100 + 100);
 
         // withdraw
-        assert_ok!(XRecords::withdrawal(
+        assert_ok!(XRecords::withdraw(
             &ALICE,
-            &X_BTC,
+            X_BTC,
             50,
             b"addr".to_vec(),
             b"ext".to_vec().into()
@@ -28,9 +28,9 @@ fn test_normal() {
             .collect::<Vec<_>>();
         assert_eq!(numbers.len(), 1);
 
-        assert_ok!(XRecords::process_withdrawals(Chain::Bitcoin, &numbers));
+        assert_ok!(XRecords::process_withdrawals(&numbers, Chain::Bitcoin));
         for i in numbers {
-            assert_ok!(XRecords::finish_withdrawal(None, i));
+            assert_ok!(XRecords::finish_withdrawal(i, None));
         }
         assert_eq!(XAssets::usable_balance(&ALICE, &X_BTC), 50 + 100);
     })
@@ -40,30 +40,30 @@ fn test_normal() {
 fn test_normal2() {
     ExtBuilder::default().build_and_execute(|| {
         // deposit
-        assert_ok!(XRecords::deposit(&ALICE, &X_BTC, 100));
+        assert_ok!(XRecords::deposit(&ALICE, X_BTC, 100));
         assert_eq!(XAssets::usable_balance(&ALICE, &X_BTC), 100 + 100);
-        assert_ok!(XRecords::deposit(&ALICE, &X_ETH, 500));
+        assert_ok!(XRecords::deposit(&ALICE, X_ETH, 500));
         assert_eq!(XAssets::usable_balance(&ALICE, &X_ETH), 500 + 100);
 
         // withdraw
-        assert_ok!(XRecords::withdrawal(
+        assert_ok!(XRecords::withdraw(
             &ALICE,
-            &X_BTC,
+            X_BTC,
             50,
             b"addr".to_vec(),
             b"ext".to_vec().into()
         ));
         // withdrawal twice at once
-        assert_ok!(XRecords::withdrawal(
+        assert_ok!(XRecords::withdraw(
             &ALICE,
-            &X_ETH,
+            X_ETH,
             100,
             b"addr".to_vec(),
             b"ext".to_vec().into()
         ));
-        assert_ok!(XRecords::withdrawal(
+        assert_ok!(XRecords::withdraw(
             &ALICE,
-            &X_ETH,
+            X_ETH,
             50,
             b"addr".to_vec(),
             b"ext".to_vec().into()
@@ -85,19 +85,19 @@ fn test_normal2() {
         wrong_numbers.extend_from_slice(&numbers2);
 
         assert_noop!(
-            XRecords::process_withdrawals(Chain::Bitcoin, &wrong_numbers),
+            XRecords::process_withdrawals(&wrong_numbers, Chain::Bitcoin),
             XRecordsErr::UnexpectedChain
         );
-        assert_ok!(XRecords::process_withdrawals(Chain::Bitcoin, &numbers1));
-        assert_ok!(XRecords::process_withdrawals(Chain::Ethereum, &numbers2));
+        assert_ok!(XRecords::process_withdrawals(&numbers1, Chain::Bitcoin));
+        assert_ok!(XRecords::process_withdrawals(&numbers2, Chain::Ethereum));
 
         assert_ok!(XRecords::finish_withdrawals(
-            Some(Chain::Bitcoin),
-            &numbers1
+            &numbers1,
+            Some(Chain::Bitcoin)
         ));
         assert_ok!(XRecords::finish_withdrawals(
-            Some(Chain::Ethereum),
-            &numbers2
+            &numbers2,
+            Some(Chain::Ethereum)
         ));
 
         assert_eq!(XAssets::usable_balance(&ALICE, &X_BTC), 50 + 100);
@@ -111,12 +111,12 @@ fn test_normal2() {
 #[test]
 fn test_withdrawal_more_then_usable() {
     ExtBuilder::default().build_and_execute(|| {
-        assert_ok!(XRecords::deposit(&ALICE, &X_BTC, 10));
+        assert_ok!(XRecords::deposit(&ALICE, X_BTC, 10));
 
         assert_noop!(
-            XRecords::withdrawal(
+            XRecords::withdraw(
                 &ALICE,
-                &X_BTC,
+                X_BTC,
                 100 + 50,
                 b"addr".to_vec(),
                 b"ext".to_vec().into()
@@ -129,11 +129,11 @@ fn test_withdrawal_more_then_usable() {
 #[test]
 fn test_withdrawal_force_set_state() {
     ExtBuilder::default().build_and_execute(|| {
-        assert_ok!(XRecords::deposit(&ALICE, &X_BTC, 10));
+        assert_ok!(XRecords::deposit(&ALICE, X_BTC, 10));
         // applying
-        assert_ok!(XRecords::withdrawal(
+        assert_ok!(XRecords::withdraw(
             &ALICE,
-            &X_BTC,
+            X_BTC,
             10,
             b"addr".to_vec(),
             b"ext".to_vec().into()
@@ -147,9 +147,9 @@ fn test_withdrawal_force_set_state() {
         ));
         assert_eq!(XAssets::usable_balance(&ALICE, &X_BTC), 100 + 10);
         // change to processing
-        assert_ok!(XRecords::withdrawal(
+        assert_ok!(XRecords::withdraw(
             &ALICE,
-            &X_BTC,
+            X_BTC,
             10,
             b"addr".to_vec(),
             b"ext".to_vec().into()
@@ -161,7 +161,7 @@ fn test_withdrawal_force_set_state() {
         ));
         // reject revoke for a processing state
         assert_noop!(
-            XRecords::revoke_withdrawal(&ALICE, 1),
+            XRecords::cancel_withdrawal(1, &ALICE),
             XRecordsErr::NotApplyingState
         );
         // force change to applying
@@ -178,14 +178,14 @@ fn test_withdrawal_force_set_state() {
 fn test_withdrawal_chainx() {
     ExtBuilder::default().build_and_execute(|| {
         assert_noop!(
-            XRecords::deposit(&ALICE, &ChainXAssetId::get(), 10),
+            XRecords::deposit(&ALICE, ChainXAssetId::get(), 10),
             xpallet_assets::Error::<Test>::DenyNativeAsset
         );
 
         assert_noop!(
-            XRecords::withdrawal(
+            XRecords::withdraw(
                 &ALICE,
-                &ChainXAssetId::get(),
+                ChainXAssetId::get(),
                 50,
                 b"addr".to_vec(),
                 b"ext".to_vec().into()

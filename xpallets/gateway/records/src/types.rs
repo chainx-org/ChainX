@@ -4,16 +4,24 @@ use codec::{Codec, Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
-// Substrate
 use sp_runtime::RuntimeDebug;
 
 use chainx_primitives::{AddrStr, AssetId};
 use xp_runtime::Memo;
 
-/// state machine for state is:
-/// Applying(lock token) => Processing(can't cancel) =>
-///        destroy token => NormalFinish|RootFinish (final state)
-///        release token => NormalCancel(can from Applying directly)|RootCancel (final state)
+/// The id of withdrawal record (u32 is enough).
+pub type WithdrawalRecordId = u32;
+
+/// The state machine of WithdrawState:
+///
+/// Applying (lock token) <---> Processing (can't cancel, but can be recovered to `Applying`)
+///     |                           |
+///     |                           +----> NormalFinish|RootFinish (destroy token)
+///     |                           |
+///     |                           +----> RootCancel (unlock token)
+///     |                           |
+///     +---------------------------+----> NormalCancel (unlock token)
+///
 #[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum WithdrawalState {
@@ -46,7 +54,7 @@ impl<AccountId, Balance, BlockNumber> WithdrawalRecord<AccountId, Balance, Block
 where
     AccountId: Codec + Clone,
     Balance: Codec + Copy + Clone,
-    BlockNumber: Codec + Clone,
+    BlockNumber: Codec + Copy + Clone,
 {
     pub fn new(
         applicant: AccountId,
@@ -80,8 +88,8 @@ where
     pub fn ext(&self) -> &Memo {
         &self.ext
     }
-    pub fn height(&self) -> &BlockNumber {
-        &self.height
+    pub fn height(&self) -> BlockNumber {
+        self.height
     }
 }
 

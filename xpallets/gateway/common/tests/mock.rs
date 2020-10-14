@@ -81,7 +81,7 @@ impl frame_system::Trait for Test {
     type MaximumBlockLength = MaximumBlockLength;
     type AvailableBlockRatio = AvailableBlockRatio;
     type Version = ();
-    type ModuleToIndex = ();
+    type PalletInfo = ();
     type AccountData = pallet_balances::AccountData<Balance>;
     type OnNewAccount = ();
     type OnKilledAccount = ();
@@ -92,6 +92,7 @@ parameter_types! {
     pub const ExistentialDeposit: u64 = 0;
 }
 impl pallet_balances::Trait for Test {
+    type MaxLocks = ();
     type Balance = Balance;
     type DustRemoval = ();
     type Event = ();
@@ -237,7 +238,8 @@ impl ExtBuilder {
 
         let (genesis_info, genesis_hash, network_id) = load_mainnet_btc_genesis_header_info();
 
-        let _ = xpallet_gateway_bitcoin::GenesisConfig {
+        let _ = xpallet_gateway_bitcoin::GenesisConfig::<Test> {
+            genesis_trustees: vec![],
             genesis_info,
             genesis_hash,
             network_id,
@@ -254,7 +256,7 @@ impl ExtBuilder {
             btc_withdrawal_fee: 500000,
             max_withdrawal_count: 100,
         }
-        .assimilate_storage::<Test>(&mut storage);
+        .assimilate_storage(&mut storage);
 
         let _ = xpallet_gateway_common::GenesisConfig::<Test> {
             trustees: trustees(),

@@ -68,7 +68,7 @@ impl frame_system::Trait for Test {
     type MaximumBlockLength = MaximumBlockLength;
     type AvailableBlockRatio = AvailableBlockRatio;
     type Version = ();
-    type ModuleToIndex = ();
+    type PalletInfo = ();
     type AccountData = pallet_balances::AccountData<Balance>;
     type OnNewAccount = ();
     type OnKilledAccount = ();
@@ -79,6 +79,7 @@ parameter_types! {
     pub const ExistentialDeposit: u64 = 0;
 }
 impl pallet_balances::Trait for Test {
+    type MaxLocks = ();
     type Balance = Balance;
     type DustRemoval = ();
     type Event = ();
@@ -221,7 +222,8 @@ impl ExtBuilder {
         // let (genesis_info, genesis_hash, network_id) = load_mock_btc_genesis_header_info();
         let genesis_hash = btc_genesis.0.hash();
         let network_id = btc_network;
-        let _ = GenesisConfig {
+        let _ = GenesisConfig::<Test> {
+            genesis_trustees: vec![],
             genesis_info: btc_genesis,
             genesis_hash,
             network_id,
@@ -238,7 +240,7 @@ impl ExtBuilder {
             btc_withdrawal_fee: 500000,
             max_withdrawal_count: 100,
         }
-        .assimilate_storage::<Test>(&mut storage);
+        .assimilate_storage(&mut storage);
 
         let ext = sp_io::TestExternalities::new(storage);
         ext
@@ -274,14 +276,30 @@ impl ExtBuilder {
         }
         .assimilate_storage(&mut storage);
 
-        let _ = xpallet_gateway_common::GenesisConfig::<Test> {
-            trustees: trustees_info(),
-        }
-        .assimilate_storage(&mut storage);
+        let info = trustees_info();
+        let genesis_trustees = info
+            .iter()
+            .find_map(|(chain, _, trustee_params)| {
+                if *chain == Chain::Bitcoin {
+                    Some(
+                        trustee_params
+                            .iter()
+                            .map(|i| (i.0).clone())
+                            .collect::<Vec<_>>(),
+                    )
+                } else {
+                    None
+                }
+            })
+            .unwrap();
+
+        let _ = xpallet_gateway_common::GenesisConfig::<Test> { trustees: info }
+            .assimilate_storage(&mut storage);
 
         let (genesis_info, genesis_hash, network_id) = load_mainnet_btc_genesis_header_info();
 
-        let _ = GenesisConfig {
+        let _ = GenesisConfig::<Test> {
+            genesis_trustees,
             genesis_info,
             genesis_hash,
             network_id,
@@ -298,7 +316,7 @@ impl ExtBuilder {
             btc_withdrawal_fee: 500000,
             max_withdrawal_count: 100,
         }
-        .assimilate_storage::<Test>(&mut storage);
+        .assimilate_storage(&mut storage);
 
         let ext = sp_io::TestExternalities::new(storage);
         ext

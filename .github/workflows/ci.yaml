@@ -26,7 +26,7 @@ jobs:
     - name: Install Rust toolchain
       uses: actions-rs/toolchain@v1
       with:
-        toolchain: nightly-2020-05-14
+        toolchain: nightly-2020-08-24
         target: wasm32-unknown-unknown
         profile: minimal
         override: true
@@ -60,7 +60,7 @@ jobs:
       run: cargo clippy
 
     - name: Test
-      run: cargo test --workspace --exclude xpallet-contracts
+      run: cargo test --workspace
 
     - name: Compile
       run: cargo test --no-run

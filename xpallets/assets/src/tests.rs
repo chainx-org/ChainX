@@ -109,7 +109,7 @@ fn test_normal_case() {
             25
         );
 
-        assert_ok!(XAssets::destroy(&X_BTC, &999, 15));
+        assert_ok!(XAssets::destroy_reserved_withdrawal(&X_BTC, &999, 15));
         assert_eq!(
             XAssets::asset_typed_balance(&999, &X_BTC, AssetType::ReservedWithdrawal),
             10
@@ -120,7 +120,7 @@ fn test_normal_case() {
         );
         assert_eq!(XAssets::total_issuance(&X_BTC), 100 + 200 + 300 + 400 - 15);
 
-        assert_ok!(XAssets::destroy(&X_BTC, &999, 10));
+        assert_ok!(XAssets::destroy_reserved_withdrawal(&X_BTC, &999, 10));
         assert_eq!(
             XAssets::total_asset_balance_of(&X_BTC, AssetType::ReservedWithdrawal),
             0
@@ -166,7 +166,7 @@ fn test_normal_issue_and_destroy() {
         assert_eq!(XAssets::all_type_asset_balance(&a, &btc_id), 150);
 
         // destroy
-        XAssets::destroy(&btc_id, &a, 25).unwrap();
+        XAssets::destroy_reserved_withdrawal(&btc_id, &a, 25).unwrap();
         assert_eq!(
             XAssets::asset_balance_of(&a, &btc_id, AssetType::ReservedWithdrawal),
             0
@@ -238,7 +238,7 @@ fn test_error_issue_and_destroy1() {
         // destroy first
         // destroy
         assert_noop!(
-            XAssets::destroy(&btc_id, &a, 25),
+            XAssets::destroy_reserved_withdrawal(&btc_id, &a, 25),
             XAssetsErr::InsufficientBalance,
         );
 
@@ -265,7 +265,7 @@ fn test_error_issue_and_destroy1() {
         )
         .unwrap();
         // destroy
-        assert_ok!(XAssets::destroy(&btc_id, &a, 25));
+        assert_ok!(XAssets::destroy_reserved_withdrawal(&btc_id, &a, 25));
     })
 }
 
@@ -307,7 +307,7 @@ fn test_error_issue_and_destroy3() {
         let btc_id = X_BTC;
         // lock or destroy without init
         assert_noop!(
-            XAssets::destroy(&btc_id, &a, 25),
+            XAssets::destroy_reserved_withdrawal(&btc_id, &a, 25),
             XAssetsErr::InsufficientBalance
         );
 
@@ -325,7 +325,7 @@ fn test_error_issue_and_destroy3() {
 
         XAssets::issue(&btc_id, &a, 0).unwrap();
         assert_noop!(
-            XAssets::destroy(&btc_id, &a, 25),
+            XAssets::destroy_reserved_withdrawal(&btc_id, &a, 25),
             XAssetsErr::InsufficientBalance
         );
 
@@ -353,7 +353,7 @@ fn test_error_issue_and_destroy3() {
         )
         .unwrap();
 
-        assert_ok!(XAssets::destroy(&btc_id, &a, 25));
+        assert_ok!(XAssets::destroy_reserved_withdrawal(&btc_id, &a, 25));
     })
 }
 

@@ -79,7 +79,7 @@ impl system::Trait for Test {
     type MaximumBlockLength = MaximumBlockLength;
     type AvailableBlockRatio = AvailableBlockRatio;
     type Version = ();
-    type ModuleToIndex = ();
+    type PalletInfo = ();
     type AccountData = pallet_balances::AccountData<Balance>;
     type OnNewAccount = ();
     type OnKilledAccount = ();
@@ -94,6 +94,7 @@ impl Get<Balance> for ExistentialDeposit {
 }
 
 impl pallet_balances::Trait for Test {
+    type MaxLocks = ();
     type Balance = Balance;
     type Event = MetaEvent;
     type DustRemoval = ();
@@ -201,6 +202,8 @@ impl xp_mining_common::RewardPotAccountFor<AccountId, AccountId>
 parameter_types! {
     pub const SessionDuration: BlockNumber = 50;
     pub const MigrationSessionOffset: u32 = 500;
+    pub const MinimumReferralId: u32 = 2;
+    pub const MaximumReferralId: u32 = 12;
 }
 
 impl Trait for Test {
@@ -209,6 +212,8 @@ impl Trait for Test {
     type AssetMining = ();
     type MigrationSessionOffset = MigrationSessionOffset;
     type SessionDuration = SessionDuration;
+    type MinimumReferralId = MinimumReferralId;
+    type MaximumReferralId = MaximumReferralId;
     type SessionInterface = Self;
     type TreasuryAccount = DummyTreasuryAccount;
     type DetermineRewardPotAccount = DummyStakingRewardPotAccountDeterminer;

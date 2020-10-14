@@ -118,7 +118,7 @@ decl_module! {
         #[weight = <T as Trait>::WeightInfo::withdraw()]
         pub fn revoke_withdraw(origin, id: u32) -> DispatchResult {
             let from = ensure_signed(origin)?;
-            xpallet_gateway_records::Module::<T>::revoke_withdrawal(&from, id)
+            xpallet_gateway_records::Module::<T>::cancel_withdrawal(id, &from)
         }
 
         // trustees
@@ -175,7 +175,7 @@ decl_module! {
                 .find_map(|(chain, multisig)| if from == multisig { Some(chain) } else { None })
                 .ok_or(Error::<T>::InvalidMultisig)?;
 
-            xpallet_gateway_records::Module::<T>::set_withdrawal_state_by_trustees(chain, withdrawal_id, state)
+            xpallet_gateway_records::Module::<T>::set_withdrawal_state_by_trustees(withdrawal_id, chain, state)
         }
 
         #[weight = <T as Trait>::WeightInfo::set_trustee_info_config()]
@@ -248,10 +248,9 @@ decl_storage! {
                     .expect("setup trustee can not fail; qed");
                     trustees.push(who.clone());
                 }
-                // config set should before transitino
+                // config set should before transition
                 TrusteeInfoConfigOf::insert(chain, info_config.clone());
-                Module::<T>::transition_trustee_session_impl(*chain, trustees)
-                    .expect("trustee session transition can not fail; qed");
+                // trustee init should happen in chain module like gateway_bitcoin/gateway_ethereum.
             }
         })
     }
@@ -273,7 +272,7 @@ impl<T: Trait> Module<T> {
 
         Self::verify_withdrawal(asset_id, value, &addr, &ext)?;
 
-        xpallet_gateway_records::Module::<T>::withdrawal(&who, &asset_id, value, addr, ext)?;
+        xpallet_gateway_records::Module::<T>::withdraw(&who, asset_id, value, addr, ext)?;
         Ok(())
     }
 
@@ -388,11 +387,8 @@ impl<T: Trait> Module<T> {
                         )
                     })
                     .collect();
-                let mut session_info =
-                    T::BitcoinTrustee::generate_trustee_session_info(props, config)?;
+                let session_info = T::BitcoinTrustee::generate_trustee_session_info(props, config)?;
 
-                // sort account list to make sure generate a stable multisig addr(addr is related with accounts sequence)
-                session_info.trustee_list.sort();
                 session_info.into()
             }
             _ => return Err(Error::<T>::NotSupportedChain.into()),

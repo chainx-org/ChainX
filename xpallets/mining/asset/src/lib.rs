@@ -319,6 +319,25 @@ impl<T: Trait> Module<T> {
         Self::apply_update_miner_mining_weight(from, target, new_weight, current_block);
     }
 
+    #[cfg(feature = "std")]
+    pub fn force_set_asset_mining_weight(
+        target: &AssetId,
+        new_weight: WeightType,
+        current_block: T::BlockNumber,
+    ) {
+        Self::apply_update_asset_mining_weight(target, new_weight, current_block);
+    }
+
+    #[cfg(feature = "std")]
+    pub fn force_set_miner_mining_weight(
+        from: &T::AccountId,
+        target: &AssetId,
+        new_weight: WeightType,
+        current_block: T::BlockNumber,
+    ) {
+        Self::apply_update_miner_mining_weight(from, target, new_weight, current_block);
+    }
+
     fn apply_update_miner_mining_weight(
         from: &T::AccountId,
         target: &AssetId,

@@ -296,9 +296,7 @@ impl<T: Trait> Module<T> {
     ) -> BTreeMap<AssetId, BTreeMap<AssetType, BalanceOf<T>>> {
         use frame_support::IterableStorageDoubleMap;
         AssetBalance::<T>::iter_prefix(who)
-            .filter_map(|(id, map)| {
-                xpallet_assets_registrar::Module::<T>::asset_online(id).map(|_| (id, map))
-            })
+            .filter(|(id, _)| xpallet_assets_registrar::Module::<T>::asset_online(id))
             .collect()
     }
 
@@ -398,7 +396,11 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    pub fn destroy(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
+    pub fn destroy_reserved_withdrawal(
+        id: &AssetId,
+        who: &T::AccountId,
+        value: BalanceOf<T>,
+    ) -> DispatchResult {
         Self::ensure_not_native_asset(id)?;
         xpallet_assets_registrar::Module::<T>::ensure_asset_is_valid(id)?;
         Self::can_destroy_withdrawal(id)?;
