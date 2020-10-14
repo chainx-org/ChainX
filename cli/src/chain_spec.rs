@@ -18,7 +18,7 @@ use sp_runtime::traits::{IdentifyAccount, Verify};
 
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 
-use xpallet_protocol::{BTC_DECIMALS, PCX, PCX_DECIMALS, X_BTC};
+use xpallet_protocol::{PCX, PCX_DECIMALS, X_BTC, X_BTC_DECIMALS};
 
 use chainx_runtime::{
     constants::{currency::DOLLARS, time::DAYS},
@@ -557,7 +557,7 @@ fn xbtc() -> (AssetId, AssetInfo, AssetRestrictions) {
             b"XBTC".to_vec(),
             b"ChainX Bitcoin".to_vec(),
             Chain::Bitcoin,
-            BTC_DECIMALS,
+            X_BTC_DECIMALS,
             b"ChainX's Cross-chain Bitcoin".to_vec(),
         )
         .unwrap(),

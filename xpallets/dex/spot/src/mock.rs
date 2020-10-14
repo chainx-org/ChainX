@@ -17,7 +17,7 @@ use sp_runtime::{
 
 use chainx_primitives::{AssetId, BlockNumber};
 use xpallet_assets::{AssetInfo, AssetRestrictions, Chain};
-use xpallet_protocol::{BTC_DECIMALS, PCX, PCX_DECIMALS, X_BTC, X_DOT};
+use xpallet_protocol::{PCX, PCX_DECIMALS, X_BTC, X_BTC_DECIMALS, X_DOT};
 
 /// The AccountId alias in this test module.
 pub(crate) type AccountId = u64;
@@ -151,7 +151,7 @@ pub(crate) fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {
             b"X-BTC".to_vec(),
             b"X-BTC".to_vec(),
             Chain::Bitcoin,
-            BTC_DECIMALS,
+            X_BTC_DECIMALS,
             b"ChainX's cross-chain Bitcoin".to_vec(),
         )
         .unwrap(),
