@@ -7,8 +7,8 @@ use sp_std::collections::btree_map::BTreeMap;
 
 use codec::Codec;
 
-pub use chainx_primitives::{AssetId, Decimals};
-pub use xpallet_assets::{AssetInfo, AssetRestrictions, AssetType, Chain, TotalAssetInfo};
+pub use chainx_primitives::AssetId;
+pub use xpallet_assets::{AssetType, TotalAssetInfo};
 
 sp_api::decl_runtime_apis! {
     pub trait XAssetsApi<AccountId, Balance>
