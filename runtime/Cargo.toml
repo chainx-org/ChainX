@@ -17,7 +17,7 @@ smallvec = "1.4.1"
 sp-authority-discovery = { version = "2.0.0", default-features = false }
 sp-api = { version = "2.0.0", default-features = false }
 sp-block-builder = { version = "2.0.0", default-features = false }
-sp-consensus-aura = { version = "0.8.0", default-features = false }
+sp-consensus-babe = { version = "0.8.0", default-features = false }
 sp-core = { version = "2.0.0", default-features = false }
 sp-inherents = { version = "2.0.0", default-features = false }
 sp-io = { version = "2.0.0", default-features = false }
@@ -33,7 +33,7 @@ frame-executive = { version = "2.0.0", default-features = false }
 frame-support = { version = "2.0.0", default-features = false }
 frame-system = { version = "2.0.0", default-features = false }
 frame-system-rpc-runtime-api = { version = "2.0.0", default-features = false }
-pallet-aura = { version = "2.0.0", default-features = false }
+pallet-babe = { version = "2.0.0", default-features = false }
 pallet-authority-discovery = { version = "2.0.0", default-features = false }
 pallet-authorship = { version = "2.0.0", default-features = false }
 pallet-balances = { version = "2.0.0", default-features = false }
@@ -103,7 +103,7 @@ std = [
     "sp-authority-discovery/std",
     "sp-api/std",
     "sp-block-builder/std",
-    "sp-consensus-aura/std",
+    "sp-consensus-babe/std",
     "sp-core/std",
     "sp-inherents/std",
     "sp-io/std",
@@ -119,7 +119,7 @@ std = [
     "frame-system/std",
     "frame-system-rpc-runtime-api/std",
 
-    "pallet-aura/std",
+    "pallet-babe/std",
     "pallet-authority-discovery/std",
     "pallet-authorship/std",
     "pallet-balances/std",
