@@ -33,7 +33,7 @@ impl<T: Trait> AssetChangedTrigger<T> {
         to_type: AssetType,
         value: BalanceOf<T>,
     ) -> result::Result<(), AssetErr> {
-        Module::<T>::deposit_event(Event::<T>::Move(
+        Module::<T>::deposit_event(Event::<T>::Moved(
             *id,
             from.clone(),
             from_type,

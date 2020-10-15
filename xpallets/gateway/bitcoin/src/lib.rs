@@ -166,30 +166,29 @@ decl_event!(
         <T as frame_system::Trait>::AccountId,
         Balance = BalanceOf<T>
     {
-        /// A Bitcoin header was processed and inserted successfully. [btc_header_hash]
+        /// A Bitcoin header was validated and inserted successfully. [btc_header_hash]
         HeaderInserted(H256),
         /// A Bitcoin transaction was processed successfully. [tx_hash, block_hash, tx_state]
         TxProcessed(H256, H256, BtcTxState),
+        /// An account deposited some token. [tx_hash, who, amount]
+        Deposited(H256, AccountId, Balance),
+        /// A list of withdrawal applications were processed successfully. [tx_hash, withdrawal_ids, total_withdrawn]
+        Withdrawn(H256, Vec<u32>, Balance),
         /// A new record of unclaimed deposit. [tx_hash]
         UnclaimedDeposit(H256),
         /// A unclaimed deposit record was removed. [depositor, deposit_amount, tx_hsah, chain_addr]
         PendingDepositRemoved(AccountId, Balance, H256, AddrStr),
         /// create withdraw tx, who proposal, withdrawal list id
         /// A new withdrawal proposal was created. [proposer, withdrawal_ids]
-        WithdrawalProposalCreated(AccountId, Vec<u32>),
-        /// Sign withdraw tx
+        ProposalCreated(AccountId, Vec<u32>),
         /// A trustee voted/vetoed a withdrawal proposal. [trustee, vote_status]
-        WithdrawalProposalSigned(AccountId, bool),
+        ProposalVoted(AccountId, bool),
+        /// A withdrawal proposal was dropped. [reject_count, total_count, withdrawal_ids]
+        ProposalDropped(u32, u32, Vec<u32>),
         /// The proposal has been processed successfully and is waiting for broadcasting. [tx_hash]
         ProposalCompleted(H256),
         /// A fatal error happened during the withdrwal process. [tx_hash, proposal_hash]
         WithdrawalFatalErr(H256, H256),
-        /// A withdrawal proposal was dropped. [reject_count, total_count, withdrawal_ids]
-        WithdrawalProposalDropped(u32, u32, Vec<u32>),
-        /// An account deposited some token. [tx_hash, who, amount]
-        TokenDeposited(H256, AccountId, Balance),
-        /// A list of withdrawal applications were processed successfully. [tx_hash, withdrawal_ids, total_withdrawn]
-        TokenWithdrawn(H256, Vec<u32>, Balance),
     }
 );
 

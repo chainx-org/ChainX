@@ -124,8 +124,8 @@ decl_event!(
         <T as frame_system::Trait>::AccountId,
         Balance = BalanceOf<T>,
     {
-        /// Move balance of an asset from one to another. [asset_id, from, from_type, to, to_type, amount]
-        Move(AssetId, AccountId, AssetType, AccountId, AssetType, Balance),
+        /// Some balances of an asset was moved from one to another. [asset_id, from, from_type, to, to_type, amount]
+        Moved(AssetId, AccountId, AssetType, AccountId, AssetType, Balance),
         /// New balances of an asset were issued. [asset_id, receiver, amount]
         Issued(AssetId, AccountId, Balance),
         /// Some balances of an asset were destoryed. [asset_id, who, amount]

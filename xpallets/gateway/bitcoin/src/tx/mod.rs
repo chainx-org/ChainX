@@ -358,7 +358,7 @@ fn deposit_token<T: Trait>(tx_hash: H256, who: &T::AccountId, balance: u64) -> D
     let value: BalanceOf<T> = balance.saturated_into();
     match <xpallet_gateway_records::Module<T>>::deposit(&who, id, value) {
         Ok(a) => {
-            Module::<T>::deposit_event(Event::<T>::TokenDeposited(tx_hash, who.clone(), value));
+            Module::<T>::deposit_event(Event::<T>::Deposited(tx_hash, who.clone(), value));
             Ok(a)
         }
         Err(e) => {
@@ -480,7 +480,7 @@ fn withdraw<T: Trait>(tx: Transaction) -> BtcTxResult {
             // real withdraw value would reduce withdraw_fee
             total -=
                 (proposal.withdrawal_id_list.len() as u64 * btc_withdrawal_fee).saturated_into();
-            Module::<T>::deposit_event(Event::<T>::TokenWithdrawn(
+            Module::<T>::deposit_event(Event::<T>::Withdrawn(
                 tx_hash,
                 proposal.withdrawal_id_list,
                 total,

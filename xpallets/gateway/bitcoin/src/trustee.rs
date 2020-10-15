@@ -275,10 +275,7 @@ impl<T: Trait> Module<T> {
 
         info!("[apply_create_withdraw]|Through the legality check of withdrawal");
 
-        Self::deposit_event(Event::<T>::WithdrawalProposalCreated(
-            who.clone(),
-            withdrawal_id_list,
-        ));
+        Self::deposit_event(Event::<T>::ProposalCreated(who.clone(), withdrawal_id_list));
 
         if apply_sig {
             info!("[apply_create_withdraw]apply sign after create proposal");
@@ -380,7 +377,7 @@ impl<T: Trait> Module<T> {
 
                     WithdrawalProposal::<T>::kill();
 
-                    Self::deposit_event(Event::<T>::WithdrawalProposalDropped(
+                    Self::deposit_event(Event::<T>::ProposalDropped(
                         reject_count as u32,
                         sig_num as u32,
                         proposal.withdrawal_id_list,
@@ -505,7 +502,7 @@ fn insert_trustee_vote_state<T: Trait>(
             );
         }
     }
-    Module::<T>::deposit_event(Event::<T>::WithdrawalProposalSigned(who.clone(), state));
+    Module::<T>::deposit_event(Event::<T>::ProposalVoted(who.clone(), state));
     Ok(())
 }
 
