@@ -217,7 +217,7 @@ fn transfer_should_work() {
         assert_eq!(XAssets::free_balance(X_BTC, &BOB), 150);
         assert_eq!(XAssets::total_issuance(&X_BTC), 200 + 800);
 
-        let transferred_event = MetaEvent::assets(RawEvent::Move(
+        let transferred_event = MetaEvent::assets(RawEvent::Moved(
             X_BTC,
             ALICE,
             AssetType::Usable,
