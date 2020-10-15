@@ -11,7 +11,7 @@ use sc_chain_spec::ChainSpecExtension;
 use sc_service::{config::TelemetryEndpoints, ChainType, Properties};
 
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
-use sp_consensus_aura::sr25519::AuthorityId as AuraId;
+use sp_consensus_babe::AuthorityId as BabeId;
 use sp_core::{crypto::UncheckedInto, sr25519, Pair, Public};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::traits::{IdentifyAccount, Verify};
@@ -26,11 +26,11 @@ use chainx_runtime::{
     NetworkType, ReferralId, Runtime, SessionKeys, Signature, TrusteeInfoConfig, WASM_BINARY,
 };
 use chainx_runtime::{
-    AuraConfig, AuthorityDiscoveryConfig, BalancesConfig, CouncilConfig, DemocracyConfig,
-    ElectionsConfig, GenesisConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig,
-    SocietyConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, XAssetsConfig,
-    XAssetsRegistrarConfig, XGatewayBitcoinConfig, XGatewayCommonConfig, XMiningAssetConfig,
-    XSpotConfig, XStakingConfig, XSystemConfig,
+    AuthorityDiscoveryConfig, BalancesConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
+    GenesisConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig, SocietyConfig,
+    SudoConfig, SystemConfig, TechnicalCommitteeConfig, XAssetsConfig, XAssetsRegistrarConfig,
+    XGatewayBitcoinConfig, XGatewayCommonConfig, XMiningAssetConfig, XSpotConfig, XStakingConfig,
+    XSystemConfig,
 };
 
 use crate::genesis::trustees::TrusteeParams;
@@ -76,13 +76,13 @@ where
 type AuthorityKeysTuple = (
     (AccountId, ReferralId), // (Staking ValidatorId, ReferralId)
     AccountId,               // (SessionKey)
-    AuraId,
+    BabeId,
     GrandpaId,
     ImOnlineId,
     AuthorityDiscoveryId,
 );
 
-/// Helper function to generate an authority key for Aura
+/// Helper function to generate an authority key for babe
 pub fn authority_keys_from_seed(seed: &str) -> AuthorityKeysTuple {
     (
         (
@@ -90,7 +90,7 @@ pub fn authority_keys_from_seed(seed: &str) -> AuthorityKeysTuple {
             seed.as_bytes().to_vec(),
         ),
         get_account_id_from_seed::<sr25519::Public>(&format!("{}//blockauthor", seed)),
-        get_from_seed::<AuraId>(seed),
+        get_from_seed::<BabeId>(seed),
         get_from_seed::<GrandpaId>(seed),
         get_from_seed::<ImOnlineId>(seed),
         get_from_seed::<AuthorityDiscoveryId>(seed),
@@ -254,7 +254,7 @@ pub fn staging_testnet_config() -> Result<ChainSpec, String> {
         hex!["684e9d27ae6b5ab3a673616de27bd3e455062c83090de607ab49a2f7396b5a19"].into();
     // bash:
     // for i in 1 2 3; do for j in validator blockauthor; do subkey inspect-key --uri "$SECRET//$i//$j"; done; done
-    // for i in 1 2 3; do for j in aura; do subkey inspect-key --scheme sr25519  --uri "$SECRET//$i//$j"; done; done
+    // for i in 1 2 3; do for j in babe; do subkey inspect-key --scheme sr25519  --uri "$SECRET//$i//$j"; done; done
     // for i in 1 2 3; do for j in grandpa; do subkey inspect-key --scheme ed25519 --uri "$SECRET//$i//$j"; done; done
     // for i in 1 2 3; do for j in im_online; do subkey inspect-key --scheme sr25519 --uri "$SECRET//$i//$j"; done; done
     // for i in 1 2 3; do for j in authority_discovery; do subkey inspect-key --scheme sr25519 --uri "$SECRET//$i//$j"; done; done
@@ -279,15 +279,15 @@ pub fn staging_testnet_config() -> Result<ChainSpec, String> {
         hex!["8a91dc3768bdba8bba11da5c3b2ae954eede9591a6b7a2d156637d84aee5623c"].into(),
     );
 
-    // aura
+    // babe
     // 5EZ47mio3fjhb1iwGSLKZGmgYvhZRJakfGmPfAemMAMBAA7e
-    let aura1: AuraId =
+    let babe1: BabeId =
         hex!["6e178a72736139a91e32dadeb57c2822501690e9d8f1516a04b18372cd981831"].unchecked_into();
     // 5EpnwHC4QjhHXq9tGV4FE94GG17JBDDBXfBALPu5VQTVqbyp
-    let aura2: AuraId =
+    let babe2: BabeId =
         hex!["7a185d241085c938fda96b54059632f885866befb1183aa4dd456f8a406db70c"].unchecked_into();
     // 5CV7jA56wV3mjzLi4JMg4oXATNpwKfcet61NwYJqAAiRsEH9
-    let aura3: AuraId =
+    let babe3: BabeId =
         hex!["129e3eb4543ed8188d67df20122bb73add3f0ea5fdbd480fdbb9f6b4c14dd872"].unchecked_into();
 
     // grandpa
@@ -327,7 +327,7 @@ pub fn staging_testnet_config() -> Result<ChainSpec, String> {
         (
             (validator1, b"Validator1".to_vec()),
             blockauthor1,
-            aura1,
+            babe1,
             grandpa1,
             im_online1,
             authority_discovery1,
@@ -335,7 +335,7 @@ pub fn staging_testnet_config() -> Result<ChainSpec, String> {
         (
             (validator2, b"Validator2".to_vec()),
             blockauthor2,
-            aura2,
+            babe2,
             grandpa2,
             im_online2,
             authority_discovery2,
@@ -343,7 +343,7 @@ pub fn staging_testnet_config() -> Result<ChainSpec, String> {
         (
             (validator3, b"Validator3".to_vec()),
             blockauthor3,
-            aura3,
+            babe3,
             grandpa3,
             im_online3,
             authority_discovery3,
@@ -397,7 +397,7 @@ pub fn testnet_config() -> Result<ChainSpec, String> {
         hex!["684e9d27ae6b5ab3a673616de27bd3e455062c83090de607ab49a2f7396b5a19"].into();
     // bash:
     // for i in 1 2 3; do for j in validator blockauthor; do subkey inspect-key --uri "$SECRET//$i//$j"; done; done
-    // for i in 1 2 3; do for j in aura; do subkey inspect-key --scheme sr25519  --uri "$SECRET//$i//$j"; done; done
+    // for i in 1 2 3; do for j in babe; do subkey inspect-key --scheme sr25519  --uri "$SECRET//$i//$j"; done; done
     // for i in 1 2 3; do for j in grandpa; do subkey inspect-key --scheme ed25519 --uri "$SECRET//$i//$j"; done; done
     // for i in 1 2 3; do for j in im_online; do subkey inspect-key --scheme sr25519 --uri "$SECRET//$i//$j"; done; done
     // for i in 1 2 3; do for j in authority_discovery; do subkey inspect-key --scheme sr25519 --uri "$SECRET//$i//$j"; done; done
@@ -422,15 +422,15 @@ pub fn testnet_config() -> Result<ChainSpec, String> {
         hex!["8a91dc3768bdba8bba11da5c3b2ae954eede9591a6b7a2d156637d84aee5623c"].into(),
     );
 
-    // aura
+    // babe
     // 5EZ47mio3fjhb1iwGSLKZGmgYvhZRJakfGmPfAemMAMBAA7e
-    let aura1: AuraId =
+    let babe1: BabeId =
         hex!["6e178a72736139a91e32dadeb57c2822501690e9d8f1516a04b18372cd981831"].unchecked_into();
     // 5EpnwHC4QjhHXq9tGV4FE94GG17JBDDBXfBALPu5VQTVqbyp
-    let aura2: AuraId =
+    let babe2: BabeId =
         hex!["7a185d241085c938fda96b54059632f885866befb1183aa4dd456f8a406db70c"].unchecked_into();
     // 5CV7jA56wV3mjzLi4JMg4oXATNpwKfcet61NwYJqAAiRsEH9
-    let aura3: AuraId =
+    let babe3: BabeId =
         hex!["129e3eb4543ed8188d67df20122bb73add3f0ea5fdbd480fdbb9f6b4c14dd872"].unchecked_into();
 
     // grandpa
@@ -470,7 +470,7 @@ pub fn testnet_config() -> Result<ChainSpec, String> {
         (
             (validator1, b"Validator1".to_vec()),
             blockauthor1,
-            aura1,
+            babe1,
             grandpa1,
             im_online1,
             authority_discovery1,
@@ -478,7 +478,7 @@ pub fn testnet_config() -> Result<ChainSpec, String> {
         (
             (validator2, b"Validator2".to_vec()),
             blockauthor2,
-            aura2,
+            babe2,
             grandpa2,
             im_online2,
             authority_discovery2,
@@ -486,7 +486,7 @@ pub fn testnet_config() -> Result<ChainSpec, String> {
         (
             (validator3, b"Validator3".to_vec()),
             blockauthor3,
-            aura3,
+            babe3,
             grandpa3,
             im_online3,
             authority_discovery3,
@@ -577,14 +577,14 @@ fn testnet_assets() -> Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)> 
 }
 
 fn session_keys(
-    aura: AuraId,
+    babe: BabeId,
     grandpa: GrandpaId,
     im_online: ImOnlineId,
     authority_discovery: AuthorityDiscoveryId,
 ) -> SessionKeys {
     SessionKeys {
         grandpa,
-        aura,
+        babe,
         im_online,
         authority_discovery,
     }
@@ -682,16 +682,14 @@ where
                 None
             }
         })
-        .expect("must success for bitcoin trustee info");
+        .expect("bitcoin trustees generation can not fail; qed");
 
     GenesisConfig {
         frame_system: Some(SystemConfig {
             code: wasm_binary.to_vec(),
             changes_trie_config: Default::default(),
         }),
-        pallet_aura: Some(AuraConfig {
-            authorities: vec![],
-        }),
+        pallet_babe: Some(Default::default()),
         pallet_grandpa: Some(GrandpaConfig {
             authorities: vec![],
         }),

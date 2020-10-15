@@ -3,6 +3,8 @@
 use std::fmt;
 use std::sync::Arc;
 
+use sc_consensus_babe::Epoch;
+use sc_consensus_babe_rpc::BabeRpcHandler;
 use sc_finality_grandpa::{
     FinalityProofProvider, GrandpaJustificationStream, SharedAuthoritySet, SharedVoterState,
 };
@@ -12,6 +14,8 @@ pub use sc_rpc_api::DenyUnsafe;
 use sp_api::ProvideRuntimeApi;
 use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
+use sp_consensus::SelectChain;
+use sp_consensus_babe::BabeApi;
 use sp_transaction_pool::TransactionPool;
 
 use chainx_primitives::Block;
@@ -29,6 +33,16 @@ pub struct LightDeps<C, F, P> {
     pub fetcher: Arc<F>,
 }
 
+/// Extra dependencies for BABE.
+pub struct BabeDeps {
+    /// BABE protocol config.
+    pub babe_config: sc_consensus_babe::Config,
+    /// BABE pending epoch changes.
+    pub shared_epoch_changes: sc_consensus_epochs::SharedEpochChanges<Block, Epoch>,
+    /// The keystore that manages the keys of the node.
+    pub keystore: sc_keystore::KeyStorePtr,
+}
+
 /// Extra dependencies for GRANDPA
 pub struct GrandpaDeps<B> {
     /// Voting round info.
@@ -44,13 +58,17 @@ pub struct GrandpaDeps<B> {
 }
 
 /// Full client dependencies.
-pub struct FullDeps<C, P, B> {
+pub struct FullDeps<C, P, SC, B> {
     /// The client instance to use.
     pub client: Arc<C>,
     /// Transaction pool instance.
     pub pool: Arc<P>,
+    /// The SelectionChain Strategy.
+    pub select_chain: SC,
     /// Whether to deny unsafe calls
     pub deny_unsafe: DenyUnsafe,
+    /// BABE specific dependencies.
+    pub babe: BabeDeps,
     /// GRANDPA specific dependencies.
     pub grandpa: GrandpaDeps<B>,
 }
@@ -59,14 +77,15 @@ pub struct FullDeps<C, P, B> {
 pub type IoHandler = jsonrpc_core::IoHandler<sc_rpc::Metadata>;
 
 /// Instantiate all Full RPC extensions.
-pub fn create_full<C, P, B>(
-    deps: FullDeps<C, P, B>,
+pub fn create_full<C, P, SC, B>(
+    deps: FullDeps<C, P, SC, B>,
 ) -> jsonrpc_core::IoHandler<sc_rpc_api::Metadata>
 where
     C: ProvideRuntimeApi<Block>,
     C: HeaderBackend<Block> + HeaderMetadata<Block, Error = BlockChainError> + 'static,
     C: Send + Sync + 'static,
     C::Api: BlockBuilder<Block>,
+    C::Api: BabeApi<Block>,
     C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>,
     C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
     C::Api: xpallet_assets_rpc_runtime_api::XAssetsApi<Block, AccountId, Balance>,
@@ -89,6 +108,7 @@ where
     C::Api: xpallet_gateway_common_rpc_runtime_api::XGatewayCommonApi<Block, AccountId, Balance>,
     <C::Api as sp_api::ApiErrorExt>::Error: fmt::Debug,
     P: TransactionPool + 'static,
+    SC: SelectChain<Block> + 'static,
     B: sc_client_api::Backend<Block> + Send + Sync + 'static,
     B::State: sc_client_api::backend::StateBackend<sp_runtime::traits::HashFor<Block>>,
 {
@@ -105,9 +125,16 @@ where
     let FullDeps {
         client,
         pool,
+        select_chain,
         deny_unsafe,
         grandpa,
+        babe,
     } = deps;
+    let BabeDeps {
+        keystore,
+        babe_config,
+        shared_epoch_changes,
+    } = babe;
     let GrandpaDeps {
         shared_voter_state,
         shared_authority_set,
@@ -124,7 +151,16 @@ where
     io.extend_with(TransactionPaymentApi::to_delegate(TransactionPayment::new(
         client.clone(),
     )));
-
+    io.extend_with(sc_consensus_babe_rpc::BabeApi::to_delegate(
+        BabeRpcHandler::new(
+            client.clone(),
+            shared_epoch_changes,
+            keystore,
+            babe_config,
+            select_chain,
+            deny_unsafe,
+        ),
+    ));
     io.extend_with(sc_finality_grandpa_rpc::GrandpaApi::to_delegate(
         GrandpaRpcHandler::new(
             shared_authority_set,
