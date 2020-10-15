@@ -8,13 +8,13 @@ edition = "2018"
 codec = { package = "parity-scale-codec", version = "1.3.4", features = ["derive"], default-features = false }
 serde = { version = "1.0", optional = true }
 
-sp-std = { version = "2.0.0-rc6", default-features = false }
-sp-runtime = { version = "2.0.0-rc6", default-features = false }
-frame-support = { version = "2.0.0-rc6", default-features = false }
-frame-system = { version = "2.0.0-rc6", default-features = false }
-frame-benchmarking = { version = "2.0.0-rc6", default-features = false, optional = true }
+sp-std = { version = "2.0.0", default-features = false }
+sp-runtime = { version = "2.0.0", default-features = false }
+frame-support = { version = "2.0.0", default-features = false }
+frame-system = { version = "2.0.0", default-features = false }
+frame-benchmarking = { version = "2.0.0", default-features = false, optional = true }
 
-orml-utilities = { version = "0.2", default-features = false }
+orml-utilities = { version = "0.3", default-features = false }
 
 chainx-primitives = { path = "../../../primitives", default-features = false }
 xp-runtime = { path = "../../../primitives/runtime", default-features = false }
@@ -24,9 +24,9 @@ xpallet-protocol = { path = "../../protocol", default-features = false }
 xpallet-support = { path = "../../support", default-features = false }
 
 [dev-dependencies]
-sp-io = "2.0.0-rc6"
-sp-core = "2.0.0-rc6"
-pallet-balances = "2.0.0-rc6"
+sp-io = "2.0.0"
+sp-core = "2.0.0"
+pallet-balances = "2.0.0"
 
 [features]
 default = ["std"]

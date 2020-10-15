@@ -36,7 +36,7 @@ benchmarks! {
         Module::<T>::register(RawOrigin::Root.into(), ASSET_ID, asset_info.clone(), true, true)?;
     }: _(RawOrigin::Root, ASSET_ID)
     verify {
-        assert!(AssetOnline::get(ASSET_ID).is_none());
+        assert!(!AssetOnline::get(ASSET_ID));
     }
 
     recover {
@@ -45,7 +45,7 @@ benchmarks! {
         Module::<T>::deregister(RawOrigin::Root.into(), ASSET_ID)?;
     }: _(RawOrigin::Root, ASSET_ID, true)
     verify {
-        assert!(AssetOnline::get(ASSET_ID).is_some());
+        assert!(AssetOnline::get(ASSET_ID));
     }
 
     update_asset_info {

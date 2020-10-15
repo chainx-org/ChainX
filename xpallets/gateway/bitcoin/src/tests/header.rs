@@ -64,10 +64,7 @@ fn test_insert_headers() {
 
 fn should_in_mainchain(headers: &[BtcHeader], expect: bool) {
     for header in headers.iter() {
-        assert_eq!(
-            XGatewayBitcoin::main_chain(&header.hash()).is_some(),
-            expect
-        );
+        assert_eq!(XGatewayBitcoin::main_chain(&header.hash()), expect);
     }
 }
 

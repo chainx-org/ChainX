@@ -124,7 +124,7 @@ pub fn work_required_retarget<T: Trait>(
         let hash_list = Module::<T>::block_hash_for(&retarget_num);
         for h in hash_list {
             // look up in main chain
-            if Module::<T>::main_chain(h).is_some() {
+            if Module::<T>::main_chain(h) {
                 let info = Module::<T>::headers(h).expect("block header must exist at here.");
                 retarget_header = info.header;
                 break;

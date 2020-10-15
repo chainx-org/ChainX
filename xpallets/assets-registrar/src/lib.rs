@@ -96,7 +96,7 @@ decl_storage! {
         pub AssetInfoOf get(fn asset_info_of): map hasher(twox_64_concat) AssetId => Option<AssetInfo>;
 
         /// The map of asset to the online state.
-        pub AssetOnline get(fn asset_online): map hasher(twox_64_concat) AssetId => Option<()>;
+        pub AssetOnline get(fn asset_online): map hasher(twox_64_concat) AssetId => bool;
 
         /// The map of asset to the block number at which the asset was registered.
         pub RegisteredAt get(fn registered_at): map hasher(twox_64_concat) AssetId => T::BlockNumber;
@@ -185,7 +185,7 @@ decl_module! {
             ensure!(Self::exists(&id), Error::<T>::AssetDoesNotExist);
             ensure!(!Self::is_valid(&id), Error::<T>::AssetAlreadyValid);
 
-            AssetOnline::insert(id, ());
+            AssetOnline::insert(id, true);
 
             T::RegistrarHandler::on_register(&id, has_mining_rights)?;
             Self::deposit_event(Event::Recover(id, has_mining_rights));
@@ -268,7 +268,7 @@ impl<T: Trait> Module<T> {
 
     /// Returns true if the given `asset_id` is an online asset.
     pub fn is_online(asset_id: &AssetId) -> bool {
-        Self::asset_online(asset_id).is_some()
+        Self::asset_online(asset_id)
     }
 
     /// Returns true if the asset info record of given `asset_id` exists.
@@ -303,7 +303,7 @@ impl<T: Trait> Module<T> {
         });
 
         AssetInfoOf::insert(&id, asset);
-        AssetOnline::insert(&id, ());
+        AssetOnline::insert(&id, true);
 
         RegisteredAt::<T>::insert(&id, frame_system::Module::<T>::block_number());
 

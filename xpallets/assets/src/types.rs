@@ -1,6 +1,6 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use bitmask::bitmask;
+use bitflags::bitflags;
 use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -13,8 +13,9 @@ use sp_std::{collections::btree_map::BTreeMap, prelude::*, slice::Iter};
 pub use chainx_primitives::{Decimals, Desc, Token};
 use xpallet_assets_registrar::AssetInfo;
 
-use super::{Error, Trait};
 use frame_support::traits::LockIdentifier;
+
+use crate::{Error, Trait};
 
 const ASSET_TYPES: [AssetType; 6] = [
     AssetType::Usable,
@@ -48,29 +49,23 @@ impl Default for AssetType {
     }
 }
 
-bitmask! {
-    ///
+bitflags! {
+    /// Restrictions for asset operations.
     #[derive(Encode, Decode)]
-    #[cfg_attr(not(feature = "std"), derive(RuntimeDebug))]
     #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-    pub mask AssetRestrictions: u32 where
-    ///
-    #[derive(Encode, Decode)]
-    #[cfg_attr(not(feature = "std"), derive(RuntimeDebug))]
-    #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-    flags AssetRestriction {
-        Move                = 1 << 0,
-        Transfer            = 1 << 1,
-        Deposit             = 1 << 2,
-        Withdraw            = 1 << 3,
-        DestroyWithdrawal   = 1 << 4,
-        DestroyUsable       = 1 << 5,
+    pub struct AssetRestrictions: u32 {
+        const MOVE                = 1 << 0;
+        const TRANSFER            = 1 << 1;
+        const DEPOSIT             = 1 << 2;
+        const WITHDRAW            = 1 << 3;
+        const DESTROY_WITHDRAWAL  = 1 << 4;
+        const DESTROY_USABLE      = 1 << 5;
     }
 }
 
 impl Default for AssetRestrictions {
     fn default() -> Self {
-        AssetRestrictions::none()
+        AssetRestrictions::empty()
     }
 }
 

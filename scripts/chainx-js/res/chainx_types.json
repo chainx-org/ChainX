@@ -194,14 +194,7 @@
     "AssetRestrictions": {
         "mask": "u32"
     },
-    "BtcHeader": {
-        "version": "u32",
-        "previousHeaderHash": "H256",
-        "merkleRootHash": "H256",
-        "time": "u32",
-        "bits": "BtcCompact",
-        "nonce": "u32"
-    },
+    "BtcHeader": "Vec<u8>",
     "BtcNetwork": {
         "_enum": [
             "Mainnet",
@@ -304,7 +297,6 @@
         "hotAddress": "BtcTrusteeAddrInfo",
         "coldAddress": "BtcTrusteeAddrInfo"
     },
-    "BtcCompact": "u32",
     "BtcTransaction": "Vec<u8>",
     "BtcPartialMerkleTree": "Vec<u8>",
     "BtcRelayedTxInfo": {

@@ -11,7 +11,7 @@ use sp_runtime::{
 };
 
 use chainx_primitives::AssetId;
-use xpallet_assets::{AssetRestriction, AssetRestrictions};
+use xpallet_assets::AssetRestrictions;
 use xpallet_assets_registrar::AssetInfo;
 pub use xpallet_protocol::{X_BTC, X_ETH};
 
@@ -56,7 +56,7 @@ impl frame_system::Trait for Test {
     type MaximumBlockLength = MaximumBlockLength;
     type AvailableBlockRatio = AvailableBlockRatio;
     type Version = ();
-    type ModuleToIndex = ();
+    type PalletInfo = ();
     type AccountData = pallet_balances::AccountData<Balance>;
     type OnNewAccount = ();
     type OnKilledAccount = ();
@@ -67,6 +67,7 @@ parameter_types! {
     pub const ExistentialDeposit: u64 = 0;
 }
 impl pallet_balances::Trait for Test {
+    type MaxLocks = ();
     type Balance = Balance;
     type DustRemoval = ();
     type Event = ();
@@ -119,7 +120,7 @@ pub(crate) fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {
             b"ChainX's cross-chain Bitcoin".to_vec(),
         )
         .unwrap(),
-        AssetRestriction::DestroyUsable.into(),
+        AssetRestrictions::DESTROY_USABLE,
     )
 }
 pub(crate) fn eth() -> (AssetId, AssetInfo, AssetRestrictions) {
@@ -133,7 +134,7 @@ pub(crate) fn eth() -> (AssetId, AssetInfo, AssetRestrictions) {
             b"ChainX's cross-chain Ethereum".to_vec(),
         )
         .unwrap(),
-        AssetRestriction::DestroyUsable.into(),
+        AssetRestrictions::DESTROY_USABLE,
     )
 }
 

@@ -170,6 +170,8 @@ decl_event!(
         InsertHeader(H256),
         /// tx hash, block hash, tx type
         ProcessTx(H256, H256, BtcTxState),
+        /// Unclaimed deposit tx
+        UnclaimedDeposit(H256),
         /// who, balance, txhsah, Chain Addr
         DepositPending(AccountId, Balance, H256, AddrStr),
         /// create withdraw tx, who proposal, withdrawal list id
@@ -198,7 +200,7 @@ decl_storage! {
         /// block hash list for a height, include forked header hash
         pub BlockHashFor get(fn block_hash_for): map hasher(twox_64_concat) u32 => Vec<H256>;
         /// mark this blockhash is in mainchain
-        pub MainChain get(fn main_chain): map hasher(identity) H256 => Option<()>;
+        pub MainChain get(fn main_chain): map hasher(identity) H256 => bool;
         /// all valid blockheader (include forked blockheader)
         pub Headers get(fn headers): map hasher(identity) H256 => Option<BtcHeaderInfo>;
 
@@ -258,7 +260,7 @@ decl_storage! {
 
             Headers::insert(&genesis_hash, header_info);
             BlockHashFor::insert(&genesis_index.height, vec![genesis_hash]);
-            MainChain::insert(&genesis_hash, ());
+            MainChain::insert(&genesis_hash, true);
 
             BestIndex::put(genesis_index);
 
@@ -580,10 +582,7 @@ impl<T: Trait> Module<T> {
         // ensure the tx should belong to the main chain, means should submit mainchain tx,
         // e.g. a tx may be packed in main chain block, and forked chain block, only submit main chain tx
         // could pass the verify.
-        ensure!(
-            Self::main_chain(&tx.block_hash).is_some(),
-            Error::<T>::UnconfirmedTx
-        );
+        ensure!(Self::main_chain(&tx.block_hash), Error::<T>::UnconfirmedTx);
         // if ConfirmedIndex not set, due to confirm height not beyond genesis height
         let confirmed = Self::confirmed_index().ok_or(Error::<T>::UnconfirmedTx)?;
         let height = header_info.height;

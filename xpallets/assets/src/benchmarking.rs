@@ -58,7 +58,7 @@ benchmarks! {
     }
 
     set_asset_limit {
-        let res = AssetRestriction::Deposit|AssetRestriction::DestroyUsable;
+        let res = AssetRestrictions::DEPOSIT | AssetRestrictions::DESTROY_USABLE;
     }: set_asset_limit(RawOrigin::Root, ASSET_ID, res)
     verify {
         assert_eq!(XAssets::<T>::asset_restrictions_of(&ASSET_ID), res);

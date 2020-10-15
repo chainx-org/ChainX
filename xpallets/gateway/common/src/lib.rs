@@ -31,7 +31,7 @@ use frame_system::{ensure_root, ensure_signed};
 
 use chainx_primitives::{AddrStr, AssetId, ChainAddress, Text};
 use xp_runtime::Memo;
-use xpallet_assets::{AssetRestriction, Chain, ChainT, WithdrawalLimit};
+use xpallet_assets::{AssetRestrictions, Chain, ChainT, WithdrawalLimit};
 use xpallet_gateway_records::WithdrawalState;
 use xpallet_support::{
     error, info,
@@ -266,7 +266,7 @@ impl<T: Trait> Module<T> {
         ext: Memo,
     ) -> DispatchResult {
         ensure!(
-            xpallet_assets::Module::<T>::can_do(&asset_id, AssetRestriction::Withdraw),
+            xpallet_assets::Module::<T>::can_do(&asset_id, AssetRestrictions::WITHDRAW),
             xpallet_assets::Error::<T>::ActionNotAllowed,
         );
 
@@ -387,11 +387,8 @@ impl<T: Trait> Module<T> {
                         )
                     })
                     .collect();
-                let mut session_info =
-                    T::BitcoinTrustee::generate_trustee_session_info(props, config)?;
+                let session_info = T::BitcoinTrustee::generate_trustee_session_info(props, config)?;
 
-                // sort account list to make sure generate a stable multisig addr(addr is related with accounts sequence)
-                session_info.trustee_list.sort();
                 session_info.into()
             }
             _ => return Err(Error::<T>::NotSupportedChain.into()),

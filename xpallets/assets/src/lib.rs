@@ -49,8 +49,7 @@ use xpallet_support::{debug, ensure_with_errorlog, error, info, traits::Treasury
 pub use self::traits::{ChainT, OnAssetChanged};
 use self::trigger::AssetChangedTrigger;
 pub use self::types::{
-    AssetErr, AssetRestriction, AssetRestrictions, AssetType, BalanceLock, TotalAssetInfo,
-    WithdrawalLimit,
+    AssetErr, AssetRestrictions, AssetType, BalanceLock, TotalAssetInfo, WithdrawalLimit,
 };
 
 pub type BalanceOf<T> =
@@ -120,7 +119,8 @@ decl_error! {
 }
 
 decl_event!(
-    pub enum Event<T> where
+    pub enum Event<T>
+    where
         <T as frame_system::Trait>::AccountId,
         Balance = BalanceOf<T>,
     {
@@ -128,75 +128,10 @@ decl_event!(
         Issue(AssetId, AccountId, Balance),
         Destroy(AssetId, AccountId, Balance),
         Set(AssetId, AccountId, AssetType, Balance),
-        /// set AssetRestrictions for an Asset
+        /// Set restrictions for an asset
         SetRestrictions(AssetId, AssetRestrictions),
     }
 );
-
-decl_module! {
-    pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-        type Error = Error<T>;
-
-        fn deposit_event() = default;
-
-        /// transfer between account
-        #[weight = 0]
-        pub fn transfer(
-            origin,
-            dest: <T::Lookup as StaticLookup>::Source,
-            #[compact] id: AssetId,
-            #[compact] value: BalanceOf<T>
-        ) -> DispatchResult {
-            let transactor = ensure_signed(origin)?;
-            let dest = T::Lookup::lookup(dest)?;
-            debug!("[transfer]|from:{:?}|to:{:?}|id:{:}|value:{:?}", transactor, dest, id, value);
-            Self::can_transfer(&id)?;
-
-            Self::move_usable_balance(&id, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;
-
-            Ok(())
-        }
-
-        /// for transfer by root
-        #[weight = 0]
-        pub fn force_transfer(
-            origin,
-            transactor: <T::Lookup as StaticLookup>::Source,
-            dest: <T::Lookup as StaticLookup>::Source,
-            #[compact] id: AssetId,
-            #[compact] value: BalanceOf<T>
-        ) -> DispatchResult {
-            ensure_root(origin)?;
-            let transactor = T::Lookup::lookup(transactor)?;
-            let dest = T::Lookup::lookup(dest)?;
-            debug!("[force_transfer]|from:{:?}|to:{:?}|id:{:}|value:{:?}", transactor, dest, id, value);
-            Self::can_transfer(&id)?;
-            Self::move_usable_balance(&id, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;
-            Ok(())
-        }
-
-        /// set free token for an account
-        #[weight = 0]
-        pub fn set_balance(
-            origin,
-            who: <T::Lookup as StaticLookup>::Source,
-            #[compact] id: AssetId,
-            balances: BTreeMap<AssetType, BalanceOf<T>>
-        ) -> DispatchResult {
-            ensure_root(origin)?;
-            let who = T::Lookup::lookup(who)?;
-            info!("[set_balance]|set balances by root|who:{:?}|id:{:}|balances_map:{:?}", who, id, balances);
-            Self::set_balance_impl(&who, &id, balances)?;
-            Ok(())
-        }
-
-        #[weight = <T as Trait>::WeightInfo::set_asset_limit()]
-        pub fn set_asset_limit(origin, #[compact] id: AssetId, restrictions: AssetRestrictions) -> DispatchResult {
-            ensure_root(origin)?;
-            Self::set_asset_restrictions(id, restrictions)
-        }
-    }
-}
 
 decl_storage! {
     trait Store for Module<T: Trait> as XAssets {
@@ -240,6 +175,73 @@ decl_storage! {
                 }
             }
         })
+    }
+}
+
+decl_module! {
+    pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+        type Error = Error<T>;
+
+        fn deposit_event() = default;
+
+        /// transfer between account
+        #[weight = 0]
+        pub fn transfer(
+            origin,
+            dest: <T::Lookup as StaticLookup>::Source,
+            #[compact] id: AssetId,
+            #[compact] value: BalanceOf<T>
+        ) -> DispatchResult {
+            let transactor = ensure_signed(origin)?;
+            let dest = T::Lookup::lookup(dest)?;
+            debug!("[transfer]|from:{:?}|to:{:?}|id:{:}|value:{:?}", transactor, dest, id, value);
+            Self::can_transfer(&id)?;
+
+            Self::move_usable_balance(&id, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;
+
+            Ok(())
+        }
+
+        /// for transfer by root
+        #[weight = 0]
+        pub fn force_transfer(
+            origin,
+            transactor: <T::Lookup as StaticLookup>::Source,
+            dest: <T::Lookup as StaticLookup>::Source,
+            #[compact] id: AssetId,
+            #[compact] value: BalanceOf<T>
+        ) -> DispatchResult {
+            ensure_root(origin)?;
+
+            let transactor = T::Lookup::lookup(transactor)?;
+            let dest = T::Lookup::lookup(dest)?;
+            debug!("[force_transfer]|from:{:?}|to:{:?}|id:{:}|value:{:?}", transactor, dest, id, value);
+            Self::can_transfer(&id)?;
+            Self::move_usable_balance(&id, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;
+            Ok(())
+        }
+
+        /// set free token for an account
+        #[weight = 0]
+        pub fn set_balance(
+            origin,
+            who: <T::Lookup as StaticLookup>::Source,
+            #[compact] id: AssetId,
+            balances: BTreeMap<AssetType, BalanceOf<T>>
+        ) -> DispatchResult {
+            ensure_root(origin)?;
+
+            let who = T::Lookup::lookup(who)?;
+            info!("[set_balance]|set balances by root|who:{:?}|id:{:}|balances_map:{:?}", who, id, balances);
+            Self::set_balance_impl(&who, &id, balances)?;
+            Ok(())
+        }
+
+        #[weight = <T as Trait>::WeightInfo::set_asset_limit()]
+        pub fn set_asset_limit(origin, #[compact] id: AssetId, restrictions: AssetRestrictions) -> DispatchResult {
+            ensure_root(origin)?;
+            Self::set_asset_restrictions(id, restrictions)
+        }
     }
 }
 
@@ -294,13 +296,11 @@ impl<T: Trait> Module<T> {
     ) -> BTreeMap<AssetId, BTreeMap<AssetType, BalanceOf<T>>> {
         use frame_support::IterableStorageDoubleMap;
         AssetBalance::<T>::iter_prefix(who)
-            .filter_map(|(id, map)| {
-                xpallet_assets_registrar::Module::<T>::asset_online(id).map(|_| (id, map))
-            })
+            .filter(|(id, _)| xpallet_assets_registrar::Module::<T>::asset_online(id))
             .collect()
     }
 
-    pub fn can_do(id: &AssetId, limit: AssetRestriction) -> bool {
+    pub fn can_do(id: &AssetId, limit: AssetRestrictions) -> bool {
         !Self::asset_restrictions_of(id).contains(limit)
     }
 
@@ -308,11 +308,11 @@ impl<T: Trait> Module<T> {
     #[inline]
     pub fn can_move(id: &AssetId) -> DispatchResult {
         ensure_with_errorlog!(
-            Self::can_do(id, AssetRestriction::Move),
+            Self::can_do(id, AssetRestrictions::MOVE),
             Error::<T>::ActionNotAllowed,
             "this asset do not allow move|id:{:}|action:{:?}",
             id,
-            AssetRestriction::Move,
+            AssetRestrictions::MOVE,
         );
         Ok(())
     }
@@ -320,11 +320,11 @@ impl<T: Trait> Module<T> {
     #[inline]
     pub fn can_transfer(id: &AssetId) -> DispatchResult {
         ensure_with_errorlog!(
-            Self::can_do(id, AssetRestriction::Transfer),
+            Self::can_do(id, AssetRestrictions::TRANSFER),
             Error::<T>::ActionNotAllowed,
             "this asset do not allow transfer|id:{:}|action:{:?}",
             id,
-            AssetRestriction::Transfer,
+            AssetRestrictions::TRANSFER,
         );
         Ok(())
     }
@@ -332,11 +332,11 @@ impl<T: Trait> Module<T> {
     #[inline]
     pub fn can_destroy_withdrawal(id: &AssetId) -> DispatchResult {
         ensure_with_errorlog!(
-            Self::can_do(id, AssetRestriction::DestroyWithdrawal),
+            Self::can_do(id, AssetRestrictions::DESTROY_WITHDRAWAL),
             Error::<T>::ActionNotAllowed,
             "this asset do not allow destroy withdrawal|id:{:}|action:{:?}",
             id,
-            AssetRestriction::DestroyWithdrawal,
+            AssetRestrictions::DESTROY_WITHDRAWAL,
         );
         Ok(())
     }
@@ -344,11 +344,11 @@ impl<T: Trait> Module<T> {
     #[inline]
     pub fn can_destroy_usable(id: &AssetId) -> DispatchResult {
         ensure_with_errorlog!(
-            Self::can_do(id, AssetRestriction::DestroyUsable),
+            Self::can_do(id, AssetRestrictions::DESTROY_USABLE),
             Error::<T>::ActionNotAllowed,
             "this asset do not allow destroy free|id:{:}|action:{:?}",
             id,
-            AssetRestriction::DestroyUsable,
+            AssetRestrictions::DESTROY_USABLE,
         );
         Ok(())
     }
