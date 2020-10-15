@@ -113,7 +113,15 @@ decl_module! {
             ext: Memo
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            Self::apply_withdraw(who, asset_id, value, addr, ext)
+
+            ensure!(
+                xpallet_assets::Module::<T>::can_do(&asset_id, AssetRestrictions::WITHDRAW),
+                xpallet_assets::Error::<T>::ActionNotAllowed,
+            );
+            Self::verify_withdrawal(asset_id, value, &addr, &ext)?;
+
+            xpallet_gateway_records::Module::<T>::withdraw(&who, asset_id, value, addr, ext)?;
+            Ok(())
         }
 
         #[weight = <T as Trait>::WeightInfo::withdraw()]
@@ -259,24 +267,6 @@ decl_storage! {
 
 // withdraw
 impl<T: Trait> Module<T> {
-    fn apply_withdraw(
-        who: T::AccountId,
-        asset_id: AssetId,
-        value: BalanceOf<T>,
-        addr: AddrStr,
-        ext: Memo,
-    ) -> DispatchResult {
-        ensure!(
-            xpallet_assets::Module::<T>::can_do(&asset_id, AssetRestrictions::WITHDRAW),
-            xpallet_assets::Error::<T>::ActionNotAllowed,
-        );
-
-        Self::verify_withdrawal(asset_id, value, &addr, &ext)?;
-
-        xpallet_gateway_records::Module::<T>::withdraw(&who, asset_id, value, addr, ext)?;
-        Ok(())
-    }
-
     pub fn withdrawal_limit(
         asset_id: &AssetId,
     ) -> result::Result<WithdrawalLimit<BalanceOf<T>>, DispatchError> {
