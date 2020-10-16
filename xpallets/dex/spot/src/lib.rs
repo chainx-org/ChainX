@@ -301,7 +301,7 @@ decl_module! {
         ) {
             ensure_root(origin)?;
             PriceFluctuationOf::insert(pair_id, new);
-            Self::deposit_event(RawEvent::PriceFluctuationUpdated(pair_id, new));
+            Self::deposit_event(Event::<T>::PriceFluctuationUpdated(pair_id, new));
         }
 
         /// Add a new trading pair.
@@ -340,7 +340,7 @@ decl_module! {
             let pair = Self::trading_pair(pair_id)?;
             ensure!(tick_decimals >= pair.tick_decimals, Error::<T>::InvalidTickdecimals);
             Self::apply_update_trading_pair(pair_id, tick_decimals, tradable);
-            Self::deposit_event(RawEvent::TradingPairUpdated(pair));
+            Self::deposit_event(Event::<T>::TradingPairUpdated(pair));
         }
     }
 }
@@ -401,7 +401,7 @@ impl<T: Trait> Module<T> {
 
         TradingPairCount::put(pair_id + 1);
 
-        Self::deposit_event(RawEvent::TradingPairAdded(pair));
+        Self::deposit_event(Event::<T>::TradingPairAdded(pair));
     }
 
     fn apply_update_trading_pair(pair_id: TradingPairId, tick_decimals: u32, tradable: bool) {
@@ -503,7 +503,7 @@ impl<T: Trait> xpallet_assets_registrar::RegistrarHandler for Module<T> {
                 if pair.base().eq(token) || pair.quote().eq(token) {
                     pair.tradable = false;
                     TradingPairOf::insert(i, &pair);
-                    Self::deposit_event(RawEvent::TradingPairUpdated(pair));
+                    Self::deposit_event(Event::<T>::TradingPairUpdated(pair));
                 }
             }
         }
