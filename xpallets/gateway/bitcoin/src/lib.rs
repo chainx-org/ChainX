@@ -39,7 +39,7 @@ use xpallet_support::{debug, ensure_with_errorlog, error, info, str, try_addr};
 
 // light-bitcoin
 #[cfg(feature = "std")]
-pub use light_bitcoin::primitives::h256_conv_endian_from_str;
+pub use light_bitcoin::primitives::h256_rev;
 pub use light_bitcoin::{
     chain::BlockHeader as BtcHeader,
     keys::Network as BtcNetwork,

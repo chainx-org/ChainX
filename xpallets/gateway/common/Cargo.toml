@@ -31,7 +31,7 @@ xpallet-assets-registrar = { path = "../../assets-registrar", default-features =
 xpallet-gateway-records = { path = "../records", default-features = false }
 
 # light-bitcoin
-light-bitcoin = { git = "https://github.com/chainx-org/light-bitcoin", branch = "v2", default-features = false }
+light-bitcoin = { git = "https://github.com/chainx-org/light-bitcoin", branch = "master", default-features = false }
 
 [dev-dependencies]
 hex = "0.4"
