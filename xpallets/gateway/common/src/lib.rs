@@ -7,7 +7,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::new_without_default, clippy::type_complexity)]
 
-mod brenchmarks;
+mod benchmarks;
 
 mod binding;
 pub mod extractor;
