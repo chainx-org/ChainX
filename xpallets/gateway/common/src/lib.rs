@@ -112,7 +112,7 @@ decl_module! {
 
         /// Withdraws some balances of `asset_id` to address `addr` of target chain.
         ///
-        /// NOTE: `ext` is for the compatiablity purpose, e.g., EOS requires a memo when doing the transfer.
+        /// NOTE: `ext` is for the compatiblity purpose, e.g., EOS requires a memo when doing the transfer.
         #[weight = <T as Trait>::WeightInfo::withdraw()]
         pub fn withdraw(
             origin,
