@@ -17,13 +17,12 @@ use frame_support::traits::LockIdentifier;
 
 use crate::{Error, Trait};
 
-const ASSET_TYPES: [AssetType; 6] = [
+const ASSET_TYPES: [AssetType; 5] = [
     AssetType::Usable,
     AssetType::Locked,
     AssetType::Reserved,
     AssetType::ReservedWithdrawal,
     AssetType::ReservedDexSpot,
-    AssetType::ReservedXRC20,
 ];
 
 #[derive(PartialEq, PartialOrd, Ord, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
@@ -34,7 +33,6 @@ pub enum AssetType {
     Reserved,
     ReservedWithdrawal,
     ReservedDexSpot,
-    ReservedXRC20,
 }
 
 impl AssetType {

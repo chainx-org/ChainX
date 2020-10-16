@@ -39,16 +39,14 @@ use crate::tx::utils::addr2vecu8;
 use crate::types::{
     AccountInfo, BtcAddress, BtcDepositCache, BtcTxResult, BtcTxState, DepositInfo, MetaTxType,
 };
-use crate::{BalanceOf, Module, PendingDeposits, RawEvent, Trait, WithdrawalProposal};
+use crate::{BalanceOf, Event, Module, PendingDeposits, Trait, WithdrawalProposal};
 
 pub fn process_tx<T: Trait>(
     tx: Transaction,
     prev: Option<Transaction>,
 ) -> result::Result<BtcTxState, DispatchError> {
     let meta_type = detect_transaction_type::<T>(&tx, prev.as_ref())?;
-    // process
     let state = handle_tx::<T>(tx, meta_type);
-
     Ok(state)
 }
 
@@ -357,10 +355,10 @@ fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> Btc
 fn deposit_token<T: Trait>(tx_hash: H256, who: &T::AccountId, balance: u64) -> DispatchResult {
     let id: AssetId = <Module<T> as ChainT<_>>::ASSET_ID;
 
-    let b: BalanceOf<T> = balance.saturated_into();
-    match <xpallet_gateway_records::Module<T>>::deposit(&who, id, b) {
+    let value: BalanceOf<T> = balance.saturated_into();
+    match <xpallet_gateway_records::Module<T>>::deposit(&who, id, value) {
         Ok(a) => {
-            Module::<T>::deposit_event(RawEvent::DepositToken(tx_hash, who.clone(), b));
+            Module::<T>::deposit_event(Event::<T>::Deposited(tx_hash, who.clone(), value));
             Ok(a)
         }
         Err(e) => {
@@ -414,7 +412,7 @@ pub fn remove_pending_deposit<T: Trait>(input_address: &BtcAddress, who: &T::Acc
             who, r.balance, r.txid,
         );
 
-        Module::<T>::deposit_event(RawEvent::DepositPending(
+        Module::<T>::deposit_event(Event::<T>::PendingDepositRemoved(
             who.clone(),
             r.balance.saturated_into(),
             r.txid,
@@ -442,7 +440,7 @@ fn insert_pending_deposit<T: Trait>(input_address: &Address, txid: &H256, balanc
             );
             list.push(cache);
 
-            Module::<T>::deposit_event(RawEvent::UnclaimedDeposit(*txid));
+            Module::<T>::deposit_event(Event::<T>::UnclaimedDeposit(*txid));
         }
     });
 }
@@ -482,7 +480,7 @@ fn withdraw<T: Trait>(tx: Transaction) -> BtcTxResult {
             // real withdraw value would reduce withdraw_fee
             total -=
                 (proposal.withdrawal_id_list.len() as u64 * btc_withdrawal_fee).saturated_into();
-            Module::<T>::deposit_event(RawEvent::WithdrawToken(
+            Module::<T>::deposit_event(Event::<T>::Withdrawn(
                 tx_hash,
                 proposal.withdrawal_id_list,
                 total,
@@ -494,14 +492,17 @@ fn withdraw<T: Trait>(tx: Transaction) -> BtcTxResult {
             // re-store proposal into storage.
             WithdrawalProposal::<T>::put(proposal);
 
-            Module::<T>::deposit_event(RawEvent::WithdrawalFatalErr(proposal_hash, tx_hash));
+            Module::<T>::deposit_event(Event::<T>::WithdrawalFatalErr(proposal_hash, tx_hash));
             BtcTxResult::Failed
         }
     } else {
         error!("[withdraw]|Withdrawal failed, the proposal is EMPTY, but receive a withdrawal tx, please use root to fix it|tx hash:{:}", tx.hash());
 
         // no proposal, but find a withdraw tx, it's a fatal error in withdrawal
-        Module::<T>::deposit_event(RawEvent::WithdrawalFatalErr(tx.hash(), Default::default()));
+        Module::<T>::deposit_event(Event::<T>::WithdrawalFatalErr(
+            tx.hash(),
+            Default::default(),
+        ));
 
         BtcTxResult::Failed
     }

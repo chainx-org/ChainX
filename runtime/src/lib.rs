@@ -172,8 +172,7 @@ impl SignedExtension for BaseFilter {
                 FORBIDDEN_CALL,
             )));
         }
-
-        if XSystem::blocked_accounts(who) {
+        if XSystem::blacklist(who) {
             return Err(TransactionValidityError::from(InvalidTransaction::Custom(
                 FORBIDDEN_ACCOUNT,
             )));

@@ -201,7 +201,11 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
 
         Self::allocate_dividend(claimer, &claimee_pot, dividend)?;
 
-        Self::deposit_event(RawEvent::Claim(claimer.clone(), claimee.clone(), dividend));
+        Self::deposit_event(Event::<T>::Claimed(
+            claimer.clone(),
+            claimee.clone(),
+            dividend,
+        ));
 
         let new_target_weight = target_weight - source_weight;
 
@@ -223,7 +227,7 @@ impl<T: Trait> Module<T> {
             let force_chilled = Self::slash_offenders_in_session(offenders, validator_rewards);
             if !force_chilled.is_empty() {
                 debug!("Force chilled: {:?}", force_chilled);
-                Self::deposit_event(RawEvent::ForceChilled(session_index, force_chilled));
+                Self::deposit_event(Event::<T>::ForceChilled(session_index, force_chilled));
                 // Force a new era if some offender's reward pot has been wholly slashed.
                 Self::ensure_new_era();
             }

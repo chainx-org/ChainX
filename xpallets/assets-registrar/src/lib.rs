@@ -54,12 +54,12 @@ pub trait Trait: frame_system::Trait {
 decl_event!(
     /// Event for the XAssetRegistrar Module
     pub enum Event {
-        /// A new asset is registered. [asset_id, has_mining_rights]
-        Register(AssetId, bool),
-        /// A deregistered asset is recovered. [asset_id, has_mining_rights]
-        Recover(AssetId, bool),
-        /// An asset is invalid now. [asset_id]
-        Deregister(AssetId),
+        /// A new asset was registered. [asset_id, has_mining_rights]
+        Registered(AssetId, bool),
+        /// A deregistered asset was recovered. [asset_id, has_mining_rights]
+        Recovered(AssetId, bool),
+        /// An asset was deregistered. [asset_id]
+        Deregistered(AssetId),
     }
 );
 
@@ -144,8 +144,8 @@ decl_module! {
 
             Self::apply_register(asset_id, asset)?;
 
+            Self::deposit_event(Event::Registered(asset_id, has_mining_rights));
             T::RegistrarHandler::on_register(&asset_id, has_mining_rights)?;
-            Self::deposit_event(Event::Register(asset_id, has_mining_rights));
 
             if !is_online {
                 let _ = Self::deregister(frame_system::RawOrigin::Root.into(), asset_id);
@@ -166,9 +166,9 @@ decl_module! {
             ensure!(Self::is_valid(&id), Error::<T>::AssetIsInvalid);
 
             AssetOnline::remove(id);
-            T::RegistrarHandler::on_deregister(&id)?;
 
-            Self::deposit_event(Event::Deregister(id));
+            Self::deposit_event(Event::Deregistered(id));
+            T::RegistrarHandler::on_deregister(&id)?;
 
             Ok(())
         }
@@ -187,8 +187,8 @@ decl_module! {
 
             AssetOnline::insert(id, true);
 
+            Self::deposit_event(Event::Recovered(id, has_mining_rights));
             T::RegistrarHandler::on_register(&id, has_mining_rights)?;
-            Self::deposit_event(Event::Recover(id, has_mining_rights));
             Ok(())
         }
 

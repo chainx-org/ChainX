@@ -66,7 +66,7 @@ pub trait WeightInfo {
 /// The module's config trait.
 ///
 /// `frame_system::Trait` should always be included in our implied traits.
-pub trait Trait: frame_system::Trait + xpallet_assets_registrar::Trait {
+pub trait Trait: xpallet_assets_registrar::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 
@@ -124,11 +124,15 @@ decl_event!(
         <T as frame_system::Trait>::AccountId,
         Balance = BalanceOf<T>,
     {
-        Move(AssetId, AccountId, AssetType, AccountId, AssetType, Balance),
-        Issue(AssetId, AccountId, Balance),
-        Destroy(AssetId, AccountId, Balance),
-        Set(AssetId, AccountId, AssetType, Balance),
-        /// Set restrictions for an asset
+        /// Some balances of an asset was moved from one to another. [asset_id, from, from_type, to, to_type, amount]
+        Moved(AssetId, AccountId, AssetType, AccountId, AssetType, Balance),
+        /// New balances of an asset were issued. [asset_id, receiver, amount]
+        Issued(AssetId, AccountId, Balance),
+        /// Some balances of an asset were destoryed. [asset_id, who, amount]
+        Destroyed(AssetId, AccountId, Balance),
+        /// Set asset balance of an account by root. [asset_id, who, asset_type, amount]
+        SetBalance(AssetId, AccountId, AssetType, Balance),
+        /// Set restrictions for an asset by root. [asset_id, assets_restrictions]
         SetRestrictions(AssetId, AssetRestrictions),
     }
 );
