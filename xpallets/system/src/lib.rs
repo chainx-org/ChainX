@@ -2,8 +2,9 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use sp_runtime::traits::StaticLookup;
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
+
+use sp_runtime::traits::StaticLookup;
 
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,

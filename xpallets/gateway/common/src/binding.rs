@@ -28,7 +28,7 @@ impl<T: Trait> ChannelBinding<T::AccountId> for Module<T> {
                 match Self::channel_binding_of(who, chain) {
                     None => {
                         // set to storage
-                        Self::set_binding(chain, who.clone(), channel);
+                        Self::set_referral_binding(chain, who.clone(), channel);
                     }
                     Some(_channel) => {
                         debug!("[update_binding]|already has binding, do nothing|assert_id:{:}|chain:{:?}|who:{:?}|channel:{:?}", assert_id, chain, who, _channel);

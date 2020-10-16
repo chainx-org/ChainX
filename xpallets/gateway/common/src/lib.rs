@@ -72,10 +72,10 @@ decl_event!(
     pub enum Event<T> where
         <T as frame_system::Trait>::AccountId,
     {
-        ///
+        /// A (potential) trustee set the required properties. [who, chain, trustee_props]
         SetTrusteeProps(AccountId, Chain, GenericTrusteeIntentionProps),
-        ///
-        ChannelBinded(Chain, AccountId, AccountId),
+        /// An account set its referral_account of some chain. [who, chain, referral_account]
+        ReferralBinded(AccountId, Chain, AccountId),
     }
 );
 
@@ -108,6 +108,9 @@ decl_module! {
         type Error = Error<T>;
         fn deposit_event() = default;
 
+        /// Withdraws some balances of `asset_id` to address `addr` of target chain.
+        ///
+        /// NOTE: `ext` is for the compatiablity purpose, e.g., EOS requires a memo when doing the transfer.
         #[weight = <T as Trait>::WeightInfo::withdraw()]
         pub fn withdraw(
             origin,
@@ -203,12 +206,12 @@ decl_module! {
             origin,
             chain: Chain,
             who: <T::Lookup as StaticLookup>::Source,
-            binded: <T::Lookup as StaticLookup>::Source
+            referral: <T::Lookup as StaticLookup>::Source
         ) -> DispatchResult {
             ensure_root(origin)?;
             let who = T::Lookup::lookup(who)?;
-            let binded = T::Lookup::lookup(binded)?;
-            Self::set_binding(chain, who, binded);
+            let referral = T::Lookup::lookup(referral)?;
+            Self::set_referral_binding(chain, who, referral);
             Ok(())
         }
     }
@@ -344,7 +347,7 @@ impl<T: Trait> Module<T> {
         });
 
         TrusteeIntentionPropertiesOf::<T>::insert(&who, chain, props.clone());
-        Self::deposit_event(RawEvent::SetTrusteeProps(who, chain, props));
+        Self::deposit_event(Event::<T>::SetTrusteeProps(who, chain, props));
         Ok(())
     }
 
@@ -429,9 +432,9 @@ impl<T: Trait> Module<T> {
         Ok(multi_addr)
     }
 
-    fn set_binding(chain: Chain, who: T::AccountId, binded: T::AccountId) {
-        ChannelBindingOf::<T>::insert(&who, &chain, binded.clone());
-        Self::deposit_event(Event::<T>::ChannelBinded(chain, who, binded))
+    fn set_referral_binding(chain: Chain, who: T::AccountId, referral: T::AccountId) {
+        ChannelBindingOf::<T>::insert(&who, &chain, referral.clone());
+        Self::deposit_event(Event::<T>::ReferralBinded(who, chain, referral))
     }
 }
 

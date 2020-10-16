@@ -77,8 +77,8 @@ decl_event!(
     {
         /// An account deposited some asset. [who, asset_id, amount]
         Deposited(AccountId, AssetId, Balance),
-        /// A withdrawl application was created. [withdrawal_id, record_info]
-        WithdrawalApplicationCreated(WithdrawalRecordId, WithdrawalRecord),
+        /// A withdrawal application was created. [withdrawal_id, record_info]
+        WithdrawalCreated(WithdrawalRecordId, WithdrawalRecord),
         /// A withdrawal proposal was processed. [withdrawal_id]
         WithdrawalProcessed(WithdrawalRecordId),
         /// A withdrawal proposal was recovered. [withdrawal_id]
@@ -205,7 +205,7 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> Module<T> {
     /// Deposit asset.
     ///
-    /// NOTE: this func has include deposit_init and deposit_finish (not wait for block confirm process)
+    /// NOTE: this function has included deposit_init and deposit_finish (not wait for block confirm)
     pub fn deposit(who: &T::AccountId, asset_id: AssetId, balance: BalanceOf<T>) -> DispatchResult {
         xpallet_assets::Module::<T>::ensure_not_native_asset(&asset_id)?;
 
@@ -257,7 +257,7 @@ impl<T: Trait> Module<T> {
         let next_id = id.checked_add(1_u32).unwrap_or(0);
         NextWithdrawalRecordId::put(next_id);
 
-        Self::deposit_event(Event::<T>::WithdrawalApplicationCreated(id, record));
+        Self::deposit_event(Event::<T>::WithdrawalCreated(id, record));
         Ok(())
     }
 

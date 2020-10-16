@@ -179,13 +179,13 @@ decl_event!(
         /// A unclaimed deposit record was removed. [depositor, deposit_amount, tx_hash, chain_addr]
         PendingDepositRemoved(AccountId, Balance, H256, AddrStr),
         /// A new withdrawal proposal was created. [proposer, withdrawal_ids]
-        ProposalCreated(AccountId, Vec<u32>),
+        WithdrawalProposalCreated(AccountId, Vec<u32>),
         /// A trustee voted/vetoed a withdrawal proposal. [trustee, vote_status]
-        ProposalVoted(AccountId, bool),
+        WithdrawalProposalVoted(AccountId, bool),
         /// A withdrawal proposal was dropped. [reject_count, total_count, withdrawal_ids]
-        ProposalDropped(u32, u32, Vec<u32>),
+        WithdrawalProposalDropped(u32, u32, Vec<u32>),
         /// The proposal has been processed successfully and is waiting for broadcasting. [tx_hash]
-        ProposalCompleted(H256),
+        WithdrawalProposalCompleted(H256),
         /// A fatal error happened during the withdrwal process. [tx_hash, proposal_hash]
         WithdrawalFatalErr(H256, H256),
     }
