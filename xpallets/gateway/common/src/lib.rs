@@ -76,6 +76,8 @@ decl_event!(
         SetTrusteeProps(AccountId, Chain, GenericTrusteeIntentionProps),
         /// An account set its referral_account of some chain. [who, chain, referral_account]
         ReferralBinded(AccountId, Chain, AccountId),
+        /// The trustee set of a chain was changed. [chain, session_number, session_info]
+        TrusteeSetChanged(Chain, u32, GenericTrusteeSessionInfo<AccountId>),
     }
 );
 
@@ -402,15 +404,14 @@ impl<T: Trait> Module<T> {
         let multi_addr = Self::generate_multisig_addr(chain, &info)?;
 
         let session_number = Self::trustee_session_info_len(chain);
-        let next_number = match session_number.checked_add(1) {
-            Some(n) => n,
-            None => 0_u32,
-        };
+        // FIXME: rethink about the overflow case.
+        let next_number = session_number.checked_add(1).unwrap_or(0u32);
 
         TrusteeSessionInfoLen::insert(chain, next_number);
-        TrusteeSessionInfoOf::<T>::insert(chain, session_number, info);
-
+        TrusteeSessionInfoOf::<T>::insert(chain, session_number, info.clone());
         TrusteeMultiSigAddr::<T>::insert(chain, multi_addr);
+
+        Self::deposit_event(Event::<T>::TrusteeSetChanged(chain, session_number, info));
         Ok(())
     }
 
