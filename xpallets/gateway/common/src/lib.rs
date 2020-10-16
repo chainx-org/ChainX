@@ -427,7 +427,6 @@ impl<T: Trait> Module<T> {
 
     fn set_binding(chain: Chain, who: T::AccountId, binded: T::AccountId) {
         ChannelBindingOf::<T>::insert(&who, &chain, binded.clone());
-
         Self::deposit_event(Event::<T>::ChannelBinded(chain, who, binded))
     }
 }
