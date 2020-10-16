@@ -81,7 +81,7 @@ pub use xpallet_assets::{
     AssetInfo, AssetRestrictions, AssetType, Chain, TotalAssetInfo, WithdrawalLimit,
 };
 #[cfg(feature = "std")]
-pub use xpallet_gateway_bitcoin::h256_conv_endian_from_str;
+pub use xpallet_gateway_bitcoin::h256_rev;
 pub use xpallet_gateway_bitcoin::{
     BtcHeader, BtcNetwork, BtcParams, BtcTxVerifier, Compact as BtcCompact, H256 as BtcHash,
 };

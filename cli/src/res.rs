@@ -1,6 +1,6 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use chainx_runtime::{h256_conv_endian_from_str, BtcCompact, BtcHeader, BtcNetwork};
+use chainx_runtime::{h256_rev, BtcCompact, BtcHeader, BtcNetwork};
 
 #[derive(Debug, serde::Deserialize)]
 struct BitcoinGenesisHeader {
@@ -31,7 +31,7 @@ pub struct BitcoinParams {
 }
 
 fn build_bitcoin_params(raw: BitcoinGenesisHeader, confirmed_count: u32) -> BitcoinParams {
-    let as_h256 = |s: &str| h256_conv_endian_from_str(s);
+    let as_h256 = |s: &str| h256_rev(s);
     BitcoinParams {
         genesis_info: (
             BtcHeader {
