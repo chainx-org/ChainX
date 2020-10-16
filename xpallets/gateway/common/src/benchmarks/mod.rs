@@ -22,7 +22,7 @@ use mock::*;
 // for compile
 #[cfg(test)]
 mod tests {
-    use crate::brenchmarks::mock::ExtBuilder;
+    use crate::benchmarks::mock::ExtBuilder;
 
     #[test]
     fn base() {

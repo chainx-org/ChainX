@@ -166,28 +166,28 @@ decl_event!(
         <T as frame_system::Trait>::AccountId,
         Balance = BalanceOf<T>
     {
-        /// block hash
-        InsertHeader(H256),
-        /// tx hash, block hash, tx type
-        ProcessTx(H256, H256, BtcTxState),
-        /// Unclaimed deposit tx
+        /// A Bitcoin header was validated and inserted. [btc_header_hash]
+        HeaderInserted(H256),
+        /// A Bitcoin transaction was processed. [tx_hash, block_hash, tx_state]
+        TxProcessed(H256, H256, BtcTxState),
+        /// An account deposited some token. [tx_hash, who, amount]
+        Deposited(H256, AccountId, Balance),
+        /// A list of withdrawal applications were processed successfully. [tx_hash, withdrawal_ids, total_withdrawn]
+        Withdrawn(H256, Vec<u32>, Balance),
+        /// A new record of unclaimed deposit. [tx_hash]
         UnclaimedDeposit(H256),
-        /// who, balance, txhsah, Chain Addr
-        DepositPending(AccountId, Balance, H256, AddrStr),
-        /// create withdraw tx, who proposal, withdrawal list id
-        CreateWithdrawalProposal(AccountId, Vec<u32>),
-        /// Sign withdraw tx
-        SignWithdrawalProposal(AccountId, bool),
-        /// finish proposal and wait for broadcasting
-        FinishProposal(H256),
-        /// WithdrawalFatalErr, tx hash, Proposal hash,
+        /// A unclaimed deposit record was removed. [depositor, deposit_amount, tx_hash, chain_addr]
+        PendingDepositRemoved(AccountId, Balance, H256, AddrStr),
+        /// A new withdrawal proposal was created. [proposer, withdrawal_ids]
+        WithdrawalProposalCreated(AccountId, Vec<u32>),
+        /// A trustee voted/vetoed a withdrawal proposal. [trustee, vote_status]
+        WithdrawalProposalVoted(AccountId, bool),
+        /// A withdrawal proposal was dropped. [reject_count, total_count, withdrawal_ids]
+        WithdrawalProposalDropped(u32, u32, Vec<u32>),
+        /// The proposal has been processed successfully and is waiting for broadcasting. [tx_hash]
+        WithdrawalProposalCompleted(H256),
+        /// A fatal error happened during the withdrwal process. [tx_hash, proposal_hash]
         WithdrawalFatalErr(H256, H256),
-        /// reject_count, sum_count, withdrawal id list
-        DropWithdrawalProposal(u32, u32, Vec<u32>),
-        /// Deposit token for a account.
-        DepositToken(H256, AccountId, Balance),
-        /// Withdraw token for a list of withdrawal applications.
-        WithdrawToken(H256, Vec<u32>, Balance),
     }
 );
 
@@ -560,7 +560,7 @@ impl<T: Trait> Module<T> {
                 info!("[apply_push_header]|best index larger than this height|best height:{:}|this height{:}", best_index.height, header_info.height);
                 header::check_confirmed_header::<T>(&header_info)?;
             };
-            Self::deposit_event(RawEvent::InsertHeader(hash));
+            Self::deposit_event(Event::<T>::HeaderInserted(hash));
             Ok(())
         })
     }
@@ -603,7 +603,7 @@ impl<T: Trait> Module<T> {
 
         let state = tx::process_tx::<T>(tx.raw, prev)?;
         TxState::insert(&tx_hash, state);
-        Self::deposit_event(RawEvent::ProcessTx(tx_hash, block_hash, state));
+        Self::deposit_event(Event::<T>::TxProcessed(tx_hash, block_hash, state));
         match state.result {
             BtcTxResult::Success => Ok(()),
             BtcTxResult::Failed => Err(Error::<T>::ProcessTxFailed.into()),

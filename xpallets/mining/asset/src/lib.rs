@@ -143,8 +143,8 @@ decl_event!(
         Balance = BalanceOf<T>,
         <T as frame_system::Trait>::AccountId,
     {
-        /// Claimed the asset mining rewards. [claimer, asset_id, amount]
-        Claim(AccountId, AssetId, Balance),
+        /// An asset miner claimed the mining reward. [claimer, asset_id, amount]
+        Claimed(AccountId, AssetId, Balance),
     }
 );
 

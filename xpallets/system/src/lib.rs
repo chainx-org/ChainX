@@ -4,6 +4,8 @@
 
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
+use sp_runtime::traits::StaticLookup;
+
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{CallMetadata, DispatchResult},
@@ -11,7 +13,6 @@ use frame_support::{
     IterableStorageMap,
 };
 use frame_system::ensure_root;
-use sp_runtime::traits::StaticLookup;
 
 use xpallet_protocol::NetworkType;
 
@@ -44,11 +45,11 @@ decl_event!(
         Balance = BalanceOf<T>,
         <T as frame_system::Trait>::AccountId,
     {
-        /// An account is blocked.
-        BlockAccount(AccountId),
-        /// The blocked status of an account is revoked.
-        RevokeBlockedAccount(AccountId),
-        /// Transaction fee is paid to the block author and its reward pot in 10:90.
+        /// An account was added to the blacklist. [who]
+        Blacklisted(AccountId),
+        /// An account was removed from the blacklist. [who]
+        Unblacklisted(AccountId),
+        /// Transaction fee was paid to the block author and its reward pot in 10:90.
         /// [author, author_fee, reward_pot, reward_pot_fee]
         TransactionFeePaid(AccountId, Balance, AccountId, Balance),
     }
@@ -62,8 +63,8 @@ decl_storage! {
         /// Paused pallet call.
         pub Paused get(fn paused): map hasher(twox_64_concat) Vec<u8> => BTreeMap<Vec<u8>, ()>;
 
-        /// Blocked account ids.
-        pub BlockedAccounts get(fn blocked_accounts): map hasher(blake2_128_concat) T::AccountId => bool;
+        /// The accounts that are blocked.
+        pub Blacklist get(fn blacklist): map hasher(blake2_128_concat) T::AccountId => bool;
     }
 }
 
@@ -108,20 +109,20 @@ decl_module! {
             Ok(())
         }
 
-        /// Modify the blocked status of the given account id.
+        /// Toggle the blacklist status of the given account id.
         ///
         /// This is a root-only operation.
         #[weight = 0]
-        fn modify_blocked_list(origin, who: <T::Lookup as StaticLookup>::Source, should_block: bool) -> DispatchResult {
+        fn toggle_blacklist(origin, who: <T::Lookup as StaticLookup>::Source, should_blacklist: bool) -> DispatchResult {
             ensure_root(origin)?;
 
             let who = T::Lookup::lookup(who)?;
-            if should_block {
-                BlockedAccounts::<T>::insert(who.clone(), true);
-                Self::deposit_event(Event::<T>::BlockAccount(who))
+            if should_blacklist {
+                Blacklist::<T>::insert(who.clone(), true);
+                Self::deposit_event(Event::<T>::Blacklisted(who))
             } else {
-                BlockedAccounts::<T>::remove(&who);
-                Self::deposit_event(Event::<T>::RevokeBlockedAccount(who));
+                Blacklist::<T>::remove(&who);
+                Self::deposit_event(Event::<T>::Unblacklisted(who));
             }
             Ok(())
         }
@@ -149,9 +150,9 @@ impl<T: Trait> Module<T> {
     }
 
     /// Returns the blocked account id list.
-    pub fn blocked_list() -> Vec<T::AccountId> {
-        BlockedAccounts::<T>::iter()
-            .filter_map(|(a, blocked)| if blocked { Some(a) } else { None })
+    pub fn get_blacklist() -> Vec<T::AccountId> {
+        Blacklist::<T>::iter()
+            .filter_map(|(account, blocked)| if blocked { Some(account) } else { None })
             .collect()
     }
 }

@@ -224,7 +224,7 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
             miner_ledger.last_claim = Some(current_block);
         });
 
-        Self::deposit_event(RawEvent::Claim(claimer.clone(), *claimee, dividend));
+        Self::deposit_event(Event::<T>::Claimed(claimer.clone(), *claimee, dividend));
 
         Ok(())
     }

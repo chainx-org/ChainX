@@ -210,7 +210,7 @@ fn deposit_and_withdraw<T: Trait>(who: T::AccountId, amount: BalanceOf<T>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::brenchmarks::{ExtBuilder, Test};
+    use crate::benchmarks::{ExtBuilder, Test};
     use frame_support::assert_ok;
 
     #[test]
