@@ -166,9 +166,9 @@ decl_event!(
         <T as frame_system::Trait>::AccountId,
         Balance = BalanceOf<T>
     {
-        /// A Bitcoin header was validated and inserted successfully. [btc_header_hash]
+        /// A Bitcoin header was validated and inserted. [btc_header_hash]
         HeaderInserted(H256),
-        /// A Bitcoin transaction was processed successfully. [tx_hash, block_hash, tx_state]
+        /// A Bitcoin transaction was processed. [tx_hash, block_hash, tx_state]
         TxProcessed(H256, H256, BtcTxState),
         /// An account deposited some token. [tx_hash, who, amount]
         Deposited(H256, AccountId, Balance),
@@ -176,9 +176,8 @@ decl_event!(
         Withdrawn(H256, Vec<u32>, Balance),
         /// A new record of unclaimed deposit. [tx_hash]
         UnclaimedDeposit(H256),
-        /// A unclaimed deposit record was removed. [depositor, deposit_amount, tx_hsah, chain_addr]
+        /// A unclaimed deposit record was removed. [depositor, deposit_amount, tx_hash, chain_addr]
         PendingDepositRemoved(AccountId, Balance, H256, AddrStr),
-        /// create withdraw tx, who proposal, withdrawal list id
         /// A new withdrawal proposal was created. [proposer, withdrawal_ids]
         ProposalCreated(AccountId, Vec<u32>),
         /// A trustee voted/vetoed a withdrawal proposal. [trustee, vote_status]

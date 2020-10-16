@@ -66,7 +66,7 @@ pub trait WeightInfo {
 /// The module's config trait.
 ///
 /// `frame_system::Trait` should always be included in our implied traits.
-pub trait Trait: frame_system::Trait + xpallet_assets_registrar::Trait {
+pub trait Trait: xpallet_assets_registrar::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 

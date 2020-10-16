@@ -41,7 +41,7 @@ pub type WithdrawalRecordOf<T> = WithdrawalRecord<
 /// The module's config trait.
 ///
 /// `frame_system::Trait` should always be included in our implied traits.
-pub trait Trait: frame_system::Trait + xpallet_assets::Trait {
+pub trait Trait: xpallet_assets::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 
@@ -205,7 +205,7 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> Module<T> {
     /// Deposit asset.
     ///
-    /// Note: this func has include deposit_init and deposit_finish (not wait for block confirm process)
+    /// NOTE: this func has include deposit_init and deposit_finish (not wait for block confirm process)
     pub fn deposit(who: &T::AccountId, asset_id: AssetId, balance: BalanceOf<T>) -> DispatchResult {
         xpallet_assets::Module::<T>::ensure_not_native_asset(&asset_id)?;
 
@@ -367,7 +367,7 @@ impl<T: Trait> Module<T> {
     ///
     /// WithdrawalRecord State: `Processing` ==> `NormalFinish`
     ///
-    /// Note:
+    /// NOTE:
     /// when the withdrawal id is passed by runtime self logic, just pass `None`,
     /// when the withdrawal id is passed by the parameter from call(which means the id is from outside),
     /// should pass `Some(chain)` to verify whether the withdrawal is related to this chain.

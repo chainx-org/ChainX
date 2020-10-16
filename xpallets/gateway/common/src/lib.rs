@@ -49,18 +49,22 @@ pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
     <T as frame_system::Trait>::AccountId,
 >>::Balance;
 
-pub trait Trait: frame_system::Trait + xpallet_gateway_records::Trait {
+pub trait Trait: xpallet_gateway_records::Trait {
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 
     type Validator: Validator<Self::AccountId>;
+
     type DetermineMultisigAddress: MultisigAddressFor<Self::AccountId>;
+
     // for chain
     type Bitcoin: ChainT<BalanceOf<Self>>;
+
     type BitcoinTrustee: TrusteeForChain<
         Self::AccountId,
         trustees::bitcoin::BtcTrusteeType,
         trustees::bitcoin::BtcTrusteeAddrInfo,
     >;
+
     type WeightInfo: WeightInfo;
 }
 
