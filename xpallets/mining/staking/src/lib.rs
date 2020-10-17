@@ -545,33 +545,33 @@ impl<T: Trait> xpallet_support::traits::Validator<T::AccountId> for Module<T> {
     }
 }
 
-#[cfg(feature = "std")]
-pub type GenesisValidatorInfo<T> = (
-    <T as frame_system::Trait>::AccountId,
-    ReferralId,
-    BalanceOf<T>,
-    BalanceOf<T>,
-    WeightType,
-);
-
 impl<T: Trait> Module<T> {
     #[cfg(feature = "std")]
-    pub fn initialize_validators(validators: &[GenesisValidatorInfo<T>]) -> DispatchResult {
-        for (validator, referral_id, self_bonded, total_nomination, total_weight) in validators {
+    pub fn initialize_validators(
+        validators: &[xp_genesis_builder::ValidatorInfo<T::AccountId, BalanceOf<T>>],
+    ) -> DispatchResult {
+        for xp_genesis_builder::ValidatorInfo {
+            who,
+            referral_id,
+            self_bonded,
+            total_nomination,
+            total_weight,
+        } in validators
+        {
             Self::check_referral_id(referral_id)?;
             if !self_bonded.is_zero() {
                 assert!(
-                    Self::free_balance(validator) >= *self_bonded,
+                    Self::free_balance(who) >= *self_bonded,
                     "Validator does not have enough balance to bond."
                 );
-                Self::bond_reserve(validator, *self_bonded)?;
-                Nominations::<T>::mutate(validator, validator, |nominator| {
+                Self::bond_reserve(who, *self_bonded)?;
+                Nominations::<T>::mutate(who, who, |nominator| {
                     nominator.nomination = *self_bonded;
                 });
             }
-            Self::apply_register(validator, referral_id.to_vec());
+            Self::apply_register(who, referral_id.to_vec());
 
-            ValidatorLedgers::<T>::mutate(validator, |validator| {
+            ValidatorLedgers::<T>::mutate(who, |validator| {
                 validator.total_nomination = *total_nomination;
                 validator.last_total_vote_weight = *total_weight;
             });

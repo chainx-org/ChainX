@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use serde::Deserialize;
 
-use xp_genesis_builder::{WellknownAccounts, XMiningAssetParams};
+use xp_genesis_builder::{ValidatorInfo, WellknownAccounts, XMiningAssetParams};
 
 use chainx_primitives::{AccountId, Balance};
 
@@ -40,31 +40,8 @@ pub fn xassets() -> Vec<(AccountId, Balance)> {
     balances.into_iter().map(|b| (b.who, b.free)).collect()
 }
 
-#[derive(Debug, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct ValidatorInfo {
-    who: AccountId,
-    referral_id: String,
-    self_bonded: Balance,
-    total_nomination: Balance,
-    #[serde(deserialize_with = "deserialize_u128")]
-    total_weight: u128,
-}
-
-pub fn validators() -> Vec<(AccountId, Vec<u8>, Balance, Balance, u128)> {
-    let validators: Vec<ValidatorInfo> = json_from_str!("./res/genesis_validators.json");
-    validators
-        .into_iter()
-        .map(|v| {
-            (
-                v.who,
-                v.referral_id.as_bytes().to_vec(),
-                v.self_bonded,
-                v.total_nomination,
-                v.total_weight,
-            )
-        })
-        .collect()
+pub fn validators() -> Vec<ValidatorInfo<AccountId, Balance>> {
+    json_from_str!("./res/genesis_validators.json")
 }
 
 #[derive(Debug, serde::Deserialize)]

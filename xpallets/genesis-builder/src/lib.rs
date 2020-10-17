@@ -10,14 +10,16 @@ use sp_std::prelude::*;
 use frame_support::{decl_module, decl_storage, traits::Currency};
 
 #[cfg(feature = "std")]
-use xp_genesis_builder::{WellknownAccounts, XMiningAssetParams};
+use xp_genesis_builder::{ValidatorInfo, WellknownAccounts, XMiningAssetParams};
 #[cfg(feature = "std")]
-use xpallet_mining_staking::{GenesisValidatorInfo, WeightType};
+use xpallet_mining_staking::WeightType;
 use xpallet_support::info;
 
 pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
     <T as frame_system::Trait>::AccountId,
 >>::Balance;
+
+type StakingBalanceOf<T> = xpallet_mining_staking::BalanceOf<T>;
 
 pub trait Trait:
     pallet_balances::Trait + xpallet_mining_asset::Trait + xpallet_mining_staking::Trait
@@ -33,8 +35,8 @@ decl_storage! {
     add_extra_genesis {
         config(balances): Vec<(T::AccountId, T::Balance)>;
         config(xbtc_assets): Vec<(T::AccountId, BalanceOf<T>)>;
-        config(validators): Vec<GenesisValidatorInfo<T>>;
-        config(nominators): Vec<(T::AccountId, Vec<(T::AccountId, xpallet_mining_staking::BalanceOf<T>, WeightType)>)>;
+        config(validators): Vec<ValidatorInfo<T::AccountId, StakingBalanceOf<T>>>;
+        config(nominators): Vec<(T::AccountId, Vec<(T::AccountId, StakingBalanceOf<T>, WeightType)>)>;
         config(xmining_asset): XMiningAssetParams<T::AccountId>;
         config(wellknown_accounts): WellknownAccounts<T::AccountId>;
         build(|config| {
@@ -44,7 +46,7 @@ decl_storage! {
 
             balances::initialize::<T>(&config.balances, config.wellknown_accounts.clone());
             xassets::initialize::<T>(&config.xbtc_assets);
-            xstaking::initialize::<T>(&config.validators, &config.nominators);
+            xstaking::initialize::<T>(config.validators.as_slice(), &config.nominators);
             xminingasset::initialize::<T>(&config.xmining_asset);
 
             info!(
@@ -128,14 +130,15 @@ mod genesis {
 
     pub mod xstaking {
         use crate::Trait;
-        use xpallet_mining_staking::{BalanceOf, GenesisValidatorInfo, WeightType};
+        use xp_genesis_builder::ValidatorInfo;
+        use xpallet_mining_staking::{BalanceOf, WeightType};
 
         pub fn initialize<T: Trait>(
-            validators: &[GenesisValidatorInfo<T>],
+            validators: &[ValidatorInfo<T::AccountId, BalanceOf<T>>],
             nominators: &[(T::AccountId, Vec<(T::AccountId, BalanceOf<T>, WeightType)>)],
         ) {
             /////// register validator
-            let genesis_validators = validators.iter().map(|v| v.0.clone()).collect::<Vec<_>>();
+            let genesis_validators = validators.iter().map(|v| v.who.clone()).collect::<Vec<_>>();
             xpallet_mining_staking::Module::<T>::initialize_validators(validators)
                 .expect("Failed to initialize staking validators");
 

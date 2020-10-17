@@ -20,6 +20,18 @@ mod genesis_params {
         s.parse::<u128>().map_err(serde::de::Error::custom)
     }
 
+    #[derive(Debug, Default, Serialize, Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct ValidatorInfo<AccountId, Balance> {
+        pub who: AccountId,
+        #[serde(with = "xpallet_support::serde_text")]
+        pub referral_id: Vec<u8>,
+        pub self_bonded: Balance,
+        pub total_nomination: Balance,
+        #[serde(deserialize_with = "deserialize_u128")]
+        pub total_weight: u128,
+    }
+
     #[derive(Debug, Default, Clone, Serialize, Deserialize)]
     pub struct WellknownAccounts<AccountId> {
         pub legacy_council: AccountId,

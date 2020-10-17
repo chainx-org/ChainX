@@ -8827,6 +8827,7 @@ version = "2.0.0-alpha.0"
 dependencies = [
  "chainx-primitives",
  "serde",
+ "xpallet-support",
 ]
 
 [[package]]
@@ -9222,6 +9223,7 @@ dependencies = [
  "sp-runtime",
  "sp-staking",
  "sp-std",
+ "xp-genesis-builder",
  "xp-mining-common",
  "xp-mining-staking",
  "xp-runtime",
