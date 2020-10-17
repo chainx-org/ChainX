@@ -735,6 +735,7 @@ dependencies = [
  "sp-transaction-pool",
  "structopt",
  "substrate-build-script-utils",
+ "xp-genesis-builder",
  "xp-io",
  "xpallet-gateway-bitcoin",
  "xpallet-mining-staking",
@@ -8821,6 +8822,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "xp-genesis-builder"
+version = "2.0.0-alpha.0"
+dependencies = [
+ "chainx-primitives",
+ "serde",
+]
+
+[[package]]
 name = "xp-io"
 version = "2.0.0-alpha.0"
 dependencies = [
@@ -9132,6 +9141,7 @@ dependencies = [
  "serde",
  "sp-runtime",
  "sp-std",
+ "xp-genesis-builder",
  "xpallet-assets",
  "xpallet-mining-asset",
  "xpallet-mining-staking",

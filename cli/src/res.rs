@@ -4,6 +4,8 @@ use std::collections::HashMap;
 
 use serde::Deserialize;
 
+use xp_genesis_builder::XMiningAssetParams;
+
 use chainx_primitives::{AccountId, Balance};
 
 macro_rules! json_from_str {
@@ -97,38 +99,8 @@ pub fn nominators() -> Vec<(AccountId, Vec<(AccountId, Balance, u128)>)> {
         .collect()
 }
 
-#[derive(Debug, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct XbtcInfo {
-    balance: Balance,
-    #[serde(deserialize_with = "deserialize_u128")]
-    weight: u128,
-}
-
-#[derive(Debug, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct XbtcMiner {
-    who: AccountId,
-    #[serde(deserialize_with = "deserialize_u128")]
-    weight: u128,
-}
-
-#[derive(Debug, serde::Deserialize)]
-struct XMiningAssetParams {
-    xbtc_miners: Vec<XbtcMiner>,
-    xbtc_info: XbtcInfo,
-}
-
-pub fn xmining_asset() -> (Vec<(AccountId, u128)>, u128) {
-    let params: XMiningAssetParams = json_from_str!("./res/genesis_xminingasset.json");
-    let XMiningAssetParams {
-        xbtc_miners,
-        xbtc_info,
-    } = params;
-    (
-        xbtc_miners.into_iter().map(|m| (m.who, m.weight)).collect(),
-        xbtc_info.weight,
-    )
+pub fn xmining_asset() -> XMiningAssetParams<AccountId> {
+    json_from_str!("./res/genesis_xminingasset.json")
 }
 
 #[derive(Debug, serde::Deserialize)]

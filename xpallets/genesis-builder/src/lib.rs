@@ -10,6 +10,8 @@ use sp_std::prelude::*;
 use frame_support::{decl_module, decl_storage, traits::Currency};
 
 #[cfg(feature = "std")]
+use xp_genesis_builder::XMiningAssetParams;
+#[cfg(feature = "std")]
 use xpallet_mining_staking::{GenesisValidatorInfo, WeightType};
 use xpallet_support::info;
 
@@ -33,7 +35,7 @@ decl_storage! {
         config(xbtc_assets): Vec<(T::AccountId, BalanceOf<T>)>;
         config(validators): Vec<GenesisValidatorInfo<T>>;
         config(nominators): Vec<(T::AccountId, Vec<(T::AccountId, xpallet_mining_staking::BalanceOf<T>, WeightType)>)>;
-        config(xmining_asset): (Vec<(T::AccountId, WeightType)>, WeightType);
+        config(xmining_asset): XMiningAssetParams<T::AccountId>;
         config(special_accounts): (T::AccountId, T::AccountId, Vec<(T::AccountId, T::AccountId)>);
         build(|config| {
             use crate::genesis::{xassets, balances, xstaking, xminingasset};
@@ -54,7 +56,7 @@ decl_storage! {
             );
             xassets::initialize::<T>(&config.xbtc_assets);
             xstaking::initialize::<T>(&config.validators, &config.nominators);
-            xminingasset::initialize::<T>(config.xmining_asset.1, &config.xmining_asset.0);
+            xminingasset::initialize::<T>(&config.xmining_asset);
 
             info!(
                 "Took {:?}ms to orchestrate the exported state from ChainX 1.0",
@@ -170,21 +172,22 @@ mod genesis {
 
     pub mod xminingasset {
         use crate::Trait;
-        use xpallet_mining_staking::WeightType;
+        use xp_genesis_builder::{XMiningAssetParams, XbtcMiner};
         use xpallet_protocol::X_BTC;
 
-        pub fn initialize<T: Trait>(
-            new_xbtc_weight: WeightType,
-            xbtc_miners: &[(T::AccountId, WeightType)],
-        ) {
-            //////////    XAssets
-            ////// Set mining weight.
-            ////// 1. mining asset weight
-            ////// 2. miner weight
+        /// Set mining weight.
+        /// 1. mining asset weight
+        /// 2. miner weight
+        pub fn initialize<T: Trait>(params: &XMiningAssetParams<T::AccountId>) {
+            let XMiningAssetParams {
+                xbtc_miners,
+                xbtc_info,
+            } = params;
             let current_block = frame_system::Module::<T>::block_number();
-            for (miner, weight) in xbtc_miners {
+            for miner in xbtc_miners {
+                let XbtcMiner { who, weight } = miner;
                 xpallet_mining_asset::Module::<T>::force_set_miner_mining_weight(
-                    miner,
+                    who,
                     &X_BTC,
                     *weight,
                     current_block,
@@ -192,7 +195,7 @@ mod genesis {
             }
             xpallet_mining_asset::Module::<T>::force_set_asset_mining_weight(
                 &X_BTC,
-                new_xbtc_weight,
+                xbtc_info.weight,
                 current_block,
             );
         }
