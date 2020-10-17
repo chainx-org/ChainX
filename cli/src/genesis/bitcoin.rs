@@ -3,7 +3,7 @@
 use std::convert::TryFrom;
 
 use hex_literal::hex;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use sp_core::sr25519;
 
@@ -14,7 +14,7 @@ use chainx_runtime::{
 
 use crate::chain_spec::get_account_id_from_seed;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct BtcGenesisParams {
     pub network: BtcNetwork,
     pub confirmation_number: u32,
@@ -56,17 +56,6 @@ pub fn btc_genesis_params(res: &str) -> BtcGenesisParams {
     let params: BtcGenesisParams = serde_json::from_str(res).expect("JSON was not well-formatted");
     assert_eq!(params.header().hash(), params.hash());
     params
-}
-
-#[test]
-fn test_btc_genesis_params() {
-    use chainx_runtime::hash_rev;
-    let params = btc_genesis_params(include_str!("../res/btc_genesis_params_mainnet.json"));
-    let ser = serde_json::to_string_pretty(&params).unwrap();
-    println!("BTC params: {}", ser);
-    let params: BtcGenesisParams = serde_json::from_str(&ser).unwrap();
-    println!("BTC hash: {:#?}", hash_rev(params.hash()));
-    println!("BTC header: {:#?}", params.header());
 }
 
 // (account_id, about, hot_key, cold_key)
