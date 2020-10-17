@@ -10,7 +10,7 @@ use sp_std::prelude::*;
 use frame_support::{decl_module, decl_storage, traits::Currency};
 
 #[cfg(feature = "std")]
-use xp_genesis_builder::XMiningAssetParams;
+use xp_genesis_builder::{WellknownAccounts, XMiningAssetParams};
 #[cfg(feature = "std")]
 use xpallet_mining_staking::{GenesisValidatorInfo, WeightType};
 use xpallet_support::info;
@@ -36,24 +36,13 @@ decl_storage! {
         config(validators): Vec<GenesisValidatorInfo<T>>;
         config(nominators): Vec<(T::AccountId, Vec<(T::AccountId, xpallet_mining_staking::BalanceOf<T>, WeightType)>)>;
         config(xmining_asset): XMiningAssetParams<T::AccountId>;
-        config(special_accounts): (T::AccountId, T::AccountId, Vec<(T::AccountId, T::AccountId)>);
+        config(wellknown_accounts): WellknownAccounts<T::AccountId>;
         build(|config| {
             use crate::genesis::{xassets, balances, xstaking, xminingasset};
 
             let now = std::time::Instant::now();
 
-            let (legacy_treasury_account, legacy_vesting_account, legacy_reward_pots) = (
-                config.special_accounts.0.clone(),
-                config.special_accounts.1.clone(),
-                &config.special_accounts.2
-            );
-
-            balances::initialize::<T>(
-                &config.balances,
-                legacy_treasury_account,
-                legacy_vesting_account,
-                legacy_reward_pots,
-            );
+            balances::initialize::<T>(&config.balances, config.wellknown_accounts.clone());
             xassets::initialize::<T>(&config.xbtc_assets);
             xstaking::initialize::<T>(&config.validators, &config.nominators);
             xminingasset::initialize::<T>(&config.xmining_asset);
@@ -72,24 +61,27 @@ mod genesis {
         use crate::Trait;
         use frame_support::traits::StoredMap;
         use pallet_balances::AccountData;
+        use xp_genesis_builder::WellknownAccounts;
         use xpallet_mining_staking::RewardPotAccountFor;
         use xpallet_support::traits::TreasuryAccount;
 
         fn validator_for<'a, T: Trait, I: Iterator<Item = &'a (T::AccountId, T::AccountId)>>(
             target: &T::AccountId,
-            pots: I,
+            mut pots: I,
         ) -> Option<&'a T::AccountId> {
-            pots.filter(|(pot, _)| *pot == *target)
-                .next()
-                .map(|(_, v)| v)
+            pots.find(|(pot, _)| *pot == *target).map(|(_, v)| v)
         }
 
         pub fn initialize<T: Trait>(
             balances: &[(T::AccountId, T::Balance)],
-            legacy_treasury_account: T::AccountId,
-            legacy_vesting_account: T::AccountId,
-            legacy_reward_pots: &[(T::AccountId, T::AccountId)],
+            legacy_wellknown_accounts: WellknownAccounts<T::AccountId>,
         ) {
+            let WellknownAccounts {
+                legacy_council,
+                legacy_team,
+                legacy_pots,
+            } = legacy_wellknown_accounts;
+
             let treasury_account =
                 <T as xpallet_mining_staking::Trait>::TreasuryAccount::treasury_account();
 
@@ -104,16 +96,14 @@ mod genesis {
             };
 
             for (who, free) in balances {
-                if *who == legacy_treasury_account {
+                if *who == legacy_council {
                     set_free_balance(&treasury_account, free);
-                } else if *who == legacy_vesting_account {
+                } else if *who == legacy_team {
                     set_free_balance(
                         &xpallet_mining_staking::Module::<T>::vesting_account(),
                         free,
                     );
-                } else if let Some(validator) =
-                    validator_for::<T, _>(who, legacy_reward_pots.iter())
-                {
+                } else if let Some(validator) = validator_for::<T, _>(who, legacy_pots.iter()) {
                     let new_pot = <T as xpallet_mining_staking::Trait>::DetermineRewardPotAccount::reward_pot_account_for(
                             validator,
                         );
@@ -184,8 +174,7 @@ mod genesis {
                 xbtc_info,
             } = params;
             let current_block = frame_system::Module::<T>::block_number();
-            for miner in xbtc_miners {
-                let XbtcMiner { who, weight } = miner;
+            for XbtcMiner { who, weight } in xbtc_miners {
                 xpallet_mining_asset::Module::<T>::force_set_miner_mining_weight(
                     who,
                     &X_BTC,

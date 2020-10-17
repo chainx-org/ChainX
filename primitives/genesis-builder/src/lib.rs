@@ -9,9 +9,8 @@ pub use self::genesis_params::*;
 
 #[cfg(feature = "std")]
 mod genesis_params {
-    use serde::{Deserialize, Serialize};
-
     use chainx_primitives::Balance;
+    use serde::{Deserialize, Serialize};
 
     fn deserialize_u128<'de, D>(deserializer: D) -> Result<u128, D::Error>
     where
@@ -21,7 +20,13 @@ mod genesis_params {
         s.parse::<u128>().map_err(serde::de::Error::custom)
     }
 
-    /// Genesis
+    #[derive(Debug, Default, Clone, Serialize, Deserialize)]
+    pub struct WellknownAccounts<AccountId> {
+        pub legacy_council: AccountId,
+        pub legacy_team: AccountId,
+        pub legacy_pots: Vec<(AccountId, AccountId)>,
+    }
+
     #[derive(Debug, Default, Serialize, Deserialize)]
     pub struct XbtcInfo {
         pub balance: Balance,

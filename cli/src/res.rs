@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use serde::Deserialize;
 
-use xp_genesis_builder::XMiningAssetParams;
+use xp_genesis_builder::{WellknownAccounts, XMiningAssetParams};
 
 use chainx_primitives::{AccountId, Balance};
 
@@ -104,18 +104,17 @@ pub fn xmining_asset() -> XMiningAssetParams<AccountId> {
 }
 
 #[derive(Debug, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct SpecialAccounts {
+pub struct ConcreteAccounts {
     council: AccountId,
     team: AccountId,
     pots: HashMap<AccountId, AccountId>,
 }
 
-pub fn special_accounts() -> (AccountId, AccountId, Vec<(AccountId, AccountId)>) {
-    let special_accounts: SpecialAccounts = json_from_str!("./res/genesis_special_accounts.json");
-    (
-        special_accounts.council,
-        special_accounts.team,
-        special_accounts.pots.into_iter().collect(),
-    )
+pub fn wellknown_accounts() -> WellknownAccounts<AccountId> {
+    let accounts: ConcreteAccounts = json_from_str!("./res/genesis_special_accounts.json");
+    WellknownAccounts {
+        legacy_council: accounts.council,
+        legacy_team: accounts.team,
+        legacy_pots: accounts.pots.into_iter().collect(),
+    }
 }

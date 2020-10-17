@@ -783,7 +783,7 @@ fn build_genesis(
             validators: crate::res::validators(),
             nominators: crate::res::nominators(),
             xmining_asset: crate::res::xmining_asset(),
-            special_accounts: crate::res::special_accounts(),
+            wellknown_accounts: crate::res::wellknown_accounts(),
         }),
     }
 }
