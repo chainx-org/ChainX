@@ -41,7 +41,7 @@ pub type WithdrawalRecordOf<T> = WithdrawalRecord<
 /// The module's config trait.
 ///
 /// `frame_system::Trait` should always be included in our implied traits.
-pub trait Trait: frame_system::Trait + xpallet_assets::Trait {
+pub trait Trait: xpallet_assets::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 
@@ -75,11 +75,17 @@ decl_event!(
         Balance = BalanceOf<T>,
         WithdrawalRecord = WithdrawalRecordOf<T>
     {
+        /// An account deposited some asset. [who, asset_id, amount]
         Deposited(AccountId, AssetId, Balance),
-        WithdrawalApplied(WithdrawalRecordId, WithdrawalRecord),
+        /// A withdrawal application was created. [withdrawal_id, record_info]
+        WithdrawalCreated(WithdrawalRecordId, WithdrawalRecord),
+        /// A withdrawal proposal was processed. [withdrawal_id]
         WithdrawalProcessed(WithdrawalRecordId),
+        /// A withdrawal proposal was recovered. [withdrawal_id]
         WithdrawalRecovered(WithdrawalRecordId),
+        /// A withdrawal proposal was canceled. [withdrawal_id, withdrawal_state]
         WithdrawalCanceled(WithdrawalRecordId, WithdrawalState),
+        /// A withdrawal proposal was finished successfully. [withdrawal_id, withdrawal_state]
         WithdrawalFinished(WithdrawalRecordId, WithdrawalState),
     }
 );
@@ -199,7 +205,7 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> Module<T> {
     /// Deposit asset.
     ///
-    /// Note: this func has include deposit_init and deposit_finish (not wait for block confirm process)
+    /// NOTE: this function has included deposit_init and deposit_finish (not wait for block confirm)
     pub fn deposit(who: &T::AccountId, asset_id: AssetId, balance: BalanceOf<T>) -> DispatchResult {
         xpallet_assets::Module::<T>::ensure_not_native_asset(&asset_id)?;
 
@@ -217,7 +223,7 @@ impl<T: Trait> Module<T> {
     ///
     /// WithdrawalRecord State: `Applying`
     ///
-    /// Note: this func has include withdrawal_init and withdrawal_locking
+    /// NOTE: this function has included withdrawal_init and withdrawal_locking.
     pub fn withdraw(
         who: &T::AccountId,
         asset_id: AssetId,
@@ -251,7 +257,7 @@ impl<T: Trait> Module<T> {
         let next_id = id.checked_add(1_u32).unwrap_or(0);
         NextWithdrawalRecordId::put(next_id);
 
-        Self::deposit_event(Event::<T>::WithdrawalApplied(id, record));
+        Self::deposit_event(Event::<T>::WithdrawalCreated(id, record));
         Ok(())
     }
 
@@ -361,7 +367,7 @@ impl<T: Trait> Module<T> {
     ///
     /// WithdrawalRecord State: `Processing` ==> `NormalFinish`
     ///
-    /// Note:
+    /// NOTE:
     /// when the withdrawal id is passed by runtime self logic, just pass `None`,
     /// when the withdrawal id is passed by the parameter from call(which means the id is from outside),
     /// should pass `Some(chain)` to verify whether the withdrawal is related to this chain.

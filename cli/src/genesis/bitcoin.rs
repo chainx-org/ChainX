@@ -3,13 +3,13 @@
 use std::convert::TryFrom;
 
 use hex_literal::hex;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use sp_core::sr25519;
 
 use chainx_primitives::AccountId;
 use chainx_runtime::{
-    h256_conv_endian, trustees, BtcCompact, BtcHash, BtcHeader, BtcNetwork, Chain, TrusteeInfoConfig,
+    trustees, BtcCompact, BtcHash, BtcHeader, BtcNetwork, Chain, TrusteeInfoConfig,
 };
 
 use crate::chain_spec::get_account_id_from_seed;
@@ -56,7 +56,7 @@ impl BtcGenesisParams {
             merkle_root_hash: self.merkle_root_hash,
             time: self.time,
             bits: self.bits,
-            nonce: self.nonce
+            nonce: self.nonce,
         }
     }
 }

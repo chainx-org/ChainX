@@ -28,7 +28,7 @@ use xpallet_support::{debug, error, info};
 use crate::tx::utils::{addr2vecu8, ensure_identical, parse_output_addr};
 use crate::tx::validator::parse_and_check_signed_tx;
 use crate::types::{BtcWithdrawalProposal, VoteResult};
-use crate::{Error, Module, RawEvent, Trait, WithdrawalProposal};
+use crate::{Error, Event, Module, Trait, WithdrawalProposal};
 
 pub fn trustee_session<T: Trait>(
 ) -> Result<TrusteeSessionInfo<T::AccountId, BtcTrusteeAddrInfo>, DispatchError> {
@@ -275,14 +275,14 @@ impl<T: Trait> Module<T> {
 
         info!("[apply_create_withdraw]|Through the legality check of withdrawal");
 
-        Self::deposit_event(RawEvent::CreateWithdrawalProposal(
+        Self::deposit_event(Event::<T>::WithdrawalProposalCreated(
             who.clone(),
             withdrawal_id_list,
         ));
 
         if apply_sig {
             info!("[apply_create_withdraw]apply sign after create proposal");
-            // due to `SignWithdrawalProposal` event should after `CreateWithdrawalProposal`, thus this function should after proposal
+            // due to `SignWithdrawalProposal` event should after `WithdrawalProposalCreated`, thus this function should after proposal
             // but this function would have an error return, this error return should not meet.
             if insert_trustee_vote_state::<T>(true, &who, &mut proposal.trustee_list).is_err() {
                 // should not be error in this function, if hit this branch, panic to clear all modification
@@ -343,7 +343,7 @@ impl<T: Trait> Module<T> {
                     info!("[apply_sig_withdraw]Signature completed: {:}", sigs_count);
                     proposal.sig_state = VoteResult::Finish;
 
-                    Self::deposit_event(RawEvent::FinishProposal(tx.hash()))
+                    Self::deposit_event(Event::<T>::WithdrawalProposalCompleted(tx.hash()))
                 } else {
                     proposal.sig_state = VoteResult::Unfinish;
                 }
@@ -380,7 +380,7 @@ impl<T: Trait> Module<T> {
 
                     WithdrawalProposal::<T>::kill();
 
-                    Self::deposit_event(RawEvent::DropWithdrawalProposal(
+                    Self::deposit_event(Event::<T>::WithdrawalProposalDropped(
                         reject_count as u32,
                         sig_num as u32,
                         proposal.withdrawal_id_list,
@@ -505,7 +505,7 @@ fn insert_trustee_vote_state<T: Trait>(
             );
         }
     }
-    Module::<T>::deposit_event(RawEvent::SignWithdrawalProposal(who.clone(), state));
+    Module::<T>::deposit_event(Event::<T>::WithdrawalProposalVoted(who.clone(), state));
     Ok(())
 }
 

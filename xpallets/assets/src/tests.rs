@@ -371,7 +371,7 @@ fn test_balance_btree_map() {
             &a,
             AssetType::Usable,
             &a,
-            AssetType::ReservedXRC20,
+            AssetType::ReservedWithdrawal,
             30,
         );
         assert_eq!(AssetBalance::<Test>::get(&a, &btc_id).len(), 2);
@@ -380,7 +380,7 @@ fn test_balance_btree_map() {
         let _ = XAssets::move_balance(
             &X_BTC,
             &a,
-            AssetType::ReservedXRC20,
+            AssetType::ReservedWithdrawal,
             &a,
             AssetType::Usable,
             10,
@@ -388,7 +388,7 @@ fn test_balance_btree_map() {
         let _ = XAssets::move_balance(
             &X_BTC,
             &a,
-            AssetType::ReservedXRC20,
+            AssetType::ReservedWithdrawal,
             &b,
             AssetType::Usable,
             20,

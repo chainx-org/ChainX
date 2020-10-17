@@ -34,7 +34,7 @@ impl<T: Trait> Module<T> {
     #[inline]
     pub(crate) fn mint(receiver: &T::AccountId, value: BalanceOf<T>) {
         T::Currency::deposit_creating(receiver, value);
-        Self::deposit_event(RawEvent::Mint(receiver.clone(), value));
+        Self::deposit_event(Event::<T>::Minted(receiver.clone(), value));
     }
 
     /// Reward a (potential) validator by a specific amount.

@@ -52,7 +52,7 @@ pub fn validate_transaction<T: Trait>(
         // verify prev tx for input
         // only check the first(0) input in transaction
         let previous_txid = prev.hash();
-        let expected_id = tx.raw.inputs[0].previous_output.hash;
+        let expected_id = tx.raw.inputs[0].previous_output.txid;
         if previous_txid != expected_id {
             error!("[validate_transaction]|relay previou tx's hash not equail to relay tx first input|expected_id:{:?}|prev:{:?}", expected_id, previous_txid);
             return Err(Error::<T>::InvalidPrevTx.into());

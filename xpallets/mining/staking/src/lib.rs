@@ -232,20 +232,20 @@ decl_event!(
         <T as frame_system::Trait>::AccountId
     {
         /// Issue new balance to this account. [account, reward_amount]
-        Mint(AccountId, Balance),
-        /// One validator (and its reward pot) has been slashed by the given amount. [validator, slashed_amount]
-        Slash(AccountId, Balance),
-        /// Nominator has bonded to the validator this amount. [nominator, validator, amount]
-        Bond(AccountId, AccountId, Balance),
-        /// Nominator switched the vote from one validator to another. [nominator, from, to, amount]
-        Rebond(AccountId, AccountId, AccountId, Balance),
-        /// An account has unbonded this amount. [nominator, validator, amount]
-        Unbond(AccountId, AccountId, Balance),
-        /// Claim the staking dividend. [nominator, validator, dividend]
-        Claim(AccountId, AccountId, Balance),
-        /// The nominator has withdrawn the locked balance due to the unbond operation. [nominator, amount]
-        UnlockUnbondedWithdrawal(AccountId, Balance),
-        /// Offenders are forcibly to be chilled due to insufficient reward pot balance. [session_index, chilled_validators]
+        Minted(AccountId, Balance),
+        /// A validator (and its reward pot) was slashed. [validator, slashed_amount]
+        Slashed(AccountId, Balance),
+        /// A nominator bonded to the validator this amount. [nominator, validator, amount]
+        Bonded(AccountId, AccountId, Balance),
+        /// A nominator switched the vote from one validator to another. [nominator, from, to, amount]
+        Rebonded(AccountId, AccountId, AccountId, Balance),
+        /// A nominator unbonded this amount. [nominator, validator, amount]
+        Unbonded(AccountId, AccountId, Balance),
+        /// A nominator claimed the staking dividend. [nominator, validator, dividend]
+        Claimed(AccountId, AccountId, Balance),
+        /// The nominator withdrew the locked balance from the unlocking queue. [nominator, amount]
+        Withdrawn(AccountId, Balance),
+        /// Offenders were forcibly to be chilled due to insufficient reward pot balance. [session_index, chilled_validators]
         ForceChilled(SessionIndex, Vec<AccountId>),
     }
 );
@@ -394,7 +394,7 @@ decl_module! {
                 nominator.unbonded_chunks = unbonded_chunks;
             });
 
-            Self::deposit_event(RawEvent::UnlockUnbondedWithdrawal(sender, value));
+            Self::deposit_event(Event::<T>::Withdrawn(sender, value));
         }
 
         /// Claim the staking reward given the `target` validator.
@@ -906,7 +906,11 @@ impl<T: Trait> Module<T> {
     ) -> DispatchResult {
         Self::bond_reserve(nominator, value)?;
         Self::update_vote_weight(nominator, nominee, Delta::Add(value));
-        Self::deposit_event(RawEvent::Bond(nominator.clone(), nominee.clone(), value));
+        Self::deposit_event(Event::<T>::Bonded(
+            nominator.clone(),
+            nominee.clone(),
+            value,
+        ));
         Ok(())
     }
 
@@ -922,7 +926,7 @@ impl<T: Trait> Module<T> {
         LastRebondOf::<T>::mutate(who, |last_rebond| {
             *last_rebond = Some(current_block);
         });
-        Self::deposit_event(RawEvent::Rebond(
+        Self::deposit_event(Event::<T>::Rebonded(
             who.clone(),
             from.clone(),
             to.clone(),
@@ -977,7 +981,7 @@ impl<T: Trait> Module<T> {
 
         Self::update_vote_weight(who, target, Delta::Sub(value));
 
-        Self::deposit_event(RawEvent::Unbond(who.clone(), target.clone(), value));
+        Self::deposit_event(Event::<T>::Unbonded(who.clone(), target.clone(), value));
 
         Ok(())
     }

@@ -16,11 +16,12 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 jsonrpc-pubsub = "15.0.0"
 
+# Substrate client
 sc-authority-discovery = "0.8.0"
 sc-basic-authorship = "0.8.0"
 sc-client-api = "2.0.0"
 sc-consensus = "0.8.0"
-sc-consensus-aura = "0.8.0"
+sc-consensus-babe = "0.8.0"
 sc-executor = "0.8.0"
 sc-finality-grandpa = "0.8.0"
 sc-network = "0.8.0"
@@ -32,20 +33,23 @@ sc-cli = { version = "0.8.0", optional = true }
 sc-service = { version = "0.8.0", optional = true }
 frame-benchmarking-cli = { version = "2.0.0", optional = true }
 
-sp-consensus = "0.8.0"
-sp-consensus-aura = "0.8.0"
+# Substrate primitives
 sp-core = "2.0.0"
+sp-consensus = "0.8.0"
+sp-consensus-babe = "0.8.0"
 sp-finality-grandpa = "2.0.0"
 sp-inherents = "2.0.0"
 sp-runtime = "2.0.0"
 sp-transaction-pool = "2.0.0"
 sp-authority-discovery = "2.0.0"
+
+# Substrate pallets
 pallet-im-online = "2.0.0"
 
-chainx-runtime = { path = "../runtime" }
-chainx-rpc = { path = "../rpc" }
 chainx-executor = { path = "../executor" }
 chainx-primitives = { path = "../primitives" }
+chainx-rpc = { path = "../rpc" }
+chainx-runtime = { path = "../runtime" }
 xp-io = { path = "../primitives/io" }
 xpallet-protocol = { path = "../xpallets/protocol" }
 

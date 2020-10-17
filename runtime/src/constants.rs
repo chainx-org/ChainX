@@ -1,6 +1,6 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-//! A set of constant values used in substrate runtime.
+//! A set of constant values used in chainx runtime.
 
 /// Money matters.
 pub mod currency {
@@ -20,16 +20,17 @@ pub mod currency {
 pub mod time {
     use chainx_primitives::{BlockNumber, Moment};
 
-    // Aura
     pub const MILLISECS_PER_BLOCK: Moment = 6000;
-    pub const SECS_PER_BLOCK: Moment = MILLISECS_PER_BLOCK / 1000;
-
     pub const SLOT_DURATION: Moment = MILLISECS_PER_BLOCK;
+    pub const EPOCH_DURATION_IN_BLOCKS: BlockNumber = 5 * MINUTES;
 
     // These time units are defined in number of blocks.
-    pub const MINUTES: BlockNumber = 60 / (SECS_PER_BLOCK as BlockNumber);
+    pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
     pub const HOURS: BlockNumber = MINUTES * 60;
     pub const DAYS: BlockNumber = HOURS * 24;
+
+    // 1 in 4 blocks (on average, not counting collisions) will be primary babe blocks.
+    pub const PRIMARY_PROBABILITY: (u64, u64) = (1, 4);
 }
 
 /// Fee-related.

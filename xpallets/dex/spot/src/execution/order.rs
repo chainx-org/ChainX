@@ -72,7 +72,7 @@ impl<T: Trait> Module<T> {
         // The order count of user should be increased after a new order is created.
         <OrderCountOf<T>>::insert(&who, order_id + 1);
 
-        Self::deposit_event(RawEvent::NewOrder(order.clone()));
+        Self::deposit_event(Event::<T>::NewOrder(order.clone()));
 
         order
     }
@@ -382,9 +382,9 @@ impl<T: Trait> Module<T> {
         Self::insert_executed_order(taker_order);
 
         // FIXME: The information delivered by these events seems be redundant.
-        Self::deposit_event(RawEvent::MakerOrderUpdated(maker_order.clone()));
-        Self::deposit_event(RawEvent::TakerOrderUpdated(taker_order.clone()));
-        Self::deposit_event(RawEvent::OrderExecuted(OrderExecutedInfo::new(
+        Self::deposit_event(Event::<T>::MakerOrderUpdated(maker_order.clone()));
+        Self::deposit_event(Event::<T>::TakerOrderUpdated(taker_order.clone()));
+        Self::deposit_event(Event::<T>::OrderExecuted(OrderExecutedInfo::new(
             trading_history_idx,
             pair_id,
             price,
@@ -416,7 +416,7 @@ impl<T: Trait> Module<T> {
 
         OrderInfoOf::<T>::insert(order.submitter(), order.id(), order.clone());
 
-        Self::deposit_event(RawEvent::CanceledOrderUpdated(order.clone()));
+        Self::deposit_event(Event::<T>::CanceledOrderUpdated(order.clone()));
 
         Ok(())
     }

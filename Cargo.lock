@@ -708,7 +708,7 @@ dependencies = [
  "sc-cli",
  "sc-client-api",
  "sc-consensus",
- "sc-consensus-aura",
+ "sc-consensus-babe",
  "sc-executor",
  "sc-finality-grandpa",
  "sc-network",
@@ -719,7 +719,7 @@ dependencies = [
  "serde_json",
  "sp-authority-discovery",
  "sp-consensus",
- "sp-consensus-aura",
+ "sp-consensus-babe",
  "sp-core",
  "sp-finality-grandpa",
  "sp-inherents",
@@ -767,8 +767,12 @@ dependencies = [
  "pallet-transaction-payment-rpc",
  "parity-scale-codec",
  "sc-client-api",
+ "sc-consensus-babe",
+ "sc-consensus-babe-rpc",
+ "sc-consensus-epochs",
  "sc-finality-grandpa",
  "sc-finality-grandpa-rpc",
+ "sc-keystore",
  "sc-rpc",
  "sc-rpc-api",
  "sc-service",
@@ -776,6 +780,7 @@ dependencies = [
  "sp-block-builder",
  "sp-blockchain",
  "sp-consensus",
+ "sp-consensus-babe",
  "sp-runtime",
  "sp-state-machine",
  "sp-transaction-pool",
@@ -807,9 +812,9 @@ dependencies = [
  "frame-system-rpc-runtime-api",
  "orml-currencies",
  "orml-traits",
- "pallet-aura",
  "pallet-authority-discovery",
  "pallet-authorship",
+ "pallet-babe",
  "pallet-balances",
  "pallet-collective",
  "pallet-democracy",
@@ -839,7 +844,7 @@ dependencies = [
  "sp-api",
  "sp-authority-discovery",
  "sp-block-builder",
- "sp-consensus-aura",
+ "sp-consensus-babe",
  "sp-core",
  "sp-inherents",
  "sp-io",
@@ -3176,7 +3181,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#6b2f855839047327d742448cb2cc87c1356adb8e"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#58547a04f5b45f9adf737c4fc564c500b8f6963e"
 dependencies = [
  "light-bitcoin-chain",
  "light-bitcoin-crypto",
@@ -3190,48 +3195,48 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-chain"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#6b2f855839047327d742448cb2cc87c1356adb8e"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#58547a04f5b45f9adf737c4fc564c500b8f6963e"
 dependencies = [
+ "hex",
  "light-bitcoin-crypto",
  "light-bitcoin-primitives",
  "light-bitcoin-serialization",
  "parity-scale-codec",
- "rustc-hex",
  "serde",
 ]
 
 [[package]]
 name = "light-bitcoin-crypto"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#6b2f855839047327d742448cb2cc87c1356adb8e"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#58547a04f5b45f9adf737c4fc564c500b8f6963e"
 dependencies = [
- "digest 0.8.1",
+ "digest 0.9.0",
  "light-bitcoin-primitives",
  "ripemd160",
- "sha-1 0.8.2",
- "sha2 0.8.2",
+ "sha-1 0.9.1",
+ "sha2 0.9.1",
  "siphasher",
 ]
 
 [[package]]
 name = "light-bitcoin-keys"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#6b2f855839047327d742448cb2cc87c1356adb8e"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#58547a04f5b45f9adf737c4fc564c500b8f6963e"
 dependencies = [
  "bs58",
+ "hex",
  "libsecp256k1",
  "light-bitcoin-crypto",
  "light-bitcoin-primitives",
  "light-bitcoin-serialization",
  "parity-scale-codec",
- "rustc-hex",
  "serde",
 ]
 
 [[package]]
 name = "light-bitcoin-merkle"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#6b2f855839047327d742448cb2cc87c1356adb8e"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#58547a04f5b45f9adf737c4fc564c500b8f6963e"
 dependencies = [
  "light-bitcoin-chain",
  "light-bitcoin-primitives",
@@ -3242,7 +3247,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-primitives"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#6b2f855839047327d742448cb2cc87c1356adb8e"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#58547a04f5b45f9adf737c4fc564c500b8f6963e"
 dependencies = [
  "byteorder 1.3.4",
  "fixed-hash",
@@ -3250,15 +3255,15 @@ dependencies = [
  "impl-codec",
  "impl-serde",
  "primitive-types",
- "rustc-hex",
  "serde",
 ]
 
 [[package]]
 name = "light-bitcoin-script"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#6b2f855839047327d742448cb2cc87c1356adb8e"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#58547a04f5b45f9adf737c4fc564c500b8f6963e"
 dependencies = [
+ "hex",
  "light-bitcoin-chain",
  "light-bitcoin-crypto",
  "light-bitcoin-keys",
@@ -3269,7 +3274,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-serialization"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#6b2f855839047327d742448cb2cc87c1356adb8e"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#58547a04f5b45f9adf737c4fc564c500b8f6963e"
 dependencies = [
  "light-bitcoin-primitives",
  "light-bitcoin-serialization-derive",
@@ -3278,7 +3283,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-serialization-derive"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=v2#6b2f855839047327d742448cb2cc87c1356adb8e"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#58547a04f5b45f9adf737c4fc564c500b8f6963e"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3906,26 +3911,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-aura"
-version = "2.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3150af311603b2fd78d948c8e2346d6b2530403c3971ae684ccc46021c1ea198"
-dependencies = [
- "frame-support",
- "frame-system",
- "pallet-session",
- "pallet-timestamp",
- "parity-scale-codec",
- "serde",
- "sp-application-crypto",
- "sp-consensus-aura",
- "sp-inherents",
- "sp-runtime",
- "sp-std",
- "sp-timestamp",
-]
-
-[[package]]
 name = "pallet-authority-discovery"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3956,6 +3941,32 @@ dependencies = [
  "sp-inherents",
  "sp-runtime",
  "sp-std",
+]
+
+[[package]]
+name = "pallet-babe"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f2e602bfb8c4a6498274c246cd8cd5c3b19b37324a6124542d944d95a3610bd9"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-authorship",
+ "pallet-session",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "serde",
+ "sp-application-crypto",
+ "sp-consensus-babe",
+ "sp-consensus-vrf",
+ "sp-inherents",
+ "sp-io",
+ "sp-runtime",
+ "sp-session",
+ "sp-staking",
+ "sp-std",
+ "sp-timestamp",
 ]
 
 [[package]]
@@ -4627,6 +4638,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "pdqselect"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4ec91767ecc0a0bbe558ce8c9da33c068066c57ecc8bb8477ef8c1ad3ef77c27"
+
+[[package]]
 name = "peeking_take_while"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5274,13 +5291,13 @@ dependencies = [
 
 [[package]]
 name = "ripemd160"
-version = "0.8.0"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad5112e0dbbb87577bfbc56c42450235e3012ce336e29c5befd7807bd626da4a"
+checksum = "2eca4ecc81b7f313189bf73ce724400a07da2a6dac19588b03c8bd76a2dcc251"
 dependencies = [
- "block-buffer 0.7.3",
- "digest 0.8.1",
- "opaque-debug 0.2.3",
+ "block-buffer 0.9.0",
+ "digest 0.9.0",
+ "opaque-debug 0.3.0",
 ]
 
 [[package]]
@@ -5646,35 +5663,87 @@ dependencies = [
 ]
 
 [[package]]
-name = "sc-consensus-aura"
+name = "sc-consensus-babe"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e0b4fbf217f3942ae545ad70cd5b5d567b4519b9acb07b35e0de5cce7e7ef195"
+checksum = "075c3826f181c49723215636f1b840b22c00e9be2acbaea21a86121b4dddb709"
 dependencies = [
  "derive_more",
+ "fork-tree",
  "futures 0.3.5",
  "futures-timer 3.0.2",
  "log",
+ "merlin",
+ "num-bigint",
+ "num-rational",
+ "num-traits",
  "parity-scale-codec",
  "parking_lot 0.10.2",
- "sc-block-builder",
+ "pdqselect",
+ "rand 0.7.3",
+ "retain_mut",
  "sc-client-api",
+ "sc-consensus-epochs",
  "sc-consensus-slots",
+ "sc-consensus-uncles",
  "sc-keystore",
  "sc-telemetry",
+ "schnorrkel",
+ "serde",
  "sp-api",
  "sp-application-crypto",
  "sp-block-builder",
  "sp-blockchain",
  "sp-consensus",
- "sp-consensus-aura",
+ "sp-consensus-babe",
+ "sp-consensus-vrf",
  "sp-core",
  "sp-inherents",
  "sp-io",
  "sp-runtime",
  "sp-timestamp",
+ "sp-utils",
  "sp-version",
  "substrate-prometheus-endpoint",
+]
+
+[[package]]
+name = "sc-consensus-babe-rpc"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "63e580caef0fa657f2d7b7d083ba410d1f9dbb9c1ff21113a06ef4905d6ed7ea"
+dependencies = [
+ "derive_more",
+ "futures 0.3.5",
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "sc-consensus-babe",
+ "sc-consensus-epochs",
+ "sc-keystore",
+ "sc-rpc-api",
+ "serde",
+ "sp-api",
+ "sp-application-crypto",
+ "sp-blockchain",
+ "sp-consensus",
+ "sp-consensus-babe",
+ "sp-core",
+ "sp-runtime",
+]
+
+[[package]]
+name = "sc-consensus-epochs"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f890c5e6c1dbb34d3e0bfde9242b1bf88dc44afee8746d0fa4a91e8e046f21dd"
+dependencies = [
+ "fork-tree",
+ "parity-scale-codec",
+ "parking_lot 0.10.2",
+ "sc-client-api",
+ "sp-blockchain",
+ "sp-runtime",
 ]
 
 [[package]]
@@ -5699,6 +5768,21 @@ dependencies = [
  "sp-inherents",
  "sp-runtime",
  "sp-state-machine",
+]
+
+[[package]]
+name = "sc-consensus-uncles"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "050ab17e248045000374952fa91b4ccc82d4da1ee615fb408d744802084cb2d7"
+dependencies = [
+ "log",
+ "sc-client-api",
+ "sp-authorship",
+ "sp-consensus",
+ "sp-core",
+ "sp-inherents",
+ "sp-runtime",
 ]
 
 [[package]]
@@ -6833,14 +6917,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "sp-consensus-aura"
+name = "sp-consensus-babe"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8dc270d5c9c74960f44be4fe3e2e04886edf6a4a6fa85a57d381b242ce8b41e0"
+checksum = "8050a73302f354f45d0dee610e69ed39aadf43ab8a7528bdf3df8427276dc739"
 dependencies = [
+ "merlin",
  "parity-scale-codec",
  "sp-api",
  "sp-application-crypto",
+ "sp-consensus",
+ "sp-consensus-slots",
+ "sp-consensus-vrf",
+ "sp-core",
  "sp-inherents",
  "sp-runtime",
  "sp-std",
@@ -6855,6 +6944,19 @@ checksum = "83ea323ccf4ec8aad353fbc9016a1cb8cbf0d872d33bc8874cb0753b014fb7fc"
 dependencies = [
  "parity-scale-codec",
  "sp-runtime",
+]
+
+[[package]]
+name = "sp-consensus-vrf"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3345ee42ea5319bd6e3329bc3b5ee68b09f14d677378b27409a3a52d5ebe9990"
+dependencies = [
+ "parity-scale-codec",
+ "schnorrkel",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
