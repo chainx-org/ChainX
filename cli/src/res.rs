@@ -1,10 +1,6 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use std::collections::HashMap;
-
-use xp_genesis_builder::{
-    BalancesParams, FreeBalanceInfo, WellknownAccounts, XMiningAssetParams, XStakingParams,
-};
+use xp_genesis_builder::{BalancesParams, FreeBalanceInfo, XMiningAssetParams, XStakingParams};
 
 use chainx_primitives::{AccountId, Balance};
 
@@ -16,31 +12,12 @@ macro_rules! json_from_str {
     };
 }
 
-#[derive(Debug, serde::Deserialize)]
-pub struct ConcreteAccounts {
-    council: AccountId,
-    team: AccountId,
-    pots: HashMap<AccountId, AccountId>,
-}
-
 pub fn balances() -> BalancesParams<AccountId, Balance> {
-    let free_balances: Vec<FreeBalanceInfo<AccountId, Balance>> =
-        json_from_str!("./res/genesis_balances.json");
-    let accounts: ConcreteAccounts = json_from_str!("./res/genesis_special_accounts.json");
-    BalancesParams {
-        free_balances,
-        wellknown_accounts: WellknownAccounts {
-            legacy_council: accounts.council,
-            legacy_team: accounts.team,
-            legacy_pots: accounts.pots.into_iter().collect(),
-        },
-    }
+    json_from_str!("./res/genesis_balances.json")
 }
 
-pub fn xassets() -> Vec<(AccountId, Balance)> {
-    let balances: Vec<FreeBalanceInfo<AccountId, Balance>> =
-        json_from_str!("./res/genesis_xassets.json");
-    balances.into_iter().map(|b| (b.who, b.free)).collect()
+pub fn xassets() -> Vec<FreeBalanceInfo<AccountId, Balance>> {
+    json_from_str!("./res/genesis_xassets.json")
 }
 
 pub fn xstaking() -> XStakingParams<AccountId, Balance> {

@@ -34,14 +34,12 @@ mod genesis_params {
     }
 
     #[derive(Debug, Default, Clone, Serialize, Deserialize)]
-    #[serde(rename_all = "camelCase")]
     pub struct BalancesParams<AccountId, Balance> {
         pub free_balances: Vec<FreeBalanceInfo<AccountId, Balance>>,
         pub wellknown_accounts: WellknownAccounts<AccountId>,
     }
 
     #[derive(Debug, Default, Clone, Serialize, Deserialize)]
-    #[serde(rename_all = "camelCase")]
     pub struct ValidatorInfo<AccountId, Balance> {
         pub who: AccountId,
         #[serde(with = "xpallet_support::serde_text")]

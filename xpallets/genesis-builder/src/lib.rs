@@ -10,7 +10,7 @@ use sp_std::prelude::*;
 use frame_support::{decl_module, decl_storage, traits::Currency};
 
 #[cfg(feature = "std")]
-use xp_genesis_builder::{BalancesParams, XMiningAssetParams, XStakingParams};
+use xp_genesis_builder::{BalancesParams, FreeBalanceInfo, XMiningAssetParams, XStakingParams};
 use xpallet_support::info;
 
 pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
@@ -32,7 +32,7 @@ decl_storage! {
     trait Store for Module<T: Trait> as XGenesisBuilder {}
     add_extra_genesis {
         config(balances): BalancesParams<T::AccountId, T::Balance>;
-        config(xbtc_assets): Vec<(T::AccountId, BalanceOf<T>)>;
+        config(xbtc_assets): Vec<FreeBalanceInfo<T::AccountId, BalanceOf<T>>>;
         config(xstaking): XStakingParams<T::AccountId, StakingBalanceOf<T>>;
         config(xmining_asset): XMiningAssetParams<T::AccountId>;
         build(|config| {
@@ -117,10 +117,11 @@ mod genesis {
 
     pub mod xassets {
         use crate::{BalanceOf, Trait};
+        use xp_genesis_builder::FreeBalanceInfo;
         use xpallet_protocol::X_BTC;
 
-        pub fn initialize<T: Trait>(xbtc_assets: &[(T::AccountId, BalanceOf<T>)]) {
-            for (who, free) in xbtc_assets {
+        pub fn initialize<T: Trait>(xbtc_assets: &[FreeBalanceInfo<T::AccountId, BalanceOf<T>>]) {
+            for FreeBalanceInfo { who, free } in xbtc_assets {
                 xpallet_assets::Module::<T>::force_set_free_balance(&X_BTC, who, *free);
             }
         }
