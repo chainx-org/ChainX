@@ -745,7 +745,7 @@ fn build_genesis(
             genesis_trustees: btc_genesis_trustees,
             network_id: bitcoin.network,
             confirmation_number: bitcoin.confirmation_number,
-            genesis_hash: bitcoin.hash,
+            genesis_hash: bitcoin.hash(),
             genesis_info: (bitcoin.header(), bitcoin.height),
             params_info: BtcParams::new(
                 486604799,            // max_bits

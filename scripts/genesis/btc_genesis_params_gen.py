@@ -49,8 +49,10 @@ def main():
 
     if args.network != 'Mainnet':
         network = 'Testnet'
+        confirmation_number = 4
     else:
         network = 'Mainnet'
+        confirmation_number = 6
 
     print('Generating ' + args.network + ' Bitcoin Block Header for #' +
           args.height + ':\n')
@@ -61,15 +63,16 @@ def main():
 
     full_header = json.loads(get_block(network, blk_hash))
     generated = {
+        "network": network,
+        "confirmation_number": confirmation_number,
+        'height': int(args.height),
+        'hash': blk_hash,
         'version': full_header['version'],
         'previous_header_hash': full_header['previousblockhash'],
         'merkle_root_hash': full_header['merkle_root'],
         'time': full_header['timestamp'],
         'bits': full_header['bits'],
-        'nonce': full_header['nonce'],
-        'height': int(args.height),
-        'hash': blk_hash,
-        "network_id": network
+        'nonce': full_header['nonce']
     }
     print('Generated Block header info:\n')
     print(json.dumps(generated, indent=4))
@@ -81,8 +84,7 @@ def main():
     chainx_dir = os.path.dirname(scripts_dir)
     os.chdir(chainx_dir)
 
-    output_fname = 'cli/src/res/btc_genesis_header_' + args.network.lower(
-    ) + '.json'
+    output_fname = 'cli/src/res/btc_genesis_params_' + args.network.lower() + '.json'
     with open(output_fname, 'w') as outfile:
         json.dump(generated, outfile, indent=4, sort_keys=False)
 

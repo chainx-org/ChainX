@@ -3,57 +3,46 @@
 use std::convert::TryFrom;
 
 use hex_literal::hex;
-use serde::{Deserialize, Serialize};
+use serde::{Serialize, Deserialize};
 
 use sp_core::sr25519;
 
 use chainx_primitives::AccountId;
-use chainx_runtime::{
-    trustees, BtcCompact, BtcHash, BtcHeader, BtcNetwork, Chain, TrusteeInfoConfig,
-};
+use chainx_runtime::{trustees, BtcCompact, BtcHash, BtcHeader, BtcNetwork, Chain, TrusteeInfoConfig, h256_rev};
 
 use crate::chain_spec::get_account_id_from_seed;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct BtcGenesisParams {
     pub network: BtcNetwork,
     pub confirmation_number: u32,
     pub height: u32,
-    pub hash: BtcHash,
-    // FIXME: https://github.com/serde-rs/json/issues/721
-    // #[serde(flatten)]
-    // pub header: BtcHeader,
-    pub version: u32,
-    pub previous_header_hash: BtcHash,
-    pub merkle_root_hash: BtcHash,
-    pub time: u32,
-    pub bits: BtcCompact,
-    pub nonce: u32,
-}
-
-impl std::fmt::Debug for BtcGenesisParams {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("BtcGenesisParams")
-            .field("network", &self.network)
-            .field("confirmation_number", &self.confirmation_number)
-            .field("height", &self.height)
-            .field("hash", &self.hash)
-            .field("version", &self.version)
-            .field("previous_header_hash", &self.previous_header_hash)
-            .field("merkle_root_hash", &self.merkle_root_hash)
-            .field("time", &self.time)
-            .field("bits", &self.bits)
-            .field("nonce", &self.nonce)
-            .finish()
-    }
+    hash: String,
+    version: u32,
+    previous_header_hash: String,
+    merkle_root_hash: String,
+    time: u32,
+    bits: BtcCompact,
+    nonce: u32,
 }
 
 impl BtcGenesisParams {
+    /// Return the block hash.
+    ///
+    /// Indicating user-visible serializations of this hash should be backward.
+    pub fn hash(&self) -> BtcHash {
+        h256_rev(&self.hash)
+    }
+
+    /// Return the block header.
+    ///
+    /// Indicating user-visible serializations of `previous_header_hash` and `merkle_root_hash`
+    /// should be backward.
     pub fn header(&self) -> BtcHeader {
         BtcHeader {
             version: self.version,
-            previous_header_hash: self.previous_header_hash,
-            merkle_root_hash: self.merkle_root_hash,
+            previous_header_hash: h256_rev(&self.previous_header_hash),
+            merkle_root_hash: h256_rev(&self.merkle_root_hash),
             time: self.time,
             bits: self.bits,
             nonce: self.nonce,
@@ -63,17 +52,18 @@ impl BtcGenesisParams {
 
 pub fn btc_genesis_params(res: &str) -> BtcGenesisParams {
     let params: BtcGenesisParams = serde_json::from_str(res).expect("JSON was not well-formatted");
-    assert_eq!(params.header().hash(), params.hash);
+    assert_eq!(params.header().hash(), params.hash());
     params
 }
 
 #[test]
 fn test_btc_genesis_params() {
+    use chainx_runtime::hash_rev;
     let params = btc_genesis_params(include_str!("../res/btc_genesis_params_mainnet.json"));
     let ser = serde_json::to_string_pretty(&params).unwrap();
     println!("BTC params: {}", ser);
     let params: BtcGenesisParams = serde_json::from_str(&ser).unwrap();
-    println!("BTC params: {:#?}", params);
+    println!("BTC hash: {:#?}", hash_rev(params.hash()));
     println!("BTC header: {:#?}", params.header());
 }
 
