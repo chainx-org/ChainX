@@ -60,7 +60,6 @@ mod genesis {
         use frame_support::traits::StoredMap;
         use pallet_balances::AccountData;
         use xp_genesis_builder::{BalancesParams, FreeBalanceInfo, WellknownAccounts};
-        use xpallet_mining_staking::RewardPotAccountFor;
         use xpallet_support::traits::TreasuryAccount;
 
         fn validator_for<'a, T: Trait, I: Iterator<Item = &'a (T::AccountId, T::AccountId)>>(
@@ -104,9 +103,7 @@ mod genesis {
                         free,
                     );
                 } else if let Some(validator) = validator_for::<T, _>(who, legacy_pots.iter()) {
-                    let new_pot = <T as xpallet_mining_staking::Trait>::DetermineRewardPotAccount::reward_pot_account_for(
-                            validator,
-                        );
+                    let new_pot = xpallet_mining_staking::Module::<T>::reward_pot_for(validator);
                     set_free_balance(&new_pot, free);
                 } else {
                     set_free_balance(who, free);
