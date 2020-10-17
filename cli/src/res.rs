@@ -105,11 +105,6 @@ struct XbtcInfo {
     weight: u128,
 }
 
-pub fn xbtc_weight() -> u128 {
-    let xbtc_info: XbtcInfo = json_from_str!("./res/genesis_xbtc_info.json");
-    xbtc_info.weight
-}
-
 #[derive(Debug, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct XbtcMiner {
@@ -118,9 +113,22 @@ struct XbtcMiner {
     weight: u128,
 }
 
-pub fn xbtc_miners() -> Vec<(AccountId, u128)> {
-    let xbtc_miners: Vec<XbtcMiner> = json_from_str!("./res/genesis_xbtc_miners.json");
-    xbtc_miners.into_iter().map(|m| (m.who, m.weight)).collect()
+#[derive(Debug, serde::Deserialize)]
+struct XMiningAssetParams {
+    xbtc_miners: Vec<XbtcMiner>,
+    xbtc_info: XbtcInfo,
+}
+
+pub fn xmining_asset() -> (Vec<(AccountId, u128)>, u128) {
+    let params: XMiningAssetParams = json_from_str!("./res/genesis_xminingasset.json");
+    let XMiningAssetParams {
+        xbtc_miners,
+        xbtc_info,
+    } = params;
+    (
+        xbtc_miners.into_iter().map(|m| (m.who, m.weight)).collect(),
+        xbtc_info.weight,
+    )
 }
 
 #[derive(Debug, serde::Deserialize)]

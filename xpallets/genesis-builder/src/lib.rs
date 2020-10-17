@@ -33,8 +33,7 @@ decl_storage! {
         config(xbtc_assets): Vec<(T::AccountId, BalanceOf<T>)>;
         config(validators): Vec<GenesisValidatorInfo<T>>;
         config(nominators): Vec<(T::AccountId, Vec<(T::AccountId, xpallet_mining_staking::BalanceOf<T>, WeightType)>)>;
-        config(xbtc_weight): WeightType;
-        config(xbtc_miners): Vec<(T::AccountId, WeightType)>;
+        config(xmining_asset): (Vec<(T::AccountId, WeightType)>, WeightType);
         config(special_accounts): (T::AccountId, T::AccountId, Vec<(T::AccountId, T::AccountId)>);
         build(|config| {
             use crate::genesis::{xassets, balances, xstaking, xminingasset};
@@ -55,7 +54,7 @@ decl_storage! {
             );
             xassets::initialize::<T>(&config.xbtc_assets);
             xstaking::initialize::<T>(&config.validators, &config.nominators);
-            xminingasset::initialize::<T>(config.xbtc_weight, &config.xbtc_miners);
+            xminingasset::initialize::<T>(config.xmining_asset.1, &config.xmining_asset.0);
 
             info!(
                 "Took {:?}ms to orchestrate the exported state from ChainX 1.0",

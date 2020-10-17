@@ -782,8 +782,7 @@ fn build_genesis(
             xbtc_assets: crate::res::xassets(),
             validators: crate::res::validators(),
             nominators: crate::res::nominators(),
-            xbtc_miners: crate::res::xbtc_miners(),
-            xbtc_weight: crate::res::xbtc_weight(),
+            xmining_asset: crate::res::xmining_asset(),
             special_accounts: crate::res::special_accounts(),
         }),
     }
