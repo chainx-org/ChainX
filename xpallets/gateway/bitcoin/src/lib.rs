@@ -39,11 +39,11 @@ use xpallet_support::{debug, ensure_with_errorlog, error, info, str, try_addr};
 
 // light-bitcoin
 #[cfg(feature = "std")]
-pub use light_bitcoin::primitives::h256_conv_endian_from_str;
+pub use light_bitcoin::primitives::h256_rev;
 pub use light_bitcoin::{
     chain::BlockHeader as BtcHeader,
     keys::Network as BtcNetwork,
-    primitives::{Compact, H256, H264},
+    primitives::{hash_rev, Compact, H256, H264},
 };
 use light_bitcoin::{
     chain::Transaction,
@@ -235,15 +235,15 @@ decl_storage! {
         config(genesis_hash): H256;
         config(genesis_trustees): Vec<T::AccountId>;
         build(|config| {
-            let genesis_header = config.genesis_info.0;
-            let genesis_hash = genesis_header.hash();
+            let genesis_hash = config.genesis_hash;
+            let (genesis_header, genesis_height) = config.genesis_info;
             let genesis_index = BtcHeaderIndex {
                 hash: genesis_hash,
-                height: config.genesis_info.1
+                height: genesis_height,
             };
             let header_info = BtcHeaderInfo {
                 header: genesis_header,
-                height: config.genesis_info.1
+                height: genesis_height,
             };
             // would ignore check for bitcoin testnet
             #[cfg(not(test))] {
@@ -254,14 +254,9 @@ decl_storage! {
             }
             }
 
-            if genesis_hash != config.genesis_hash {
-                panic!("the genesis block not much the genesis_hash!|genesis_block's hash:{:?}|config genesis_hash:{:?}", genesis_hash, config.genesis_hash);
-            }
-
             Headers::insert(&genesis_hash, header_info);
             BlockHashFor::insert(&genesis_index.height, vec![genesis_hash]);
             MainChain::insert(&genesis_hash, true);
-
             BestIndex::put(genesis_index);
 
             // init trustee (not this action should ha)
