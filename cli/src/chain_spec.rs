@@ -782,7 +782,6 @@ fn build_genesis(
             xbtc_assets: crate::res::xassets(),
             xstaking: crate::res::xstaking(),
             xmining_asset: crate::res::xmining_asset(),
-            wellknown_accounts: crate::res::wellknown_accounts(),
         }),
     }
 }

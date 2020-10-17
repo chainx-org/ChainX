@@ -10,7 +10,7 @@ use sp_std::prelude::*;
 use frame_support::{decl_module, decl_storage, traits::Currency};
 
 #[cfg(feature = "std")]
-use xp_genesis_builder::{WellknownAccounts, XMiningAssetParams, XStakingParams};
+use xp_genesis_builder::{BalancesParams, XMiningAssetParams, XStakingParams};
 use xpallet_support::info;
 
 pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
@@ -31,17 +31,16 @@ decl_module! {
 decl_storage! {
     trait Store for Module<T: Trait> as XGenesisBuilder {}
     add_extra_genesis {
-        config(balances): Vec<(T::AccountId, T::Balance)>;
+        config(balances): BalancesParams<T::AccountId, T::Balance>;
         config(xbtc_assets): Vec<(T::AccountId, BalanceOf<T>)>;
         config(xstaking): XStakingParams<T::AccountId, StakingBalanceOf<T>>;
         config(xmining_asset): XMiningAssetParams<T::AccountId>;
-        config(wellknown_accounts): WellknownAccounts<T::AccountId>;
         build(|config| {
             use crate::genesis::{xassets, balances, xstaking, xminingasset};
 
             let now = std::time::Instant::now();
 
-            balances::initialize::<T>(&config.balances, config.wellknown_accounts.clone());
+            balances::initialize::<T>(&config.balances);
             xassets::initialize::<T>(&config.xbtc_assets);
             xstaking::initialize::<T>(&config.xstaking);
             xminingasset::initialize::<T>(&config.xmining_asset);
@@ -60,7 +59,7 @@ mod genesis {
         use crate::Trait;
         use frame_support::traits::StoredMap;
         use pallet_balances::AccountData;
-        use xp_genesis_builder::WellknownAccounts;
+        use xp_genesis_builder::{BalancesParams, FreeBalanceInfo, WellknownAccounts};
         use xpallet_mining_staking::RewardPotAccountFor;
         use xpallet_support::traits::TreasuryAccount;
 
@@ -71,15 +70,17 @@ mod genesis {
             pots.find(|(pot, _)| *pot == *target).map(|(_, v)| v)
         }
 
-        pub fn initialize<T: Trait>(
-            balances: &[(T::AccountId, T::Balance)],
-            legacy_wellknown_accounts: WellknownAccounts<T::AccountId>,
-        ) {
+        pub fn initialize<T: Trait>(params: &BalancesParams<T::AccountId, T::Balance>) {
+            let BalancesParams {
+                free_balances,
+                wellknown_accounts,
+            } = params;
+
             let WellknownAccounts {
                 legacy_council,
                 legacy_team,
                 legacy_pots,
-            } = legacy_wellknown_accounts;
+            } = wellknown_accounts;
 
             let treasury_account =
                 <T as xpallet_mining_staking::Trait>::TreasuryAccount::treasury_account();
@@ -94,10 +95,10 @@ mod genesis {
                 )
             };
 
-            for (who, free) in balances {
-                if *who == legacy_council {
+            for FreeBalanceInfo { who, free } in free_balances {
+                if *who == *legacy_council {
                     set_free_balance(&treasury_account, free);
-                } else if *who == legacy_team {
+                } else if *who == *legacy_team {
                     set_free_balance(
                         &xpallet_mining_staking::Module::<T>::vesting_account(),
                         free,

@@ -21,6 +21,26 @@ mod genesis_params {
     }
 
     #[derive(Debug, Default, Clone, Serialize, Deserialize)]
+    pub struct FreeBalanceInfo<AccountId, Balance> {
+        pub who: AccountId,
+        pub free: Balance,
+    }
+
+    #[derive(Debug, Default, Clone, Serialize, Deserialize)]
+    pub struct WellknownAccounts<AccountId> {
+        pub legacy_council: AccountId,
+        pub legacy_team: AccountId,
+        pub legacy_pots: Vec<(AccountId, AccountId)>,
+    }
+
+    #[derive(Debug, Default, Clone, Serialize, Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct BalancesParams<AccountId, Balance> {
+        pub free_balances: Vec<FreeBalanceInfo<AccountId, Balance>>,
+        pub wellknown_accounts: WellknownAccounts<AccountId>,
+    }
+
+    #[derive(Debug, Default, Clone, Serialize, Deserialize)]
     #[serde(rename_all = "camelCase")]
     pub struct ValidatorInfo<AccountId, Balance> {
         pub who: AccountId,
@@ -50,13 +70,6 @@ mod genesis_params {
     pub struct XStakingParams<AccountId, Balance> {
         pub validators: Vec<ValidatorInfo<AccountId, Balance>>,
         pub nominators: Vec<NominatorInfo<AccountId, Balance>>,
-    }
-
-    #[derive(Debug, Default, Clone, Serialize, Deserialize)]
-    pub struct WellknownAccounts<AccountId> {
-        pub legacy_council: AccountId,
-        pub legacy_team: AccountId,
-        pub legacy_pots: Vec<(AccountId, AccountId)>,
     }
 
     #[derive(Debug, Default, Serialize, Deserialize)]
