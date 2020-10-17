@@ -3,72 +3,78 @@
 use std::convert::TryFrom;
 
 use hex_literal::hex;
-use serde::Deserialize;
+use serde::{Serialize, Deserialize};
 
 use sp_core::sr25519;
 
 use chainx_primitives::AccountId;
 use chainx_runtime::{
-    h256_conv_endian, trustees, BtcCompact, BtcHash, BtcHeader, BtcNetwork, Chain,
-    TrusteeInfoConfig,
+    h256_conv_endian, trustees, BtcCompact, BtcHash, BtcHeader, BtcNetwork, Chain, TrusteeInfoConfig,
 };
 
 use crate::chain_spec::get_account_id_from_seed;
 
-#[derive(Debug, Deserialize)]
-struct BitcoinGenesisHeader {
-    version: u32,
-    previous_header_hash: BtcHash,
-    merkle_root_hash: BtcHash,
-    time: u32,
-    bits: u32,
-    nonce: u32,
-    height: u32,
-    hash: BtcHash,
-}
-
+#[derive(Serialize, Deserialize)]
 pub struct BtcGenesisParams {
     pub network: BtcNetwork,
-    pub genesis_hash: BtcHash,
-    pub genesis_info: (BtcHeader, u32),
     pub confirmation_number: u32,
+    pub height: u32,
+    pub hash: BtcHash,
+    // FIXME: https://github.com/serde-rs/json/issues/721
+    // #[serde(flatten)]
+    // pub header: BtcHeader,
+    pub version: u32,
+    pub previous_header_hash: BtcHash,
+    pub merkle_root_hash: BtcHash,
+    pub time: u32,
+    pub bits: BtcCompact,
+    pub nonce: u32,
 }
 
 impl std::fmt::Debug for BtcGenesisParams {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BtcGenesisParams")
             .field("network", &self.network)
-            .field("genesis_hash", &h256_conv_endian(self.genesis_hash))
-            .field("genesis_info", &self.genesis_info)
             .field("confirmation_number", &self.confirmation_number)
+            .field("height", &self.height)
+            .field("hash", &self.hash)
+            .field("version", &self.version)
+            .field("previous_header_hash", &self.previous_header_hash)
+            .field("merkle_root_hash", &self.merkle_root_hash)
+            .field("time", &self.time)
+            .field("bits", &self.bits)
+            .field("nonce", &self.nonce)
             .finish()
     }
 }
 
-pub fn btc_genesis_header_info(network: BtcNetwork) -> BtcGenesisParams {
-    let (btc_genesis, confirmation_number) = match network {
-        BtcNetwork::Mainnet => (include_str!("../res/btc_genesis_header_mainnet.json"), 4),
-        BtcNetwork::Testnet => (include_str!("../res/btc_genesis_header_testnet.json"), 6),
-    };
-    let raw: BitcoinGenesisHeader =
-        serde_json::from_str(btc_genesis).expect("JSON was not well-formatted");
-    let genesis_hash = h256_conv_endian(raw.hash);
-    let genesis_height = raw.height;
-    let genesis_header = BtcHeader {
-        version: raw.version,
-        previous_header_hash: h256_conv_endian(raw.previous_header_hash),
-        merkle_root_hash: h256_conv_endian(raw.merkle_root_hash),
-        time: raw.time,
-        bits: BtcCompact::new(raw.bits),
-        nonce: raw.nonce,
-    };
-    assert_eq!(genesis_header.hash(), genesis_hash);
-    BtcGenesisParams {
-        network,
-        genesis_hash,
-        genesis_info: (genesis_header, genesis_height),
-        confirmation_number,
+impl BtcGenesisParams {
+    pub fn header(&self) -> BtcHeader {
+        BtcHeader {
+            version: self.version,
+            previous_header_hash: self.previous_header_hash,
+            merkle_root_hash: self.merkle_root_hash,
+            time: self.time,
+            bits: self.bits,
+            nonce: self.nonce
+        }
     }
+}
+
+pub fn btc_genesis_params(res: &str) -> BtcGenesisParams {
+    let params: BtcGenesisParams = serde_json::from_str(res).expect("JSON was not well-formatted");
+    assert_eq!(params.header().hash(), params.hash);
+    params
+}
+
+#[test]
+fn test_btc_genesis_params() {
+    let params = btc_genesis_params(include_str!("../res/btc_genesis_params_mainnet.json"));
+    let ser = serde_json::to_string_pretty(&params).unwrap();
+    println!("BTC params: {}", ser);
+    let params: BtcGenesisParams = serde_json::from_str(&ser).unwrap();
+    println!("BTC params: {:#?}", params);
+    println!("BTC header: {:#?}", params.header());
 }
 
 // (account_id, about, hot_key, cold_key)

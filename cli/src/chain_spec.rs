@@ -22,9 +22,8 @@ use xpallet_protocol::{BTC_DECIMALS, PCX, PCX_DECIMALS, X_BTC};
 
 use chainx_runtime::{
     constants::{currency::DOLLARS, time::DAYS},
-    AccountId, AssetId, AssetInfo, AssetRestrictions, Balance, BtcNetwork, BtcParams,
-    BtcTxVerifier, Chain, NetworkType, ReferralId, Runtime, SessionKeys, Signature,
-    TrusteeInfoConfig, WASM_BINARY,
+    AccountId, AssetId, AssetInfo, AssetRestrictions, Balance, BtcParams, BtcTxVerifier, Chain,
+    NetworkType, ReferralId, Runtime, SessionKeys, Signature, TrusteeInfoConfig, WASM_BINARY,
 };
 use chainx_runtime::{
     AuraConfig, AuthorityDiscoveryConfig, BalancesConfig, CouncilConfig, DemocracyConfig,
@@ -147,7 +146,9 @@ pub fn development_config() -> Result<ChainSpec, String> {
                 ("Alice//stash", endowed_balance),
                 ("Bob//stash", endowed_balance),
             ],
-            crate::genesis::bitcoin::btc_genesis_header_info(BtcNetwork::Testnet),
+            crate::genesis::bitcoin::btc_genesis_params(include_str!(
+                "res/btc_genesis_params_testnet.json"
+            )),
             crate::genesis::bitcoin::local_testnet_trustees(),
         )
     };
@@ -182,7 +183,9 @@ pub fn benchmarks_config() -> Result<ChainSpec, String> {
                 ("Alice//stash", endowed_balance),
                 ("Bob//stash", endowed_balance),
             ],
-            crate::genesis::bitcoin::btc_genesis_header_info(BtcNetwork::Mainnet),
+            crate::genesis::bitcoin::btc_genesis_params(include_str!(
+                "res/btc_genesis_params_mainnet.json"
+            )),
             crate::genesis::bitcoin::benchmarks_trustees(),
         )
     };
@@ -228,7 +231,9 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
                 ("Eve//stash", endowed_balance),
                 ("Ferdie//stash", endowed_balance),
             ],
-            crate::genesis::bitcoin::btc_genesis_header_info(BtcNetwork::Testnet),
+            crate::genesis::bitcoin::btc_genesis_params(include_str!(
+                "res/btc_genesis_params_testnet.json"
+            )),
             crate::genesis::bitcoin::local_testnet_trustees(),
         )
     };
@@ -368,7 +373,9 @@ pub fn staging_testnet_config() -> Result<ChainSpec, String> {
             root_key.clone(), // use root key as vesting_account
             assets.clone(),
             endowed.clone(),
-            crate::genesis::bitcoin::btc_genesis_header_info(BtcNetwork::Testnet),
+            crate::genesis::bitcoin::btc_genesis_params(include_str!(
+                "res/btc_genesis_params_testnet.json"
+            )),
             crate::genesis::bitcoin::staging_testnet_trustees(),
         )
     };
@@ -511,7 +518,9 @@ pub fn testnet_config() -> Result<ChainSpec, String> {
             root_key.clone(), // use root key as vesting_account
             assets.clone(),
             endowed.clone(),
-            crate::genesis::bitcoin::btc_genesis_header_info(BtcNetwork::Testnet),
+            crate::genesis::bitcoin::btc_genesis_params(include_str!(
+                "res/btc_genesis_params_testnet.json"
+            )),
             crate::genesis::bitcoin::staging_testnet_trustees(),
         )
     };
@@ -737,9 +746,9 @@ fn build_genesis(
         xpallet_gateway_bitcoin: Some(XGatewayBitcoinConfig {
             genesis_trustees: btc_genesis_trustees,
             network_id: bitcoin.network,
-            genesis_hash: bitcoin.genesis_hash,
-            genesis_info: bitcoin.genesis_info,
             confirmation_number: bitcoin.confirmation_number,
+            genesis_hash: bitcoin.hash,
+            genesis_info: (bitcoin.header(), bitcoin.height),
             params_info: BtcParams::new(
                 486604799,            // max_bits
                 2 * 60 * 60,          // block_max_future
