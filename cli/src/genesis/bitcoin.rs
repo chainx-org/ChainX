@@ -3,12 +3,14 @@
 use std::convert::TryFrom;
 
 use hex_literal::hex;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use sp_core::sr25519;
 
 use chainx_primitives::AccountId;
-use chainx_runtime::{trustees, BtcCompact, BtcHash, BtcHeader, BtcNetwork, Chain, TrusteeInfoConfig, h256_rev};
+use chainx_runtime::{
+    h256_rev, trustees, BtcCompact, BtcHash, BtcHeader, BtcNetwork, Chain, TrusteeInfoConfig,
+};
 
 use crate::chain_spec::get_account_id_from_seed;
 
