@@ -20,7 +20,7 @@ mod genesis_params {
         s.parse::<u128>().map_err(serde::de::Error::custom)
     }
 
-    #[derive(Debug, Default, Serialize, Deserialize)]
+    #[derive(Debug, Default, Clone, Serialize, Deserialize)]
     #[serde(rename_all = "camelCase")]
     pub struct ValidatorInfo<AccountId, Balance> {
         pub who: AccountId,
@@ -30,6 +30,26 @@ mod genesis_params {
         pub total_nomination: Balance,
         #[serde(deserialize_with = "deserialize_u128")]
         pub total_weight: u128,
+    }
+
+    #[derive(Debug, Default, Clone, Serialize, Deserialize)]
+    pub struct Nomination<AccountId, Balance> {
+        pub nominee: AccountId,
+        pub nomination: Balance,
+        #[serde(deserialize_with = "deserialize_u128")]
+        pub weight: u128,
+    }
+
+    #[derive(Debug, Default, Clone, Serialize, Deserialize)]
+    pub struct NominatorInfo<AccountId, Balance> {
+        pub nominator: AccountId,
+        pub nominations: Vec<Nomination<AccountId, Balance>>,
+    }
+
+    #[derive(Debug, Default, Clone, Serialize, Deserialize)]
+    pub struct XStakingParams<AccountId, Balance> {
+        pub validators: Vec<ValidatorInfo<AccountId, Balance>>,
+        pub nominators: Vec<NominatorInfo<AccountId, Balance>>,
     }
 
     #[derive(Debug, Default, Clone, Serialize, Deserialize)]

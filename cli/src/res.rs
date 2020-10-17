@@ -2,9 +2,7 @@
 
 use std::collections::HashMap;
 
-use serde::Deserialize;
-
-use xp_genesis_builder::{ValidatorInfo, WellknownAccounts, XMiningAssetParams};
+use xp_genesis_builder::{WellknownAccounts, XMiningAssetParams, XStakingParams};
 
 use chainx_primitives::{AccountId, Balance};
 
@@ -14,14 +12,6 @@ macro_rules! json_from_str {
             .map_err(|e| log::error!("{:?}", e))
             .expect("JSON was not well-formatted")
     };
-}
-
-fn deserialize_u128<'de, D>(deserializer: D) -> Result<u128, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let s = String::deserialize(deserializer)?;
-    s.parse::<u128>().map_err(serde::de::Error::custom)
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -40,40 +30,8 @@ pub fn xassets() -> Vec<(AccountId, Balance)> {
     balances.into_iter().map(|b| (b.who, b.free)).collect()
 }
 
-pub fn validators() -> Vec<ValidatorInfo<AccountId, Balance>> {
-    json_from_str!("./res/genesis_validators.json")
-}
-
-#[derive(Debug, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct Nomination {
-    nominee: AccountId,
-    nomination: Balance,
-    #[serde(deserialize_with = "deserialize_u128")]
-    weight: u128,
-}
-
-#[derive(Debug, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct NominatorInfo {
-    nominator: AccountId,
-    nominations: Vec<Nomination>,
-}
-
-pub fn nominators() -> Vec<(AccountId, Vec<(AccountId, Balance, u128)>)> {
-    let nominators: Vec<NominatorInfo> = json_from_str!("./res/genesis_nominators.json");
-    nominators
-        .into_iter()
-        .map(|n| {
-            (
-                n.nominator,
-                n.nominations
-                    .into_iter()
-                    .map(|nom| (nom.nominee, nom.nomination, nom.weight))
-                    .collect(),
-            )
-        })
-        .collect()
+pub fn xstaking() -> XStakingParams<AccountId, Balance> {
+    json_from_str!("./res/genesis_xstaking.json")
 }
 
 pub fn xmining_asset() -> XMiningAssetParams<AccountId> {

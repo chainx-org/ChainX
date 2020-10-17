@@ -780,8 +780,7 @@ fn build_genesis(
         xpallet_genesis_builder: Some(XGenesisBuilderConfig {
             balances: crate::res::balances(),
             xbtc_assets: crate::res::xassets(),
-            validators: crate::res::validators(),
-            nominators: crate::res::nominators(),
+            xstaking: crate::res::xstaking(),
             xmining_asset: crate::res::xmining_asset(),
             wellknown_accounts: crate::res::wellknown_accounts(),
         }),

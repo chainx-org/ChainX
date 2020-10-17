@@ -10,9 +10,7 @@ use sp_std::prelude::*;
 use frame_support::{decl_module, decl_storage, traits::Currency};
 
 #[cfg(feature = "std")]
-use xp_genesis_builder::{ValidatorInfo, WellknownAccounts, XMiningAssetParams};
-#[cfg(feature = "std")]
-use xpallet_mining_staking::WeightType;
+use xp_genesis_builder::{WellknownAccounts, XMiningAssetParams, XStakingParams};
 use xpallet_support::info;
 
 pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
@@ -35,8 +33,7 @@ decl_storage! {
     add_extra_genesis {
         config(balances): Vec<(T::AccountId, T::Balance)>;
         config(xbtc_assets): Vec<(T::AccountId, BalanceOf<T>)>;
-        config(validators): Vec<ValidatorInfo<T::AccountId, StakingBalanceOf<T>>>;
-        config(nominators): Vec<(T::AccountId, Vec<(T::AccountId, StakingBalanceOf<T>, WeightType)>)>;
+        config(xstaking): XStakingParams<T::AccountId, StakingBalanceOf<T>>;
         config(xmining_asset): XMiningAssetParams<T::AccountId>;
         config(wellknown_accounts): WellknownAccounts<T::AccountId>;
         build(|config| {
@@ -46,7 +43,7 @@ decl_storage! {
 
             balances::initialize::<T>(&config.balances, config.wellknown_accounts.clone());
             xassets::initialize::<T>(&config.xbtc_assets);
-            xstaking::initialize::<T>(config.validators.as_slice(), &config.nominators);
+            xstaking::initialize::<T>(&config.xstaking);
             xminingasset::initialize::<T>(&config.xmining_asset);
 
             info!(
@@ -130,30 +127,46 @@ mod genesis {
 
     pub mod xstaking {
         use crate::Trait;
-        use xp_genesis_builder::ValidatorInfo;
-        use xpallet_mining_staking::{BalanceOf, WeightType};
+        use xp_genesis_builder::{Nomination, NominatorInfo, XStakingParams};
+        use xpallet_mining_staking::BalanceOf;
 
-        pub fn initialize<T: Trait>(
-            validators: &[ValidatorInfo<T::AccountId, BalanceOf<T>>],
-            nominators: &[(T::AccountId, Vec<(T::AccountId, BalanceOf<T>, WeightType)>)],
-        ) {
-            /////// register validator
+        pub fn initialize<T: Trait>(params: &XStakingParams<T::AccountId, BalanceOf<T>>) {
+            let XStakingParams {
+                validators,
+                nominators,
+            } = params;
+
             let genesis_validators = validators.iter().map(|v| v.who.clone()).collect::<Vec<_>>();
+
+            // register validator
             xpallet_mining_staking::Module::<T>::initialize_validators(validators)
                 .expect("Failed to initialize staking validators");
 
             // 1. mock vote
             // 3. set vote weights
-            for (nominator, nominations) in nominators {
-                for (nominee, value, weight) in nominations {
+            for NominatorInfo {
+                nominator,
+                nominations,
+            } in nominators
+            {
+                for Nomination {
+                    nominee,
+                    nomination,
+                    weight,
+                } in nominations
+                {
                     // The dead validators in 1.0 has been dropped.
                     if genesis_validators.contains(nominee) {
                         // Validator self bonded already processed in initialize_validators()
                         if *nominee == *nominator {
                             continue;
                         }
-                        xpallet_mining_staking::Module::<T>::force_bond(nominator, nominee, *value)
-                            .expect("force bond failed");
+                        xpallet_mining_staking::Module::<T>::force_bond(
+                            nominator,
+                            nominee,
+                            *nomination,
+                        )
+                        .expect("force bond failed");
                         xpallet_mining_staking::Module::<T>::force_set_nominator_vote_weight(
                             nominator, nominee, *weight,
                         );
