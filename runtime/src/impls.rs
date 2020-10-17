@@ -10,8 +10,11 @@ use frame_support::{
 };
 use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 
-use crate::{Authorship, Balances, NegativeImbalance, Runtime};
-use chainx_primitives::Balance;
+use chainx_primitives::{AccountId, Balance};
+
+use crate::{Authorship, Balances, Runtime};
+
+type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
 
 pub struct Author;
 impl OnUnbalanced<NegativeImbalance> for Author {
@@ -72,5 +75,6 @@ parameter_types! {
     pub AdjustmentVariable: Multiplier = Multiplier::saturating_from_rational(1, 100_000);
     pub MinimumMultiplier: Multiplier = Multiplier::saturating_from_rational(1, 1_000_000_000u128);
 }
+
 pub type SlowAdjustingFeeUpdate<R> =
     TargetedFeeAdjustment<R, TargetBlockFullness, AdjustmentVariable, MinimumMultiplier>;

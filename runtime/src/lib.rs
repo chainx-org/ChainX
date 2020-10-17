@@ -11,7 +11,6 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use codec::Encode;
-
 use static_assertions::const_assert;
 
 use sp_api::impl_runtime_apis;
@@ -51,9 +50,6 @@ use xpallet_mining_asset::{MinerLedger, MiningAssetInfo};
 use xpallet_mining_staking::{NominatorInfo, NominatorLedger, ValidatorInfo};
 use xpallet_support::traits::MultisigAddressFor;
 
-#[cfg(any(feature = "std", test))]
-pub use sp_runtime::BuildStorage;
-
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
     construct_runtime, debug, parameter_types,
@@ -83,7 +79,8 @@ pub use xpallet_assets::{
 #[cfg(feature = "std")]
 pub use xpallet_gateway_bitcoin::h256_rev;
 pub use xpallet_gateway_bitcoin::{
-    BtcHeader, BtcNetwork, BtcParams, BtcTxVerifier, Compact as BtcCompact, H256 as BtcHash,
+    hash_rev, BtcHeader, BtcNetwork, BtcParams, BtcTxVerifier, Compact as BtcCompact,
+    H256 as BtcHash,
 };
 pub use xpallet_gateway_common::{
     trustees,
@@ -92,24 +89,15 @@ pub use xpallet_gateway_common::{
 pub use xpallet_gateway_records::Withdrawal;
 pub use xpallet_protocol::*;
 
-/// Implementations of some helper traits passed into runtime modules as associated types.
-pub mod impls;
-use impls::{CurrencyToVoteHandler, DealWithFees, SlowAdjustingFeeUpdate};
-
 /// Constant values used within the runtime.
 pub mod constants;
-pub use constants::{currency::*, fee::WeightToFee, time::*};
+/// Implementations of some helper traits passed into runtime modules as associated types.
+pub mod impls;
 /// Weights for pallets used in the runtime.
 mod weights;
 
-impl_opaque_keys! {
-    pub struct SessionKeys {
-        pub babe: Babe,
-        pub grandpa: Grandpa,
-        pub im_online: ImOnline,
-        pub authority_discovery: AuthorityDiscovery,
-    }
-}
+use self::constants::{currency::*, fee::WeightToFee, time::*};
+use self::impls::{CurrencyToVoteHandler, DealWithFees, SlowAdjustingFeeUpdate};
 
 /// This runtime version.
 pub const VERSION: RuntimeVersion = RuntimeVersion {
@@ -353,6 +341,15 @@ parameter_types! {
     pub const DisabledValidatorsThreshold: Perbill = Perbill::from_percent(17);
 }
 
+impl_opaque_keys! {
+    pub struct SessionKeys {
+        pub babe: Babe,
+        pub grandpa: Grandpa,
+        pub im_online: ImOnline,
+        pub authority_discovery: AuthorityDiscovery,
+    }
+}
+
 /// Substrate has the controller/stash concept, the according `Convert` implementation
 /// is used to find the stash of the given controller account.
 /// There is no such concepts in the context of ChainX, the stash account is also the controller account.
@@ -398,9 +395,7 @@ impl pallet_balances::Trait for Runtime {
 
 parameter_types! {
     pub const TransactionByteFee: Balance = 10 * MILLICENTS; // 100 => 0.000001 pcx
-
 }
-type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
 
 impl pallet_transaction_payment::Trait for Runtime {
     type Currency = Balances;

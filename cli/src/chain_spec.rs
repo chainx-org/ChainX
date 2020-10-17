@@ -33,8 +33,7 @@ use chainx_runtime::{
     XSystemConfig,
 };
 
-use crate::genesis::trustees::TrusteeParams;
-use crate::res::BitcoinParams;
+use crate::genesis::bitcoin::{BtcGenesisParams, BtcTrusteeParams};
 
 // Note this is the URL for the telemetry server
 //const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -135,7 +134,7 @@ pub fn development_config() -> Result<ChainSpec, String> {
 
     let endowed_balance = 50 * DOLLARS;
     let constructor = move || {
-        testnet_genesis(
+        build_genesis(
             wasm_binary,
             vec![authority_keys_from_seed("Alice")],
             get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -147,8 +146,10 @@ pub fn development_config() -> Result<ChainSpec, String> {
                 ("Alice//stash", endowed_balance),
                 ("Bob//stash", endowed_balance),
             ],
-            crate::res::testnet_btc_genesis_header,
-            crate::genesis::trustees::local_testnet_trustees(),
+            crate::genesis::bitcoin::btc_genesis_params(include_str!(
+                "res/btc_genesis_params_testnet.json"
+            )),
+            crate::genesis::bitcoin::local_testnet_trustees(),
         )
     };
     Ok(ChainSpec::from_genesis(
@@ -170,7 +171,7 @@ pub fn benchmarks_config() -> Result<ChainSpec, String> {
 
     let endowed_balance = 50 * DOLLARS;
     let constructor = move || {
-        testnet_genesis(
+        build_genesis(
             wasm_binary,
             vec![authority_keys_from_seed("Alice")],
             get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -182,8 +183,10 @@ pub fn benchmarks_config() -> Result<ChainSpec, String> {
                 ("Alice//stash", endowed_balance),
                 ("Bob//stash", endowed_balance),
             ],
-            crate::res::mainnet_btc_genesis_header,
-            crate::genesis::trustees::benchmarks_trustees(),
+            crate::genesis::bitcoin::btc_genesis_params(include_str!(
+                "res/btc_genesis_params_mainnet.json"
+            )),
+            crate::genesis::bitcoin::benchmarks_trustees(),
         )
     };
     Ok(ChainSpec::from_genesis(
@@ -205,7 +208,7 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 
     let endowed_balance = 50 * DOLLARS;
     let constructor = move || {
-        testnet_genesis(
+        build_genesis(
             wasm_binary,
             vec![
                 authority_keys_from_seed("Alice"),
@@ -228,8 +231,10 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
                 ("Eve//stash", endowed_balance),
                 ("Ferdie//stash", endowed_balance),
             ],
-            crate::res::testnet_btc_genesis_header,
-            crate::genesis::trustees::local_testnet_trustees(),
+            crate::genesis::bitcoin::btc_genesis_params(include_str!(
+                "res/btc_genesis_params_testnet.json"
+            )),
+            crate::genesis::bitcoin::local_testnet_trustees(),
         )
     };
     Ok(ChainSpec::from_genesis(
@@ -361,15 +366,17 @@ pub fn staging_testnet_config() -> Result<ChainSpec, String> {
     endowed.insert(pcx_id, endowed_info);
 
     let constructor = move || {
-        testnet_genesis(
+        build_genesis(
             wasm_binary,
             initial_authorities.clone(),
             root_key.clone(),
             root_key.clone(), // use root key as vesting_account
             assets.clone(),
             endowed.clone(),
-            crate::res::testnet_btc_genesis_header,
-            crate::genesis::trustees::staging_testnet_trustees(),
+            crate::genesis::bitcoin::btc_genesis_params(include_str!(
+                "res/btc_genesis_params_testnet.json"
+            )),
+            crate::genesis::bitcoin::staging_testnet_trustees(),
         )
     };
     Ok(ChainSpec::from_genesis(
@@ -504,15 +511,17 @@ pub fn testnet_config() -> Result<ChainSpec, String> {
     endowed.insert(pcx_id, endowed_info);
 
     let constructor = move || {
-        testnet_genesis(
+        build_genesis(
             &wasm_binary[..],
             initial_authorities.clone(),
             root_key.clone(),
             root_key.clone(), // use root key as vesting_account
             assets.clone(),
             endowed.clone(),
-            crate::res::testnet_btc_genesis_header,
-            crate::genesis::trustees::staging_testnet_trustees(),
+            crate::genesis::bitcoin::btc_genesis_params(include_str!(
+                "res/btc_genesis_params_testnet.json"
+            )),
+            crate::genesis::bitcoin::staging_testnet_trustees(),
         )
     };
     Ok(ChainSpec::from_genesis(
@@ -606,19 +615,16 @@ fn init_assets(
     (init_assets, assets_restrictions)
 }
 
-fn testnet_genesis<F>(
+fn build_genesis(
     wasm_binary: &[u8],
     initial_authorities: Vec<AuthorityKeysTuple>,
     root_key: AccountId,
     vesting_account: AccountId,
     assets: Vec<AssetParams>,
     endowed: BTreeMap<AssetId, Vec<(AccountId, Balance)>>,
-    bitcoin_info: F,
-    trustees: Vec<(Chain, TrusteeInfoConfig, Vec<TrusteeParams>)>,
-) -> GenesisConfig
-where
-    F: FnOnce() -> BitcoinParams,
-{
+    bitcoin: BtcGenesisParams,
+    trustees: Vec<(Chain, TrusteeInfoConfig, Vec<BtcTrusteeParams>)>,
+) -> GenesisConfig {
     const ENDOWMENT: Balance = 10_000_000 * DOLLARS;
     const STASH: Balance = 100 * DOLLARS;
     const STAKING_LOCKED: Balance = 1_000 * DOLLARS;
@@ -666,7 +672,7 @@ where
     let validators = initial_authorities
         .clone()
         .into_iter()
-        .map(|((val, referral_id), _, _, _, _, _)| (val, referral_id, STAKING_LOCKED))
+        .map(|((validator, referral), _, _, _, _, _)| (validator, referral, STAKING_LOCKED))
         .collect::<Vec<_>>();
     let btc_genesis_trustees = trustees
         .iter()
@@ -735,32 +741,24 @@ where
             endowed: assets_endowed,
         }),
         xpallet_gateway_common: Some(XGatewayCommonConfig { trustees }),
-        xpallet_gateway_bitcoin: {
-            let BitcoinParams {
-                genesis_info,
-                genesis_hash,
-                network,
-                confirmed_count,
-            } = bitcoin_info(); // crate::res::mainnet_btc_genesis_header();
-            Some(XGatewayBitcoinConfig {
-                genesis_trustees: btc_genesis_trustees,
-                genesis_info,
-                genesis_hash,
-                network_id: network,
-                params_info: BtcParams::new(
-                    486604799,            // max_bits
-                    2 * 60 * 60,          // block_max_future
-                    2 * 7 * 24 * 60 * 60, // target_timespan_seconds
-                    10 * 60,              // target_spacing_seconds
-                    4,                    // retargeting_factor
-                ),
-                verifier: BtcTxVerifier::Recover,
-                confirmation_number: confirmed_count,
-                reserved_block: 2100,
-                btc_withdrawal_fee: 500000,
-                max_withdrawal_count: 100,
-            })
-        },
+        xpallet_gateway_bitcoin: Some(XGatewayBitcoinConfig {
+            genesis_trustees: btc_genesis_trustees,
+            network_id: bitcoin.network,
+            confirmation_number: bitcoin.confirmation_number,
+            genesis_hash: bitcoin.hash(),
+            genesis_info: (bitcoin.header(), bitcoin.height),
+            params_info: BtcParams::new(
+                486604799,            // max_bits
+                2 * 60 * 60,          // block_max_future
+                2 * 7 * 24 * 60 * 60, // target_timespan_seconds
+                10 * 60,              // target_spacing_seconds
+                4,                    // retargeting_factor
+            ), // retargeting_factor
+            reserved_block: 2100,
+            btc_withdrawal_fee: 500000,
+            max_withdrawal_count: 100,
+            verifier: BtcTxVerifier::Recover,
+        }),
         xpallet_mining_staking: Some(XStakingConfig {
             validators,
             validator_count: 50,
