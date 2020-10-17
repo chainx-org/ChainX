@@ -17,8 +17,6 @@ pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
     <T as frame_system::Trait>::AccountId,
 >>::Balance;
 
-type StakingBalanceOf<T> = xpallet_mining_staking::BalanceOf<T>;
-
 pub trait Trait:
     pallet_balances::Trait + xpallet_mining_asset::Trait + xpallet_mining_staking::Trait
 {
@@ -33,7 +31,7 @@ decl_storage! {
     add_extra_genesis {
         config(balances): BalancesParams<T::AccountId, T::Balance>;
         config(xbtc_assets): Vec<FreeBalanceInfo<T::AccountId, BalanceOf<T>>>;
-        config(xstaking): XStakingParams<T::AccountId, StakingBalanceOf<T>>;
+        config(xstaking): XStakingParams<T::AccountId, xpallet_mining_staking::BalanceOf<T>>;
         config(xmining_asset): XMiningAssetParams<T::AccountId>;
         build(|config| {
             use crate::genesis::{xassets, balances, xstaking, xminingasset};
