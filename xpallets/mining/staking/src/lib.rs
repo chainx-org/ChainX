@@ -203,6 +203,8 @@ decl_storage! {
     }
 
     add_extra_genesis {
+        // Staking validators are used for initializing the genesis easier in tests.
+        // For the mainnet genesis, use `Module::<T>::initialize_validators()`.
         config(validators): Vec<(T::AccountId, ReferralId, BalanceOf<T>)>;
         config(glob_dist_ratio): (u32, u32);
         config(mining_ratio): (u32, u32);
@@ -218,6 +220,18 @@ decl_storage! {
                 asset: config.mining_ratio.0,
                 staking: config.mining_ratio.1,
             });
+
+            for (validator, referral_id, balance) in &config.validators {
+                assert!(
+                    Module::<T>::free_balance(validator) >= *balance,
+                    "Validator does not have enough balance to bond."
+                );
+                Module::<T>::check_referral_id(referral_id)
+                    .expect("Validator referral id must be valid; qed");
+                Module::<T>::apply_register(validator, referral_id.to_vec());
+                Module::<T>::apply_bond(validator, validator, *balance)
+                    .expect("Bonding to validator itself can not fail; qed");
+            }
         });
     }
 }
