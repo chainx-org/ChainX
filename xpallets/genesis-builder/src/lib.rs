@@ -1,4 +1,4 @@
-// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 //! This crate provides the feature of initializing the genesis state from ChainX 1.0.
 
@@ -57,11 +57,13 @@ mod genesis {
         use xp_genesis_builder::{BalancesParams, FreeBalanceInfo, WellknownAccounts};
         use xpallet_support::traits::TreasuryAccount;
 
+        /// Returns the validator account by the given reward pot account.
         fn validator_for<'a, T: Trait, I: Iterator<Item = &'a (T::AccountId, T::AccountId)>>(
-            target: &T::AccountId,
+            target_pot: &T::AccountId,
             mut pots: I,
         ) -> Option<&'a T::AccountId> {
-            pots.find(|(pot, _)| *pot == *target).map(|(_, v)| v)
+            pots.find(|(pot, _)| *pot == *target_pot)
+                .map(|(_, validator)| validator)
         }
 
         pub fn initialize<T: Trait>(params: &BalancesParams<T::AccountId, T::Balance>) {
@@ -76,9 +78,6 @@ mod genesis {
                 legacy_pots,
             } = wellknown_accounts;
 
-            let treasury_account =
-                <T as xpallet_mining_staking::Trait>::TreasuryAccount::treasury_account();
-
             let set_free_balance = |who: &T::AccountId, free: &T::Balance| {
                 T::AccountStore::insert(
                     who,
@@ -89,14 +88,15 @@ mod genesis {
                 )
             };
 
+            let treasury_account =
+                <T as xpallet_mining_staking::Trait>::TreasuryAccount::treasury_account();
+            let vesting_account = xpallet_mining_staking::Module::<T>::vesting_account();
+
             for FreeBalanceInfo { who, free } in free_balances {
                 if *who == *legacy_council {
                     set_free_balance(&treasury_account, free);
                 } else if *who == *legacy_team {
-                    set_free_balance(
-                        &xpallet_mining_staking::Module::<T>::vesting_account(),
-                        free,
-                    );
+                    set_free_balance(&vesting_account, free);
                 } else if let Some(validator) = validator_for::<T, _>(who, legacy_pots.iter()) {
                     let new_pot = xpallet_mining_staking::Module::<T>::reward_pot_for(validator);
                     set_free_balance(&new_pot, free);
@@ -132,12 +132,11 @@ mod genesis {
 
             let genesis_validators = validators.iter().map(|v| v.who.clone()).collect::<Vec<_>>();
 
-            // register validator
+            // Firstly register the genesis validators.
             xpallet_mining_staking::Module::<T>::initialize_validators(validators)
                 .expect("Failed to initialize staking validators");
 
-            // 1. mock vote
-            // 3. set vote weights
+            // Then mock the validator bond themselves and set the vote weights.
             for NominatorInfo {
                 nominator,
                 nominations,
@@ -149,9 +148,11 @@ mod genesis {
                     weight,
                 } in nominations
                 {
-                    // The dead validators in 1.0 has been dropped.
+                    // Not all `nominee` are in `genesis_validators` because the dead
+                    // validators in 1.0 have been dropped.
                     if genesis_validators.contains(nominee) {
-                        // Validator self bonded already processed in initialize_validators()
+                        // Skip the validator self-bonding as it has already been processed
+                        // in initialize_validators()
                         if *nominee == *nominator {
                             continue;
                         }
@@ -160,7 +161,7 @@ mod genesis {
                             nominee,
                             *nomination,
                         )
-                        .expect("force bond failed");
+                        .expect("force validator self-bond can not fail; qed");
                         xpallet_mining_staking::Module::<T>::force_set_nominator_vote_weight(
                             nominator, nominee, *weight,
                         );
@@ -175,9 +176,9 @@ mod genesis {
         use xp_genesis_builder::{XMiningAssetParams, XbtcMiner};
         use xpallet_protocol::X_BTC;
 
-        /// Set mining weight.
-        /// 1. mining asset weight
-        /// 2. miner weight
+        /// Mining asset module initialization only involves the mining weight.
+        /// - Set xbtc mining asset weight.
+        /// - Set xbtc miners' weight.
         pub fn initialize<T: Trait>(params: &XMiningAssetParams<T::AccountId>) {
             let XMiningAssetParams {
                 xbtc_miners,
