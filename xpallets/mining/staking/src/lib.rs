@@ -584,6 +584,8 @@ impl<T: Trait> Module<T> {
                 });
             }
             Self::apply_register(who, referral_id.to_vec());
+            // These validators will be chilled on the network startup.
+            Self::apply_force_chilled(who);
 
             ValidatorLedgers::<T>::mutate(who, |validator| {
                 validator.total_nomination = *total_nomination;

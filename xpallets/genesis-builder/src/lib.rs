@@ -10,7 +10,7 @@ use sp_std::prelude::*;
 use frame_support::{decl_module, decl_storage, traits::Currency};
 
 #[cfg(feature = "std")]
-use xp_genesis_builder::{BalancesParams, FreeBalanceInfo, XMiningAssetParams, XStakingParams};
+use xp_genesis_builder::AllParams;
 use xpallet_support::info;
 
 pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
@@ -29,19 +29,21 @@ decl_module! {
 decl_storage! {
     trait Store for Module<T: Trait> as XGenesisBuilder {}
     add_extra_genesis {
-        config(balances): BalancesParams<T::AccountId, T::Balance>;
-        config(xbtc_assets): Vec<FreeBalanceInfo<T::AccountId, BalanceOf<T>>>;
-        config(xstaking): XStakingParams<T::AccountId, xpallet_mining_staking::BalanceOf<T>>;
-        config(xmining_asset): XMiningAssetParams<T::AccountId>;
+        config(all_params): AllParams<
+                          T::AccountId,
+                          T::Balance,
+                          BalanceOf<T>,
+                          xpallet_mining_staking::BalanceOf<T>,
+                          >;
         build(|config| {
             use crate::genesis::{xassets, balances, xstaking, xminingasset};
 
             let now = std::time::Instant::now();
 
-            balances::initialize::<T>(&config.balances);
-            xassets::initialize::<T>(&config.xbtc_assets);
-            xstaking::initialize::<T>(&config.xstaking);
-            xminingasset::initialize::<T>(&config.xmining_asset);
+            balances::initialize::<T>(&config.all_params.balances);
+            xassets::initialize::<T>(&config.all_params.xassets);
+            xstaking::initialize::<T>(&config.all_params.xstaking);
+            xminingasset::initialize::<T>(&config.all_params.xmining_asset);
 
             info!(
                 "Took {:?}ms to orchestrate the exported state from ChainX 1.0",

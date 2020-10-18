@@ -21,6 +21,14 @@ mod genesis_params {
     }
 
     #[derive(Debug, Default, Clone, Serialize, Deserialize)]
+    pub struct AllParams<AccountId, TBalance, AssetBalanceOf, StakingBalanceOf> {
+        pub balances: BalancesParams<AccountId, TBalance>,
+        pub xassets: Vec<FreeBalanceInfo<AccountId, AssetBalanceOf>>,
+        pub xstaking: XStakingParams<AccountId, StakingBalanceOf>,
+        pub xmining_asset: XMiningAssetParams<AccountId>,
+    }
+
+    #[derive(Debug, Default, Clone, Serialize, Deserialize)]
     pub struct FreeBalanceInfo<AccountId, Balance> {
         pub who: AccountId,
         pub free: Balance,
@@ -70,21 +78,21 @@ mod genesis_params {
         pub nominators: Vec<NominatorInfo<AccountId, Balance>>,
     }
 
-    #[derive(Debug, Default, Serialize, Deserialize)]
+    #[derive(Debug, Default, Clone, Serialize, Deserialize)]
     pub struct XbtcInfo {
         pub balance: Balance,
         #[serde(deserialize_with = "deserialize_u128")]
         pub weight: u128,
     }
 
-    #[derive(Debug, Default, Serialize, Deserialize)]
+    #[derive(Debug, Default, Clone, Serialize, Deserialize)]
     pub struct XbtcMiner<AccountId> {
         pub who: AccountId,
         #[serde(deserialize_with = "deserialize_u128")]
         pub weight: u128,
     }
 
-    #[derive(Debug, Default, Serialize, Deserialize)]
+    #[derive(Debug, Default, Clone, Serialize, Deserialize)]
     pub struct XMiningAssetParams<AccountId> {
         pub xbtc_miners: Vec<XbtcMiner<AccountId>>,
         pub xbtc_info: XbtcInfo,
