@@ -29,21 +29,16 @@ decl_module! {
 decl_storage! {
     trait Store for Module<T: Trait> as XGenesisBuilder {}
     add_extra_genesis {
-        config(all_params): AllParams<
-                          T::AccountId,
-                          T::Balance,
-                          BalanceOf<T>,
-                          xpallet_mining_staking::BalanceOf<T>,
-                          >;
+        config(params): AllParams<T::AccountId, T::Balance, BalanceOf<T>, xpallet_mining_staking::BalanceOf<T>>;
         build(|config| {
             use crate::genesis::{xassets, balances, xstaking, xminingasset};
 
             let now = std::time::Instant::now();
 
-            balances::initialize::<T>(&config.all_params.balances);
-            xassets::initialize::<T>(&config.all_params.xassets);
-            xstaking::initialize::<T>(&config.all_params.xstaking);
-            xminingasset::initialize::<T>(&config.all_params.xmining_asset);
+            balances::initialize::<T>(&config.params.balances);
+            xassets::initialize::<T>(&config.params.xassets);
+            xstaking::initialize::<T>(&config.params.xstaking);
+            xminingasset::initialize::<T>(&config.params.xmining_asset);
 
             info!(
                 "Took {:?}ms to orchestrate the exported state from ChainX 1.0",

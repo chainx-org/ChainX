@@ -778,7 +778,7 @@ fn build_genesis(
             trading_pairs: vec![(PCX, X_BTC, 9, 2, 100000, true)],
         }),
         xpallet_genesis_builder: Some(XGenesisBuilderConfig {
-            all_params: crate::genesis::genesis_builder_params(),
+            params: crate::genesis::genesis_builder_params(),
         }),
     }
 }
