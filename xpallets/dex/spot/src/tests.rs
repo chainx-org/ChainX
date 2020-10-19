@@ -2,12 +2,13 @@
 
 #![cfg(test)]
 
-use super::mock::*;
-use super::*;
+use sp_std::collections::btree_map::BTreeMap;
 
 use frame_support::{assert_noop, assert_ok};
-use sp_std::collections::btree_map::BTreeMap;
 use xpallet_assets::AssetType;
+
+use super::mock::*;
+use super::*;
 
 pub(crate) const EOS: AssetId = 8888;
 pub(crate) const ETH: AssetId = 9999;
@@ -17,7 +18,7 @@ pub(crate) fn t_issue_pcx(to: AccountId, value: Balance) {
 }
 
 pub(crate) fn t_generic_issue(asset_id: AssetId, to: AccountId, value: Balance) {
-    if asset_id == xpallet_protocol::PCX {
+    if asset_id == xp_protocol::PCX {
         t_issue_pcx(to, value);
     } else {
         assert_ok!(XAssets::issue(&asset_id, &to, value));
@@ -25,7 +26,7 @@ pub(crate) fn t_generic_issue(asset_id: AssetId, to: AccountId, value: Balance) 
 }
 
 pub(crate) fn t_generic_free_balance(who: AccountId, asset_id: AssetId) -> Balance {
-    if asset_id == xpallet_protocol::PCX {
+    if asset_id == xp_protocol::PCX {
         Balances::free_balance(who)
     } else {
         XAssets::usable_balance(&who, &asset_id)

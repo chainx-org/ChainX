@@ -12,7 +12,7 @@ use sp_runtime::{
 };
 
 use chainx_primitives::AssetId;
-use xpallet_protocol::X_BTC;
+use xp_protocol::X_BTC;
 
 use crate::*;
 
@@ -97,7 +97,7 @@ impl Default for ExtBuilder {
 
 pub(crate) fn btc() -> (AssetId, AssetInfo) {
     (
-        xpallet_protocol::X_BTC,
+        xp_protocol::X_BTC,
         AssetInfo::new::<Test>(
             b"X-BTC".to_vec(),
             b"X-BTC".to_vec(),

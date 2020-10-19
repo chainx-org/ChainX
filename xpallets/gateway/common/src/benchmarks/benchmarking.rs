@@ -1,19 +1,20 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use crate::*;
 use codec::{Decode, Encode};
+
+use sp_std::prelude::*;
 
 use frame_benchmarking::benchmarks;
 use frame_system::RawOrigin;
 use sp_core::crypto::AccountId32;
-use sp_std::prelude::*;
 
 use chainx_primitives::AssetId;
-
-use crate::Module as XGatewayCommon;
 use xpallet_gateway_records::Module as XGatewayRecords;
 
-const ASSET_ID: AssetId = xpallet_protocol::X_BTC;
+use crate::Module as XGatewayCommon;
+use crate::*;
+
+const ASSET_ID: AssetId = xp_protocol::X_BTC;
 
 benchmarks! {
     _{ }

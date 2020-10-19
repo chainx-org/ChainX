@@ -1,13 +1,15 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use super::*;
 use codec::Encode;
 use sp_core::crypto::UncheckedFrom;
 use sp_runtime::traits::{Hash, Saturating};
+
 use xp_mining_common::{
     generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight, WeightFactors, WeightType,
 };
 use xp_mining_staking::MiningPower;
+
+use super::*;
 
 impl<'a, T: Trait> BaseMiningWeight<BalanceOf<T>, T::BlockNumber> for AssetLedgerWrapper<'a, T> {
     fn amount(&self) -> BalanceOf<T> {
@@ -85,7 +87,7 @@ impl<T: Trait> ComputeMiningWeight<T::AccountId, T::BlockNumber> for Module<T> {
 // * `on_move_pre`
 //
 // ```rust
-// if xpallet_protocol::PCX == *target {
+// if xp_protocol::PCX == *target {
 //     return Ok(());
 // }
 // ```

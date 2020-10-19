@@ -737,7 +737,7 @@ dependencies = [
  "substrate-build-script-utils",
  "xp-genesis-builder",
  "xp-io",
- "xpallet-protocol",
+ "xp-protocol",
 ]
 
 [[package]]
@@ -866,6 +866,7 @@ dependencies = [
  "static_assertions",
  "substrate-wasm-builder-runner",
  "xp-mining-staking",
+ "xp-protocol",
  "xp-runtime",
  "xpallet-assets",
  "xpallet-assets-registrar",
@@ -882,7 +883,6 @@ dependencies = [
  "xpallet-mining-asset-rpc-runtime-api",
  "xpallet-mining-staking",
  "xpallet-mining-staking-rpc-runtime-api",
- "xpallet-protocol",
  "xpallet-support",
  "xpallet-system",
 ]
@@ -8860,6 +8860,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "xp-protocol"
+version = "2.0.0-alpha.0"
+dependencies = [
+ "chainx-primitives",
+ "parity-scale-codec",
+ "serde",
+ "sp-runtime",
+]
+
+[[package]]
 name = "xp-runtime"
 version = "2.0.0-alpha.0"
 dependencies = [
@@ -8889,8 +8899,8 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "xp-protocol",
  "xpallet-assets-registrar",
- "xpallet-protocol",
  "xpallet-support",
 ]
 
@@ -8909,8 +8919,8 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xp-assets-registrar",
+ "xp-protocol",
  "xp-runtime",
- "xpallet-protocol",
  "xpallet-support",
 ]
 
@@ -8956,9 +8966,9 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "xp-protocol",
  "xpallet-assets",
  "xpallet-assets-registrar",
- "xpallet-protocol",
  "xpallet-support",
 ]
 
@@ -9011,11 +9021,11 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xp-io",
+ "xp-protocol",
  "xpallet-assets",
  "xpallet-assets-registrar",
  "xpallet-gateway-common",
  "xpallet-gateway-records",
- "xpallet-protocol",
  "xpallet-support",
 ]
 
@@ -9039,12 +9049,12 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xp-io",
+ "xp-protocol",
  "xp-runtime",
  "xpallet-assets",
  "xpallet-assets-registrar",
  "xpallet-gateway-bitcoin",
  "xpallet-gateway-records",
- "xpallet-protocol",
  "xpallet-support",
 ]
 
@@ -9093,10 +9103,10 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "xp-protocol",
  "xp-runtime",
  "xpallet-assets",
  "xpallet-assets-registrar",
- "xpallet-protocol",
  "xpallet-support",
 ]
 
@@ -9141,10 +9151,10 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xp-genesis-builder",
+ "xp-protocol",
  "xpallet-assets",
  "xpallet-mining-asset",
  "xpallet-mining-staking",
- "xpallet-protocol",
  "xpallet-support",
 ]
 
@@ -9169,10 +9179,10 @@ dependencies = [
  "sp-std",
  "xp-mining-common",
  "xp-mining-staking",
+ "xp-protocol",
  "xpallet-assets",
  "xpallet-assets-registrar",
  "xpallet-mining-staking",
- "xpallet-protocol",
  "xpallet-support",
 ]
 
@@ -9224,8 +9234,8 @@ dependencies = [
  "xp-genesis-builder",
  "xp-mining-common",
  "xp-mining-staking",
+ "xp-protocol",
  "xp-runtime",
- "xpallet-protocol",
  "xpallet-support",
 ]
 
@@ -9254,16 +9264,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "xpallet-protocol"
-version = "2.0.0-alpha.0"
-dependencies = [
- "chainx-primitives",
- "parity-scale-codec",
- "serde",
- "sp-runtime",
-]
-
-[[package]]
 name = "xpallet-support"
 version = "2.0.0-alpha.0"
 dependencies = [
@@ -9285,7 +9285,7 @@ dependencies = [
  "serde",
  "sp-runtime",
  "sp-std",
- "xpallet-protocol",
+ "xp-protocol",
 ]
 
 [[package]]

@@ -109,7 +109,7 @@ mod genesis {
     pub mod xassets {
         use crate::{AssetBalanceOf, Trait};
         use xp_genesis_builder::FreeBalanceInfo;
-        use xpallet_protocol::X_BTC;
+        use xp_protocol::X_BTC;
 
         pub fn initialize<T: Trait>(
             xbtc_assets: &[FreeBalanceInfo<T::AccountId, AssetBalanceOf<T>>],
@@ -174,7 +174,7 @@ mod genesis {
     pub mod xmining_asset {
         use crate::Trait;
         use xp_genesis_builder::{XBtcMiner, XMiningAssetParams};
-        use xpallet_protocol::X_BTC;
+        use xp_protocol::X_BTC;
 
         /// Mining asset module initialization only involves the mining weight.
         /// - Set xbtc mining asset weight.

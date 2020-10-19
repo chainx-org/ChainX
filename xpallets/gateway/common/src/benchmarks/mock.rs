@@ -1,7 +1,7 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use core::time::Duration;
 use std::cell::RefCell;
+use std::time::Duration;
 
 use codec::{Decode, Encode};
 
@@ -18,16 +18,14 @@ use sp_runtime::{
 };
 
 use chainx_primitives::AssetId;
+pub use xp_protocol::{X_BTC, X_ETH};
 use xpallet_assets::AssetRestrictions;
 use xpallet_assets_registrar::{AssetInfo, Chain};
+use xpallet_support::traits::{MultisigAddressFor, Validator};
 
 use super::mock_impls;
 use crate::trustees;
 use crate::types::TrusteeInfoConfig;
-
-pub use xpallet_protocol::X_BTC;
-pub use xpallet_protocol::X_ETH;
-use xpallet_support::traits::{MultisigAddressFor, Validator};
 
 pub(crate) type AccountId = AccountId32;
 pub(crate) type BlockNumber = u64;

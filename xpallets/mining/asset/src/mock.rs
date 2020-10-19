@@ -1,8 +1,10 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use crate::*;
-use crate::{Module, Trait};
-use chainx_primitives::AssetId;
+use std::{
+    cell::RefCell,
+    collections::{BTreeMap, HashSet},
+};
+
 use frame_support::{
     impl_outer_event, impl_outer_origin, parameter_types, traits::Get, weights::Weight,
 };
@@ -12,12 +14,13 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
     Perbill,
 };
-use std::{
-    cell::RefCell,
-    collections::{BTreeMap, HashSet},
-};
+
+use chainx_primitives::AssetId;
 use xp_mining_staking::SessionIndex;
 use xpallet_assets::{AssetInfo, AssetRestrictions, Chain};
+
+use crate::*;
+use crate::{Module, Trait};
 
 pub const INIT_TIMESTAMP: u64 = 30_000;
 
@@ -177,7 +180,7 @@ impl pallet_session::OneSessionHandler<AccountId> for OtherSessionHandler {
 
 pub(crate) fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {
     (
-        xpallet_protocol::X_BTC,
+        xp_protocol::X_BTC,
         AssetInfo::new::<Test>(
             b"X-BTC".to_vec(),
             b"X-BTC".to_vec(),
@@ -382,8 +385,8 @@ impl ExtBuilder {
         .assimilate_storage(&mut storage);
 
         let _ = GenesisConfig::<Test> {
-            claim_restrictions: vec![(xpallet_protocol::X_BTC, (7, 3))],
-            mining_power_map: vec![(xpallet_protocol::X_BTC, 400)],
+            claim_restrictions: vec![(xp_protocol::X_BTC, (7, 3))],
+            mining_power_map: vec![(xp_protocol::X_BTC, 400)],
         }
         .assimilate_storage(&mut storage);
 

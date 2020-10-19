@@ -1,7 +1,5 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use crate::*;
-
 use frame_support::{impl_outer_origin, parameter_types, sp_io, weights::Weight};
 use sp_core::H256;
 use sp_runtime::{
@@ -11,9 +9,11 @@ use sp_runtime::{
 };
 
 use chainx_primitives::AssetId;
+pub use xp_protocol::{X_BTC, X_ETH};
 use xpallet_assets::AssetRestrictions;
 use xpallet_assets_registrar::AssetInfo;
-pub use xpallet_protocol::{X_BTC, X_ETH};
+
+use crate::*;
 
 /// The AccountId alias in this test module.
 pub(crate) type AccountId = u64;

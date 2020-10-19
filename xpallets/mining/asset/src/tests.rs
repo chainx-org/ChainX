@@ -1,7 +1,5 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use super::*;
-use crate::mock::*;
 use frame_support::{
     assert_err, assert_ok,
     traits::{Get, OnInitialize},
@@ -9,7 +7,10 @@ use frame_support::{
 use frame_system::RawOrigin;
 
 use xp_mining_staking::SessionIndex;
-use xpallet_protocol::X_BTC;
+use xp_protocol::X_BTC;
+
+use super::*;
+use crate::mock::*;
 
 fn t_system_block_number_inc(number: BlockNumber) {
     System::set_block_number((System::block_number() + number).into());
@@ -82,7 +83,7 @@ fn t_xbtc_set_claim_staking_requirement(new: StakingRequirement) {
 fn assert_xbtc_reward_pot_balance(value: Balance) {
     assert_eq!(
         Balances::free_balance(
-            &DummyAssetRewardPotAccountDeterminer::reward_pot_account_for(&xpallet_protocol::X_BTC)
+            &DummyAssetRewardPotAccountDeterminer::reward_pot_account_for(&xp_protocol::X_BTC)
         ),
         value
     );
@@ -368,7 +369,7 @@ fn total_issuance_should_work() {
 fn t_set_xbtc_asset_power(new: FixedAssetPower) {
     assert_ok!(XMiningAsset::set_asset_power(
         Origin::root(),
-        xpallet_protocol::X_BTC,
+        xp_protocol::X_BTC,
         new
     ));
 }
@@ -436,20 +437,17 @@ fn asset_mining_reward_should_work() {
         // Disable the staking requirement.
         assert_ok!(XMiningAsset::set_claim_staking_requirement(
             Origin::root(),
-            xpallet_protocol::X_BTC,
+            xp_protocol::X_BTC,
             0
         ));
 
         assert_eq!(Balances::free_balance(&t_1), 0);
-        assert_ok!(XMiningAsset::claim(
-            Origin::signed(t_1),
-            xpallet_protocol::X_BTC
-        ));
+        assert_ok!(XMiningAsset::claim(Origin::signed(t_1), xp_protocol::X_BTC));
         assert_eq!(
             Balances::free_balance(&t_1),
             xbtc_pot_balance - xbtc_pot_balance / 10
         );
-        let referral = DummyGatewayReferralGetter::referral_of(&t_1, xpallet_protocol::X_BTC)
+        let referral = DummyGatewayReferralGetter::referral_of(&t_1, xp_protocol::X_BTC)
             .unwrap_or(TREASURY_ACCOUNT);
         assert_eq!(Balances::free_balance(&referral), xbtc_pot_balance / 10);
         assert_eq!(Balances::free_balance(&TREASURY_ACCOUNT), treasury_balance);

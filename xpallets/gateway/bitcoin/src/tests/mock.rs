@@ -4,8 +4,8 @@
 
 use super::common::*;
 
-use core::time::Duration;
 use std::cell::RefCell;
+use std::time::Duration;
 
 // Substrate
 use frame_support::{impl_outer_origin, parameter_types, sp_io, weights::Weight};
@@ -16,16 +16,14 @@ use sp_runtime::{
     AccountId32, Perbill,
 };
 
-// light-bitcoin
-use light_bitcoin::primitives::Compact;
-
 use chainx_primitives::AssetId;
+pub use xp_protocol::{X_BTC, X_ETH};
 use xpallet_assets::AssetRestrictions;
 use xpallet_assets_registrar::AssetInfo;
 use xpallet_gateway_common::types::TrusteeInfoConfig;
 
-pub use xpallet_protocol::X_BTC;
-pub use xpallet_protocol::X_ETH;
+// light-bitcoin
+use light_bitcoin::primitives::Compact;
 
 /// The AccountId alias in this test module.
 pub(crate) type AccountId = AccountId32;

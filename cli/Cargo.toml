@@ -52,7 +52,7 @@ chainx-rpc = { path = "../rpc" }
 chainx-runtime = { path = "../runtime" }
 xp-io = { path = "../primitives/io" }
 xp-genesis-builder  = { path  = "../primitives/genesis-builder" }
-xpallet-protocol = { path = "../xpallets/protocol" }
+xp-protocol = { path = "../primitives/protocol" }
 
 [build-dependencies]
 substrate-build-script-utils = "2.0.0"

@@ -1,7 +1,5 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use crate::*;
-
 use std::{
     cell::RefCell,
     collections::{BTreeMap, HashSet},
@@ -16,8 +14,10 @@ use sp_runtime::{
 };
 
 use chainx_primitives::{AssetId, BlockNumber};
+use xp_protocol::{BTC_DECIMALS, PCX, PCX_DECIMALS, X_BTC, X_DOT};
 use xpallet_assets::{AssetInfo, AssetRestrictions, Chain};
-use xpallet_protocol::{BTC_DECIMALS, PCX, PCX_DECIMALS, X_BTC, X_DOT};
+
+use crate::*;
 
 /// The AccountId alias in this test module.
 pub(crate) type AccountId = u64;

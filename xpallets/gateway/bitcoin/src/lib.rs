@@ -427,7 +427,7 @@ decl_module! {
 }
 
 impl<T: Trait> ChainT<BalanceOf<T>> for Module<T> {
-    const ASSET_ID: AssetId = xpallet_protocol::X_BTC;
+    const ASSET_ID: AssetId = xp_protocol::X_BTC;
 
     fn chain() -> Chain {
         Chain::Bitcoin
