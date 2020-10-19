@@ -15,18 +15,18 @@ sp-std = { version = "2.0.0", default-features = false }
 
 # Substrte pallets
 frame-benchmarking = { version = "2.0.0", default-features = false, optional = true }
-frame-system = { version = "2.0.0", default-features = false }
 frame-support = { version = "2.0.0", default-features = false }
+frame-system = { version = "2.0.0", default-features = false }
 
 # Orml
 orml-traits = { version = "0.3", default-features = false }
 
 # ChainX primitives
 chainx-primitives = { path = "../../primitives", default-features = false }
+xp-protocol = { path = "../../primitives/protocol", default-features = false }
 
 # ChainX pallets
 xpallet-assets-registrar = { path = "../assets-registrar", default-features = false }
-xpallet-protocol = { path = "../protocol", default-features = false }
 xpallet-support = { path = "../support", default-features = false }
 
 [dev-dependencies]
@@ -44,15 +44,15 @@ std = [
     "sp-runtime/std",
     "sp-std/std",
     # Substrte pallets
-    "frame-system/std",
     "frame-support/std",
+    "frame-system/std",
     # Orml
     "orml-traits/std",
     # ChainX primitives
     "chainx-primitives/std",
+    "xp-protocol/std",
     # ChainX pallets
     "xpallet-assets-registrar/std",
-    "xpallet-protocol/std",
     "xpallet-support/std",
 ]
 runtime-benchmarks = [

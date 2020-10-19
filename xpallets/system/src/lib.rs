@@ -14,7 +14,7 @@ use frame_support::{
 };
 use frame_system::ensure_root;
 
-use xpallet_protocol::NetworkType;
+use xp_protocol::NetworkType;
 
 const PALLET_MARK: &[u8; 1] = b"#";
 const ALWAYS_ALLOW: [&str; 1] = ["Sudo"];

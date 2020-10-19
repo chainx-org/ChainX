@@ -1,12 +1,12 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use super::*;
-use crate::Module as XGatewayRecords;
-
 use frame_benchmarking::{benchmarks, whitelisted_caller};
 use frame_system::RawOrigin;
 
-const ASSET_ID: AssetId = xpallet_protocol::X_BTC;
+use super::*;
+use crate::Module as XGatewayRecords;
+
+const ASSET_ID: AssetId = xp_protocol::X_BTC;
 
 fn deposit<T: Trait>(who: T::AccountId, amount: BalanceOf<T>) {
     let receiver_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(who);

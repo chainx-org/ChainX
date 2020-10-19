@@ -70,6 +70,7 @@ pub use chainx_primitives::{
     Index, Moment, ReferralId, Signature, Token,
 };
 pub use xp_mining_staking::SessionIndex;
+pub use xp_protocol::*;
 pub use xp_runtime::Memo;
 
 // xpallet re-exports
@@ -87,7 +88,6 @@ pub use xpallet_gateway_common::{
     types::{GenericTrusteeIntentionProps, GenericTrusteeSessionInfo, TrusteeInfoConfig},
 };
 pub use xpallet_gateway_records::Withdrawal;
-pub use xpallet_protocol::*;
 
 /// Constant values used within the runtime.
 pub mod constants;
@@ -828,7 +828,7 @@ impl xpallet_system::Trait for Runtime {
 }
 
 parameter_types! {
-    pub const ChainXAssetId: AssetId = xpallet_protocol::PCX;
+    pub const ChainXAssetId: AssetId = xp_protocol::PCX;
 }
 
 impl xpallet_assets_registrar::Trait for Runtime {

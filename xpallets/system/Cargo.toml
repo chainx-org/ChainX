@@ -13,11 +13,11 @@ sp-runtime = { version = "2.0.0", default-features = false }
 sp-std = { version = "2.0.0", default-features = false }
 
 # Substrate pallets
-frame-system = { version = "2.0.0", default-features = false }
 frame-support = { version = "2.0.0", default-features = false }
+frame-system = { version = "2.0.0", default-features = false }
 
-# ChainX pallets
-xpallet-protocol = { path = "../protocol", default-features = false }
+# ChainX primitives
+xp-protocol = { path = "../../primitives/protocol", default-features = false }
 
 [features]
 default = ["std"]
@@ -28,8 +28,8 @@ std = [
     "sp-runtime/std",
     "sp-std/std",
     # Substrate pallets
-    "frame-system/std",
     "frame-support/std",
-    # ChainX pallets
-    "xpallet-protocol/std",
+    "frame-system/std",
+    # ChainX primitives
+    "xp-protocol/std",
 ]

@@ -1,5 +1,5 @@
 [package]
-name = "xpallet-protocol"
+name = "xp-protocol"
 version = "2.0.0-alpha.0"
 authors = ["The ChainX Authors"]
 edition = "2018"
@@ -12,7 +12,7 @@ serde = { version = "1.0", optional = true }
 sp-runtime = { version = "2.0.0", default-features = false }
 
 # ChainX primitives
-chainx-primitives = { path = "../../primitives", default-features = false }
+chainx-primitives = { path = "..", default-features = false }
 
 [features]
 default = ["std"]

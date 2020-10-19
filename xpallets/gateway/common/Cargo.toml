@@ -17,19 +17,19 @@ sp-std = { version = "2.0.0", default-features = false }
 
 # Substrate pallets
 frame-benchmarking = { version = "2.0.0", default-features = false, optional = true }
-frame-system = { version = "2.0.0", default-features = false }
 frame-support = { version = "2.0.0", default-features = false }
+frame-system = { version = "2.0.0", default-features = false }
 
 # ChainX primitives
 chainx-primitives = { path = "../../../primitives", default-features = false }
-xp-runtime = { path = "../../../primitives/runtime", default-features = false }
 xp-io = { path = "../../../primitives/io", default-features = false, optional = true }
+xp-protocol = { path = "../../../primitives/protocol", default-features = false }
+xp-runtime = { path = "../../../primitives/runtime", default-features = false }
 
 # ChainX pallets
 xpallet-assets = { path = "../../assets", default-features = false }
 xpallet-assets-registrar = { path = "../../assets-registrar", default-features = false }
 xpallet-gateway-records = { path = "../records", default-features = false }
-xpallet-protocol = { path = "../../protocol", default-features = false }
 xpallet-support = { path = "../../support", default-features = false }
 
 # light-bitcoin
@@ -54,17 +54,17 @@ std = [
     "sp-runtime/std",
     "sp-std/std",
     # Substrate pallets
-    "frame-system/std",
     "frame-support/std",
+    "frame-system/std",
     # ChainX primitives
     "chainx-primitives/std",
     "xp-io/std",
+    "xp-protocol/std",
     "xp-runtime/std",
     # ChainX pallets
     "xpallet-assets/std",
     "xpallet-assets-registrar/std",
     "xpallet-gateway-records/std",
-    "xpallet-protocol/std",
     "xpallet-support/std",
     # light-bitcoin
     "light-bitcoin/std",

@@ -1,10 +1,10 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use super::*;
-
 pub use frame_benchmarking::{account, benchmarks};
 use frame_system::RawOrigin;
-use xpallet_protocol::X_BTC;
+use xp_protocol::X_BTC;
+
+use super::*;
 
 const SEED: u32 = 0;
 

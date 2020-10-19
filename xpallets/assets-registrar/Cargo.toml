@@ -14,16 +14,16 @@ sp-std = { version = "2.0.0", default-features = false }
 
 # Substrate pallets
 frame-benchmarking = { version = "2.0.0", default-features = false, optional = true }
-frame-system = { version = "2.0.0", default-features = false }
 frame-support = { version = "2.0.0", default-features = false }
+frame-system = { version = "2.0.0", default-features = false }
 
 # ChainX primitives
 chainx-primitives = { path = "../../primitives", default-features = false }
 xp-assets-registrar = { path = "../../primitives/assets-registrar", default-features = false }
+xp-protocol = { path = "../../primitives/protocol", default-features = false }
 xp-runtime = { path = "../../primitives/runtime", default-features = false }
 
 # ChainX pallets
-xpallet-protocol = { path = "../protocol", default-features = false }
 xpallet-support = { path = "../support", default-features = false }
 
 [dev-dependencies]
@@ -40,14 +40,14 @@ std = [
     "sp-runtime/std",
     "sp-std/std",
     # Substrate pallets
-    "frame-system/std",
     "frame-support/std",
+    "frame-system/std",
     # ChainX primitives
     "chainx-primitives/std",
     "xp-assets-registrar/std",
+    "xp-protocol/std",
     "xp-runtime/std",
     # ChainX pallets
-    "xpallet-protocol/std",
     "xpallet-support/std",
 ]
 runtime-benchmarks = [

@@ -2,18 +2,19 @@
 
 use frame_benchmarking::{benchmarks, whitelisted_caller};
 use frame_system::RawOrigin;
-use light_bitcoin::merkle::PartialMerkleTree;
 
-use crate::Module as XGatewayBitcoin;
 use xpallet_assets::Module as XAssets;
 use xpallet_gateway_records::Module as XGatewayRecords;
 use xpallet_gateway_records::WithdrawalState;
 
+use light_bitcoin::merkle::PartialMerkleTree;
+
 use super::*;
 use crate::tests::common::{self, *};
 use crate::types::*;
+use crate::Module as XGatewayBitcoin;
 
-const ASSET_ID: AssetId = xpallet_protocol::X_BTC;
+const ASSET_ID: AssetId = xp_protocol::X_BTC;
 
 fn withdraw_tx() -> (Transaction, BtcRelayedTxInfo, Transaction) {
     // https://btc.com/62c389f1974b8a44737d76f92da0f5cd7f6f48d065e7af6ba368298361141270.rawhex

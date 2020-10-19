@@ -18,7 +18,7 @@ use sp_runtime::traits::{IdentifyAccount, Verify};
 
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 
-use xpallet_protocol::{BTC_DECIMALS, PCX, PCX_DECIMALS, X_BTC};
+use xp_protocol::{BTC_DECIMALS, PCX, PCX_DECIMALS, X_BTC};
 
 use chainx_runtime::{
     constants::{currency::DOLLARS, time::DAYS},

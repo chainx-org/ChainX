@@ -1,12 +1,12 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-pub use crate::mock::*;
-use crate::*;
-
 use frame_support::{assert_noop, assert_ok};
 use frame_system::{EventRecord, Phase};
 
-use xpallet_protocol::X_BTC;
+use xp_protocol::X_BTC;
+
+pub use crate::mock::*;
+use crate::*;
 
 #[test]
 fn test_genesis() {

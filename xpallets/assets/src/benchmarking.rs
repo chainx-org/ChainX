@@ -7,7 +7,7 @@ use frame_system::RawOrigin;
 
 use crate::Module as XAssets;
 
-const ASSET_ID: AssetId = xpallet_protocol::X_BTC;
+const ASSET_ID: AssetId = xp_protocol::X_BTC;
 const SEED: u32 = 0;
 
 benchmarks! {

@@ -17,8 +17,8 @@ sp-std = { version = "2.0.0", default-features = false }
 
 # Substrate pallets
 frame-benchmarking = { version = "2.0.0", default-features = false, optional = true }
-frame-system = { version = "2.0.0", default-features = false }
 frame-support = { version = "2.0.0", default-features = false }
+frame-system = { version = "2.0.0", default-features = false }
 pallet-balances = { version = "2.0.0", default-features = false }
 pallet-session = { version = "2.0.0", default-features = false }
 
@@ -35,9 +35,9 @@ xpallet-support = { path = "../../support", default-features = false }
 env_logger = "0.7.1"
 sp-core = "2.0.0"
 sp-io = "2.0.0"
+xp-protocol = { path = "../../../primitives/protocol" }
 frame-benchmarking = "2.0.0"
 pallet-timestamp = "2.0.0"
-xpallet-protocol = { path = "../../protocol" }
 
 [features]
 default = ["std"]
@@ -51,8 +51,8 @@ std = [
     "sp-staking/std",
     "sp-std/std",
     # Substrate pallets
-    "frame-system/std",
     "frame-support/std",
+    "frame-system/std",
     "pallet-balances/std",
     "pallet-session/std",
     # ChainX primitives
