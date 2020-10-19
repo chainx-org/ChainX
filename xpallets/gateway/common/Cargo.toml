@@ -50,6 +50,7 @@ std = [
     "hex",
     "serde",
     # Substrate primitives
+    "sp-core/std",
     "sp-runtime/std",
     "sp-std/std",
     # Substrate pallets
