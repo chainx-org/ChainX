@@ -7,15 +7,13 @@
 
 use sp_std::prelude::*;
 
-use frame_support::{decl_module, decl_storage, traits::Currency};
+use frame_support::{decl_module, decl_storage};
 
 #[cfg(feature = "std")]
 use xp_genesis_builder::AllParams;
+use xpallet_assets::BalanceOf as AssetBalanceOf;
+use xpallet_mining_staking::BalanceOf as StakingBalanceOf;
 use xpallet_support::info;
-
-pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
-    <T as frame_system::Trait>::AccountId,
->>::Balance;
 
 pub trait Trait:
     pallet_balances::Trait + xpallet_mining_asset::Trait + xpallet_mining_staking::Trait
@@ -29,16 +27,16 @@ decl_module! {
 decl_storage! {
     trait Store for Module<T: Trait> as XGenesisBuilder {}
     add_extra_genesis {
-        config(params): AllParams<T::AccountId, T::Balance, BalanceOf<T>, xpallet_mining_staking::BalanceOf<T>>;
+        config(params): AllParams<T::AccountId, T::Balance, AssetBalanceOf<T>, StakingBalanceOf<T>>;
         build(|config| {
-            use crate::genesis::{xassets, balances, xstaking, xminingasset};
+            use crate::genesis::{xassets, balances, xstaking, xmining_asset};
 
             let now = std::time::Instant::now();
 
             balances::initialize::<T>(&config.params.balances);
             xassets::initialize::<T>(&config.params.xassets);
             xstaking::initialize::<T>(&config.params.xstaking);
-            xminingasset::initialize::<T>(&config.params.xmining_asset);
+            xmining_asset::initialize::<T>(&config.params.xmining_asset);
 
             info!(
                 "Took {:?}ms to orchestrate the exported state from ChainX 1.0",
@@ -90,6 +88,7 @@ mod genesis {
 
             let treasury_account =
                 <T as xpallet_mining_staking::Trait>::TreasuryAccount::treasury_account();
+
             let vesting_account = xpallet_mining_staking::Module::<T>::vesting_account();
 
             for FreeBalanceInfo { who, free } in free_balances {
@@ -108,11 +107,13 @@ mod genesis {
     }
 
     pub mod xassets {
-        use crate::{BalanceOf, Trait};
+        use crate::{AssetBalanceOf, Trait};
         use xp_genesis_builder::FreeBalanceInfo;
         use xpallet_protocol::X_BTC;
 
-        pub fn initialize<T: Trait>(xbtc_assets: &[FreeBalanceInfo<T::AccountId, BalanceOf<T>>]) {
+        pub fn initialize<T: Trait>(
+            xbtc_assets: &[FreeBalanceInfo<T::AccountId, AssetBalanceOf<T>>],
+        ) {
             for FreeBalanceInfo { who, free } in xbtc_assets {
                 xpallet_assets::Module::<T>::force_set_free_balance(&X_BTC, who, *free);
             }
@@ -120,21 +121,20 @@ mod genesis {
     }
 
     pub mod xstaking {
-        use crate::Trait;
+        use crate::{StakingBalanceOf, Trait};
         use xp_genesis_builder::{Nomination, NominatorInfo, XStakingParams};
-        use xpallet_mining_staking::BalanceOf;
 
-        pub fn initialize<T: Trait>(params: &XStakingParams<T::AccountId, BalanceOf<T>>) {
+        pub fn initialize<T: Trait>(params: &XStakingParams<T::AccountId, StakingBalanceOf<T>>) {
             let XStakingParams {
                 validators,
                 nominators,
             } = params;
 
-            let genesis_validators = validators.iter().map(|v| v.who.clone()).collect::<Vec<_>>();
+            let mut genesis_validators = validators.iter().map(|v| v.who.clone());
 
             // Firstly register the genesis validators.
             xpallet_mining_staking::Module::<T>::initialize_validators(validators)
-                .expect("Failed to initialize staking validators");
+                .expect("Failed to initialize genesis staking validators");
 
             // Then mock the validator bond themselves and set the vote weights.
             for NominatorInfo {
@@ -150,7 +150,7 @@ mod genesis {
                 {
                     // Not all `nominee` are in `genesis_validators` because the dead
                     // validators in 1.0 have been dropped.
-                    if genesis_validators.contains(nominee) {
+                    if genesis_validators.any(|ref v| v == nominee) {
                         // Skip the validator self-bonding as it has already been processed
                         // in initialize_validators()
                         if *nominee == *nominator {
@@ -171,9 +171,9 @@ mod genesis {
         }
     }
 
-    pub mod xminingasset {
+    pub mod xmining_asset {
         use crate::Trait;
-        use xp_genesis_builder::{XMiningAssetParams, XbtcMiner};
+        use xp_genesis_builder::{XBtcMiner, XMiningAssetParams};
         use xpallet_protocol::X_BTC;
 
         /// Mining asset module initialization only involves the mining weight.
@@ -185,7 +185,7 @@ mod genesis {
                 xbtc_info,
             } = params;
             let current_block = frame_system::Module::<T>::block_number();
-            for XbtcMiner { who, weight } in xbtc_miners {
+            for XBtcMiner { who, weight } in xbtc_miners {
                 xpallet_mining_asset::Module::<T>::force_set_miner_mining_weight(
                     who,
                     &X_BTC,

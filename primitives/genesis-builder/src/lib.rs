@@ -79,14 +79,14 @@ mod genesis_params {
     }
 
     #[derive(Debug, Default, Clone, Serialize, Deserialize)]
-    pub struct XbtcInfo {
+    pub struct XBtcInfo {
         pub balance: Balance,
         #[serde(deserialize_with = "deserialize_u128")]
         pub weight: u128,
     }
 
     #[derive(Debug, Default, Clone, Serialize, Deserialize)]
-    pub struct XbtcMiner<AccountId> {
+    pub struct XBtcMiner<AccountId> {
         pub who: AccountId,
         #[serde(deserialize_with = "deserialize_u128")]
         pub weight: u128,
@@ -94,7 +94,7 @@ mod genesis_params {
 
     #[derive(Debug, Default, Clone, Serialize, Deserialize)]
     pub struct XMiningAssetParams<AccountId> {
-        pub xbtc_miners: Vec<XbtcMiner<AccountId>>,
-        pub xbtc_info: XbtcInfo,
+        pub xbtc_miners: Vec<XBtcMiner<AccountId>>,
+        pub xbtc_info: XBtcInfo,
     }
 }
