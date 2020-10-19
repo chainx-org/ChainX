@@ -84,6 +84,7 @@ xpallet-gateway-common = { path = "../xpallets/gateway/common", default-features
 xpallet-gateway-common-rpc-runtime-api = { path = "../xpallets/gateway/common/rpc/runtime-api", default-features = false }
 xpallet-gateway-records = { path = "../xpallets/gateway/records", default-features = false }
 xpallet-gateway-records-rpc-runtime-api = { path = "../xpallets/gateway/records/rpc/runtime-api", default-features = false }
+xpallet-genesis-builder = { path = "../xpallets/genesis-builder", default-features = false }
 xpallet-mining-asset = { path  = "../xpallets/mining/asset", default-features = false }
 xpallet-mining-asset-rpc-runtime-api = { path  = "../xpallets/mining/asset/rpc/runtime-api", default-features = false }
 xpallet-mining-staking = { path  = "../xpallets/mining/staking", default-features = false }
@@ -163,6 +164,7 @@ std = [
     "xpallet-gateway-common-rpc-runtime-api/std",
     "xpallet-gateway-records/std",
     "xpallet-gateway-records-rpc-runtime-api/std",
+    "xpallet-genesis-builder/std",
     "xpallet-mining-asset/std",
     "xpallet-mining-asset-rpc-runtime-api/std",
     "xpallet-mining-staking/std",

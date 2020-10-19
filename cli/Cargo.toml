@@ -51,6 +51,7 @@ chainx-primitives = { path = "../primitives" }
 chainx-rpc = { path = "../rpc" }
 chainx-runtime = { path = "../runtime" }
 xp-io = { path = "../primitives/io" }
+xp-genesis-builder  = { path  = "../primitives/genesis-builder" }
 xpallet-protocol = { path = "../xpallets/protocol" }
 
 [build-dependencies]

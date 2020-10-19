@@ -35,7 +35,7 @@ use frame_support::{
 };
 use frame_system::{ensure_root, ensure_signed};
 use sp_runtime::{
-    traits::{CheckedSub, Convert, SaturatedConversion, Saturating, StaticLookup, Zero},
+    traits::{Convert, SaturatedConversion, Saturating, StaticLookup, Zero},
     DispatchResult,
 };
 use sp_std::collections::btree_map::BTreeMap;
@@ -43,9 +43,7 @@ use sp_std::prelude::*;
 
 use chainx_primitives::ReferralId;
 use constants::*;
-use xp_mining_common::{
-    Claim, ComputeMiningWeight, Delta, RewardPotAccountFor, WeightType, ZeroMiningWeightError,
-};
+use xp_mining_common::{Claim, ComputeMiningWeight, Delta, ZeroMiningWeightError};
 use xp_mining_staking::{AssetMining, SessionIndex, UnbondedIndex};
 use xpallet_support::{debug, traits::TreasuryAccount};
 
@@ -53,6 +51,7 @@ pub use impls::{IdentificationTuple, SimpleValidatorRewardPotAccountDeterminer};
 pub use rpc::*;
 pub use types::*;
 pub use weight_info::WeightInfo;
+pub use xp_mining_common::{RewardPotAccountFor, WeightType};
 
 pub type BalanceOf<T> =
     <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
@@ -204,8 +203,9 @@ decl_storage! {
     }
 
     add_extra_genesis {
-        config(validators):
-            Vec<(T::AccountId, ReferralId, BalanceOf<T>)>;
+        // Staking validators are used for initializing the genesis easier in tests.
+        // For the mainnet genesis, use `Module::<T>::initialize_validators()`.
+        config(validators): Vec<(T::AccountId, ReferralId, BalanceOf<T>)>;
         config(glob_dist_ratio): (u32, u32);
         config(mining_ratio): (u32, u32);
         build(|config: &GenesisConfig<T>| {
@@ -220,7 +220,18 @@ decl_storage! {
                 asset: config.mining_ratio.0,
                 staking: config.mining_ratio.1,
             });
-            Module::<T>::register_genesis_validator(&config.validators).expect("Failed to register genesis validators");
+
+            for (validator, referral_id, balance) in &config.validators {
+                assert!(
+                    Module::<T>::free_balance(validator) >= *balance,
+                    "Validator does not have enough balance to bond."
+                );
+                Module::<T>::check_referral_id(referral_id)
+                    .expect("Validator referral id must be valid; qed");
+                Module::<T>::apply_register(validator, referral_id.to_vec());
+                Module::<T>::apply_bond(validator, validator, *balance)
+                    .expect("Bonding to validator itself can not fail; qed");
+            }
         });
     }
 }
@@ -549,19 +560,37 @@ impl<T: Trait> xpallet_support::traits::Validator<T::AccountId> for Module<T> {
 }
 
 impl<T: Trait> Module<T> {
-    /// Expose the bond impl for initializing the genesis state easier.
     #[cfg(feature = "std")]
-    pub fn register_genesis_validator(
-        validators: &[(T::AccountId, ReferralId, BalanceOf<T>)],
+    pub fn initialize_validators(
+        validators: &[xp_genesis_builder::ValidatorInfo<T::AccountId, BalanceOf<T>>],
     ) -> DispatchResult {
-        for (validator, referral_id, balance) in validators {
-            assert!(
-                Self::free_balance(validator) >= *balance,
-                "Validator does not have enough balance to bond."
-            );
+        for xp_genesis_builder::ValidatorInfo {
+            who,
+            referral_id,
+            self_bonded,
+            total_nomination,
+            total_weight,
+        } in validators
+        {
             Self::check_referral_id(referral_id)?;
-            Self::apply_register(validator, referral_id.to_vec());
-            Self::apply_bond(validator, validator, *balance)?;
+            if !self_bonded.is_zero() {
+                assert!(
+                    Self::free_balance(who) >= *self_bonded,
+                    "Validator does not have enough balance to bond."
+                );
+                Self::bond_reserve(who, *self_bonded)?;
+                Nominations::<T>::mutate(who, who, |nominator| {
+                    nominator.nomination = *self_bonded;
+                });
+            }
+            Self::apply_register(who, referral_id.to_vec());
+            // These validators will be chilled on the network startup.
+            Self::apply_force_chilled(who);
+
+            ValidatorLedgers::<T>::mutate(who, |validator| {
+                validator.total_nomination = *total_nomination;
+                validator.last_total_vote_weight = *total_weight;
+            });
         }
         Ok(())
     }
@@ -572,11 +601,12 @@ impl<T: Trait> Module<T> {
         target: &T::AccountId,
         value: BalanceOf<T>,
     ) -> DispatchResult {
-        Self::bond_reserve(sender, value)?;
-        let delta = Delta::Add(value);
-        Nominations::<T>::mutate(sender, target, |nominator| {
-            nominator.nomination = delta.calculate(nominator.nomination);
-        });
+        if !value.is_zero() {
+            Self::bond_reserve(sender, value)?;
+            Nominations::<T>::mutate(sender, target, |nominator| {
+                nominator.nomination = value;
+            });
+        }
         Ok(())
     }
 
@@ -588,7 +618,14 @@ impl<T: Trait> Module<T> {
         value: BalanceOf<T>,
         locked_until: T::BlockNumber,
     ) -> DispatchResult {
-        Self::can_unbond(sender, target, value)?;
+        // We can not reuse can_unbond() as the target can has no bond but has unbonds.
+        // Self::can_unbond(sender, target, value)?;
+        ensure!(Self::is_validator(target), Error::<T>::NotValidator);
+        ensure!(
+            Self::unbonded_chunks_of(sender, target).len()
+                < Self::maximum_unbonded_chunk_size() as usize,
+            Error::<T>::NoMoreUnbondChunks
+        );
         Self::unbond_reserve(sender, value)?;
         Self::mutate_unbonded_chunks(sender, target, value, locked_until);
         Ok(())
@@ -814,9 +851,10 @@ impl<T: Trait> Module<T> {
         let old_bonded = *new_locks.entry(LockedType::Bonded).or_default();
         let new_bonded = old_bonded + value;
 
-        Self::free_balance(who)
-            .checked_sub(&new_bonded)
-            .ok_or(Error::<T>::InsufficientBalance)?;
+        ensure!(
+            Self::free_balance(who) >= new_bonded,
+            Error::<T>::InsufficientBalance
+        );
 
         Self::set_lock(who, new_bonded);
         new_locks.insert(LockedType::Bonded, new_bonded);

@@ -392,6 +392,12 @@ impl<T: Trait> Module<T> {
 
 // public write interface
 impl<T: Trait> Module<T> {
+    /// Sets the free balance of `who` without sanity checks and triggering the asset changed hook.
+    #[cfg(feature = "std")]
+    pub fn force_set_free_balance(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) {
+        Self::make_type_balance_be(who, id, AssetType::Usable, value);
+    }
+
     pub fn issue(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
         Self::ensure_not_native_asset(id)?;
         xpallet_assets_registrar::Module::<T>::ensure_asset_is_valid(id)?;
