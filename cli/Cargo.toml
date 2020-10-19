@@ -52,8 +52,6 @@ chainx-rpc = { path = "../rpc" }
 chainx-runtime = { path = "../runtime" }
 xp-io = { path = "../primitives/io" }
 xp-genesis-builder  = { path  = "../primitives/genesis-builder" }
-xpallet-gateway-bitcoin = { path = "../xpallets/gateway/bitcoin" }
-xpallet-mining-staking = { path  = "../xpallets/mining/staking" }
 xpallet-protocol = { path = "../xpallets/protocol" }
 
 [build-dependencies]

@@ -737,8 +737,6 @@ dependencies = [
  "substrate-build-script-utils",
  "xp-genesis-builder",
  "xp-io",
- "xpallet-gateway-bitcoin",
- "xpallet-mining-staking",
  "xpallet-protocol",
 ]
 
