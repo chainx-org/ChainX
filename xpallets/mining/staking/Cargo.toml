@@ -16,12 +16,11 @@ sp-staking = { version = "2.0.0", default-features = false }
 sp-std = { version = "2.0.0", default-features = false }
 
 # Substrate pallets
-frame-support = { version = "2.0.0", default-features = false }
-frame-system = { version = "2.0.0", default-features = false }
-pallet-session = { version = "2.0.0", default-features = false }
-pallet-balances = { version = "2.0.0", default-features = false }
-
 frame-benchmarking = { version = "2.0.0", default-features = false, optional = true }
+frame-system = { version = "2.0.0", default-features = false }
+frame-support = { version = "2.0.0", default-features = false }
+pallet-balances = { version = "2.0.0", default-features = false }
+pallet-session = { version = "2.0.0", default-features = false }
 
 # ChainX primitives
 chainx-primitives = { path = "../../../primitives", default-features = false }
@@ -33,35 +32,35 @@ xp-mining-staking = { path  = "../../../primitives/mining/staking", default-feat
 xpallet-support = { path = "../../support", default-features = false }
 
 [dev-dependencies]
-xpallet-protocol = { path = "../../protocol" }
-sp-core = { version = "2.0.0" }
-sp-io = { version = "2.0.0" }
-pallet-timestamp = { version = "2.0.0" }
-frame-benchmarking = { version = "2.0.0" }
 env_logger = "0.7.1"
+sp-core = "2.0.0"
+sp-io = "2.0.0"
+frame-benchmarking = "2.0.0"
+pallet-timestamp = "2.0.0"
+xpallet-protocol = { path = "../../protocol" }
 
 [features]
 default = ["std"]
 std = [
     "codec/std",
     "serde",
-
+    # Substate primitives
     "sp-arithmetic/std",
     "sp-core/std",
     "sp-runtime/std",
     "sp-staking/std",
     "sp-std/std",
-
-    "frame-support/std",
+    # Substrate pallets
     "frame-system/std",
-    "pallet-session/std",
+    "frame-support/std",
     "pallet-balances/std",
-
+    "pallet-session/std",
+    # ChainX primitives
     "chainx-primitives/std",
     "xp-runtime/std",
     "xp-mining-common/std",
     "xp-mining-staking/std",
-
+    # ChainX pallets
     "xpallet-support/std",
 ]
 runtime-benchmarks = [

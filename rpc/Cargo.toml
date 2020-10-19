@@ -11,15 +11,15 @@ jsonrpc-pubsub = "15.0.0"
 
 # Substrate client
 sc-client-api = "2.0.0"
-sc-service = { version = "0.8.0", features = ["test-helpers"] }
-sc-rpc-api = "0.8.0"
-sc-rpc = "2.0.0"
-sc-keystore = "2.0.0"
 sc-consensus-babe = "0.8.0"
 sc-consensus-babe-rpc = "0.8.0"
 sc-consensus-epochs = "0.8.0"
 sc-finality-grandpa = "0.8.0"
 sc-finality-grandpa-rpc = "0.8.0"
+sc-keystore = "2.0.0"
+sc-rpc = "2.0.0"
+sc-rpc-api = "0.8.0"
+sc-service = { version = "0.8.0", features = ["test-helpers"] }
 
 # Substrate primitives
 sp-api = "2.0.0"
@@ -33,9 +33,10 @@ sp-transaction-pool = "2.0.0"
 
 # Substrate pallets
 frame-support = "2.0.0"
-substrate-frame-rpc-system = "2.0.0"
 pallet-transaction-payment-rpc = "2.0.0"
+substrate-frame-rpc-system = "2.0.0"
 
+# ChainX runtime
 chainx-runtime = { path = "../runtime" }
 
 # ChainX primitives
@@ -46,11 +47,11 @@ xpallet-assets-rpc = { path = "../xpallets/assets/rpc" }
 xpallet-assets-rpc-runtime-api = { path = "../xpallets/assets/rpc/runtime-api" }
 xpallet-dex-spot-rpc = { path = "../xpallets/dex/spot/rpc" }
 xpallet-dex-spot-rpc-runtime-api = { path = "../xpallets/dex/spot/rpc/runtime-api" }
-xpallet-mining-staking-rpc = { path = "../xpallets/mining/staking/rpc" }
-xpallet-mining-staking-rpc-runtime-api = { path = "../xpallets/mining/staking/rpc/runtime-api" }
-xpallet-mining-asset-rpc = { path = "../xpallets/mining/asset/rpc" }
-xpallet-mining-asset-rpc-runtime-api = { path = "../xpallets/mining/asset/rpc/runtime-api" }
-xpallet-gateway-records-rpc = { path = "../xpallets/gateway/records/rpc" }
-xpallet-gateway-records-rpc-runtime-api = { path = "../xpallets/gateway/records/rpc/runtime-api" }
 xpallet-gateway-common-rpc = { path = "../xpallets/gateway/common/rpc" }
 xpallet-gateway-common-rpc-runtime-api = { path = "../xpallets/gateway/common/rpc/runtime-api" }
+xpallet-gateway-records-rpc = { path = "../xpallets/gateway/records/rpc" }
+xpallet-gateway-records-rpc-runtime-api = { path = "../xpallets/gateway/records/rpc/runtime-api" }
+xpallet-mining-asset-rpc = { path = "../xpallets/mining/asset/rpc" }
+xpallet-mining-asset-rpc-runtime-api = { path = "../xpallets/mining/asset/rpc/runtime-api" }
+xpallet-mining-staking-rpc = { path = "../xpallets/mining/staking/rpc" }
+xpallet-mining-staking-rpc-runtime-api = { path = "../xpallets/mining/staking/rpc/runtime-api" }
