@@ -29,8 +29,8 @@ use chainx_runtime::{
     AuthorityDiscoveryConfig, BalancesConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
     GenesisConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig, SocietyConfig,
     SudoConfig, SystemConfig, TechnicalCommitteeConfig, XAssetsConfig, XAssetsRegistrarConfig,
-    XGatewayBitcoinConfig, XGatewayCommonConfig, XMiningAssetConfig, XSpotConfig, XStakingConfig,
-    XSystemConfig,
+    XGatewayBitcoinConfig, XGatewayCommonConfig, XGenesisBuilderConfig, XMiningAssetConfig,
+    XSpotConfig, XStakingConfig, XSystemConfig,
 };
 
 use crate::genesis::bitcoin::{BtcGenesisParams, BtcTrusteeParams};
@@ -776,6 +776,9 @@ fn build_genesis(
         }),
         xpallet_dex_spot: Some(XSpotConfig {
             trading_pairs: vec![(PCX, X_BTC, 9, 2, 100000, true)],
+        }),
+        xpallet_genesis_builder: Some(XGenesisBuilderConfig {
+            params: crate::genesis::genesis_builder_params(),
         }),
     }
 }
