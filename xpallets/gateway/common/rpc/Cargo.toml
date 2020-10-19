@@ -14,8 +14,10 @@ jsonrpc-core = { version = "15.0.0", features = ["arbitrary_precision"] }
 jsonrpc-core-client = { version = "15.0.0", features = ["arbitrary_precision"] }
 jsonrpc-derive = "15.0.0"
 
+# Substrate primitives
 sp-api = "2.0.0"
-sp-runtime = "2.0.0"
 sp-blockchain = "2.0.0"
+sp-runtime = "2.0.0"
 
+# ChainX pallets api
 xpallet-gateway-common-rpc-runtime-api = { path = "./runtime-api" }
