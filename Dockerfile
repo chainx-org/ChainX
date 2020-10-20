@@ -1,4 +1,4 @@
-FROM phusion/baseimage:0.10.2 as builder
+FROM phusion/baseimage:0.11 as builder
 LABEL maintainer "xuliuchengxlc@gmail.com"
 LABEL description="The build stage for ChainX. We create the ChainX binary in this stage."
 
@@ -22,7 +22,7 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
 
 # ===== SECOND STAGE ======
 
-FROM phusion/baseimage:0.10.2
+FROM phusion/baseimage:0.11
 LABEL maintainer "xuliuchengxlc@gmail.com"
 LABEL description="A very small image where we copy the ChainX binary created from the builder image."
 
