@@ -1,9 +1,10 @@
-FROM phusion/baseimage:0.10.2 as builder
+FROM phusion/baseimage:0.11 as builder
 LABEL maintainer "xuliuchengxlc@gmail.com"
 LABEL description="The build stage for ChainX. We create the ChainX binary in this stage."
 
 ARG PROFILE=release
 ARG APP=chainx
+ARG NIGHTLY=nightly-2020-08-24
 
 WORKDIR /$APP
 
@@ -15,11 +16,13 @@ RUN apt-get update && \
 
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
     export PATH=$PATH:$HOME/.cargo/bin && \
+    rustup toolchain install $NIGHTLY && \
+    rustup target add wasm32-unknown-unknown --toolchain $NIGHTLY && \
     cargo build --$PROFILE
 
 # ===== SECOND STAGE ======
 
-FROM phusion/baseimage:0.10.2
+FROM phusion/baseimage:0.11
 LABEL maintainer "xuliuchengxlc@gmail.com"
 LABEL description="A very small image where we copy the ChainX binary created from the builder image."
 
