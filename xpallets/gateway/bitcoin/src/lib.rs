@@ -29,7 +29,7 @@ use frame_system::{ensure_root, ensure_signed};
 use orml_utilities::with_transaction_result;
 
 // ChainX
-use chainx_primitives::{AddrStr, AssetId};
+use chainx_primitives::AssetId;
 use xpallet_assets::{BalanceOf, Chain, ChainT, WithdrawalLimit};
 use xpallet_gateway_common::{
     traits::{AddrBinding, ChannelBinding, Extractable, TrusteeSession},
@@ -174,10 +174,10 @@ decl_event!(
         Deposited(H256, AccountId, Balance),
         /// A list of withdrawal applications were processed successfully. [tx_hash, withdrawal_ids, total_withdrawn]
         Withdrawn(H256, Vec<u32>, Balance),
-        /// A new record of unclaimed deposit. [tx_hash]
-        UnclaimedDeposit(H256),
+        /// A new record of unclaimed deposit. [tx_hash, chain_addr]
+        UnclaimedDeposit(H256, BtcAddress),
         /// A unclaimed deposit record was removed. [depositor, deposit_amount, tx_hash, chain_addr]
-        PendingDepositRemoved(AccountId, Balance, H256, AddrStr),
+        PendingDepositRemoved(AccountId, Balance, H256, BtcAddress),
         /// A new withdrawal proposal was created. [proposer, withdrawal_ids]
         WithdrawalProposalCreated(AccountId, Vec<u32>),
         /// A trustee voted/vetoed a withdrawal proposal. [trustee, vote_status]
