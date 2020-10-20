@@ -4,6 +4,7 @@ LABEL description="The build stage for ChainX. We create the ChainX binary in th
 
 ARG PROFILE=release
 ARG APP=chainx
+ARG NIGHTLY=nightly-2020-08-24
 
 WORKDIR /$APP
 
@@ -15,8 +16,8 @@ RUN apt-get update && \
 
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
     export PATH=$PATH:$HOME/.cargo/bin && \
-    rustup toolchain install nightly-2020-08-24 && \
-    rustup target add wasm32-unknown-unknown --toolchain nightly-2020-08-24 && \
+    rustup toolchain install $NIGHTLY && \
+    rustup target add wasm32-unknown-unknown --toolchain $NIGHTLY && \
     cargo build --$PROFILE
 
 # ===== SECOND STAGE ======
