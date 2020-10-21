@@ -130,7 +130,7 @@ mod genesis {
                 nominators,
             } = params;
 
-            let mut genesis_validators = validators.iter().map(|v| v.who.clone());
+            let genesis_validators = validators.iter().map(|v| v.who.clone()).collect::<Vec<_>>();
 
             // Firstly register the genesis validators.
             xpallet_mining_staking::Module::<T>::initialize_validators(validators)
@@ -150,7 +150,7 @@ mod genesis {
                 {
                     // Not all `nominee` are in `genesis_validators` because the dead
                     // validators in 1.0 have been dropped.
-                    if genesis_validators.any(|ref v| v == nominee) {
+                    if genesis_validators.contains(nominee) {
                         // Skip the validator self-bonding as it has already been processed
                         // in initialize_validators()
                         if *nominee == *nominator {
