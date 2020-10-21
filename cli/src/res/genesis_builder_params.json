@@ -5034,10 +5034,6 @@
         "free": 2082441775
       },
       {
-        "who": "5QZNPxy2k3gjA6LhSPBDpuZHh2gtzsxFQoNZ1j3GvjzWSvpr",
-        "free": 37216081
-      },
-      {
         "who": "5QZQHhFoYdoFkBWn4b4Md97JvRGwLhSXDpMijGpjpdYtRz5n",
         "free": 999735115
       },
@@ -6904,10 +6900,6 @@
       {
         "who": "5Qsifq5Tt8rW9qzPvSrNzCVxnMDLz2Vhx66QeMNJWwqMJz2u",
         "free": 34777938807
-      },
-      {
-        "who": "5QsjoodDChi7tbzMxwfCP1Z1zyD2g96ddipga6AcMvECSmyK",
-        "free": 68433696
       },
       {
         "who": "5QstMyJaVQJZLTWu8Dv1NePaDUtWkVW77HQ2xjjbvQxDY3mj",
@@ -10208,10 +10200,6 @@
       {
         "who": "5RXjYhJ6hR31ajjKvyQERWFdnXD5obZWAUqr7BxKJpNEQekQ",
         "free": 974300
-      },
-      {
-        "who": "5RXkmzuqCfRhbpDmwQqpZmDsXnaFNaoHUHWdMq4HYuxYZ2dd",
-        "free": 29863
       },
       {
         "who": "5RXp6hm3h9rLTV4gc4SjdwyisREzCQiu4VJzBBxrWvZGRjSg",
@@ -15514,10 +15502,6 @@
         "free": 13833147273
       },
       {
-        "who": "5SVH85CzFmSxHKiQRt55bASJkmACwJDxbMoRU4WWHSHPv7Hg",
-        "free": 528640
-      },
-      {
         "who": "5SVJsavf5fVazyqjGLTdsyzLRqi66wBjbTad8ppqBPr1Krqx",
         "free": 112462826168
       },
@@ -17856,10 +17840,6 @@
       {
         "who": "5SvTvdi8CJexSdjHsMWLo9Pj99LwjGA8Nz88UAjpQAaZU6NP",
         "free": 740321
-      },
-      {
-        "who": "5Svd7HcqqbiVFZWJndfDpP4ccFkyNZ8ndNazBQRKwkArn6LX",
-        "free": 69967540
       },
       {
         "who": "5SvdgULkLMmtvoaP1bWrrwLcdzAEE9Ea6ju88nby9GzWMDjC",
@@ -27058,10 +27038,6 @@
         "free": 32196676500
       },
       {
-        "who": "5UeS4gUuwKtahS1WhMZzUcgoi9btX4YUoRAJ6d7FDsJJGqBL",
-        "free": 5594
-      },
-      {
         "who": "5UeSLEiGXgb9m82FM2811dHr7Laj8U7r76Dizjean82ZctQB",
         "free": 100000000
       },
@@ -27888,10 +27864,6 @@
       {
         "who": "5UoTsNMD7SvNAo1knHywnF4Wfm4NCuMNrb69TmYum9tSCqcS",
         "free": 186640003
-      },
-      {
-        "who": "5UoVj6m6YuGDEgZtk1afFrTz5cWwdF8Ccra9vQicQKeYDU9L",
-        "free": 507
       },
       {
         "who": "5UoXrHtcgSgKLPt4bxXFFvWEwv1VwXGe1WXd7QQbqXGNrxmv",
@@ -34834,574 +34806,574 @@
         "referral_id": "NovaNode",
         "self_bonded": 0,
         "total_nomination": 866900000,
-        "total_weight": "13492406450200000"
+        "total_weight": "15174428247000000"
       },
       {
         "who": "5PgjXzrRS11eNNALJUEkG9MUfMbqqGUSYuhRwHjCCmiumAD9",
         "referral_id": "Nova Staking",
         "self_bonded": 980000,
         "total_nomination": 1590980000,
-        "total_weight": "6367490543280000"
+        "total_weight": "25088281736680000"
       },
       {
         "who": "5PiejzeVDhwaVdpXZ4eySwRDLmfbAgMsPPaVeGBDA1wzR3hG",
         "referral_id": "TwoPizza",
         "self_bonded": 20000000000,
         "total_nomination": 45782289641,
-        "total_weight": "9118652307188460"
+        "total_weight": "9530006179612845"
       },
       {
         "who": "5Pjajd12o9hVixBPRPHZEdjsrct3NZp9Ge7QP4PiSivQrBZa",
         "referral_id": "buildlinks",
         "self_bonded": 5000000000000,
         "total_nomination": 49999929264648,
-        "total_weight": "11867641133569427658"
+        "total_weight": "11874491123878684434"
       },
       {
         "who": "5Q91jjhAy6BkQUF4CrcC8e7B3uC5iPopwvW1SD6VEPsdPBvo",
         "referral_id": "polkadotpro",
         "self_bonded": 65500000000,
         "total_nomination": 101474500000,
-        "total_weight": "393875201160500000"
+        "total_weight": "399168009606000000"
       },
       {
         "who": "5QJPzLAsPUNdz6Sx7sBaQHhruMW6yS5hL6W6fxkmJdFAuDty",
         "referral_id": "huolanshan",
         "self_bonded": 810100000000,
         "total_nomination": 5875353232732,
-        "total_weight": "1783463911538008952"
+        "total_weight": "1809221460110306040"
       },
       {
         "who": "5QSW4cTjEhgeTyQEBbwEmtF2gBNhfm1z6RTkdAjtuRsEKECN",
         "referral_id": "Ma_IPFS_Dot",
         "self_bonded": 103521751002,
         "total_nomination": 518633720853,
-        "total_weight": "123121829828070140"
+        "total_weight": "135536883837849254"
       },
       {
         "who": "5QXiFC8eoKdHD9PqATMrGvNVy7R6GYeGZ54zwh1bUyC4fKPG",
         "referral_id": "OlympusPool",
         "self_bonded": 653097000000,
         "total_nomination": 677961896339,
-        "total_weight": "92846295513231438"
+        "total_weight": "101126922115115984"
       },
       {
         "who": "5Qf7heeLDk7i2NCRPSFPty5jhncqKEW5yFCdVGdp1BKAGRui",
         "referral_id": "redpenguin",
         "self_bonded": 1508302000000,
         "total_nomination": 15048795167967,
-        "total_weight": "1660803320695687326"
+        "total_weight": "1699719505000049988"
       },
       {
         "who": "5QgYGmGp2K4BihhdznNaXEsM6bmbn8NnCGuBTDbxpnxAWKCx",
         "referral_id": "ANAMIX",
         "self_bonded": 339483000000,
         "total_nomination": 2269451751458,
-        "total_weight": "211798811285667182"
+        "total_weight": "221641423531740528"
       },
       {
         "who": "5Qi8hTUgg7p6E39M9xjczQUG5Hrg5Gg9ZpS34kDZENsWsrBH",
         "referral_id": "Stella",
         "self_bonded": 0,
         "total_nomination": 9871000000,
-        "total_weight": "14300000000"
+        "total_weight": "16744270568000000"
       },
       {
         "who": "5QkGjd5rsczm4qVgVpzRSdBe2SrhLvKrPrYFeAAtw4qbdRPh",
         "referral_id": "Hotbit",
         "self_bonded": 10021307721875,
         "total_nomination": 99733201613913,
-        "total_weight": "7863328564662399456"
+        "total_weight": "7874498683243157712"
       },
       {
         "who": "5QpTfTDYSLWkuVEvRqEcugQtFZnhE3qyJLCzwGQgdzNRpiSQ",
         "referral_id": "Wetez",
         "self_bonded": 676401000000,
         "total_nomination": 5767649426915,
-        "total_weight": "2249220754677489387"
+        "total_weight": "2266494864711099812"
       },
       {
         "who": "5QpaUQudS4cxZEQTtviWm5pmv8NQWX5HkKmd9T1GFamqcu3h",
         "referral_id": "PolkaWorld",
         "self_bonded": 1400000000000,
         "total_nomination": 13620217177042,
-        "total_weight": "4847120080244043739"
+        "total_weight": "4870846498566450903"
       },
       {
         "who": "5R6D6CxhLYko3tV1yrcwE9CAca5QNqSBCHTfnx3rjL4J1vLa",
         "referral_id": "ExinPool",
         "self_bonded": 280019000000,
         "total_nomination": 1743245845136,
-        "total_weight": "48222534944097197"
+        "total_weight": "158092347579638733"
       },
       {
         "who": "5RAZf8UHcbS5RBRpP9zptQJm84tpfnxcJ64ctSyxNJeLLxtq",
         "referral_id": "XPool",
         "self_bonded": 1781678000000,
         "total_nomination": 17095164442591,
-        "total_weight": "3348073409833047980"
+        "total_weight": "3428403587548783089"
       },
       {
         "who": "5RG9ePuRV9b6HGE636K2h2AUaqJWM2GZGShVy9HT3LGJGdaD",
         "referral_id": "DeVal",
         "self_bonded": 8888888,
         "total_nomination": 119043888888,
-        "total_weight": "264943395595926970"
+        "total_weight": "280635522941365354"
       },
       {
         "who": "5RTzBZM2t4e7AMTtBSN8SBL8x1kqn9q7i5ZuVn5iSxvRcA2k",
         "referral_id": "HLT",
         "self_bonded": 3128401852229,
         "total_nomination": 10571518404390,
-        "total_weight": "445666180318234005"
+        "total_weight": "451522801514266065"
       },
       {
         "who": "5RXaXGcz84KQ1XZeAMbjbexXRPNAaPdt3st5QDG3H6VegwD6",
         "referral_id": "BiHODL",
         "self_bonded": 8080100000000,
         "total_nomination": 46946069501078,
-        "total_weight": "18973235104488891755"
+        "total_weight": "18978868632829021115"
       },
       {
         "who": "5RZdv1AFajaS43K6tbsvEQ3TuPMc5BUYVtRYpGWaAUTmYqcC",
         "referral_id": "Akropolis",
         "self_bonded": 2000000,
         "total_nomination": 10498000000,
-        "total_weight": "69354906908000000"
+        "total_weight": "87162853272000000"
       },
       {
         "who": "5RZq3mtrDDYdX5UmUYzdSTrmMsSdM4GUgt7Hvw8HJA3aHmJs",
         "referral_id": "pcx-pool.com",
         "self_bonded": 983600000000,
         "total_nomination": 4313422546094,
-        "total_weight": "457421670634428769"
+        "total_weight": "485083649422529591"
       },
       {
         "who": "5RaxFQc7E4ACr4FVoHj2SMA6MGMqT8Ck9mDV5byGZtPPUw8f",
         "referral_id": "ChainY",
         "self_bonded": 1067021000000,
         "total_nomination": 10528340868730,
-        "total_weight": "1761055826720617990"
+        "total_weight": "2137159747574259780"
       },
       {
         "who": "5RbvMUD9n1mphAACpRC2K6xXVMomWZKbtTF3VRJ4jkt5Kp5P",
         "referral_id": "KeepNode",
         "self_bonded": 22629116239,
         "total_nomination": 121544928639,
-        "total_weight": "32346474772156722"
+        "total_weight": "32917249757045466"
       },
       {
         "who": "5ReDj2o2xRQowpcrRdrCq3hR4cj1dJgj239dGMHnB9QzAnPa",
         "referral_id": "CybexDex",
         "self_bonded": 882325100000,
         "total_nomination": 5830388703949,
-        "total_weight": "1487801540990805093"
+        "total_weight": "1521087230101649934"
       },
       {
         "who": "5Rfqe8ADJnFuwiYf2TyMx58KiBxT4jLgHWj1FkEtCo4ky9FT",
         "referral_id": "SSSnodes",
         "self_bonded": 5678988000000,
         "total_nomination": 56789820618183,
-        "total_weight": "8943770329293365701"
+        "total_weight": "9008908253542421602"
       },
       {
         "who": "5RjfjwXjzJtVd6EiTCG3RsJmUM9h4FgocswJyAaLvuBicwE4",
         "referral_id": "HashQuark",
         "self_bonded": 2752054904694,
         "total_nomination": 33836861095630,
-        "total_weight": "18488439987701472001"
+        "total_weight": "18501873221556437111"
       },
       {
         "who": "5RmdXfNmzwzWjmju5BsWNJD6d2NnE1UeK9gZS3HsakHELj6y",
         "referral_id": "tower",
         "self_bonded": 371500000000,
         "total_nomination": 3692122864164,
-        "total_weight": "2322174623615001736"
+        "total_weight": "2330540974025197360"
       },
       {
         "who": "5RqGUzLpm58Y5kHFctNnEoLguMMHLcrZnmY1SY2mhxBqLHFz",
         "referral_id": "BlockEden",
         "self_bonded": 0,
         "total_nomination": 20939800000,
-        "total_weight": "57133771287700"
+        "total_weight": "7462870957687700"
       },
       {
         "who": "5Rvg2EjXvrQP4hbDEgBn3vB5SP5kTfMd5XJGc1ZrGD5FxEgc",
         "referral_id": "88",
         "self_bonded": 5179110271,
         "total_nomination": 44752344119,
-        "total_weight": "8545091989878363"
+        "total_weight": "10332411109302985"
       },
       {
         "who": "5S62hz4ZschcRnXSnKXYPzbh1aaYNwNsecWC8eqv6kPrgJ1S",
         "referral_id": "BitPortal",
         "self_bonded": 502797107868,
         "total_nomination": 1912222695214,
-        "total_weight": "34257190294947880"
+        "total_weight": "47761306968549148"
       },
       {
         "who": "5S7QqjuxUWL1Na7UR6s5PhBuQjAip8g9WJXXbJ4JoTZyoEev",
         "referral_id": "SNZHolding",
         "self_bonded": 798940000000,
         "total_nomination": 4851931223003,
-        "total_weight": "16919373402321980541"
+        "total_weight": "16943773764442462628"
       },
       {
         "who": "5SB5ibGKNc5LRmWwLTMBP5zpsVJBcQxEVNixektkngMhY9t1",
         "referral_id": "NodeSoleil",
         "self_bonded": 85000000000,
         "total_nomination": 835000000000,
-        "total_weight": "9005030000000"
+        "total_weight": "10697005030000000"
       },
       {
         "who": "5SNjytyox1YngVNZiAfnEwJXurHFqmxViJ2fTbzjRSbVd4gq",
         "referral_id": "168NODE",
         "self_bonded": 1000000000000,
         "total_nomination": 6147403107582,
-        "total_weight": "5980927801720821000"
+        "total_weight": "6009722237876735088"
       },
       {
         "who": "5SSQfZ5hvd9JgWtj4kk337D4gQnW33vSJLTNLdNpYfo2f17S",
         "referral_id": "BitCat",
         "self_bonded": 0,
         "total_nomination": 468510000000,
-        "total_weight": "45805619021856"
+        "total_weight": "5140383359021856"
       },
       {
         "who": "5SSpmZ7NYwEEEgDPd2jVJb6XtYtktV6Npot5Z4mpPofG1sEw",
         "referral_id": "my",
         "self_bonded": 1099000000,
         "total_nomination": 2499000000,
-        "total_weight": "333524520000000"
+        "total_weight": "5113149405000000"
       },
       {
         "who": "5SU6g6Q1hbtJfXNGhq3zJgu91S7iHudvtbZmxExrUBR5UKiS",
         "referral_id": "BEPAL",
         "self_bonded": 0,
         "total_nomination": 1902000000,
-        "total_weight": "5116577258751553"
+        "total_weight": "6749411924751553"
       },
       {
         "who": "5SWAPQw1XgFWvfgwZvLc4MHNiZQMJsrkNxgMcb3pxgRQmnbW",
         "referral_id": "STW",
         "self_bonded": 167991327098,
         "total_nomination": 776257417646,
-        "total_weight": "85392071558398722"
+        "total_weight": "85572939536710240"
       },
       {
         "who": "5SWypcHQ85t5hX9QUM8Hnku9RgWRYgkRoUppRiDDWoJKThJ2",
         "referral_id": "cha.in",
         "self_bonded": 0,
         "total_nomination": 146047359672,
-        "total_weight": "1624943887578987627"
+        "total_weight": "1797960206640659475"
       },
       {
         "who": "5SXGgo9Xaw7kbZF2znxPuTpWPtzrLtFjtdQnnBcqBXhPyHNa",
         "referral_id": "Ammon",
         "self_bonded": 0,
         "total_nomination": 250000000,
-        "total_weight": "4691322434000000"
+        "total_weight": "4960052434000000"
       },
       {
         "who": "5SY3yajabLKYcuxPjXwLMc7p6WDC4Tv1H3sVMx6Hmjtxycji",
         "referral_id": "MathWallet",
         "self_bonded": 161830000000,
         "total_nomination": 1615624613357,
-        "total_weight": "859506471160820057"
+        "total_weight": "865495591602534456"
       },
       {
         "who": "5SbUTxQrN9qwWM1KZGMXhQqVw84RfRyXwy7x1bvG57Qh8LaX",
         "referral_id": "RuChainX",
         "self_bonded": 120249000000,
         "total_nomination": 1188979182000,
-        "total_weight": "47174761672000000"
+        "total_weight": "61599457108024000"
       },
       {
         "who": "5SdW7xPqRSh21tYfQAjyUA9eZNkbiJjKtRTRJ74XT9e4G3qz",
         "referral_id": "PcxPool",
         "self_bonded": 232941489485,
         "total_nomination": 1605620616408,
-        "total_weight": "19384486800163430"
+        "total_weight": "21235767370881854"
       },
       {
         "who": "5ShRNBFCJisSZqSbdxStePhZzuYt9UC3zyqjUr8Tu9fMKePU",
         "referral_id": "baidu",
         "self_bonded": 22000000000,
         "total_nomination": 69804000000,
-        "total_weight": "12445936000000"
+        "total_weight": "76121771452000000"
       },
       {
         "who": "5SmuQ9LA8GexmSHgLsD3FSftBZBQqRySyJT2EQhvHWqYdMHn",
         "referral_id": "Polkadog",
         "self_bonded": 685016000000,
         "total_nomination": 6715471000000,
-        "total_weight": "527483089519000000"
+        "total_weight": "1410815998446000000"
       },
       {
         "who": "5SnB5irrKUQpP2GG6xsdSm9RLYCsiR9C2fYttwki93u2CjCb",
         "referral_id": "ChainFirst",
         "self_bonded": 80700000000,
         "total_nomination": 80700000000,
-        "total_weight": "25596400000000"
+        "total_weight": "11919404500000000"
       },
       {
         "who": "5SrcuULDuBC2fy2xUXU4cEyWUZ9YcTmYH45SQwNn9LGu8eYU",
         "referral_id": "Stake.li",
         "self_bonded": 0,
         "total_nomination": 317000000,
-        "total_weight": "4364206785000000"
+        "total_weight": "5240823686000000"
       },
       {
         "who": "5StNFoeSmLXr7SfDuwJqHR5CyKV2o4BD2yU36GGay3GVFhtt",
         "referral_id": "Web3",
         "self_bonded": 836733000000,
         "total_nomination": 8349365100000,
-        "total_weight": "1368921825566311275"
+        "total_weight": "1761233443520011275"
       },
       {
         "who": "5SynATW8LdYSU844yJXJqBSJ1Pm4NPNrdq2n6QKwV5PYXkTJ",
         "referral_id": "AZIMUT",
         "self_bonded": 1200000000000,
         "total_nomination": 11791651715322,
-        "total_weight": "3419645257153976863"
+        "total_weight": "3464264867244755311"
       },
       {
         "who": "5T9Ads433Jg4CXfDoCaHKpBzCjkaJ62YiFQ3BsZX4ZxBojCx",
         "referral_id": "spring123",
         "self_bonded": 31912000000,
         "total_nomination": 300868000000,
-        "total_weight": "11790018328000000"
+        "total_weight": "79225368376000000"
       },
       {
         "who": "5TEgAjJg1Asa5aN6LH4ebx4zLwrbymHMaQ5tgKziJwEpn3a8",
         "referral_id": "SpaceXPool",
         "self_bonded": 63164500000,
         "total_nomination": 163164500000,
-        "total_weight": "130323879877500000"
+        "total_weight": "195038836525500000"
       },
       {
         "who": "5TLM4wEBMEJysMSj5TY5BKv3K4aaE1XRE5mv6FUt6NzT1PFT",
         "referral_id": "ExxiBox",
         "self_bonded": 841500000000,
         "total_nomination": 8250260901970,
-        "total_weight": "1855659010599779988"
+        "total_weight": "1856112774949388338"
       },
       {
         "who": "5TNzLcisGJSYEKCsxGViLC2XfHso1YuM9ikkwYBbuvP3uFgD",
         "referral_id": "LiebiPool",
         "self_bonded": 100000000000,
         "total_nomination": 125573547320,
-        "total_weight": "14938459989847481"
+        "total_weight": "114798437598678401"
       },
       {
         "who": "5TTQkUmmSgX9eK2WnL4GrUF4oZd9YAAZ6pT5ZKXwDDaMenRF",
         "referral_id": "LAILAI",
         "self_bonded": 65420000000,
         "total_nomination": 72477405629,
-        "total_weight": "706111053706564"
+        "total_weight": "13979913030224140"
       },
       {
         "who": "5TTdXhES2NsVBqDf7PvpVEgRJgUnc6t2QUfedmVdaXeJMmiX",
         "referral_id": "Polkanordic",
         "self_bonded": 0,
         "total_nomination": 1115420000000,
-        "total_weight": "29476440523298850"
+        "total_weight": "32821585103298850"
       },
       {
         "who": "5TTpXKjF6EKohqxbDSE5xCogtzDDZRC185Bq5DxxHj1siEhp",
         "referral_id": "xiamiPool",
         "self_bonded": 768300000000,
         "total_nomination": 7658276872310,
-        "total_weight": "889845290055003015"
+        "total_weight": "889975480761832285"
       },
       {
         "who": "5TZKwEp3NiYSR6cJs8XBTfLeAveE8Bv8QQFFZECqUaULFxHa",
         "referral_id": "realgar",
         "self_bonded": 0,
         "total_nomination": 10361698701,
-        "total_weight": "152940947241985927"
+        "total_weight": "164568161652133861"
       },
       {
         "who": "5Tee9WTqJGE5V5Sj4zc7iGEHX8tx9hgxgzVxyPMoiVVgfpTR",
         "referral_id": "XML",
         "self_bonded": 178000000000,
         "total_nomination": 178000000000,
-        "total_weight": "1567800000000"
+        "total_weight": "63962841800000000"
       },
       {
         "who": "5TjGUeg7siZ61VbRtrEQ9yUadS9zH2HRQrjUHH3bkaRzpo9H",
         "referral_id": "pox.cool",
         "self_bonded": 34796101,
         "total_nomination": 119282007398,
-        "total_weight": "231709714938454032"
+        "total_weight": "251543330718556482"
       },
       {
         "who": "5TqDq71XesuCt8YFrXz2MqF1QqpJKYrg5LtCte3KWB7oyEBB",
         "referral_id": "luckyve",
         "self_bonded": 1111111111111,
         "total_nomination": 11056610893465,
-        "total_weight": "3390971808103999070"
+        "total_weight": "3391469355594204995"
       },
       {
         "who": "5TrSrdjNVsjxouijvKFTdGNmtQxSp8rvpq3c5F3mJEtaP8W5",
         "referral_id": "Libra",
         "self_bonded": 47670571166,
         "total_nomination": 467176840290,
-        "total_weight": "17524094553201328"
+        "total_weight": "167401432570837678"
       },
       {
         "who": "5TvxQPPthdXJwZntBkiWdwJtpD4zVBtVQQjYe2CG7zJ8kZW6",
         "referral_id": "Jinma",
         "self_bonded": 1042630277777,
         "total_nomination": 10426302511389,
-        "total_weight": "2835622241405279395"
+        "total_weight": "2838187111823081089"
       },
       {
         "who": "5TxxPvmGwEXxfxGSjMu94nbjUgk79auqqCZP94ugybh8Dy97",
         "referral_id": "ducapital",
         "self_bonded": 1000000,
         "total_nomination": 19306100000,
-        "total_weight": "260266024596984427"
+        "total_weight": "281930403324184427"
       },
       {
         "who": "5U1fXSHoPTquoPxfpi4tAoUaNnLSs1st8bk8L6gWC4fbFYL2",
         "referral_id": "xyhome",
         "self_bonded": 95180000000,
         "total_nomination": 95180000000,
-        "total_weight": "2931960000000"
+        "total_weight": "63161810100000000"
       },
       {
         "who": "5U1ptcMFx9YBzTvnZ9VuPz1fh3DsPcwjYpcs9pNer9reVXRN",
         "referral_id": "ctpool.org",
         "self_bonded": 100752892042,
         "total_nomination": 867087926072,
-        "total_weight": "119952811490052574"
+        "total_weight": "137109880283239238"
       },
       {
         "who": "5U2Cty9khm9aW762o14GUHHBcLU1PbqRuRomW33EbQpUAHxS",
         "referral_id": "feilun",
         "self_bonded": 210000000000,
         "total_nomination": 1697403399018,
-        "total_weight": "823424840623417516"
+        "total_weight": "1118257021419248044"
       },
       {
         "who": "5U3WwgxtmLF42mtV7JjaBfzq13xtyCy6xN5XsBf9DkH5mJ9Y",
         "referral_id": "XniahC-lav",
         "self_bonded": 191669730000,
         "total_nomination": 911794730000,
-        "total_weight": "50115251163380000"
+        "total_weight": "93321556239160000"
       },
       {
         "who": "5U4Ck3Mb4YKZHuCrBrnDmerUMYMu2Ji7yxwRaEqdDPkYWQbV",
         "referral_id": "PullPcx",
         "self_bonded": 2500000,
         "total_nomination": 20101500000,
-        "total_weight": "175082559920835557"
+        "total_weight": "253503657404835557"
       },
       {
         "who": "5UA2h7yfF1v8MvSUMwrTrx1L5rXCcjDev7ESWtM2RLkcT8AV",
         "referral_id": "CryptOptimus",
         "self_bonded": 3000000000,
         "total_nomination": 506392590350,
-        "total_weight": "9399866134760400"
+        "total_weight": "10416196063592850"
       },
       {
         "who": "5ULmdoqoNC35nomcfw5XRmEGzPCZbDTdcXcyA8Q3a5jRT4dL",
         "referral_id": "topwinner",
         "self_bonded": 60000000000,
         "total_nomination": 275610000000,
-        "total_weight": "6683910000000"
+        "total_weight": "64408472610000000"
       },
       {
         "who": "5USbv8pqZKuuMPrwULVjW4QTKYbYpDsPgikRqbayJT7vQqvs",
         "referral_id": "Binance.com",
         "self_bonded": 0,
         "total_nomination": 29777000000,
-        "total_weight": "8837318412412171"
+        "total_weight": "17451089864412171"
       },
       {
         "who": "5UUqnFTNRYmekmZNSu3PAiPPGksv5tai77RbZ6as6Thw87pJ",
         "referral_id": "ChainXFans",
         "self_bonded": 0,
         "total_nomination": 99900000000,
-        "total_weight": "834538112746100000"
+        "total_weight": "990120674446100000"
       },
       {
         "who": "5UWQSAHngnErh9pZXKo9NXHMTURFaRo8kJR9WDCHJphSfXpo",
         "referral_id": "Entretenidos",
         "self_bonded": 4525000000,
         "total_nomination": 6325000000,
-        "total_weight": "2247223500000000"
+        "total_weight": "6835587225000000"
       },
       {
         "who": "5UZbPRxQGzEKCUohFRSDRVgho2ekviXBf8oZSXWvFna6Nrfs",
         "referral_id": "DOT-PCX-FiL",
         "self_bonded": 223120410546,
         "total_nomination": 1442721055352,
-        "total_weight": "234190406872572855"
+        "total_weight": "253560379761728807"
       },
       {
         "who": "5UhKSEk3F4YWWoYrskiradGGUFkieAarGUGqVpffKjEuN1b6",
         "referral_id": "Nodeasy.com",
         "self_bonded": 450000000000,
         "total_nomination": 3983378398221,
-        "total_weight": "1877827994625859154"
+        "total_weight": "1911595093307578571"
       },
       {
         "who": "5V7rQu6vsJyDvnGLsDAQKnamjRuCSCmjPaPL1cba714Zudjx",
         "referral_id": "PolkaItaly",
         "self_bonded": 2181259500000,
         "total_nomination": 21314183513062,
-        "total_weight": "5235174326437962847"
+        "total_weight": "5259856150946088643"
       },
       {
         "who": "5V7ygyZ53psrNSFgT3n7Xnxd6r7eC6bga3eA4W8KYEs75ZeC",
         "referral_id": "GfNetwork",
         "self_bonded": 1357836000000,
         "total_nomination": 11214454812997,
-        "total_weight": "3604472975526021033"
+        "total_weight": "3618962051144413157"
       },
       {
         "who": "5V9Bu9ydAXnCjJEjgVvNgxAvEMGS3VdEKtMm7givE1o1SDmg",
         "referral_id": "CBDParadise",
         "self_bonded": 802000000000,
         "total_nomination": 1199554000000,
-        "total_weight": "106159324602000000"
+        "total_weight": "109257772584000000"
       },
       {
         "who": "5VBnp126bxU7FnvtcazjmjFCD5HjzfEGdSq9o6Hj9CSw3wno",
         "referral_id": "HASH",
         "self_bonded": 480000000000,
         "total_nomination": 2092525353964,
-        "total_weight": "249331512619938834"
+        "total_weight": "256996432991508966"
       },
       {
         "who": "5VCqSyDxsFEzt7FLmkV8ijnTSFV7mWBb8SaC5hbfc5XqZVun",
         "referral_id": "Xchainx",
         "self_bonded": 101950000000,
         "total_nomination": 424751987663,
-        "total_weight": "218976002981182856"
+        "total_weight": "262695300319347783"
       },
       {
         "who": "5VDLNhXwseTuFrYK4Kg6GKnuK7U9FxxA1arYKz1bqdYoWgM4",
         "referral_id": "pos.dog",
         "self_bonded": 0,
         "total_nomination": 53566008806,
-        "total_weight": "120065229001852144"
+        "total_weight": "127377899826020846"
       },
       {
         "who": "5VEW3R1T4LR3kDhYwXeeCnYrHRwRaH7E9V1KprypBe68XmY4",
         "referral_id": "bemular",
         "self_bonded": 606800000000,
         "total_nomination": 4910937200527,
-        "total_weight": "2500089750041276808"
+        "total_weight": "2602585920353475825"
       },
       {
         "who": "5VJPK9vpjfw2HjvgGdX56zuTi6Pr7vGvYbyN5CWEZyYaby7w",
         "referral_id": "Laocius",
         "self_bonded": 1439540000000,
         "total_nomination": 14065322053474,
-        "total_weight": "2805200776623971766"
+        "total_weight": "2870857699969588398"
       }
     ],
     "nominators": [

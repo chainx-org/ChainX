@@ -174,9 +174,9 @@ decl_event!(
         Deposited(H256, AccountId, Balance),
         /// A list of withdrawal applications were processed successfully. [tx_hash, withdrawal_ids, total_withdrawn]
         Withdrawn(H256, Vec<u32>, Balance),
-        /// A new record of unclaimed deposit. [tx_hash, chain_addr]
+        /// A new record of unclaimed deposit. [tx_hash, btc_address]
         UnclaimedDeposit(H256, BtcAddress),
-        /// A unclaimed deposit record was removed. [depositor, deposit_amount, tx_hash, chain_addr]
+        /// A unclaimed deposit record was removed. [depositor, deposit_amount, tx_hash, btc_address]
         PendingDepositRemoved(AccountId, Balance, H256, BtcAddress),
         /// A new withdrawal proposal was created. [proposer, withdrawal_ids]
         WithdrawalProposalCreated(AccountId, Vec<u32>),
