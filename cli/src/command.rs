@@ -17,7 +17,7 @@ impl SubstrateCli for Cli {
     }
 
     fn executable_name() -> String {
-        env!("CARGO_PKG_NAME").into()
+        "chainx".into()
     }
 
     fn description() -> String {
@@ -29,11 +29,11 @@ impl SubstrateCli for Cli {
     }
 
     fn support_url() -> String {
-        "https://github.com/chainx-org/ChainX".into()
+        "https://github.com/chainx-org/ChainX/issues/new".into()
     }
 
     fn copyright_start_year() -> i32 {
-        2020
+        2019
     }
 
     fn load_spec(&self, id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
