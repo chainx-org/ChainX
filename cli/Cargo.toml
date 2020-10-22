@@ -2,6 +2,7 @@
 name = "chainx-cli"
 version = "2.0.0-alpha.1"
 authors = ["The ChainX Authors"]
+description = "ChainX Client Node"
 edition = "2018"
 
 [dependencies]
