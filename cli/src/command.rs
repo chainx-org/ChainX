@@ -29,7 +29,7 @@ impl SubstrateCli for Cli {
     }
 
     fn support_url() -> String {
-        "https://github.com/chainx-org/ChainX/issue/new".into()
+        "https://github.com/chainx-org/ChainX/issues/new".into()
     }
 
     fn copyright_start_year() -> i32 {

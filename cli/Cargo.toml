@@ -2,7 +2,7 @@
 name = "chainx-cli"
 version = "2.0.0-alpha.1"
 authors = ["The ChainX Authors"]
-description = "ChainX Client Node"
+description = "Implementation of protocol https://chainx.org in Rust based on the Substrate framework."
 edition = "2018"
 
 [dependencies]
