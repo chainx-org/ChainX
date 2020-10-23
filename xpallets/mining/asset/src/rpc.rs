@@ -9,31 +9,33 @@ use serde::{Deserialize, Serialize};
 use frame_support::storage::IterableStorageDoubleMap;
 use sp_runtime::RuntimeDebug;
 
-use super::*;
+use crate::*;
 
 /// Mining asset info.
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct MiningAssetInfo<AccountId, Balance, BlockNumber> {
+pub struct MiningAssetInfo<AccountId, Balance, MiningWeight, BlockNumber> {
     pub asset_id: AssetId,
     pub mining_power: FixedAssetPower,
     pub reward_pot: AccountId,
     pub reward_pot_balance: Balance,
     #[cfg_attr(feature = "std", serde(flatten))]
-    pub ledger_info: AssetLedger<BlockNumber>,
+    pub ledger_info: AssetLedger<MiningWeight, BlockNumber>,
 }
 
 impl<T: Trait> Module<T> {
     /// Get overall information about all mining assets.
-    pub fn mining_assets() -> Vec<MiningAssetInfo<T::AccountId, BalanceOf<T>, T::BlockNumber>> {
+    pub fn mining_assets(
+    ) -> Vec<MiningAssetInfo<T::AccountId, BalanceOf<T>, MiningWeight, T::BlockNumber>> {
         MiningPrevilegedAssets::get()
             .into_iter()
             .map(|asset_id| {
                 let mining_power = FixedAssetPowerOf::get(asset_id);
                 let reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(&asset_id);
                 let reward_pot_balance: BalanceOf<T> = Self::free_balance(&reward_pot);
-                let ledger_info: AssetLedger<T::BlockNumber> = AssetLedgers::<T>::get(asset_id);
+                let ledger_info: AssetLedger<MiningWeight, T::BlockNumber> =
+                    AssetLedgers::<T>::get(asset_id);
                 MiningAssetInfo {
                     asset_id,
                     mining_power,
@@ -59,7 +61,9 @@ impl<T: Trait> Module<T> {
     }
 
     /// Get the nomination details given the staker AccountId.
-    pub fn miner_ledger(who: T::AccountId) -> BTreeMap<AssetId, MinerLedger<T::BlockNumber>> {
+    pub fn miner_ledger(
+        who: T::AccountId,
+    ) -> BTreeMap<AssetId, MinerLedger<MiningWeight, T::BlockNumber>> {
         MinerLedgers::<T>::iter_prefix(&who).collect()
     }
 }

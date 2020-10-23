@@ -21,6 +21,9 @@ use sp_transaction_pool::TransactionPool;
 use chainx_primitives::Block;
 use chainx_runtime::{AccountId, Balance, BlockNumber, Hash, Index};
 
+use xpallet_mining_asset_rpc_runtime_api::MiningWeight;
+use xpallet_mining_staking_rpc_runtime_api::VoteWeight;
+
 /// Light client extra dependencies.
 pub struct LightDeps<C, F, P> {
     /// The client instance to use.
@@ -90,22 +93,28 @@ where
     C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
     C::Api: xpallet_assets_rpc_runtime_api::XAssetsApi<Block, AccountId, Balance>,
     C::Api:
-        xpallet_mining_staking_rpc_runtime_api::XStakingApi<Block, AccountId, Balance, BlockNumber>,
-    C::Api:
         xpallet_dex_spot_rpc_runtime_api::XSpotApi<Block, AccountId, Balance, BlockNumber, Balance>,
-    C::Api: xpallet_mining_asset_rpc_runtime_api::XMiningAssetApi<
-        Block,
-        AccountId,
-        Balance,
-        BlockNumber,
-    >,
+    C::Api: xpallet_gateway_common_rpc_runtime_api::XGatewayCommonApi<Block, AccountId, Balance>,
     C::Api: xpallet_gateway_records_rpc_runtime_api::XGatewayRecordsApi<
         Block,
         AccountId,
         Balance,
         BlockNumber,
     >,
-    C::Api: xpallet_gateway_common_rpc_runtime_api::XGatewayCommonApi<Block, AccountId, Balance>,
+    C::Api: xpallet_mining_staking_rpc_runtime_api::XStakingApi<
+        Block,
+        AccountId,
+        Balance,
+        VoteWeight,
+        BlockNumber,
+    >,
+    C::Api: xpallet_mining_asset_rpc_runtime_api::XMiningAssetApi<
+        Block,
+        AccountId,
+        Balance,
+        MiningWeight,
+        BlockNumber,
+    >,
     <C::Api as sp_api::ApiErrorExt>::Error: fmt::Debug,
     P: TransactionPool + 'static,
     SC: SelectChain<Block> + 'static,

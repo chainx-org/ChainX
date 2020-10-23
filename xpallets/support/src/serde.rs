@@ -88,6 +88,12 @@ pub type RpcBalance<Balance> = RpcU128<Balance>;
 /// Price type of order when interacting with RPC.
 pub type RpcPrice<Price> = RpcU128<Price>;
 
+/// Weight type of mining when interacting with RPC.
+pub type RpcMiningWeight<Weight> = RpcU128<Weight>;
+
+/// Weight type of staking when interacting with RPC.
+pub type RpcVoteWeight<Weight> = RpcU128<Weight>;
+
 /// A helper struct for handling u128 serialization/deserialization of RPC.
 /// See https://github.com/polkadot-js/api/issues/2464 for details (shit!).
 #[derive(Eq, PartialEq, Copy, Clone, Debug, Serialize, Deserialize)]

@@ -5,13 +5,16 @@ use sp_core::crypto::UncheckedFrom;
 use sp_runtime::traits::{Hash, Saturating};
 
 use xp_mining_common::{
-    generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight, WeightFactors, WeightType,
+    generic_weight_factors, BaseMiningWeightHandle, Claim, ComputeMiningWeight, WeightFactors,
+    WeightType,
 };
 use xp_mining_staking::MiningPower;
 
 use super::*;
 
-impl<'a, T: Trait> BaseMiningWeight<BalanceOf<T>, T::BlockNumber> for AssetLedgerWrapper<'a, T> {
+impl<'a, T: Trait> BaseMiningWeightHandle<BalanceOf<T>, T::BlockNumber>
+    for AssetLedgerWrapper<'a, T>
+{
     fn amount(&self) -> BalanceOf<T> {
         xpallet_assets::Module::<T>::total_issuance(&self.asset_id)
     }
@@ -33,7 +36,9 @@ impl<'a, T: Trait> BaseMiningWeight<BalanceOf<T>, T::BlockNumber> for AssetLedge
     }
 }
 
-impl<'a, T: Trait> BaseMiningWeight<BalanceOf<T>, T::BlockNumber> for MinerLedgerWrapper<'a, T> {
+impl<'a, T: Trait> BaseMiningWeightHandle<BalanceOf<T>, T::BlockNumber>
+    for MinerLedgerWrapper<'a, T>
+{
     fn amount(&self) -> BalanceOf<T> {
         xpallet_assets::Module::<T>::all_type_asset_balance(&self.miner, &self.asset_id)
     }

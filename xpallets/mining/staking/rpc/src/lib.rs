@@ -15,7 +15,7 @@ use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 
-use xpallet_support::RpcBalance;
+use xpallet_support::{RpcBalance, RpcVoteWeight};
 
 use xpallet_mining_staking_rpc_runtime_api::{
     NominatorInfo, NominatorLedger, Unbonded, ValidatorInfo, ValidatorLedger,
@@ -24,17 +24,20 @@ use xpallet_mining_staking_rpc_runtime_api::{
 
 /// XStaking RPC methods.
 #[rpc]
-pub trait XStakingApi<BlockHash, AccountId, Balance, BlockNumber>
+pub trait XStakingApi<BlockHash, AccountId, Balance, VoteWeight, BlockNumber>
 where
     AccountId: Ord,
     Balance: Display + FromStr,
+    VoteWeight: Display + FromStr,
 {
     /// Get overall information about all potential validators
     #[rpc(name = "xstaking_getValidators")]
     fn validators(
         &self,
         at: Option<BlockHash>,
-    ) -> Result<Vec<ValidatorInfo<AccountId, RpcBalance<Balance>, BlockNumber>>>;
+    ) -> Result<
+        Vec<ValidatorInfo<AccountId, RpcBalance<Balance>, RpcVoteWeight<VoteWeight>, BlockNumber>>,
+    >;
 
     /// Get overall information given the validator AccountId.
     #[rpc(name = "xstaking_getValidatorByAccount")]
@@ -42,7 +45,7 @@ where
         &self,
         who: AccountId,
         at: Option<BlockHash>,
-    ) -> Result<ValidatorInfo<AccountId, RpcBalance<Balance>, BlockNumber>>;
+    ) -> Result<ValidatorInfo<AccountId, RpcBalance<Balance>, RpcVoteWeight<VoteWeight>, BlockNumber>>;
 
     /// Get the staking dividends info given the staker AccountId.
     #[rpc(name = "xstaking_getDividendByAccount")]
@@ -58,7 +61,12 @@ where
         &self,
         who: AccountId,
         at: Option<BlockHash>,
-    ) -> Result<BTreeMap<AccountId, NominatorLedger<RpcBalance<Balance>, BlockNumber>>>;
+    ) -> Result<
+        BTreeMap<
+            AccountId,
+            NominatorLedger<RpcBalance<Balance>, RpcVoteWeight<VoteWeight>, BlockNumber>,
+        >,
+    >;
 
     /// Get individual nominator information given the nominator AccountId.
     #[rpc(name = "xstaking_getNominatorByAccount")]
@@ -85,20 +93,24 @@ impl<C, B> XStaking<C, B> {
     }
 }
 
-impl<C, Block, AccountId, Balance, BlockNumber>
-    XStakingApi<<Block as BlockT>::Hash, AccountId, Balance, BlockNumber> for XStaking<C, Block>
+impl<C, Block, AccountId, Balance, VoteWeight, BlockNumber>
+    XStakingApi<<Block as BlockT>::Hash, AccountId, Balance, VoteWeight, BlockNumber>
+    for XStaking<C, Block>
 where
     Block: BlockT,
     C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
-    C::Api: XStakingRuntimeApi<Block, AccountId, Balance, BlockNumber>,
+    C::Api: XStakingRuntimeApi<Block, AccountId, Balance, VoteWeight, BlockNumber>,
     AccountId: Codec + Ord,
     Balance: Codec + Display + FromStr,
+    VoteWeight: Codec + Display + FromStr,
     BlockNumber: Codec,
 {
     fn validators(
         &self,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<Vec<ValidatorInfo<AccountId, RpcBalance<Balance>, BlockNumber>>> {
+    ) -> Result<
+        Vec<ValidatorInfo<AccountId, RpcBalance<Balance>, RpcVoteWeight<VoteWeight>, BlockNumber>>,
+    > {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
         Ok(api
@@ -111,7 +123,7 @@ where
                         profile: validator.profile,
                         ledger: ValidatorLedger {
                             total_nomination: validator.ledger.total_nomination.into(),
-                            last_total_vote_weight: validator.ledger.last_total_vote_weight,
+                            last_total_vote_weight: validator.ledger.last_total_vote_weight.into(),
                             last_total_vote_weight_update: validator
                                 .ledger
                                 .last_total_vote_weight_update,
@@ -130,7 +142,8 @@ where
         &self,
         who: AccountId,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<ValidatorInfo<AccountId, RpcBalance<Balance>, BlockNumber>> {
+    ) -> Result<ValidatorInfo<AccountId, RpcBalance<Balance>, RpcVoteWeight<VoteWeight>, BlockNumber>>
+    {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
         Ok(api
@@ -140,7 +153,7 @@ where
                 profile: validator.profile,
                 ledger: ValidatorLedger {
                     total_nomination: validator.ledger.total_nomination.into(),
-                    last_total_vote_weight: validator.ledger.last_total_vote_weight,
+                    last_total_vote_weight: validator.ledger.last_total_vote_weight.into(),
                     last_total_vote_weight_update: validator.ledger.last_total_vote_weight_update,
                 },
                 is_validating: validator.is_validating,
@@ -173,7 +186,12 @@ where
         &self,
         who: AccountId,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<BTreeMap<AccountId, NominatorLedger<RpcBalance<Balance>, BlockNumber>>> {
+    ) -> Result<
+        BTreeMap<
+            AccountId,
+            NominatorLedger<RpcBalance<Balance>, RpcVoteWeight<VoteWeight>, BlockNumber>,
+        >,
+    > {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
         Ok(api
@@ -186,7 +204,7 @@ where
                             account,
                             NominatorLedger {
                                 nomination: nominator_ledger.nomination.into(),
-                                last_vote_weight: nominator_ledger.last_vote_weight,
+                                last_vote_weight: nominator_ledger.last_vote_weight.into(),
                                 last_vote_weight_update: nominator_ledger.last_vote_weight_update,
                                 unbonded_chunks: nominator_ledger
                                     .unbonded_chunks

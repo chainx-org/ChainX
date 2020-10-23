@@ -10,7 +10,9 @@ use chainx_primitives::AssetId;
 use xp_mining_common::WeightType;
 use xp_mining_staking::MiningPower;
 
-use super::*;
+use crate::*;
+
+pub type VoteWeight = WeightType;
 
 /// Detailed types of reserved balances in Staking.
 #[derive(PartialEq, PartialOrd, Ord, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
@@ -58,11 +60,11 @@ pub struct Unbonded<Balance, BlockNumber> {
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct ValidatorLedger<Balance, BlockNumber> {
+pub struct ValidatorLedger<Balance, VoteWeight, BlockNumber> {
     /// The total amount of all the nominators' vote balances.
     pub total_nomination: Balance,
     /// Last calculated total vote weight of current validator.
-    pub last_total_vote_weight: WeightType,
+    pub last_total_vote_weight: VoteWeight,
     /// Block number at which point `last_total_vote_weight` just updated.
     pub last_total_vote_weight_update: BlockNumber,
 }
@@ -71,12 +73,11 @@ pub struct ValidatorLedger<Balance, BlockNumber> {
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct NominatorLedger<Balance, BlockNumber> {
+pub struct NominatorLedger<Balance, VoteWeight, BlockNumber> {
     /// The amount of vote.
     pub nomination: Balance,
     /// Last calculated total vote weight of current nominator.
-    #[cfg_attr(feature = "std", serde(with = "xpallet_support::serde_num_str"))]
-    pub last_vote_weight: WeightType,
+    pub last_vote_weight: VoteWeight,
     /// Block number at which point `last_vote_weight` just updated.
     pub last_vote_weight_update: BlockNumber,
     /// Unbonded entries.
