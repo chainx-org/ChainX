@@ -190,7 +190,7 @@
         "is_chilled": "bool",
         "last_chilled": "Option<BlockNumber>",
         "total": "Balance",
-        "last_total_vote_weight": "WeightType",
+        "last_total_vote_weight": "VoteWeight",
         "last_total_vote_weight_update": "BlockNumber",
         "is_validating": "bool",
         "self_bonded": "Balance",
@@ -213,7 +213,7 @@
     },
     "NominatorLedger": {
         "nomination": "Balance",
-        "last_vote_weight": "WeightType",
+        "last_vote_weight": "VoteWeight",
         "last_vote_weight_update": "BlockNumber",
         "unbonded_chunks": "Vec<Unbonded>"
     },
@@ -222,7 +222,7 @@
         "mining_power": "FixedAssetPower",
         "reward_pot": "AccountId",
         "reward_pot_balance": "Balance",
-        "last_total_mining_weight": "WeightType",
+        "last_total_mining_weight": "MiningWeight",
         "last_total_mining_weight_update": "BlockNumber"
     },
     "Unbonded": {
@@ -239,17 +239,20 @@
         "data": "Vec<RpcOrder>"
     },
     "String": "Text",
-    "Balance": "u128",
-    "WeightType": "u128",
-    "MiningPower": "u128",
-    "MiningWeight": "u128",
+    "Price": "String",
+    "Balance": "String",
+    "MiningWeight": "String",
+    "VoteWeight": "String",
+    "RpcPrice": "Price",
+    "RpcBalance": "Balance",
+    "RpcMiningWeight": "MiningWeight",
+    "RpcVoteWeight": "VoteWeight",
     "AssetRestrictions":  {
-        "mask": "u32"
+        "bits": "u32"
     },
     "OrderInfo": "Order",
     "HandicapInfo": "Handicap",
     "FullIdentification": "ValidatorId",
-    "Price": "Balance",
     "WithdrawalRecordOf": "WithdrawalRecord",
     "RpcWithdrawalRecord": {
         "asset_id": "AssetId",
