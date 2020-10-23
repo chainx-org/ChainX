@@ -65,8 +65,8 @@ where
     C: Send + Sync + 'static,
     C::Api: XAssetsRuntimeApi<Block, AccountId, Balance>,
     Block: BlockT,
-    AccountId: Clone + std::fmt::Display + Codec,
-    Balance: Clone + Copy + std::fmt::Display + std::str::FromStr + Codec + Zero,
+    AccountId: Clone + Display + Codec,
+    Balance: Clone + Copy + Display + FromStr + Codec + Zero,
 {
     fn assets_by_account(
         &self,
