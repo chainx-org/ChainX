@@ -1,22 +1,23 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use serde::{de, ser, Deserialize};
+use std::{fmt, str};
+
+use serde::{de, ser, Deserialize, Serialize};
 
 /// Hex serialization/deserialization
 pub mod serde_hex {
     use super::*;
 
-    /// A serializer that first encodes the argument as a hex-string
+    /// A serializer that encodes the bytes as a hex-string
     pub fn serialize<T, S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: ser::Serializer,
         T: AsRef<[u8]>,
     {
-        let output = hex::encode(value);
-        serializer.serialize_str(&format!("0x{:}", output))
+        serializer.serialize_str(&format!("0x{}", hex::encode(value)))
     }
 
-    /// A deserializer that first encodes the argument as a hex-string
+    /// A deserializer that decodes the hex-string to bytes (Vec<u8>)
     pub fn deserialize<'de, D>(deserializer: D) -> Result<Vec<u8>, D::Error>
     where
         D: de::Deserializer<'de>,
@@ -36,7 +37,7 @@ pub mod serde_hex {
 pub mod serde_text {
     use super::*;
 
-    /// A serializer that first encodes the argument as a string
+    /// A serializer that encodes the bytes as a string
     pub fn serialize<T, S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: ser::Serializer,
@@ -46,13 +47,55 @@ pub mod serde_text {
         serializer.serialize_str(&output)
     }
 
-    /// A deserializer that first encodes the argument as a string
+    /// A deserializer that decodes the string to the bytes (Vec<u8>)
     pub fn deserialize<'de, D>(deserializer: D) -> Result<Vec<u8>, D::Error>
     where
         D: de::Deserializer<'de>,
     {
-        let s = String::deserialize(deserializer)?;
-        Ok(s.into_bytes())
+        let data = String::deserialize(deserializer)?;
+        Ok(data.into_bytes())
+    }
+}
+
+/// Number string serialization/deserialization
+pub mod serde_num_str {
+    use super::*;
+
+    /// A serializer that encodes the number as a string
+    pub fn serialize<S, T>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+        T: fmt::Display,
+    {
+        serializer.serialize_str(&value.to_string())
+    }
+
+    /// A deserializer that decodes a string to the number.
+    pub fn deserialize<'de, D, T>(deserializer: D) -> Result<T, D::Error>
+    where
+        D: de::Deserializer<'de>,
+        T: str::FromStr,
+    {
+        let data = String::deserialize(deserializer)?;
+        data.parse::<T>()
+            .map_err(|_| de::Error::custom("Parse from string failed"))
+    }
+}
+
+/// Balance type when interacting with RPC.
+pub type RpcBalance<Balance> = RpcU128<Balance>;
+
+/// Price type of order when interacting with RPC.
+pub type RpcPrice<Price> = RpcU128<Price>;
+
+/// A helper struct for handling u128 serialization/deserialization of RPC.
+/// See https://github.com/polkadot-js/api/issues/2464 for details (shit!).
+#[derive(Eq, PartialEq, Copy, Clone, Debug, Serialize, Deserialize)]
+pub struct RpcU128<T: fmt::Display + str::FromStr>(#[serde(with = "self::serde_num_str")] T);
+
+impl<T: fmt::Display + str::FromStr> From<T> for RpcU128<T> {
+    fn from(value: T) -> Self {
+        RpcU128(value)
     }
 }
 
@@ -84,6 +127,17 @@ mod tests {
         let ser = serde_json::to_string(&test).unwrap();
         assert_eq!(ser, "\"0123456789\"");
         let de = serde_json::from_str::<TextTest>(&ser).unwrap();
+        assert_eq!(de, test);
+    }
+
+    #[test]
+    fn test_serde_num_str_attr() {
+        use super::RpcU128;
+
+        let test = RpcU128(u128::max_value());
+        let ser = serde_json::to_string(&test).unwrap();
+        assert_eq!(ser, "\"340282366920938463463374607431768211455\"");
+        let de = serde_json::from_str::<RpcU128<u128>>(&ser).unwrap();
         assert_eq!(de, test);
     }
 }

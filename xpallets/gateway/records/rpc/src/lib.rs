@@ -1,6 +1,8 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 use std::collections::BTreeMap;
+use std::fmt::{Debug, Display};
+use std::str::FromStr;
 use std::sync::Arc;
 
 use codec::Codec;
@@ -33,7 +35,10 @@ impl<C, B> XGatewayRecords<C, B> {
 }
 
 #[rpc]
-pub trait XGatewayRecordsApi<BlockHash, AccountId, Balance, BlockNumber> {
+pub trait XGatewayRecordsApi<BlockHash, AccountId, Balance, BlockNumber>
+where
+    Balance: Display + FromStr,
+{
     /// Return current withdraw list(include Applying and Processing withdraw state)
     #[rpc(name = "xgatewayrecords_withdrawalList")]
     fn withdrawal_list(
@@ -67,9 +72,9 @@ where
     C: Send + Sync + 'static,
     C::Api: GatewayRecordsRuntimeApi<Block, AccountId, Balance, BlockNumber>,
     Block: BlockT,
-    AccountId: Clone + std::fmt::Display + Codec,
-    Balance: Clone + std::fmt::Display + Codec,
-    BlockNumber: Clone + std::fmt::Display + Codec,
+    AccountId: Clone + Display + FromStr + Codec,
+    Balance: Clone + Display + FromStr + Codec,
+    BlockNumber: Clone + Display + Codec,
 {
     fn withdrawal_list(
         &self,
@@ -127,9 +132,10 @@ where
 
 #[derive(PartialEq, Eq, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct RpcWithdrawalRecord<AccountId, Balance, BlockNumber> {
+pub struct RpcWithdrawalRecord<AccountId, Balance: Display + FromStr, BlockNumber> {
     pub asset_id: AssetId,
     pub applicant: AccountId,
+    #[serde(with = "xpallet_support::serde_num_str")]
     pub balance: Balance,
     pub addr: String,
     pub ext: String,
@@ -137,7 +143,8 @@ pub struct RpcWithdrawalRecord<AccountId, Balance, BlockNumber> {
     pub state: WithdrawalState,
 }
 
-impl<AccountId, Balance, BlockNumber> From<Withdrawal<AccountId, Balance, BlockNumber>>
+impl<AccountId, Balance: Display + FromStr, BlockNumber>
+    From<Withdrawal<AccountId, Balance, BlockNumber>>
     for RpcWithdrawalRecord<AccountId, Balance, BlockNumber>
 {
     fn from(record: Withdrawal<AccountId, Balance, BlockNumber>) -> Self {
@@ -154,7 +161,8 @@ impl<AccountId, Balance, BlockNumber> From<Withdrawal<AccountId, Balance, BlockN
 }
 
 const RUNTIME_ERROR: i64 = 1;
-fn runtime_error_into_rpc_err(err: impl std::fmt::Debug) -> Error {
+/// Converts a runtime trap into an RPC error.
+fn runtime_error_into_rpc_err(err: impl Debug) -> Error {
     Error {
         code: ErrorCode::ServerError(RUNTIME_ERROR),
         message: "Runtime trapped".into(),

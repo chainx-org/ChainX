@@ -9,7 +9,7 @@ use sp_std::prelude::*;
 
 use codec::Codec;
 
-pub use xpallet_dex_spot::{Depth, FullPairInfo, RpcOrder, TradingPairId};
+pub use xpallet_dex_spot::{Depth, FullPairInfo, Handicap, OrderProperty, RpcOrder, TradingPairInfo, TradingPairId};
 
 sp_api::decl_runtime_apis! {
     /// The API to query DEX Spot info.

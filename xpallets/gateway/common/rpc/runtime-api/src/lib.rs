@@ -11,6 +11,7 @@ use sp_runtime::DispatchError;
 
 pub use chainx_primitives::{AddrStr, AssetId, ChainAddress};
 pub use xp_runtime::Memo;
+
 pub use xpallet_assets::{Chain, WithdrawalLimit};
 pub use xpallet_gateway_common::{
     trustees,

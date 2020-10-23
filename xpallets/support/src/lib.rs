@@ -14,4 +14,4 @@ pub use frame_support::fail;
 
 pub use self::macros::*;
 #[cfg(feature = "std")]
-pub use self::serde::{serde_hex, serde_text};
+pub use self::serde::{serde_hex, serde_num_str, serde_text, RpcBalance, RpcPrice, RpcU128};

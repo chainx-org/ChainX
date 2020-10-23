@@ -8936,6 +8936,7 @@ dependencies = [
  "sp-blockchain",
  "sp-runtime",
  "xpallet-assets-rpc-runtime-api",
+ "xpallet-support",
 ]
 
 [[package]]
@@ -8985,6 +8986,7 @@ dependencies = [
  "sp-blockchain",
  "sp-runtime",
  "xpallet-dex-spot-rpc-runtime-api",
+ "xpallet-support",
 ]
 
 [[package]]
@@ -9071,6 +9073,7 @@ dependencies = [
  "sp-blockchain",
  "sp-runtime",
  "xpallet-gateway-common-rpc-runtime-api",
+ "xpallet-support",
 ]
 
 [[package]]
@@ -9198,6 +9201,7 @@ dependencies = [
  "sp-blockchain",
  "sp-runtime",
  "xpallet-mining-asset-rpc-runtime-api",
+ "xpallet-support",
 ]
 
 [[package]]
@@ -9251,6 +9255,7 @@ dependencies = [
  "sp-blockchain",
  "sp-runtime",
  "xpallet-mining-staking-rpc-runtime-api",
+ "xpallet-support",
 ]
 
 [[package]]

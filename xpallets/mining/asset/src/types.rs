@@ -1,11 +1,13 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use crate::Trait;
-use chainx_primitives::AssetId;
 use codec::{Decode, Encode};
-use sp_runtime::RuntimeDebug;
 #[cfg(feature = "std")]
-use sp_runtime::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
+use sp_runtime::RuntimeDebug;
+
+use chainx_primitives::AssetId;
+
+use crate::Trait;
 
 pub type MiningWeight = u128;
 pub type FixedAssetPower = u32;
@@ -17,6 +19,7 @@ pub type StakingRequirement = u32;
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct AssetLedger<BlockNumber> {
     /// Last calculated total vote weight of current validator.
+    #[cfg_attr(feature = "std", serde(with = "xpallet_support::serde_num_str"))]
     pub last_total_mining_weight: MiningWeight,
     /// Block number at which point `last_total_vote_weight` just updated.
     pub last_total_mining_weight_update: BlockNumber,
@@ -43,6 +46,7 @@ impl<'a, T: Trait> AssetLedgerWrapper<'a, T> {
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct MinerLedger<BlockNumber> {
     /// Last calculated total vote weight of current validator.
+    #[cfg_attr(feature = "std", serde(with = "xpallet_support::serde_num_str"))]
     pub last_mining_weight: MiningWeight,
     /// Block number at which point `last_total_vote_weight` just updated.
     pub last_mining_weight_update: BlockNumber,

@@ -1,12 +1,15 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use super::*;
+use sp_std::collections::btree_map::BTreeMap;
+
 use codec::{Decode, Encode};
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
+
 use frame_support::storage::IterableStorageDoubleMap;
 use sp_runtime::RuntimeDebug;
-#[cfg(feature = "std")]
-use sp_runtime::{Deserialize, Serialize};
-use sp_std::collections::btree_map::BTreeMap;
+
+use super::*;
 
 /// Mining asset info.
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]

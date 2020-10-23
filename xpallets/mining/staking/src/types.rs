@@ -1,13 +1,16 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use super::*;
-use chainx_primitives::AssetId;
 use codec::{Decode, Encode};
-use sp_runtime::RuntimeDebug;
 #[cfg(feature = "std")]
-use sp_runtime::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
+
+use sp_runtime::RuntimeDebug;
+
+use chainx_primitives::AssetId;
 use xp_mining_common::WeightType;
 use xp_mining_staking::MiningPower;
+
+use super::*;
 
 /// Detailed types of reserved balances in Staking.
 #[derive(PartialEq, PartialOrd, Ord, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
@@ -72,6 +75,7 @@ pub struct NominatorLedger<Balance, BlockNumber> {
     /// The amount of vote.
     pub nomination: Balance,
     /// Last calculated total vote weight of current nominator.
+    #[cfg_attr(feature = "std", serde(with = "xpallet_support::serde_num_str"))]
     pub last_vote_weight: WeightType,
     /// Block number at which point `last_vote_weight` just updated.
     pub last_vote_weight_update: BlockNumber,

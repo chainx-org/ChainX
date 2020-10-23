@@ -4,6 +4,8 @@
 
 #![allow(clippy::type_complexity)]
 
+use std::fmt::{Debug, Display};
+use std::str::FromStr;
 use std::sync::Arc;
 
 use codec::Codec;
@@ -15,17 +17,26 @@ use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 
+use xpallet_support::{RpcBalance, RpcPrice};
+
 use xpallet_dex_spot_rpc_runtime_api::{
-    Depth, FullPairInfo, RpcOrder, TradingPairId, XSpotApi as XSpotRuntimeApi,
+    Depth, FullPairInfo, Handicap, OrderProperty, RpcOrder, TradingPairId,
+    TradingPairInfo, XSpotApi as XSpotRuntimeApi,
 };
 
 /// XSpot RPC methods.
 #[rpc]
-pub trait XSpotApi<BlockHash, AccountId, Balance, BlockNumber, Price> {
+pub trait XSpotApi<BlockHash, AccountId, Balance, BlockNumber, Price>
+where
+    Balance: Display + FromStr,
+    Price: Display + FromStr,
+{
     /// Get the overall info of all trading pairs.
     #[rpc(name = "xspot_getTradingPairs")]
-    fn trading_pairs(&self, at: Option<BlockHash>)
-        -> Result<Vec<FullPairInfo<Price, BlockNumber>>>;
+    fn trading_pairs(
+        &self,
+        at: Option<BlockHash>,
+    ) -> Result<Vec<FullPairInfo<RpcPrice<Price>, BlockNumber>>>;
 
     /// Get the orders of an account.
     #[rpc(name = "xspot_getOrdersByAccount")]
@@ -35,7 +46,19 @@ pub trait XSpotApi<BlockHash, AccountId, Balance, BlockNumber, Price> {
         page_index: u32,
         page_size: u32,
         at: Option<BlockHash>,
-    ) -> Result<Page<Vec<RpcOrder<TradingPairId, AccountId, Balance, Price, BlockNumber>>>>;
+    ) -> Result<
+        Page<
+            Vec<
+                RpcOrder<
+                    TradingPairId,
+                    AccountId,
+                    RpcBalance<Balance>,
+                    RpcPrice<Price>,
+                    BlockNumber,
+                >,
+            >,
+        >,
+    >;
 
     /// Get the depth of a trading pair.
     #[rpc(name = "xspot_getDepth")]
@@ -44,7 +67,7 @@ pub trait XSpotApi<BlockHash, AccountId, Balance, BlockNumber, Price> {
         pair_id: TradingPairId,
         depth_size: u32,
         at: Option<BlockHash>,
-    ) -> Result<Option<Depth<Price, Balance>>>;
+    ) -> Result<Option<Depth<RpcPrice<Price>, RpcBalance<Balance>>>>;
 }
 
 /// A struct that implements the [`XSpotApi`].
@@ -70,17 +93,39 @@ where
     C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
     C::Api: XSpotRuntimeApi<Block, AccountId, Balance, BlockNumber, Price>,
     AccountId: Codec,
-    Balance: Codec,
+    Balance: Codec + Display + FromStr,
     BlockNumber: Codec,
-    Price: Codec,
+    Price: Codec + Display + FromStr,
 {
     fn trading_pairs(
         &self,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<Vec<FullPairInfo<Price, BlockNumber>>> {
+    ) -> Result<Vec<FullPairInfo<RpcPrice<Price>, BlockNumber>>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-        Ok(api.trading_pairs(&at).map_err(runtime_error_into_rpc_err)?)
+        Ok(api
+            .trading_pairs(&at)
+            .map(|trading_pairs| {
+                trading_pairs
+                    .into_iter()
+                    .map(
+                        |trading_pairs| FullPairInfo::<RpcPrice<Price>, BlockNumber> {
+                            profile: trading_pairs.profile,
+                            handicap: Handicap {
+                                highest_bid: trading_pairs.handicap.highest_bid.into(),
+                                lowest_ask: trading_pairs.handicap.lowest_ask.into(),
+                            },
+                            pair_info: TradingPairInfo {
+                                latest_price: trading_pairs.pair_info.latest_price.into(),
+                                last_updated: trading_pairs.pair_info.last_updated,
+                            },
+                            max_valid_bid: trading_pairs.max_valid_bid.into(),
+                            min_valid_ask: trading_pairs.min_valid_ask.into(),
+                        },
+                    )
+                    .collect::<Vec<_>>()
+            })
+            .map_err(runtime_error_into_rpc_err)?)
     }
 
     fn orders(
@@ -89,11 +134,46 @@ where
         page_index: u32,
         page_size: u32,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<Page<Vec<RpcOrder<TradingPairId, AccountId, Balance, Price, BlockNumber>>>> {
+    ) -> Result<
+        Page<
+            Vec<
+                RpcOrder<
+                    TradingPairId,
+                    AccountId,
+                    RpcBalance<Balance>,
+                    RpcPrice<Price>,
+                    BlockNumber,
+                >,
+            >,
+        >,
+    > {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
         let data = api
             .orders(&at, who, page_index, page_size)
+            .map(|orders| {
+                orders
+                    .into_iter()
+                    .map(|order| RpcOrder {
+                        props: OrderProperty {
+                            id: order.props.id,
+                            side: order.props.side,
+                            price: order.props.price.into(),
+                            amount: order.props.amount.into(),
+                            pair_id: order.props.pair_id,
+                            submitter: order.props.submitter,
+                            order_type: order.props.order_type,
+                            created_at: order.props.created_at,
+                        },
+                        status: order.status,
+                        remaining: order.remaining.into(),
+                        executed_indices: order.executed_indices,
+                        already_filled: order.already_filled.into(),
+                        reserved_balance: order.reserved_balance.into(),
+                        last_update_at: order.last_update_at,
+                    })
+                    .collect::<Vec<_>>()
+            })
             .map_err(runtime_error_into_rpc_err)?;
         Ok(Page {
             page_index,
@@ -107,12 +187,26 @@ where
         pair_id: TradingPairId,
         depth_size: u32,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<Option<Depth<Price, Balance>>> {
+    ) -> Result<Option<Depth<RpcPrice<Price>, RpcBalance<Balance>>>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-        Ok(api
-            .depth(&at, pair_id, depth_size)
-            .map_err(runtime_error_into_rpc_err)?)
+        match api.depth(&at, pair_id, depth_size) {
+            Ok(Some(depth)) => {
+                let asks = depth
+                    .asks
+                    .into_iter()
+                    .map(|(price, quantity)| (price.into(), quantity.into()))
+                    .collect::<Vec<_>>();
+                let bids = depth
+                    .bids
+                    .into_iter()
+                    .map(|(price, quantity)| (price.into(), quantity.into()))
+                    .collect::<Vec<_>>();
+                Ok(Some(Depth { asks, bids }))
+            }
+            Ok(None) => Ok(None),
+            Err(err) => Err(runtime_error_into_rpc_err(err)),
+        }
     }
 }
 
@@ -142,9 +236,8 @@ impl From<Error> for i64 {
 }
 
 const RUNTIME_ERROR: i64 = 1;
-
 /// Converts a runtime trap into an RPC error.
-fn runtime_error_into_rpc_err(err: impl std::fmt::Debug) -> RpcError {
+fn runtime_error_into_rpc_err(err: impl Debug) -> RpcError {
     RpcError {
         code: ErrorCode::ServerError(RUNTIME_ERROR),
         message: "Runtime trapped".into(),
