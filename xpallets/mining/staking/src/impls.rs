@@ -9,14 +9,13 @@ use sp_runtime::{traits::Hash, Perbill};
 use sp_staking::offence::{OffenceDetails, OnOffenceHandler};
 
 use xp_mining_common::{
-    generic_weight_factors, BaseMiningWeightHandle, Claim, ComputeMiningWeight, WeightFactors,
-    WeightType,
+    generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight, WeightFactors, WeightType,
 };
 use xp_mining_staking::SessionIndex;
 
 use crate::*;
 
-impl<Balance, BlockNumber> BaseMiningWeightHandle<Balance, BlockNumber>
+impl<Balance, BlockNumber> BaseMiningWeight<Balance, BlockNumber>
     for ValidatorLedger<Balance, VoteWeight, BlockNumber>
 where
     Balance: Default + BaseArithmetic + Copy,
@@ -47,7 +46,7 @@ where
     }
 }
 
-impl<Balance, BlockNumber> BaseMiningWeightHandle<Balance, BlockNumber>
+impl<Balance, BlockNumber> BaseMiningWeight<Balance, BlockNumber>
     for NominatorLedger<Balance, VoteWeight, BlockNumber>
 where
     Balance: Default + BaseArithmetic + Copy,

@@ -1,15 +1,20 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use sp_std::collections::btree_map::BTreeMap;
+use sp_std::{collections::btree_map::BTreeMap, vec::Vec};
 
 use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
-use frame_support::storage::IterableStorageDoubleMap;
+use frame_support::storage::{IterableStorageDoubleMap, StorageDoubleMap, StorageMap};
 use sp_runtime::RuntimeDebug;
 
-use crate::*;
+use xp_mining_common::RewardPotAccountFor;
+
+use crate::{
+    types::*, BalanceOf, LastRebondOf, Module, Nominations, SessionInterface, Trait,
+    ValidatorLedgers, Validators,
+};
 
 /// Total information about a validator.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]

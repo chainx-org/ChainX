@@ -1,16 +1,22 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
+use sp_std::vec::Vec;
+
 use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
-use sp_runtime::RuntimeDebug;
+use sp_runtime::{
+    traits::{SaturatedConversion, Saturating},
+    RuntimeDebug,
+};
 
-use chainx_primitives::AssetId;
-use xp_mining_common::WeightType;
+use chainx_primitives::{AssetId, ReferralId};
+use xp_mining_common::{RewardPotAccountFor, WeightType};
 use xp_mining_staking::MiningPower;
+use xpallet_support::debug;
 
-use crate::*;
+use crate::{AssetMining, BalanceOf, EraIndex, Module, Trait};
 
 pub type VoteWeight = WeightType;
 

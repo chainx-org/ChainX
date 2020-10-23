@@ -47,7 +47,7 @@ use sp_std::result::Result;
 pub type WeightType = u128;
 
 /// The getter and setter methods for the further mining weight processing.
-pub trait BaseMiningWeightHandle<Balance, BlockNumber> {
+pub trait BaseMiningWeight<Balance, BlockNumber> {
     fn amount(&self) -> Balance;
     /// Set the new amount.
     ///
@@ -86,8 +86,8 @@ impl<Balance: BaseArithmetic> Delta<Balance> {
 }
 
 /// General logic for state changes of the mining weight operations.
-pub trait MiningWeightHandle<Balance: BaseArithmetic + Copy, BlockNumber>:
-    BaseMiningWeightHandle<Balance, BlockNumber>
+pub trait MiningWeight<Balance: BaseArithmetic + Copy, BlockNumber>:
+    BaseMiningWeight<Balance, BlockNumber>
 {
     /// Set the new amount after settling the change of nomination.
     fn settle_and_set_amount(&mut self, delta: &Delta<Balance>) {
@@ -119,11 +119,8 @@ pub trait MiningWeightHandle<Balance: BaseArithmetic + Copy, BlockNumber>:
     }
 }
 
-impl<
-        Balance: BaseArithmetic + Copy,
-        BlockNumber,
-        T: BaseMiningWeightHandle<Balance, BlockNumber>,
-    > MiningWeightHandle<Balance, BlockNumber> for T
+impl<Balance: BaseArithmetic + Copy, BlockNumber, T: BaseMiningWeight<Balance, BlockNumber>>
+    MiningWeight<Balance, BlockNumber> for T
 {
 }
 
@@ -205,7 +202,7 @@ pub type WeightFactors = (WeightType, u128, u128);
 pub fn generic_weight_factors<
     Balance: BaseArithmetic,
     BlockNumber: BaseArithmetic,
-    W: BaseMiningWeightHandle<Balance, BlockNumber>,
+    W: BaseMiningWeight<Balance, BlockNumber>,
 >(
     w: W,
     current_block: BlockNumber,

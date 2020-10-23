@@ -1,15 +1,21 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use sp_std::collections::btree_map::BTreeMap;
+use sp_std::{collections::btree_map::BTreeMap, vec::Vec};
 
 use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
-use frame_support::storage::IterableStorageDoubleMap;
+use frame_support::storage::{IterableStorageDoubleMap, StorageMap, StorageValue};
 use sp_runtime::RuntimeDebug;
 
-use crate::*;
+use chainx_primitives::AssetId;
+use xp_mining_common::RewardPotAccountFor;
+
+use crate::{
+    types::*, AssetLedgers, BalanceOf, FixedAssetPowerOf, MinerLedgers, MiningPrevilegedAssets,
+    Module, Trait,
+};
 
 /// Mining asset info.
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]

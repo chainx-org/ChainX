@@ -31,7 +31,7 @@ use sp_runtime::traits::{SaturatedConversion, Zero};
 
 use chainx_primitives::AssetId;
 use xp_mining_common::{
-    Claim, ComputeMiningWeight, MiningWeightHandle, RewardPotAccountFor, WeightType,
+    Claim, ComputeMiningWeight, MiningWeight as _, RewardPotAccountFor, WeightType,
     ZeroMiningWeightError,
 };
 use xpallet_assets::{AssetType, BalanceOf};
