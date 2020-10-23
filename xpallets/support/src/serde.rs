@@ -1,6 +1,6 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use std::{fmt, str};
+use std::{fmt::Display, str::FromStr};
 
 use serde::{de, ser, Deserialize, Serialize};
 
@@ -65,7 +65,7 @@ pub mod serde_num_str {
     pub fn serialize<S, T>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: ser::Serializer,
-        T: fmt::Display,
+        T: Display,
     {
         serializer.serialize_str(&value.to_string())
     }
@@ -74,7 +74,7 @@ pub mod serde_num_str {
     pub fn deserialize<'de, D, T>(deserializer: D) -> Result<T, D::Error>
     where
         D: de::Deserializer<'de>,
-        T: str::FromStr,
+        T: FromStr,
     {
         let data = String::deserialize(deserializer)?;
         data.parse::<T>()
@@ -97,9 +97,9 @@ pub type RpcVoteWeight<Weight> = RpcU128<Weight>;
 /// A helper struct for handling u128 serialization/deserialization of RPC.
 /// See https://github.com/polkadot-js/api/issues/2464 for details (shit!).
 #[derive(Eq, PartialEq, Copy, Clone, Debug, Serialize, Deserialize)]
-pub struct RpcU128<T: fmt::Display + str::FromStr>(#[serde(with = "self::serde_num_str")] T);
+pub struct RpcU128<T: Display + FromStr>(#[serde(with = "self::serde_num_str")] T);
 
-impl<T: fmt::Display + str::FromStr> From<T> for RpcU128<T> {
+impl<T: Display + FromStr> From<T> for RpcU128<T> {
     fn from(value: T) -> Self {
         RpcU128(value)
     }
