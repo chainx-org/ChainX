@@ -239,14 +239,14 @@
         "data": "Vec<RpcOrder>"
     },
     "String": "Text",
-    "Price": "String",
-    "Balance": "String",
-    "MiningWeight": "String",
-    "VoteWeight": "String",
-    "RpcPrice": "Price",
-    "RpcBalance": "Balance",
-    "RpcMiningWeight": "MiningWeight",
-    "RpcVoteWeight": "VoteWeight",
+    "Price": "u128",
+    "Balance": "u128",
+    "MiningWeight": "u128",
+    "VoteWeight": "u128",
+    "RpcPrice": "String",
+    "RpcBalance": "String",
+    "RpcMiningWeight": "String",
+    "RpcVoteWeight": "String",
     "AssetRestrictions":  {
         "bits": "u32"
     },

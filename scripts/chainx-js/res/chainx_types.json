@@ -154,7 +154,7 @@
     "Token": "Text",
     "AddrStr": "Text",
     "HandicapInfo": "Handicap",
-    "Price": "String",
+    "Price": "u128",
     "OrderId": "u64",
     "TradingPairId": "u32",
     "TradingHistoryIndex": "u64",
@@ -177,8 +177,8 @@
         ]
     },
     "AssetId": "u32",
-    "MiningWeight": "String",
-    "VoteWeight": "String",
+    "MiningWeight": "u128",
+    "VoteWeight": "u128",
     "ReferralId": "Text",
     "AssetRestriction": {
         "_enum": [
@@ -384,11 +384,11 @@
         "data": "Vec<RpcOrder>"
     },
     "String": "Text",
-    "Balance": "String",
-    "RpcPrice": "Price",
-    "RpcBalance": "Balance",
-    "RpcMiningWeight": "MiningWeight",
-    "RpcVoteWeight": "VoteWeight",
+    "Balance": "u128",
+    "RpcPrice": "String",
+    "RpcBalance": "String",
+    "RpcMiningWeight": "String",
+    "RpcVoteWeight": "String",
     "FullIdentification": "ValidatorId",
     "WithdrawalRecordOf": "WithdrawalRecord",
     "RpcWithdrawalRecord": {
