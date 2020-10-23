@@ -20,8 +20,8 @@ use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 use xpallet_support::{RpcBalance, RpcPrice};
 
 use xpallet_dex_spot_rpc_runtime_api::{
-    Depth, FullPairInfo, Handicap, OrderProperty, RpcOrder, TradingPairId,
-    TradingPairInfo, XSpotApi as XSpotRuntimeApi,
+    Depth, FullPairInfo, Handicap, OrderProperty, RpcOrder, TradingPairId, TradingPairInfo,
+    XSpotApi as XSpotRuntimeApi,
 };
 
 /// XSpot RPC methods.

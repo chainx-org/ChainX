@@ -1,6 +1,6 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use sp_std::{collections::btree_map::BTreeMap};
+use sp_std::collections::btree_map::BTreeMap;
 
 use codec::{Decode, Encode};
 #[cfg(feature = "std")]

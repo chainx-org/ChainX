@@ -9,7 +9,9 @@ use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
 use codec::Codec;
 
-pub use xpallet_mining_staking::{NominatorInfo, NominatorLedger, ValidatorInfo, ValidatorLedger, Unbonded};
+pub use xpallet_mining_staking::{
+    NominatorInfo, NominatorLedger, Unbonded, ValidatorInfo, ValidatorLedger,
+};
 
 sp_api::decl_runtime_apis! {
     /// The API to query Staking info.

@@ -22,8 +22,8 @@ use xpallet_gateway_common_rpc_runtime_api::trustees::bitcoin::{
     BtcTrusteeIntentionProps, BtcTrusteeSessionInfo,
 };
 use xpallet_gateway_common_rpc_runtime_api::{
-    AssetId, Chain, GenericTrusteeIntentionProps, GenericTrusteeSessionInfo,
-    WithdrawalLimit, XGatewayCommonApi as XGatewayCommonRuntimeApi,
+    AssetId, Chain, GenericTrusteeIntentionProps, GenericTrusteeSessionInfo, WithdrawalLimit,
+    XGatewayCommonApi as XGatewayCommonRuntimeApi,
 };
 
 /// XGatewayCommon RPC methods.
