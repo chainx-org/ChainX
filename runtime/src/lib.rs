@@ -88,6 +88,8 @@ pub use xpallet_gateway_common::{
     types::{GenericTrusteeIntentionProps, GenericTrusteeSessionInfo, TrusteeInfoConfig},
 };
 pub use xpallet_gateway_records::Withdrawal;
+pub use xpallet_mining_asset::MiningWeight;
+pub use xpallet_mining_staking::VoteWeight;
 
 /// Constant values used within the runtime.
 pub mod constants;
@@ -1224,17 +1226,17 @@ impl_runtime_apis! {
         }
     }
 
-    impl xpallet_mining_staking_rpc_runtime_api::XStakingApi<Block, AccountId, Balance, BlockNumber> for Runtime {
-        fn validators() -> Vec<ValidatorInfo<AccountId, Balance, BlockNumber>> {
+    impl xpallet_mining_staking_rpc_runtime_api::XStakingApi<Block, AccountId, Balance, VoteWeight, BlockNumber> for Runtime {
+        fn validators() -> Vec<ValidatorInfo<AccountId, Balance, VoteWeight, BlockNumber>> {
             XStaking::validators_info()
         }
-        fn validator_info_of(who: AccountId) -> ValidatorInfo<AccountId, Balance, BlockNumber> {
+        fn validator_info_of(who: AccountId) -> ValidatorInfo<AccountId, Balance, VoteWeight, BlockNumber> {
             XStaking::validator_info_of(who)
         }
         fn staking_dividend_of(who: AccountId) -> BTreeMap<AccountId, Balance> {
             XStaking::staking_dividend_of(who)
         }
-        fn nomination_details_of(who: AccountId) -> BTreeMap<AccountId, NominatorLedger<Balance, BlockNumber>> {
+        fn nomination_details_of(who: AccountId) -> BTreeMap<AccountId, NominatorLedger<Balance, VoteWeight, BlockNumber>> {
             XStaking::nomination_details_of(who)
         }
         fn nominator_info_of(who: AccountId) -> NominatorInfo<BlockNumber> {
@@ -1256,8 +1258,8 @@ impl_runtime_apis! {
         }
     }
 
-    impl xpallet_mining_asset_rpc_runtime_api::XMiningAssetApi<Block, AccountId, Balance, BlockNumber> for Runtime {
-        fn mining_assets() -> Vec<MiningAssetInfo<AccountId, Balance, BlockNumber>> {
+    impl xpallet_mining_asset_rpc_runtime_api::XMiningAssetApi<Block, AccountId, Balance, MiningWeight, BlockNumber> for Runtime {
+        fn mining_assets() -> Vec<MiningAssetInfo<AccountId, Balance, MiningWeight, BlockNumber>> {
             XMiningAsset::mining_assets()
         }
 
@@ -1265,7 +1267,7 @@ impl_runtime_apis! {
             XMiningAsset::mining_dividend(who)
         }
 
-        fn miner_ledger(who: AccountId) -> BTreeMap<AssetId, MinerLedger<BlockNumber>> {
+        fn miner_ledger(who: AccountId) -> BTreeMap<AssetId, MinerLedger<MiningWeight, BlockNumber>> {
             XMiningAsset::miner_ledger(who)
         }
     }

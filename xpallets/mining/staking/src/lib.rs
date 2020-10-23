@@ -28,6 +28,8 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+use sp_std::prelude::*;
+
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage, ensure,
     storage::IterableStorageMap,
@@ -39,19 +41,18 @@ use sp_runtime::{
     DispatchResult,
 };
 use sp_std::collections::btree_map::BTreeMap;
-use sp_std::prelude::*;
 
 use chainx_primitives::ReferralId;
-use constants::*;
+pub use xp_mining_common::RewardPotAccountFor;
 use xp_mining_common::{Claim, ComputeMiningWeight, Delta, ZeroMiningWeightError};
 use xp_mining_staking::{AssetMining, SessionIndex, UnbondedIndex};
 use xpallet_support::{debug, traits::TreasuryAccount};
 
-pub use impls::{IdentificationTuple, SimpleValidatorRewardPotAccountDeterminer};
-pub use rpc::*;
-pub use types::*;
-pub use weight_info::WeightInfo;
-pub use xp_mining_common::{RewardPotAccountFor, WeightType};
+use self::constants::*;
+pub use self::impls::{IdentificationTuple, SimpleValidatorRewardPotAccountDeterminer};
+pub use self::rpc::*;
+pub use self::types::*;
+pub use self::weight_info::WeightInfo;
 
 pub type BalanceOf<T> =
     <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
@@ -154,12 +155,12 @@ decl_storage! {
 
         /// The map from validator key to the vote weight ledger of that validator.
         pub ValidatorLedgers get(fn validator_ledgers):
-            map hasher(twox_64_concat) T::AccountId => ValidatorLedger<BalanceOf<T>, T::BlockNumber>;
+            map hasher(twox_64_concat) T::AccountId => ValidatorLedger<BalanceOf<T>, VoteWeight, T::BlockNumber>;
 
         /// The map from nominator to the vote weight ledger of all nominees.
         pub Nominations get(fn nominations):
             double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) T::AccountId
-            => NominatorLedger<BalanceOf<T>, T::BlockNumber>;
+            => NominatorLedger<BalanceOf<T>, VoteWeight, T::BlockNumber>;
 
         /// The map from nominator to the block number of last `rebond` operation.
         pub LastRebondOf get(fn last_rebond_of):
@@ -635,7 +636,7 @@ impl<T: Trait> Module<T> {
     pub fn force_set_nominator_vote_weight(
         nominator: &T::AccountId,
         validator: &T::AccountId,
-        new_weight: WeightType,
+        new_weight: VoteWeight,
     ) {
         Nominations::<T>::mutate(nominator, validator, |nominator| {
             nominator.last_vote_weight = new_weight;
@@ -643,7 +644,7 @@ impl<T: Trait> Module<T> {
     }
 
     #[cfg(feature = "std")]
-    pub fn force_set_validator_vote_weight(who: &T::AccountId, new_weight: WeightType) {
+    pub fn force_set_validator_vote_weight(who: &T::AccountId, new_weight: VoteWeight) {
         ValidatorLedgers::<T>::mutate(who, |validator| {
             validator.last_total_vote_weight = new_weight;
         });

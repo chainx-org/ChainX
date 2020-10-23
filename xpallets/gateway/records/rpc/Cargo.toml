@@ -10,8 +10,8 @@ targets = ["x86_64-unknown-linux-gnu"]
 [dependencies]
 codec = { package = "parity-scale-codec", version = "1.3.4" }
 serde = { version = "1.0.101", features = ["derive"] }
-jsonrpc-core = { version = "15.0.0", features = ["arbitrary_precision"] }
-jsonrpc-core-client = { version = "15.0.0", features = ["arbitrary_precision"] }
+jsonrpc-core = "15.0.0"
+jsonrpc-core-client = "15.0.0"
 jsonrpc-derive = "15.0.0"
 
 # Substrate primitives

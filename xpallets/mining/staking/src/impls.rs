@@ -1,19 +1,22 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use super::*;
+use sp_std::cmp::Ordering;
+
 use codec::Encode;
 use sp_arithmetic::traits::BaseArithmetic;
 use sp_core::crypto::UncheckedFrom;
 use sp_runtime::{traits::Hash, Perbill};
 use sp_staking::offence::{OffenceDetails, OnOffenceHandler};
-use sp_std::cmp::Ordering;
+
 use xp_mining_common::{
-    generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight, WeightFactors,
+    generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight, WeightFactors, WeightType,
 };
 use xp_mining_staking::SessionIndex;
 
+use crate::*;
+
 impl<Balance, BlockNumber> BaseMiningWeight<Balance, BlockNumber>
-    for ValidatorLedger<Balance, BlockNumber>
+    for ValidatorLedger<Balance, VoteWeight, BlockNumber>
 where
     Balance: Default + BaseArithmetic + Copy,
     BlockNumber: Default + BaseArithmetic + Copy,
@@ -44,7 +47,7 @@ where
 }
 
 impl<Balance, BlockNumber> BaseMiningWeight<Balance, BlockNumber>
-    for NominatorLedger<Balance, BlockNumber>
+    for NominatorLedger<Balance, VoteWeight, BlockNumber>
 where
     Balance: Default + BaseArithmetic + Copy,
     BlockNumber: Default + BaseArithmetic + Copy,

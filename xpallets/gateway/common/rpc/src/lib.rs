@@ -4,6 +4,8 @@
 
 use std::collections::BTreeMap;
 use std::convert::TryFrom;
+use std::fmt::{Debug, Display};
+use std::str::FromStr;
 use std::sync::Arc;
 
 use codec::Codec;
@@ -13,6 +15,8 @@ use jsonrpc_derive::rpc;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
+
+use xpallet_support::RpcBalance;
 
 use xpallet_gateway_common_rpc_runtime_api::trustees::bitcoin::{
     BtcTrusteeIntentionProps, BtcTrusteeSessionInfo,
@@ -24,7 +28,10 @@ use xpallet_gateway_common_rpc_runtime_api::{
 
 /// XGatewayCommon RPC methods.
 #[rpc]
-pub trait XGatewayCommonApi<BlockHash, AccountId, Balance> {
+pub trait XGatewayCommonApi<BlockHash, AccountId, Balance>
+where
+    Balance: Display + FromStr,
+{
     /// Get bound addrs for an accountid
     #[rpc(name = "xgatewaycommon_boundAddrs")]
     fn bound_addrs(
@@ -39,7 +46,7 @@ pub trait XGatewayCommonApi<BlockHash, AccountId, Balance> {
         &self,
         asset_id: AssetId,
         at: Option<BlockHash>,
-    ) -> Result<WithdrawalLimit<Balance>>;
+    ) -> Result<WithdrawalLimit<RpcBalance<Balance>>>;
 
     /// Use the params to verify whether the withdrawal apply is valid. Notice those params is same as the params for call `XGatewayCommon::withdraw(...)`, including checking address is valid or something else. Front-end should use this rpc to check params first, than could create the extrinsic.
     #[rpc(name = "xgatewaycommon_verifyWithdrawal")]
@@ -170,7 +177,7 @@ where
     C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
     C::Api: XGatewayCommonRuntimeApi<Block, AccountId, Balance>,
     AccountId: Codec + Send + Sync + 'static,
-    Balance: Codec + Send + Sync + 'static + From<u64>,
+    Balance: Codec + Display + FromStr + Send + Sync + 'static + From<u64>,
 {
     fn bound_addrs(
         &self,
@@ -208,7 +215,7 @@ where
         &self,
         asset_id: AssetId,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<WithdrawalLimit<Balance>> {
+    ) -> Result<WithdrawalLimit<RpcBalance<Balance>>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(||
             // If the block hash is not supplied assume the best block.
@@ -218,8 +225,8 @@ where
             .withdrawal_limit(&at, asset_id)
             .map_err(runtime_error_into_rpc_err)?
             .map(|src| WithdrawalLimit {
-                minimal_withdrawal: src.minimal_withdrawal,
-                fee: src.fee,
+                minimal_withdrawal: src.minimal_withdrawal.into(),
+                fee: src.fee.into(),
             })
             .map_err(runtime_error_into_rpc_err)?;
         Ok(result)
@@ -308,9 +315,8 @@ where
 }
 
 const RUNTIME_ERROR: i64 = 1;
-
 /// Converts a runtime trap into an RPC error.
-fn runtime_error_into_rpc_err(err: impl std::fmt::Debug) -> RpcError {
+fn runtime_error_into_rpc_err(err: impl Debug) -> RpcError {
     RpcError {
         code: ErrorCode::ServerError(RUNTIME_ERROR),
         message: "Runtime trapped".into(),

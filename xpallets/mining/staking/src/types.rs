@@ -1,13 +1,24 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use super::*;
-use chainx_primitives::AssetId;
+use sp_std::vec::Vec;
+
 use codec::{Decode, Encode};
-use sp_runtime::RuntimeDebug;
 #[cfg(feature = "std")]
-use sp_runtime::{Deserialize, Serialize};
-use xp_mining_common::WeightType;
+use serde::{Deserialize, Serialize};
+
+use sp_runtime::{
+    traits::{SaturatedConversion, Saturating},
+    RuntimeDebug,
+};
+
+use chainx_primitives::{AssetId, ReferralId};
+use xp_mining_common::{RewardPotAccountFor, WeightType};
 use xp_mining_staking::MiningPower;
+use xpallet_support::debug;
+
+use crate::{AssetMining, BalanceOf, EraIndex, Module, Trait};
+
+pub type VoteWeight = WeightType;
 
 /// Detailed types of reserved balances in Staking.
 #[derive(PartialEq, PartialOrd, Ord, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
@@ -55,11 +66,11 @@ pub struct Unbonded<Balance, BlockNumber> {
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct ValidatorLedger<Balance, BlockNumber> {
+pub struct ValidatorLedger<Balance, VoteWeight, BlockNumber> {
     /// The total amount of all the nominators' vote balances.
     pub total_nomination: Balance,
     /// Last calculated total vote weight of current validator.
-    pub last_total_vote_weight: WeightType,
+    pub last_total_vote_weight: VoteWeight,
     /// Block number at which point `last_total_vote_weight` just updated.
     pub last_total_vote_weight_update: BlockNumber,
 }
@@ -68,11 +79,11 @@ pub struct ValidatorLedger<Balance, BlockNumber> {
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct NominatorLedger<Balance, BlockNumber> {
+pub struct NominatorLedger<Balance, VoteWeight, BlockNumber> {
     /// The amount of vote.
     pub nomination: Balance,
     /// Last calculated total vote weight of current nominator.
-    pub last_vote_weight: WeightType,
+    pub last_vote_weight: VoteWeight,
     /// Block number at which point `last_vote_weight` just updated.
     pub last_vote_weight_update: BlockNumber,
     /// Unbonded entries.

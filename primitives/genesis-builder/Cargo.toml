@@ -16,7 +16,7 @@ xpallet-support = { path = "../../xpallets/support", default-features = false }
 [features]
 default = ["std"]
 std = [
-    "serde/std",
+    "serde",
     # ChainX primitives
     "chainx-primitives/std",
     # ChainX pallets

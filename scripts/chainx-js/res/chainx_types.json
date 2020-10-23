@@ -1,4 +1,10 @@
 {
+    "NetworkType": {
+        "_enum": [
+            "Mainnet",
+            "Testnet"
+        ]
+    },
     "AssetType": {
         "_enum": [
             "Usable",
@@ -32,12 +38,6 @@
         "_enum": [
             "Bonded",
             "BondedWithdrawal"
-        ]
-    },
-    "NetworkType": {
-        "_enum": [
-            "Mainnet",
-            "Testnet"
         ]
     },
     "Memo": "Text",
@@ -97,7 +97,7 @@
         "miningPower": "FixedAssetPower",
         "rewardPot": "AccountId",
         "rewardPotBalance": "Balance",
-        "lastTotalMiningWeight": "WeightType",
+        "lastTotalMiningWeight": "MiningWeight",
         "lastTotalMiningWeightUpdate": "BlockNumber"
     },
     "AssetLedger": {
@@ -126,12 +126,12 @@
     },
     "ValidatorLedger": {
         "totalNomination": "Balance",
-        "lastTotalVoteWeight": "WeightType",
+        "lastTotalVoteWeight": "VoteWeight",
         "lastTotalVoteWeightUpdate": "BlockNumber"
     },
     "NominatorLedger": {
         "nomination": "Balance",
-        "lastVoteWeight": "WeightType",
+        "lastVoteWeight": "VoteWeight",
         "lastVoteWeightUpdate": "BlockNumber",
         "unbondedChunks": "Vec<Unbonded>"
     },
@@ -154,7 +154,7 @@
     "Token": "Text",
     "AddrStr": "Text",
     "HandicapInfo": "Handicap",
-    "Price": "Balance",
+    "Price": "u128",
     "OrderId": "u64",
     "TradingPairId": "u32",
     "TradingHistoryIndex": "u64",
@@ -178,7 +178,7 @@
     },
     "AssetId": "u32",
     "MiningWeight": "u128",
-    "WeightType": "u128",
+    "VoteWeight": "u128",
     "ReferralId": "Text",
     "AssetRestriction": {
         "_enum": [
@@ -191,7 +191,7 @@
         ]
     },
     "AssetRestrictions": {
-        "mask": "u32"
+        "bits": "u32"
     },
     "BtcHeader": "Vec<u8>",
     "BtcNetwork": {
@@ -353,7 +353,7 @@
         "isChilled": "bool",
         "lastChilled": "Option<BlockNumber>",
         "total": "Balance",
-        "lastTotalVoteWeight": "WeightType",
+        "lastTotalVoteWeight": "VoteWeight",
         "lastTotalVoteWeightUpdate": "BlockNumber",
         "isValidating": "bool",
         "selfBonded": "Balance",
@@ -385,7 +385,10 @@
     },
     "String": "Text",
     "Balance": "u128",
-    "MiningPower": "u128",
+    "RpcPrice": "String",
+    "RpcBalance": "String",
+    "RpcMiningWeight": "String",
+    "RpcVoteWeight": "String",
     "FullIdentification": "ValidatorId",
     "WithdrawalRecordOf": "WithdrawalRecord",
     "RpcWithdrawalRecord": {

@@ -103,7 +103,7 @@ impl<T: Trait> From<AssetErr> for Error<T> {
 
 /// A single lock on a balance. There can be many of these on an account and
 /// they "overlap", so the same balance is frozen by multiple locks.
-#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
+#[derive(Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug)]
 pub struct BalanceLock<Balance> {
     /// An identifier for this lock. Only one lock may be in existence for each
     /// identifier.
@@ -113,8 +113,8 @@ pub struct BalanceLock<Balance> {
     pub amount: Balance,
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
+#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct WithdrawalLimit<Balance> {
     pub minimal_withdrawal: Balance,

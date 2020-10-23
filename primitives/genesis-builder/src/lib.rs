@@ -12,14 +12,6 @@ mod genesis_params {
     use chainx_primitives::Balance;
     use serde::{Deserialize, Serialize};
 
-    fn deserialize_u128<'de, D>(deserializer: D) -> Result<u128, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let s = String::deserialize(deserializer)?;
-        s.parse::<u128>().map_err(serde::de::Error::custom)
-    }
-
     #[derive(Debug, Default, Clone, Serialize, Deserialize)]
     pub struct AllParams<AccountId, TBalance, AssetBalanceOf, StakingBalanceOf> {
         pub balances: BalancesParams<AccountId, TBalance>,
@@ -54,7 +46,7 @@ mod genesis_params {
         pub referral_id: Vec<u8>,
         pub self_bonded: Balance,
         pub total_nomination: Balance,
-        #[serde(deserialize_with = "deserialize_u128")]
+        #[serde(with = "xpallet_support::serde_num_str")]
         pub total_weight: u128,
     }
 
@@ -62,7 +54,7 @@ mod genesis_params {
     pub struct Nomination<AccountId, Balance> {
         pub nominee: AccountId,
         pub nomination: Balance,
-        #[serde(deserialize_with = "deserialize_u128")]
+        #[serde(with = "xpallet_support::serde_num_str")]
         pub weight: u128,
     }
 
@@ -81,14 +73,14 @@ mod genesis_params {
     #[derive(Debug, Default, Clone, Serialize, Deserialize)]
     pub struct XBtcInfo {
         pub balance: Balance,
-        #[serde(deserialize_with = "deserialize_u128")]
+        #[serde(with = "xpallet_support::serde_num_str")]
         pub weight: u128,
     }
 
     #[derive(Debug, Default, Clone, Serialize, Deserialize)]
     pub struct XBtcMiner<AccountId> {
         pub who: AccountId,
-        #[serde(deserialize_with = "deserialize_u128")]
+        #[serde(with = "xpallet_support::serde_num_str")]
         pub weight: u128,
     }
 

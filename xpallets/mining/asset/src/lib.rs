@@ -17,6 +17,8 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+use sp_std::prelude::*;
+
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult},
@@ -26,24 +28,19 @@ use frame_support::{
 };
 use frame_system::{ensure_root, ensure_signed};
 use sp_runtime::traits::{SaturatedConversion, Zero};
-use sp_std::prelude::*;
 
 use chainx_primitives::AssetId;
 use xp_mining_common::{
-    Claim, ComputeMiningWeight, MiningWeight, RewardPotAccountFor, WeightType,
+    Claim, ComputeMiningWeight, MiningWeight as _, RewardPotAccountFor, WeightType,
     ZeroMiningWeightError,
 };
-use xpallet_assets::AssetType;
+use xpallet_assets::{AssetType, BalanceOf};
 use xpallet_support::{traits::TreasuryAccount, warn};
 
-pub use impls::SimpleAssetRewardPotAccountDeterminer;
-pub use rpc::*;
-pub use types::*;
-pub use weight_info::WeightInfo;
-
-pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
-    <T as frame_system::Trait>::AccountId,
->>::Balance;
+pub use self::impls::SimpleAssetRewardPotAccountDeterminer;
+pub use self::rpc::*;
+pub use self::types::*;
+pub use self::weight_info::WeightInfo;
 
 pub trait Trait: xpallet_assets::Trait {
     /// The overarching event type.
@@ -109,12 +106,12 @@ decl_storage! {
 
         /// Mining weight information of the mining assets.
         pub AssetLedgers get(fn asset_ledgers):
-            map hasher(twox_64_concat) AssetId => AssetLedger<T::BlockNumber>;
+            map hasher(twox_64_concat) AssetId => AssetLedger<MiningWeight, T::BlockNumber>;
 
         /// The map from nominator to the vote weight ledger of all mining assets.
         pub MinerLedgers get(fn miner_ledgers):
             double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) AssetId
-            => MinerLedger<T::BlockNumber>;
+            => MinerLedger<MiningWeight, T::BlockNumber>;
 
         /// Mining power map of X-type assets.
         pub FixedAssetPowerOf get(fn fixed_asset_power_of):
@@ -297,7 +294,7 @@ impl<T: Trait> Module<T> {
             MinerLedgers::<T>::insert(
                 who,
                 asset_id,
-                MinerLedger::<T::BlockNumber> {
+                MinerLedger::<MiningWeight, T::BlockNumber> {
                     last_mining_weight_update: current_block,
                     ..Default::default()
                 },
