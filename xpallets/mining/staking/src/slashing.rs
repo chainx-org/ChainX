@@ -46,11 +46,11 @@ impl<T: Trait> Module<T> {
                             "Insufficient reward pot balance of {:?}, actual slashed:{:?}",
                             offender, actual_slashed
                         );
-                        // Avoid the over-slashing, ensure the minimum active validators.
+                        // The offender does not have enough balance for the slashing and has to be chilled,
+                        // but we must avoid the over-slashing, ensure have the minimum active validators.
                         if active_count > minimum_validator_count {
                             Self::apply_force_chilled(&offender);
                             active_count -= 1;
-                            // The offender does not have enough balance for the slashing.
                             Some(offender)
                         } else {
                             None
