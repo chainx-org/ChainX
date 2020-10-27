@@ -24,7 +24,6 @@ impl<T: Trait> Module<T> {
 
         offenders
             .into_iter()
-            .filter(|(who, _)| Self::is_active(who))
             .flat_map(|(offender, slash_fraction)| {
                 let pot = Self::reward_pot_for(&offender);
                 let base_slash = slash_fraction.mul(Self::free_balance(&pot));
