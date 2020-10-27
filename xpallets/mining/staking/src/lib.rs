@@ -38,7 +38,7 @@ use frame_support::{
 use frame_system::{ensure_root, ensure_signed};
 use sp_runtime::{
     traits::{Convert, SaturatedConversion, Saturating, StaticLookup, Zero},
-    DispatchResult,
+    DispatchResult, Perbill,
 };
 use sp_std::collections::btree_map::BTreeMap;
 
@@ -194,7 +194,7 @@ decl_storage! {
         pub IsCurrentSessionFinal get(fn is_current_session_final): bool = false;
 
         /// Offenders reported in current session.
-        OffendersInSession get(fn offenders_in_session): Vec<T::AccountId>;
+        OffendersInSession get(fn offenders_in_session): Option<BTreeMap<T::AccountId, Perbill>>;
 
         /// Minimum penalty for each slash.
         pub MinimumPenalty get(fn minimum_penalty) config(): BalanceOf<T>;

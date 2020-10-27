@@ -3,6 +3,7 @@
 use sp_std::cmp::Ordering;
 
 use codec::Encode;
+use frame_support::weights::Weight;
 use sp_arithmetic::traits::BaseArithmetic;
 use sp_core::crypto::UncheckedFrom;
 use sp_runtime::{traits::Hash, Perbill};
@@ -225,8 +226,7 @@ impl<T: Trait> Module<T> {
         // Only the active validators can be rewarded.
         let validator_rewards = Self::distribute_session_reward(session_index);
 
-        let offenders = <OffendersInSession<T>>::take();
-        if !offenders.is_empty() {
+        if let Some(offenders) = OffendersInSession::<T>::take() {
             let force_chilled = Self::slash_offenders_in_session(offenders, validator_rewards);
             if !force_chilled.is_empty() {
                 debug!("Force chilled: {:?}", force_chilled);
@@ -295,7 +295,7 @@ impl<T: Trait> Module<T> {
 
         let next_active_era = Self::active_era().map(|e| e.index + 1).unwrap_or(0);
         debug!(
-            "[start_session]start_session:{:?}, next_active_era:{:?}",
+            "[start_session]start_session:{}, next_active_era:{:?}",
             start_session, next_active_era
         );
         if let Some(next_active_era_start_session_index) =
@@ -365,7 +365,6 @@ impl<T: Trait> pallet_session::SessionManager<T::AccountId> for Module<T> {
     }
 }
 
-type OnOffenceRes = u64;
 /// Validator ID that reported this offence.
 type Reporter<T> = <T as frame_system::Trait>::AccountId;
 
@@ -384,7 +383,7 @@ type Offender<T> = IdentificationTuple<T>;
 
 /// This is intended to be used with `FilterHistoricalOffences` in Substrate/Staking.
 /// In ChainX, we always apply the slash immediately, no deferred slash.
-impl<T: Trait> OnOffenceHandler<Reporter<T>, IdentificationTuple<T>, OnOffenceRes> for Module<T>
+impl<T: Trait> OnOffenceHandler<Reporter<T>, IdentificationTuple<T>, Weight> for Module<T>
 where
     T: pallet_session::Trait<ValidatorId = <T as frame_system::Trait>::AccountId>,
     T::SessionHandler: pallet_session::SessionHandler<<T as frame_system::Trait>::AccountId>,
@@ -397,22 +396,28 @@ where
     fn on_offence(
         offenders: &[OffenceDetails<Reporter<T>, Offender<T>>],
         slash_fraction: &[Perbill],
-        _slash_session: SessionIndex,
-    ) -> Result<OnOffenceRes, ()> {
-        debug!("[on_offence]offenders:{:?}", offenders);
-        // TODO: make use of slash_fraction
-        for (details, _slash_fraction) in offenders.iter().zip(slash_fraction) {
-            // reporters are actually always empty.
-            let (offender, _reporters) = &details.offender;
+        slash_session: SessionIndex,
+    ) -> Result<Weight, ()> {
+        let offenders_tuple = offenders
+            .iter()
+            .zip(slash_fraction)
+            .map(|(details, slash_fraction)| {
+                // Reporters are ignored for now.
+                let (offender, _reporters) = &details.offender;
+                (offender.clone(), slash_fraction)
+            })
+            .collect::<BTreeMap<_, _>>();
 
-            // FIXME: record the offenders by session_index?
-            <OffendersInSession<T>>::mutate(|offenders| {
-                if !offenders.contains(offender) {
-                    offenders.push(offender.clone())
-                }
-            });
-        }
-        Ok(0)
+        debug!(
+            "Offenders:{:?} reported in session {:?}",
+            offenders_tuple, slash_session
+        );
+
+        // Write a temp environment storage so that we can sum the session reward
+        // together later and then perform the slashing operation only once.
+        <OffendersInSession<T>>::put(offenders_tuple);
+
+        Ok(1)
     }
 
     fn can_report() -> bool {
