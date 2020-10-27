@@ -404,7 +404,7 @@ where
             .map(|(details, slash_fraction)| {
                 // Reporters are ignored for now.
                 let (offender, _reporters) = &details.offender;
-                (offender.clone(), slash_fraction)
+                (offender, slash_fraction)
             })
             .collect::<BTreeMap<_, _>>();
 
