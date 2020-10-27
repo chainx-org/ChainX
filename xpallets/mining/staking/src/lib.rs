@@ -193,8 +193,8 @@ decl_storage! {
         /// forcing into account.
         pub IsCurrentSessionFinal get(fn is_current_session_final): bool = false;
 
-        /// Offenders reported in current session.
-        OffendersInSession get(fn offenders_in_session): Option<BTreeMap<T::AccountId, Perbill>>;
+        /// Offenders reported in last session.
+        SessionOffenders get(fn session_offenders): Option<BTreeMap<T::AccountId, Perbill>>;
 
         /// Minimum penalty for each slash.
         pub MinimumPenalty get(fn minimum_penalty) config(): BalanceOf<T>;

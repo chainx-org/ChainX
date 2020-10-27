@@ -226,7 +226,7 @@ impl<T: Trait> Module<T> {
         // Only the active validators can be rewarded.
         let validator_rewards = Self::distribute_session_reward(session_index);
 
-        if let Some(offenders) = OffendersInSession::<T>::take() {
+        if let Some(offenders) = SessionOffenders::<T>::take() {
             let force_chilled = Self::slash_offenders_in_session(offenders, validator_rewards);
             if !force_chilled.is_empty() {
                 debug!("Force chilled: {:?}", force_chilled);
@@ -415,7 +415,7 @@ where
 
         // Write a temp environment storage so that we can sum the session reward
         // together later and then perform the slashing operation only once.
-        <OffendersInSession<T>>::put(offenders_tuple);
+        <SessionOffenders<T>>::put(offenders_tuple);
 
         Ok(1)
     }
