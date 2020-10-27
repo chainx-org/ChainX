@@ -226,6 +226,7 @@ impl<T: Trait> Module<T> {
         // Only the active validators can be rewarded.
         let validator_rewards = Self::distribute_session_reward(session_index);
 
+        // Reset the session offenders.
         if let Some(offenders) = SessionOffenders::<T>::take() {
             let force_chilled = Self::slash_offenders_in_session(offenders, validator_rewards);
             if !force_chilled.is_empty() {
