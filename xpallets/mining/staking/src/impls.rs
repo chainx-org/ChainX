@@ -409,7 +409,7 @@ where
             .collect::<BTreeMap<_, _>>();
 
         debug!(
-            "Offenders:{:?} reported in session {:?}",
+            "Reported the offenders:{:?} happend in session {:?}",
             offenders_tuple, slash_session
         );
 

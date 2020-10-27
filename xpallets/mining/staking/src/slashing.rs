@@ -17,6 +17,7 @@ impl<T: Trait> Module<T> {
         let treasury_account = T::TreasuryAccount::treasury_account();
         let slasher = Slasher::<T>::new(treasury_account);
 
+        let minimum_penalty = Self::minimum_penalty();
         let minimum_validator_count = Self::reasonable_minimum_validator_count() as usize;
 
         let mut active_count = Self::active_validator_set().count();
@@ -31,12 +32,12 @@ impl<T: Trait> Module<T> {
                     .get(&offender)
                     .copied()
                     .map(|reward| reward + base_slash)
-                    .unwrap_or(base_slash);
+                    .unwrap_or(base_slash).max(minimum_penalty);
                 match slasher.try_slash(&offender, penalty) {
                     Ok(_) => {
                         debug!(
-                            "Slash the offender:{:?} for {:?} successfully",
-                            offender, penalty
+                            "Slash the offender:{:?} for penalty {:?} by the given slash_fraction:{:?} successfully",
+                            offender, penalty, slash_fraction
                         );
                         None
                     }
