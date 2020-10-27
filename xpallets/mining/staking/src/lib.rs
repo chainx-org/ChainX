@@ -38,7 +38,7 @@ use frame_support::{
 use frame_system::{ensure_root, ensure_signed};
 use sp_runtime::{
     traits::{Convert, SaturatedConversion, Saturating, StaticLookup, Zero},
-    DispatchResult,
+    DispatchResult, Perbill,
 };
 use sp_std::collections::btree_map::BTreeMap;
 
@@ -193,14 +193,11 @@ decl_storage! {
         /// forcing into account.
         pub IsCurrentSessionFinal get(fn is_current_session_final): bool = false;
 
-        /// Offenders reported in current session.
-        OffendersInSession get(fn offenders_in_session): Vec<T::AccountId>;
+        /// Offenders reported in last session.
+        SessionOffenders get(fn session_offenders): Option<BTreeMap<T::AccountId, Perbill>>;
 
         /// Minimum penalty for each slash.
         pub MinimumPenalty get(fn minimum_penalty) config(): BalanceOf<T>;
-
-        /// The higher the severity, the more slash for the offences.
-        pub OffenceSeverity get(fn offence_severity) config(): u32;
     }
 
     add_extra_genesis {
@@ -210,7 +207,6 @@ decl_storage! {
         config(glob_dist_ratio): (u32, u32);
         config(mining_ratio): (u32, u32);
         build(|config: &GenesisConfig<T>| {
-            assert!(config.offence_severity > 1, "Offence severity too weak");
             assert!(config.glob_dist_ratio.0 + config.glob_dist_ratio.1 > 0);
             assert!(config.mining_ratio.0 + config.mining_ratio.1 > 0);
             GlobalDistributionRatio::put(GlobalDistribution {
@@ -505,13 +501,6 @@ decl_module! {
         fn set_sessions_per_era(origin, #[compact] new: SessionIndex) {
             ensure_root(origin)?;
             SessionsPerEra::put(new);
-        }
-
-        #[weight = 10_000_000]
-        fn set_offence_severity(origin, #[compact] new: u32) {
-            ensure_root(origin)?;
-            ensure!(new > 1, Error::<T>::WeakOffenceSeverity);
-            OffenceSeverity::put(new);
         }
     }
 }

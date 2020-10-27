@@ -16,7 +16,7 @@ use xp_mining_common::{RewardPotAccountFor, WeightType};
 use xp_mining_staking::MiningPower;
 use xpallet_support::debug;
 
-use crate::{AssetMining, BalanceOf, EraIndex, Module, Trait};
+use crate::{AssetMining, BalanceOf, EraIndex, Event, Module, Trait};
 
 pub type VoteWeight = WeightType;
 
@@ -250,9 +250,11 @@ impl<T: Trait> Slasher<T> {
         );
         if expected_slash <= reward_pot_balance {
             self.apply_slash(&reward_pot, expected_slash);
+            Module::<T>::deposit_event(Event::<T>::Slashed(offender.clone(), expected_slash));
             Ok(())
         } else {
             self.apply_slash(&reward_pot, reward_pot_balance);
+            Module::<T>::deposit_event(Event::<T>::Slashed(offender.clone(), reward_pot_balance));
             Err(reward_pot_balance)
         }
     }
