@@ -32,7 +32,8 @@ impl<T: Trait> Module<T> {
                     .get(&offender)
                     .copied()
                     .map(|reward| reward + base_slash)
-                    .unwrap_or(base_slash).max(minimum_penalty);
+                    .unwrap_or(base_slash)
+                    .max(minimum_penalty);
                 match slasher.try_slash(&offender, penalty) {
                     Ok(_) => {
                         debug!(
