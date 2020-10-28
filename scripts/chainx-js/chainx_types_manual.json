@@ -48,27 +48,21 @@
         "order_type": "OrderType",
         "created_at": "BlockNumber"
     },
-    "RpcOrder": {
-        "order_id": "OrderId",
-        "side": "Side",
-        "price": "Price",
-        "amount": "Balance",
-        "pair_id": "TradingPairId",
-        "submitter": "AccountId",
-        "order_type": "OrderType",
-        "created_at": "BlockNumber",
-        "status": "OrderStatus",
-        "remaining": "Balance",
-        "executed_indices": "Vec<TradingHistoryIndex>",
-        "already_filled": "Balance",
-        "reserved_balance": "Balance",
-        "last_update_at": "BlockNumber"
-    },
     "TotalAssetInfo": {
         "info": "AssetInfo",
-        "balance": "BTreeMap<AssetType, Balance>",
+        "balance": "BTreeMap<AssetType, RpcBalance>",
         "is_online": "bool",
         "restrictions": "AssetRestrictions"
+    },
+    "NominatorLedger": {
+        "nomination": "Balance",
+        "last_vote_weight": "VoteWeight",
+        "last_vote_weight_update": "BlockNumber",
+        "unbonded_chunks": "Vec<Unbonded>"
+    },
+    "Unbonded": {
+        "value": "Balance",
+        "locked_until": "BlockNumber"
     },
     "WithdrawalRecordId": "u32",
     "WithdrawalState": {
@@ -184,60 +178,78 @@
             "RuntimeInterface"
         ]
     },
+    "RpcOrder": {
+        "order_id": "OrderId",
+        "side": "Side",
+        "price": "RpcPrice",
+        "amount": "RpcBalance",
+        "pair_id": "TradingPairId",
+        "submitter": "AccountId",
+        "order_type": "OrderType",
+        "created_at": "BlockNumber",
+        "status": "OrderStatus",
+        "remaining": "RpcBalance",
+        "executed_indices": "Vec<TradingHistoryIndex>",
+        "already_filled": "RpcBalance",
+        "reserved_balance": "RpcBalance",
+        "last_update_at": "BlockNumber"
+    },
+    "RpcWithdrawalRecord": {
+        "asset_id": "AssetId",
+        "applicant": "AccountId",
+        "balance": "RpcBalance",
+        "addr": "String",
+        "ext": "String",
+        "height": "BlockNumber",
+        "state": "WithdrawalState"
+    },
     "ValidatorInfo": {
         "account": "AccountId",
         "registered_at": "BlockNumber",
         "is_chilled": "bool",
         "last_chilled": "Option<BlockNumber>",
-        "total_nomination": "Balance",
-        "last_total_vote_weight": "VoteWeight",
+        "total_nomination": "RpcBalance",
+        "last_total_vote_weight": "RpcVoteWeight",
         "last_total_vote_weight_update": "BlockNumber",
         "is_validating": "bool",
-        "self_bonded": "Balance",
+        "self_bonded": "RpcBalance",
         "referral_id": "String",
         "reward_pot_account": "AccountId",
-        "reward_pot_balance": "Balance"
+        "reward_pot_balance": "RpcBalance"
     },
     "FullPairInfo": {
         "base_currency": "AssetId",
-        "highest_bid": "Price",
+        "highest_bid": "RpcPrice",
         "id": "TradingPairId",
-        "latest_price": "Price",
+        "latest_price": "RpcPrice",
         "latest_price_updated_at": "BlockNumber",
-        "lowest_ask": "Price",
-        "max_valid_bid": "Price",
-        "min_valid_ask": "Price",
+        "lowest_ask": "RpcPrice",
+        "max_valid_bid": "RpcPrice",
+        "min_valid_ask": "RpcPrice",
         "pip_decimals": "u32",
         "quote_currency": "AssetId",
         "tick_decimals": "u32",
         "tradable": "bool"
     },
-    "NominatorLedger": {
-        "nomination": "Balance",
-        "last_vote_weight": "VoteWeight",
-        "last_vote_weight_update": "BlockNumber",
-        "unbonded_chunks": "Vec<Unbonded>"
-    },
     "MiningAssetInfo": {
         "asset_id": "AssetId",
         "mining_power": "FixedAssetPower",
         "reward_pot": "AccountId",
-        "reward_pot_balance": "Balance",
-        "last_total_mining_weight": "MiningWeight",
+        "reward_pot_balance": "RpcBalance",
+        "last_total_mining_weight": "RpcMiningWeight",
         "last_total_mining_weight_update": "BlockNumber"
     },
-    "Unbonded": {
-        "value": "Balance",
-        "locked_until": "BlockNumber"
-    },
     "Depth": {
-        "asks": "Vec<(Price, Balance)>",
-        "bids": "Vec<(Price, Balance)>"
+        "asks": "Vec<(RpcPrice, RpcBalance)>",
+        "bids": "Vec<(RpcPrice, RpcBalance)>"
     },
     "Page": {
         "page_index": "u32",
         "page_size": "u32",
         "data": "Vec<RpcOrder>"
+    },
+    "AssetRestrictions":  {
+        "bits": "u32"
     },
     "String": "Text",
     "Price": "u128",
@@ -248,20 +260,8 @@
     "RpcBalance": "String",
     "RpcMiningWeight": "String",
     "RpcVoteWeight": "String",
-    "AssetRestrictions":  {
-        "bits": "u32"
-    },
     "OrderInfo": "Order",
     "HandicapInfo": "Handicap",
     "FullIdentification": "ValidatorId",
-    "WithdrawalRecordOf": "WithdrawalRecord",
-    "RpcWithdrawalRecord": {
-        "asset_id": "AssetId",
-        "applicant": "AccountId",
-        "balance": "Balance",
-        "addr": "String",
-        "ext": "String",
-        "height": "BlockNumber",
-        "state": "WithdrawalState"
-    }
+    "WithdrawalRecordOf": "WithdrawalRecord"
 }
