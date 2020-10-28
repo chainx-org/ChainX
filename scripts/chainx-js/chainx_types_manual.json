@@ -189,11 +189,12 @@
         "registered_at": "BlockNumber",
         "is_chilled": "bool",
         "last_chilled": "Option<BlockNumber>",
-        "total": "Balance",
+        "total_nomination": "Balance",
         "last_total_vote_weight": "VoteWeight",
         "last_total_vote_weight_update": "BlockNumber",
         "is_validating": "bool",
         "self_bonded": "Balance",
+        "referral_id": "String",
         "reward_pot_account": "AccountId",
         "reward_pot_balance": "Balance"
     },

@@ -352,11 +352,12 @@
         "registeredAt": "BlockNumber",
         "isChilled": "bool",
         "lastChilled": "Option<BlockNumber>",
-        "total": "Balance",
+        "totalNomination": "Balance",
         "lastTotalVoteWeight": "VoteWeight",
         "lastTotalVoteWeightUpdate": "BlockNumber",
         "isValidating": "bool",
         "selfBonded": "Balance",
+        "referralId": "String",
         "rewardPotAccount": "AccountId",
         "rewardPotBalance": "Balance"
     },
