@@ -50,7 +50,7 @@
     },
     "TotalAssetInfo": {
         "info": "AssetInfo",
-        "balance": "BTreeMap<AssetType, RpcBalance>",
+        "balance": "BTreeMap<AssetType, Balance>",
         "is_online": "bool",
         "restrictions": "AssetRestrictions"
     },
@@ -177,6 +177,12 @@
             "Recover",
             "RuntimeInterface"
         ]
+    },
+    "RpcTotalAssetInfo": {
+        "info": "AssetInfo",
+        "balance": "BTreeMap<AssetType, RpcBalance>",
+        "is_online": "bool",
+        "restrictions": "AssetRestrictions"
     },
     "RpcOrder": {
         "order_id": "OrderId",
