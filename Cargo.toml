@@ -5,10 +5,6 @@ authors = ["The ChainX Authors"]
 edition = "2018"
 description = "Fully Decentralized Interchain Crypto Asset Management on Polkadot"
 
-[patch.crates-io]
-# patch for substrate runtime module
-pallet-transaction-payment = { path = "./frame/transaction-payment" }
-
 [dependencies]
 cli = { package = "chainx-cli", path = "cli" }
 
@@ -53,6 +49,9 @@ members = [
     "xpallets/mining/staking/rpc/runtime-api",
     "xpallets/support",
     "xpallets/system",
+    "xpallets/transaction-fee",
+    "xpallets/transaction-fee/rpc",
+    "xpallets/transaction-fee/rpc/runtime-api",
 ]
 
 [profile.release]

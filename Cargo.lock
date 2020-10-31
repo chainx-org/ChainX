@@ -9294,6 +9294,54 @@ dependencies = [
 ]
 
 [[package]]
+name = "xpallet-transaction-fee"
+version = "2.0.0-alpha.3"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "pallet-transaction-payment",
+ "pallet-transaction-payment-rpc-runtime-api",
+ "parity-scale-codec",
+ "serde",
+ "smallvec 1.4.2",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "sp-storage",
+ "xpallet-support",
+]
+
+[[package]]
+name = "xpallet-transaction-fee-rpc"
+version = "2.0.0-alpha.3"
+dependencies = [
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "pallet-transaction-payment-rpc",
+ "parity-scale-codec",
+ "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-core",
+ "sp-rpc",
+ "sp-runtime",
+ "xpallet-transaction-fee-rpc-runtime-api",
+]
+
+[[package]]
+name = "xpallet-transaction-fee-rpc-runtime-api"
+version = "2.0.0-alpha.3"
+dependencies = [
+ "pallet-transaction-payment-rpc-runtime-api",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-runtime",
+]
+
+[[package]]
 name = "yaml-rust"
 version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
