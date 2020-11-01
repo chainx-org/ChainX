@@ -20,18 +20,11 @@ pub fn runtime_error_into_rpc_err(err: impl Debug) -> Error {
     }
 }
 
+/// Converts a hex decode error into an RPC error.
 pub fn hex_decode_error_into_rpc_err(err: impl Debug) -> Error {
     Error {
         code: ErrorCode::ServerError(HEX_DECODE_ERROR),
         message: "Failed to decode hex".into(),
-        data: Some(format!("{:?}", err).into()),
-    }
-}
-
-pub fn new_runtime_error(message: String, err: impl Debug) -> Error {
-    Error {
-        code: ErrorCode::ServerError(RUNTIME_ERROR),
-        message,
         data: Some(format!("{:?}", err).into()),
     }
 }
