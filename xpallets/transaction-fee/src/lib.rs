@@ -8,9 +8,10 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+mod types;
+
 use sp_std::prelude::*;
 
-use codec::{Decode, Encode};
 use frame_support::{
     decl_event, decl_module,
     traits::{Currency, Get},
@@ -20,8 +21,10 @@ use frame_support::{
 };
 use sp_runtime::{
     traits::{DispatchInfoOf, Dispatchable, PostDispatchInfoOf, Saturating},
-    FixedPointNumber, FixedPointOperand, RuntimeDebug,
+    FixedPointNumber, FixedPointOperand,
 };
+
+pub use self::types::{FeeDetails, InclusionFee};
 
 type BalanceOf<T> = <<T as pallet_transaction_payment::Trait>::Currency as Currency<
     <T as frame_system::Trait>::AccountId,
@@ -46,45 +49,6 @@ decl_event!(
         Paid(AccountId, Balance, AccountId, Balance),
     }
 );
-
-/// The base fee and adjusted weight and length fees constitute the _inclusion fee,_ which is
-/// the minimum fee for a transaction to be included in a block.
-///
-/// ```ignore
-/// inclusion_fee = base_fee + len_fee + [targeted_fee_adjustment * weight_fee];
-/// ```
-#[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug)]
-#[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
-pub struct InclusionFee<Balance> {
-    /// This is the minimum amount a user pays for a transaction. It is declared
-    /// as a base _weight_ in the runtime and converted to a fee using `WeightToFee`.
-    pub base_fee: Balance,
-    /// The length fee, the amount paid for the encoded length (in bytes) of the transaction.
-    pub len_fee: Balance,
-    /// - `targeted_fee_adjustment`: This is a multiplier that can tune the final fee based on
-    ///     the congestion of the network.
-    /// - `weight_fee`: This amount is computed based on the weight of the transaction. Weight
-    /// accounts for the execution time of a transaction.
-    ///
-    /// adjusted_weight_fee = targeted_fee_adjustment * weight_fee
-    pub adjusted_weight_fee: Balance,
-}
-
-/// The `final_fee` is composed of:
-///   - (Optional) `inclusion_fee`: Only the `Pays::Yes` transaction can have the inclusion fee.
-///   - (Optional) `tip`: If included in the transaction, the tip will be added on top. Only
-///     signed transactions can have a tip.
-///
-/// ```ignore
-/// final_fee = inclusion_fee + tip;
-/// ```
-#[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug)]
-#[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
-pub struct FeeDetails<Balance> {
-    pub inclusion_fee: Option<InclusionFee<Balance>>,
-    pub tip: Balance,
-    pub final_fee: Balance,
-}
 
 impl<T: Trait> Module<T>
 where
