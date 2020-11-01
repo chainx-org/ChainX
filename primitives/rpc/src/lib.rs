@@ -13,7 +13,7 @@ const RUNTIME_TRUSTEE_ERROR: i64 = RUNTIME_ERROR + 100;
 /// Decode the generic trustee info failed.
 ///
 /// TODO: these pallet-specific errors should be moved to its own rpc module
-/// then there are many of them.
+/// when there are many of them.
 pub const RUNTIME_TRUSTEE_DECODE_ERROR: i64 = RUNTIME_TRUSTEE_ERROR + 1;
 
 /// The trustees are inexistent.
