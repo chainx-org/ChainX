@@ -9,14 +9,16 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use codec::Codec;
-use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
 
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 
-use xp_rpc::runtime_error_into_rpc_err;
+use xp_rpc::{
+    hex_decode_error_into_rpc_err, runtime_error_into_rpc_err, Error as RpcError, ErrorCode,
+    Result, RUNTIME_ERROR,
+};
 
 use xpallet_support::RpcBalance;
 
@@ -126,7 +128,7 @@ where
             .trustee_properties(&at, chain, who)
             .map_err(runtime_error_into_rpc_err)?
             .ok_or(RpcError {
-                code: ErrorCode::ServerError(xp_rpc::RUNTIME_ERROR + 1),
+                code: ErrorCode::ServerError(RUNTIME_ERROR + 1),
                 message: "Not exist".into(),
                 data: None,
             })?;
@@ -146,7 +148,7 @@ where
             .trustee_session_info(&at, chain)
             .map_err(runtime_error_into_rpc_err)?
             .ok_or(RpcError {
-                code: ErrorCode::ServerError(xp_rpc::RUNTIME_ERROR + 1),
+                code: ErrorCode::ServerError(RUNTIME_ERROR + 1),
                 message: "Not exist".into(),
                 data: None,
             })?;
@@ -244,7 +246,7 @@ where
     ) -> Result<bool> {
         let value: Balance = Balance::from(value);
         let addr = if addr.starts_with("0x") {
-            hex::decode(&addr[2..]).map_err(xp_rpc::hex_decode_error_into_rpc_err)?
+            hex::decode(&addr[2..]).map_err(hex_decode_error_into_rpc_err)?
         } else {
             hex::decode(&addr).unwrap_or_else(|_| addr.into_bytes())
         };
@@ -303,7 +305,7 @@ where
 /// Converts a runtime trap into an RPC error.
 fn trustee_error_into_rpc_err(err: impl Debug) -> RpcError {
     RpcError {
-        code: ErrorCode::ServerError(xp_rpc::RUNTIME_ERROR + 2),
+        code: ErrorCode::ServerError(RUNTIME_ERROR + 2),
         message: "Can not decode generic trustee session info".into(),
         data: Some(format!("{:?}", err).into()),
     }

@@ -6,14 +6,13 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use codec::Codec;
-use jsonrpc_core::Result;
 use jsonrpc_derive::rpc;
 use serde::{Deserialize, Serialize};
 
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 
-use xp_rpc::runtime_error_into_rpc_err;
+use xp_rpc::{runtime_error_into_rpc_err, Result};
 
 use xpallet_gateway_records_rpc_runtime_api::{
     AssetId, Chain, Withdrawal, WithdrawalRecordId, WithdrawalState,
@@ -29,7 +28,7 @@ pub struct XGatewayRecords<C, B> {
 impl<C, B> XGatewayRecords<C, B> {
     /// Create new `Contracts` with the given reference to the client.
     pub fn new(client: Arc<C>) -> Self {
-        XGatewayRecords {
+        Self {
             client,
             _marker: Default::default(),
         }
@@ -150,7 +149,7 @@ impl<AccountId, Balance: Display + FromStr, BlockNumber>
     for RpcWithdrawalRecord<AccountId, Balance, BlockNumber>
 {
     fn from(record: Withdrawal<AccountId, Balance, BlockNumber>) -> Self {
-        RpcWithdrawalRecord {
+        Self {
             asset_id: record.asset_id,
             applicant: record.applicant,
             balance: record.balance,

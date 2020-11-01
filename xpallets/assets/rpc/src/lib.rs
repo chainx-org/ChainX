@@ -6,7 +6,6 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use codec::Codec;
-use jsonrpc_core::Result;
 use jsonrpc_derive::rpc;
 
 use sp_blockchain::HeaderBackend;
@@ -14,6 +13,8 @@ use sp_runtime::{
     generic::BlockId,
     traits::{Block as BlockT, Zero},
 };
+
+use xp_rpc::{runtime_error_into_rpc_err, Result};
 
 use xpallet_support::RpcBalance;
 
@@ -29,7 +30,7 @@ pub struct Assets<C, B> {
 impl<C, B> Assets<C, B> {
     /// Create new `Contracts` with the given reference to the client.
     pub fn new(client: Arc<C>) -> Self {
-        Assets {
+        Self {
             client,
             _marker: Default::default(),
         }
@@ -89,7 +90,7 @@ where
                     })
                     .collect::<BTreeMap<_, _>>()
             })
-            .map_err(xp_rpc::runtime_error_into_rpc_err)
+            .map_err(runtime_error_into_rpc_err)
     }
 
     fn assets(
@@ -126,6 +127,6 @@ where
                     })
                     .collect()
             })
-            .map_err(xp_rpc::runtime_error_into_rpc_err)
+            .map_err(runtime_error_into_rpc_err)
     }
 }

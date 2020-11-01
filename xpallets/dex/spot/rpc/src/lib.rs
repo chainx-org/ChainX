@@ -9,13 +9,14 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use codec::Codec;
-use jsonrpc_core::Result;
 use jsonrpc_derive::rpc;
 use serde::{Deserialize, Serialize};
 
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
+
+use xp_rpc::{runtime_error_into_rpc_err, Result};
 
 use xpallet_support::{RpcBalance, RpcPrice};
 
@@ -125,7 +126,7 @@ where
                     )
                     .collect::<Vec<_>>()
             })
-            .map_err(xp_rpc::runtime_error_into_rpc_err)?)
+            .map_err(runtime_error_into_rpc_err)?)
     }
 
     fn orders(
@@ -174,7 +175,7 @@ where
                     })
                     .collect::<Vec<_>>()
             })
-            .map_err(xp_rpc::runtime_error_into_rpc_err)?;
+            .map_err(runtime_error_into_rpc_err)?;
         Ok(Page {
             page_index,
             page_size,
@@ -205,7 +206,7 @@ where
                 Ok(Some(Depth { asks, bids }))
             }
             Ok(None) => Ok(None),
-            Err(err) => Err(xp_rpc::runtime_error_into_rpc_err(err)),
+            Err(err) => Err(runtime_error_into_rpc_err(err)),
         }
     }
 }

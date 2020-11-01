@@ -8,14 +8,13 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use codec::Codec;
-use jsonrpc_core::Result;
 use jsonrpc_derive::rpc;
 
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 
-use xp_rpc::runtime_error_into_rpc_err;
+use xp_rpc::{runtime_error_into_rpc_err, Result};
 
 use xpallet_support::{RpcBalance, RpcMiningWeight};
 
