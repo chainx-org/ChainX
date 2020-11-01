@@ -400,7 +400,7 @@ def parse_rpc_api(xmodule, description, inner_fn, line_fn):
 
 
 def build_rpc():
-    MAX_RETURN_VALUE_SPANNED_LINES = 30
+    MAX_RETURN_VALUE_SPANNED_LINES = 100
 
     #  Assume all the API definition is in foo/rpc/src/lib.rs
     rpc_rs_files = list(filter(lambda x: '/rpc/src/lib.rs' in x, rs_files))
