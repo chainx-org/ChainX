@@ -1,17 +1,19 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 use std::collections::BTreeMap;
-use std::fmt::{Debug, Display};
+use std::fmt::Display;
 use std::str::FromStr;
 use std::sync::Arc;
 
 use codec::Codec;
-use jsonrpc_core::{Error, ErrorCode, Result};
+use jsonrpc_core::Result;
 use jsonrpc_derive::rpc;
 use serde::{Deserialize, Serialize};
 
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
+
+use xp_rpc::runtime_error_into_rpc_err;
 
 use xpallet_gateway_records_rpc_runtime_api::{
     AssetId, Chain, Withdrawal, WithdrawalRecordId, WithdrawalState,
@@ -157,15 +159,5 @@ impl<AccountId, Balance: Display + FromStr, BlockNumber>
             height: record.height,
             state: record.state,
         }
-    }
-}
-
-const RUNTIME_ERROR: i64 = 1;
-/// Converts a runtime trap into an RPC error.
-fn runtime_error_into_rpc_err(err: impl Debug) -> Error {
-    Error {
-        code: ErrorCode::ServerError(RUNTIME_ERROR),
-        message: "Runtime trapped".into(),
-        data: Some(format!("{:?}", err).into()),
     }
 }

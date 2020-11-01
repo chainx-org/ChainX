@@ -26,6 +26,7 @@ members = [
     "primitives/mining/common",
     "primitives/mining/staking",
     "primitives/protocol",
+    "primitives/rpc",
     "primitives/runtime",
     "rpc",
     "runtime",

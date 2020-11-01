@@ -16,6 +16,8 @@ use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 
+use xp_rpc::runtime_error_into_rpc_err;
+
 use xpallet_support::RpcBalance;
 
 use xpallet_gateway_common_rpc_runtime_api::trustees::bitcoin::{
@@ -57,7 +59,7 @@ where
         addr: String,
         memo: String,
         at: Option<BlockHash>,
-    ) -> Result<()>;
+    ) -> Result<bool>;
 
     /// Return the trustee multisig address for all chain.
     #[rpc(name = "xgatewaycommon_trusteeMultisigs")]
@@ -122,12 +124,12 @@ where
 
         let result = api
             .trustee_properties(&at, chain, who)
-            .map_err(runtime_error_into_rpc_err)?;
-        let result = result.ok_or(RpcError {
-            code: ErrorCode::ServerError(RUNTIME_ERROR + 1),
-            message: "Not exist".into(),
-            data: None,
-        })?;
+            .map_err(runtime_error_into_rpc_err)?
+            .ok_or(RpcError {
+                code: ErrorCode::ServerError(xp_rpc::RUNTIME_ERROR + 1),
+                message: "Not exist".into(),
+                data: None,
+            })?;
 
         Ok(result)
     }
@@ -142,12 +144,12 @@ where
 
         let result = api
             .trustee_session_info(&at, chain)
-            .map_err(runtime_error_into_rpc_err)?;
-        let result = result.ok_or(RpcError {
-            code: ErrorCode::ServerError(RUNTIME_ERROR + 1),
-            message: "Not exist".into(),
-            data: None,
-        })?;
+            .map_err(runtime_error_into_rpc_err)?
+            .ok_or(RpcError {
+                code: ErrorCode::ServerError(xp_rpc::RUNTIME_ERROR + 1),
+                message: "Not exist".into(),
+                data: None,
+            })?;
 
         Ok(result)
     }
@@ -163,8 +165,8 @@ where
 
         let result = api
             .generate_trustee_session_info(&at, chain, candidates)
+            .map_err(runtime_error_into_rpc_err)?
             .map_err(runtime_error_into_rpc_err)?;
-        let result = result.map_err(runtime_error_into_rpc_err)?;
 
         Ok(result)
     }
@@ -239,14 +241,10 @@ where
         addr: String,
         memo: String,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<()> {
+    ) -> Result<bool> {
         let value: Balance = Balance::from(value);
         let addr = if addr.starts_with("0x") {
-            hex::decode(&addr[2..]).map_err(|err| RpcError {
-                code: ErrorCode::ServerError(RUNTIME_ERROR + 10),
-                message: "Decode to hex error".into(),
-                data: Some(format!("{:?}", err).into()),
-            })?
+            hex::decode(&addr[2..]).map_err(xp_rpc::hex_decode_error_into_rpc_err)?
         } else {
             hex::decode(&addr).unwrap_or_else(|_| addr.into_bytes())
         };
@@ -256,10 +254,10 @@ where
         let at = BlockId::hash(at.unwrap_or_else(||
             // If the block hash is not supplied assume the best block.
             self.client.info().best_hash));
-        api.verify_withdrawal(&at, asset_id, value, addr, memo.into())
+        Ok(api
+            .verify_withdrawal(&at, asset_id, value, addr, memo.into())
             .map_err(runtime_error_into_rpc_err)?
-            .map_err(runtime_error_into_rpc_err)?;
-        Ok(())
+            .is_ok())
     }
 
     fn multisigs(&self, at: Option<<Block as BlockT>::Hash>) -> Result<BTreeMap<Chain, AccountId>> {
@@ -281,11 +279,7 @@ where
         at: Option<<Block as BlockT>::Hash>,
     ) -> Result<BtcTrusteeIntentionProps> {
         let props = self.generic_trustee_properties(Chain::Bitcoin, who, at)?;
-        BtcTrusteeIntentionProps::try_from(props).map_err(|_| RpcError {
-            code: ErrorCode::ServerError(RUNTIME_ERROR + 2),
-            message: "Decode generic data error, should not happen".into(),
-            data: None,
-        })
+        BtcTrusteeIntentionProps::try_from(props).map_err(trustee_error_into_rpc_err)
     }
 
     fn btc_trustee_session_info(
@@ -293,11 +287,7 @@ where
         at: Option<<Block as BlockT>::Hash>,
     ) -> Result<BtcTrusteeSessionInfo<AccountId>> {
         let info = self.generic_trustee_session_info(Chain::Bitcoin, at)?;
-        BtcTrusteeSessionInfo::<_>::try_from(info).map_err(|_| RpcError {
-            code: ErrorCode::ServerError(RUNTIME_ERROR + 2),
-            message: "Decode generic data error, should not happen".into(),
-            data: None,
-        })
+        BtcTrusteeSessionInfo::<_>::try_from(info).map_err(trustee_error_into_rpc_err)
     }
 
     fn btc_generate_trustee_session_info(
@@ -306,20 +296,15 @@ where
         at: Option<<Block as BlockT>::Hash>,
     ) -> Result<BtcTrusteeSessionInfo<AccountId>> {
         let info = self.generate_generic_trustee_session_info(Chain::Bitcoin, candidates, at)?;
-        BtcTrusteeSessionInfo::<_>::try_from(info).map_err(|_| RpcError {
-            code: ErrorCode::ServerError(RUNTIME_ERROR + 2),
-            message: "Decode generic data error, should not happen".into(),
-            data: None,
-        })
+        BtcTrusteeSessionInfo::<_>::try_from(info).map_err(trustee_error_into_rpc_err)
     }
 }
 
-const RUNTIME_ERROR: i64 = 1;
 /// Converts a runtime trap into an RPC error.
-fn runtime_error_into_rpc_err(err: impl Debug) -> RpcError {
+fn trustee_error_into_rpc_err(err: impl Debug) -> RpcError {
     RpcError {
-        code: ErrorCode::ServerError(RUNTIME_ERROR),
-        message: "Runtime trapped".into(),
+        code: ErrorCode::ServerError(xp_rpc::RUNTIME_ERROR + 2),
+        message: "Can not decode generic trustee session info".into(),
         data: Some(format!("{:?}", err).into()),
     }
 }

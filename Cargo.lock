@@ -8870,6 +8870,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "xp-rpc"
+version = "2.0.0-alpha.3"
+dependencies = [
+ "jsonrpc-core",
+]
+
+[[package]]
 name = "xp-runtime"
 version = "2.0.0-alpha.3"
 dependencies = [
@@ -8935,6 +8942,7 @@ dependencies = [
  "sp-api",
  "sp-blockchain",
  "sp-runtime",
+ "xp-rpc",
  "xpallet-assets-rpc-runtime-api",
  "xpallet-support",
 ]
@@ -8985,6 +8993,7 @@ dependencies = [
  "sp-api",
  "sp-blockchain",
  "sp-runtime",
+ "xp-rpc",
  "xpallet-dex-spot-rpc-runtime-api",
  "xpallet-support",
 ]
@@ -9072,6 +9081,7 @@ dependencies = [
  "sp-api",
  "sp-blockchain",
  "sp-runtime",
+ "xp-rpc",
  "xpallet-gateway-common-rpc-runtime-api",
  "xpallet-support",
 ]
@@ -9125,6 +9135,7 @@ dependencies = [
  "sp-api",
  "sp-blockchain",
  "sp-runtime",
+ "xp-rpc",
  "xpallet-gateway-records-rpc-runtime-api",
  "xpallet-support",
 ]
@@ -9200,6 +9211,7 @@ dependencies = [
  "sp-api",
  "sp-blockchain",
  "sp-runtime",
+ "xp-rpc",
  "xpallet-mining-asset-rpc-runtime-api",
  "xpallet-support",
 ]
@@ -9254,6 +9266,7 @@ dependencies = [
  "sp-api",
  "sp-blockchain",
  "sp-runtime",
+ "xp-rpc",
  "xpallet-mining-staking-rpc-runtime-api",
  "xpallet-support",
 ]
