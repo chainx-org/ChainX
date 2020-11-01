@@ -17,7 +17,7 @@ use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 
 use xp_rpc::{
     hex_decode_error_into_rpc_err, runtime_error_into_rpc_err, trustee_decode_error_into_rpc_err,
-    trustee_inexistent_error_into_rpc_err, Result,
+    trustee_inexistent_rpc_err, Result,
 };
 
 use xpallet_support::RpcBalance;
@@ -127,7 +127,7 @@ where
         let result = api
             .trustee_properties(&at, chain, who)
             .map_err(runtime_error_into_rpc_err)?
-            .ok_or(trustee_inexistent_error_into_rpc_err())?;
+            .ok_or(trustee_inexistent_rpc_err())?;
 
         Ok(result)
     }
@@ -143,7 +143,7 @@ where
         let result = api
             .trustee_session_info(&at, chain)
             .map_err(runtime_error_into_rpc_err)?
-            .ok_or(trustee_inexistent_error_into_rpc_err())?;
+            .ok_or(trustee_inexistent_rpc_err())?;
 
         Ok(result)
     }
