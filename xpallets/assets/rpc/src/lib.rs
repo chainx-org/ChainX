@@ -8,6 +8,7 @@ use std::sync::Arc;
 use codec::Codec;
 use jsonrpc_derive::rpc;
 
+use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{
     generic::BlockId,
@@ -61,9 +62,7 @@ where
 impl<C, Block, AccountId, Balance> XAssetsApi<<Block as BlockT>::Hash, AccountId, Balance>
     for Assets<C, Block>
 where
-    C: sp_api::ProvideRuntimeApi<Block>,
-    C: HeaderBackend<Block>,
-    C: Send + Sync + 'static,
+    C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
     C::Api: XAssetsRuntimeApi<Block, AccountId, Balance>,
     Block: BlockT,
     AccountId: Clone + Display + Codec,

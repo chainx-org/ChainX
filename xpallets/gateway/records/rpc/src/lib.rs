@@ -9,6 +9,7 @@ use codec::Codec;
 use jsonrpc_derive::rpc;
 use serde::{Deserialize, Serialize};
 
+use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 
@@ -68,9 +69,7 @@ impl<C, Block, AccountId, Balance, BlockNumber>
     XGatewayRecordsApi<<Block as BlockT>::Hash, AccountId, Balance, BlockNumber>
     for XGatewayRecords<C, Block>
 where
-    C: sp_api::ProvideRuntimeApi<Block>,
-    C: HeaderBackend<Block>,
-    C: Send + Sync + 'static,
+    C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
     C::Api: GatewayRecordsRuntimeApi<Block, AccountId, Balance, BlockNumber>,
     Block: BlockT,
     AccountId: Clone + Display + FromStr + Codec,
