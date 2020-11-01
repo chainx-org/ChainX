@@ -12,9 +12,11 @@ use sp_std::prelude::*;
 
 use codec::{Decode, Encode};
 use frame_support::{
-    decl_module,
+    decl_event, decl_module,
     traits::{Currency, Get},
-    weights::{DispatchInfo, Pays, PostDispatchInfo, Weight, WeightToFeePolynomial},
+    weights::{
+        DispatchInfo, GetDispatchInfo, Pays, PostDispatchInfo, Weight, WeightToFeePolynomial,
+    },
 };
 use sp_runtime::{
     traits::{DispatchInfoOf, Dispatchable, PostDispatchInfoOf, Saturating},
@@ -32,6 +34,19 @@ decl_module! {
     }
 }
 
+decl_event!(
+    /// Event for the XTransactionFee Module
+    pub enum Event<T>
+    where
+        Balance = BalanceOf<T>,
+        <T as frame_system::Trait>::AccountId,
+    {
+        /// Transaction fee was paid to the block author and its reward pot in 1:9.
+        /// [author, author_fee, reward_pot, reward_pot_fee]
+        Paid(AccountId, Balance, AccountId, Balance),
+    }
+);
+
 /// The base fee and adjusted weight and length fees constitute the _inclusion fee,_ which is
 /// the minimum fee for a transaction to be included in a block.
 ///
@@ -39,6 +54,7 @@ decl_module! {
 /// inclusion_fee = base_fee + len_fee + [targeted_fee_adjustment * weight_fee];
 /// ```
 #[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 pub struct InclusionFee<Balance> {
     /// This is the minimum amount a user pays for a transaction. It is declared
     /// as a base _weight_ in the runtime and converted to a fee using `WeightToFee`.
@@ -63,6 +79,7 @@ pub struct InclusionFee<Balance> {
 /// final_fee = inclusion_fee + tip;
 /// ```
 #[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 pub struct FeeDetails<Balance> {
     pub inclusion_fee: Option<InclusionFee<Balance>>,
     pub tip: Balance,
@@ -75,7 +92,25 @@ where
 {
     /// Returns the details of fee for a particular transaction.
     ///
-    pub fn compute_fee_details(
+    /// The basic logic is identical to [`compute_fee`] but returns
+    /// the details of final fee instead.
+    ///
+    /// [`compute_fee`]: https://docs.rs/pallet-transaction-payment/2.0.0/pallet_transaction_payment/struct.Module.html#method.compute_fee
+    ///
+    pub fn query_fee_details<Extrinsic: GetDispatchInfo>(
+        unchecked_extrinsic: Extrinsic,
+        len: u32,
+    ) -> FeeDetails<BalanceOf<T>>
+    where
+        T: Send + Sync,
+        BalanceOf<T>: Send + Sync,
+        T::Call: Dispatchable<Info = DispatchInfo>,
+    {
+        let dispatch_info = <Extrinsic as GetDispatchInfo>::get_dispatch_info(&unchecked_extrinsic);
+        Self::compute_fee(len, &dispatch_info, 0u32.into())
+    }
+
+    pub fn compute_fee(
         len: u32,
         info: &DispatchInfoOf<T::Call>,
         tip: BalanceOf<T>,

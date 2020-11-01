@@ -407,6 +407,8 @@ impl pallet_transaction_payment::Trait for Runtime {
     type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
 }
 
+impl xpallet_transaction_fee::Trait for Runtime {}
+
 parameter_types! {
     pub const SessionDuration: BlockNumber = EPOCH_DURATION_IN_BLOCKS;
     pub const ImOnlineUnsignedPriority: TransactionPriority = TransactionPriority::max_value();
@@ -1004,6 +1006,8 @@ construct_runtime!(
         // DEX
         XSpot: xpallet_dex_spot::{Module, Call, Storage, Event<T>, Config<T>},
 
+        XTransactionFee: xpallet_transaction_fee::{Module, Event<T>},
+
         XGenesisBuilder: xpallet_genesis_builder::{Module, Config<T>},
     }
 );
@@ -1213,6 +1217,15 @@ impl_runtime_apis! {
             len: u32,
         ) -> pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo<Balance> {
             TransactionPayment::query_info(uxt, len)
+        }
+    }
+
+    impl xpallet_transaction_fee_rpc_runtime_api::XTransactionFeeApi<Block, Balance> for Runtime {
+        fn query_fee_details(
+            uxt: <Block as BlockT>::Extrinsic,
+            len: u32,
+        ) -> xpallet_transaction_fee::FeeDetails<Balance> {
+            XTransactionFee::query_fee_details(uxt, len)
         }
     }
 

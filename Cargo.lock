@@ -806,6 +806,8 @@ dependencies = [
  "xpallet-mining-asset-rpc-runtime-api",
  "xpallet-mining-staking-rpc",
  "xpallet-mining-staking-rpc-runtime-api",
+ "xpallet-transaction-fee-rpc",
+ "xpallet-transaction-fee-rpc-runtime-api",
 ]
 
 [[package]]
@@ -885,6 +887,8 @@ dependencies = [
  "xpallet-mining-staking-rpc-runtime-api",
  "xpallet-support",
  "xpallet-system",
+ "xpallet-transaction-fee",
+ "xpallet-transaction-fee-rpc-runtime-api",
 ]
 
 [[package]]
@@ -9335,10 +9339,10 @@ dependencies = [
 name = "xpallet-transaction-fee-rpc-runtime-api"
 version = "2.0.0-alpha.3"
 dependencies = [
- "pallet-transaction-payment-rpc-runtime-api",
  "parity-scale-codec",
  "sp-api",
  "sp-runtime",
+ "xpallet-transaction-fee",
 ]
 
 [[package]]

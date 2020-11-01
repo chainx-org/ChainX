@@ -92,6 +92,8 @@ xpallet-mining-staking = { path  = "../xpallets/mining/staking", default-feature
 xpallet-mining-staking-rpc-runtime-api = { path  = "../xpallets/mining/staking/rpc/runtime-api", default-features = false }
 xpallet-system = { path = "../xpallets/system", default-features = false }
 xpallet-support = { path = "../xpallets/support", default-features = false }
+xpallet-transaction-fee = { path = "../xpallets/transaction-fee", default-features = false }
+xpallet-transaction-fee-rpc-runtime-api = { path = "../xpallets/transaction-fee/rpc/runtime-api", default-features = false }
 
 [build-dependencies]
 wasm-builder-runner = { package = "substrate-wasm-builder-runner", version = "1.0.6", default-features = false }
@@ -172,6 +174,8 @@ std = [
     "xpallet-mining-staking-rpc-runtime-api/std",
     "xpallet-system/std",
     "xpallet-support/std",
+    "xpallet-transaction-fee/std",
+    "xpallet-transaction-fee-rpc-runtime-api/std",
 ]
 runtime-benchmarks = [
     "frame-benchmarking",

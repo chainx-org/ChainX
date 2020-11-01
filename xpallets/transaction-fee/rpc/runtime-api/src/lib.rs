@@ -5,12 +5,12 @@
 use codec::Codec;
 use sp_runtime::traits::{MaybeDisplay, MaybeFromStr};
 
-pub use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
+pub use xpallet_transaction_fee::FeeDetails;
 
 sp_api::decl_runtime_apis! {
-    pub trait TransactionFeeApi<Balance> where
+    pub trait XTransactionFeeApi<Balance> where
         Balance: Codec + MaybeDisplay + MaybeFromStr,
     {
-        fn query_detailed_info(uxt: Block::Extrinsic, len: u32) -> RuntimeDispatchInfo<Balance>;
+        fn query_fee_details(uxt: Block::Extrinsic, len: u32) -> FeeDetails<Balance>;
     }
 }
