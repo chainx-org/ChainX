@@ -386,18 +386,22 @@ def parse_rpc_api(xmodule, description, inner_fn, line_fn):
 
     params = parse_rpc_params(fn)
 
+    #  .....<MiningWeight>,BlockNumber,>,>,>;
+    result = result.replace(',>', '>')
     #  Result<BTreeMap<AssetId, TotalAssetInfo>>;
     # len('Result<') = 7
     # >; = 2
-    ok_result = result[8:-2]
+    ok_type = result[8:-2]
     rpc_dict[xmodule][inner_fn] = {
         'description': description,
         'params': params,
-        'type': ok_result
+        'type': ok_type
     }
 
 
 def build_rpc():
+    MAX_RETURN_VALUE_SPANNED_LINES = 30
+
     #  Assume all the API definition is in foo/rpc/src/lib.rs
     rpc_rs_files = list(filter(lambda x: '/rpc/src/lib.rs' in x, rs_files))
 
@@ -422,7 +426,8 @@ def build_rpc():
                     if xmodule.startswith('x'):
                         fn_lines = []
                         #  Normally the fn defintion won't more than 10 lines
-                        for i in range(idx, idx + 10):
+                        for i in range(idx, idx +
+                                       MAX_RETURN_VALUE_SPANNED_LINES):
                             fn_lines.append(lines[i].strip())
                             if lines[i].strip().endswith(';'):
                                 break
