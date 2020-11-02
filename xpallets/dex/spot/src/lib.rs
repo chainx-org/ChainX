@@ -27,7 +27,7 @@ use sp_std::prelude::*;
 use sp_std::{cmp, fmt::Debug, result};
 
 use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage,
+    debug, decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult},
     ensure,
     traits::{Currency, Get, ReservableCurrency},
@@ -37,7 +37,6 @@ use frame_system::{ensure_root, ensure_signed};
 
 use chainx_primitives::AssetId;
 use xpallet_assets::AssetErr;
-use xpallet_support::info;
 
 pub use rpc::*;
 pub use types::*;
@@ -289,7 +288,7 @@ decl_module! {
         #[weight = <T as Trait>::WeightInfo::set_handicap()]
         fn set_handicap(origin, #[compact] pair_id: TradingPairId, new: Handicap< T::Price>) {
             ensure_root(origin)?;
-            info!("[set_handicap]pair_id:{:?},new handicap:{:?}", pair_id, new);
+            debug::info!(target: "xspot", "[set_handicap] pair_id:{:?}, new handicap:{:?}", pair_id, new);
             HandicapOf::<T>::insert(pair_id, new);
         }
 
@@ -388,7 +387,7 @@ impl<T: Trait> Module<T> {
             tradable,
         };
 
-        info!("new trading pair: {:?}", pair);
+        debug::info!(target: "xspot", "[apply_add_trading_pair] new trading pair:{:?}", pair);
 
         TradingPairOf::insert(pair_id, &pair);
         TradingPairInfoOf::<T>::insert(
@@ -405,8 +404,9 @@ impl<T: Trait> Module<T> {
     }
 
     fn apply_update_trading_pair(pair_id: TradingPairId, tick_decimals: u32, tradable: bool) {
-        info!(
-            "[update_trading_pair]pair_id: {:}, tick_decimals: {:}, tradable:{:}",
+        debug::info!(
+            target: "xspot",
+            "[update_trading_pair] pair_id: {:}, tick_decimals:{}, tradable:{}",
             pair_id, tick_decimals, tradable
         );
         TradingPairOf::mutate(pair_id, |pair| {
@@ -426,8 +426,9 @@ impl<T: Trait> Module<T> {
         price: T::Price,
         reserve_amount: BalanceOf<T>,
     ) -> result::Result<(), Error<T>> {
-        info!(
-            "transactor:{:?}, pair_id:{:}, type:{:?}, side:{:?}, amount:{:?}, price:{:?}",
+        debug::info!(
+            target: "xspot",
+            "transactor:{:?}, pair_id:{}, type:{:?}, side:{:?}, amount:{:?}, price:{:?}",
             who, pair_id, order_type, side, amount, price
         );
 
@@ -472,8 +473,9 @@ impl<T: Trait> Module<T> {
         pair_id: TradingPairId,
         order_id: OrderId,
     ) -> DispatchResult {
-        info!(
-            "[apply_cancel_order]who:{:?}, pair_id:{}, order_id:{}",
+        debug::info!(
+            target: "xspot",
+            "[apply_cancel_order] who:{:?}, pair_id:{}, order_id:{}",
             who, pair_id, order_id
         );
 

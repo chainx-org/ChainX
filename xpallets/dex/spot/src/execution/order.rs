@@ -66,7 +66,7 @@ impl<T: Trait> Module<T> {
             pair_id, price, order_id, submitter, order_type, side, amount, remaining,
         );
 
-        debug!("[inject_order]a new order injected:{:?}", order);
+        debug::debug!(target: "xspot", "[inject_order] new order:{:?}", order);
         <OrderInfoOf<T>>::insert(&who, order_id, &order);
 
         // The order count of user should be increased after a new order is created.
@@ -126,7 +126,7 @@ impl<T: Trait> Module<T> {
         Self::apply_match_order(order, pair, handicap);
 
         #[cfg(feature = "std")]
-        debug!("Took {:?}ms to match this order", now.elapsed().as_millis());
+        debug::debug!(target: "xspot", "Took {:?}ms to match this order", now.elapsed().as_millis());
 
         // Remove the full filled order, otherwise the quotations, order status and handicap
         // should be updated.

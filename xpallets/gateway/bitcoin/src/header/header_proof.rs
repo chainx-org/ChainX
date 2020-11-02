@@ -1,11 +1,8 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 // Substrate
-use frame_support::{dispatch::DispatchResult, traits::UnixTime};
+use frame_support::{debug, dispatch::DispatchResult, traits::UnixTime};
 use sp_std::{cmp, convert::TryFrom, result};
-
-// ChainX
-use xpallet_support::{debug, ensure_with_errorlog, error, info, warn};
 
 // light-bitcoin
 use light_bitcoin::{
@@ -67,14 +64,15 @@ impl<'a> HeaderWork<'a> {
     fn check<T: Trait>(&self, p: &BtcParams) -> DispatchResult {
         let previous_header_hash = self.info.header.previous_header_hash;
         let work = work_required::<T>(previous_header_hash, self.info.height, p);
-        ensure_with_errorlog!(
-            work == self.info.header.bits,
-            Error::<T>::HeaderNBitsNotMatch,
-            "nBits do not match difficulty rules|work{:?}|header bits:{:?}|height:{:}",
-            work,
-            self.info.header.bits,
-            self.info.height
-        );
+        if work != self.info.header.bits {
+            debug::error!(
+                target: "xgateway-bitcoin",
+                "[check header|work] nBits do not match difficulty rules, \
+                work:{:?}, header bits:{:?}, height:{}",
+                work, self.info.header.bits, self.info.height
+            );
+            return Err(Error::<T>::HeaderNBitsNotMatch.into());
+        }
         Ok(())
     }
 }
@@ -89,11 +87,16 @@ pub fn work_required<T: Trait>(parent_hash: H256, height: u32, params: &BtcParam
 
     if is_retarget_height(height, params) {
         let new_work = work_required_retarget::<T>(parent_header, height, params);
-        info!("[work_required]|retaget new work required|height:{:}|retargeting_interval:{:}|new_work:{:?}", height, params.retargeting_interval(), new_work);
+        debug::info!(
+            target: "xgateway-bitcoin",
+            "[work_required] Retarget new work required, height:{}, retargeting_interval:{}, new_work:{:?}",
+            height, params.retargeting_interval(), new_work
+        );
         return new_work;
     }
-    debug!(
-        "[work_required]|use old work requrie|old bits:{:?}",
+    debug::debug!(
+        target: "xgateway-bitcoin",
+        "[work_required] Use old work required, old bits:{:?}",
         parent_header.bits
     );
     parent_header.bits
@@ -145,8 +148,9 @@ pub fn work_required_retarget<T: Trait>(
     ));
     retarget /= U256::from(params.target_timespan_seconds());
 
-    debug!(
-        "[work_required_retarget]|retarget:{:}|maximum:{:?}",
+    debug::debug!(
+        target: "xgateway-bitcoin",
+        "[work_required_retarget] retarget:{}, maximum:{:?}",
         retarget, maximum
     );
 
@@ -230,14 +234,22 @@ impl<'a> HeaderTimestamp<'a> {
     fn check<T: Trait>(&self, p: &BtcParams) -> DispatchResult {
         if let Some(current_time) = self.current_time {
             if self.header.time > current_time + p.block_max_future() {
-                error!("[HeaderTimestamp check]|Futuristic timestamp|header time{:}|current time:{:}|max_future{:?}", self.header.time, current_time, p.block_max_future());
+                debug::error!(
+                    target: "xgateway-bitcoin",
+                    "[check header|timestamp] header time:{}, current time:{}, max_future{:?}",
+                    self.header.time, current_time, p.block_max_future()
+                );
                 Err(Error::<T>::HeaderFuturisticTimestamp.into())
             } else {
                 Ok(())
             }
         } else {
             // if get chain timestamp error, just ignore blockhead time check
-            warn!("[check_btc_header_time]|do not get timestamp or calculate timestamp error, ignore check|hash:{:?}", self.header.hash());
+            debug::warn!(
+                target: "xgateway-bitcoin",
+                "[check header|timestamp] header:{:?}, get unix timestamp error, ignore it",
+                self.header.hash()
+            );
             Ok(())
         }
     }

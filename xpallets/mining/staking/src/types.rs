@@ -6,6 +6,7 @@ use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
+use frame_support::debug;
 use sp_runtime::{
     traits::{SaturatedConversion, Saturating},
     RuntimeDebug,
@@ -14,7 +15,6 @@ use sp_runtime::{
 use chainx_primitives::{AssetId, ReferralId};
 use xp_mining_common::{RewardPotAccountFor, WeightType};
 use xp_mining_staking::MiningPower;
-use xpallet_support::debug;
 
 use crate::{AssetMining, BalanceOf, EraIndex, Event, Module, Trait};
 
@@ -205,8 +205,9 @@ impl MiningDistribution {
     ) -> Option<BalanceOf<T>> {
         let (m1, m2) = self.asset_mining_vs_staking::<T>();
         if m1 >= m2 {
-            debug!(
-                "[has_treasury_extra] m1({}) >= m2({}), no extra treasury split.",
+            debug::debug!(
+                target: "xmining-staking",
+                "[has_treasury_extra] m1({}) >= m2({}), no extra treasury split",
                 m1, m2
             );
             None
@@ -244,8 +245,8 @@ impl<T: Trait> Slasher<T> {
         let reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(offender);
         let reward_pot_balance = Module::<T>::free_balance(&reward_pot);
 
-        debug!(
-            "[try_slash]reward_pot_balance:{:?}, expected_slash:{:?}",
+        debug::debug!(target: "xmining-staking",
+            "[try_slash] reward_pot_balance:{:?}, expected_slash:{:?}",
             reward_pot_balance, expected_slash
         );
         if expected_slash <= reward_pot_balance {

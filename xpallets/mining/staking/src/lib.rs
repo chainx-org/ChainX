@@ -31,7 +31,7 @@ mod tests;
 use sp_std::prelude::*;
 
 use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage, ensure,
+    debug, decl_error, decl_event, decl_module, decl_storage, ensure,
     storage::IterableStorageMap,
     traits::{Currency, ExistenceRequirement, Get, LockableCurrency, WithdrawReasons},
 };
@@ -46,7 +46,7 @@ use chainx_primitives::ReferralId;
 pub use xp_mining_common::RewardPotAccountFor;
 use xp_mining_common::{Claim, ComputeMiningWeight, Delta, ZeroMiningWeightError};
 use xp_mining_staking::{AssetMining, SessionIndex, UnbondedIndex};
-use xpallet_support::{debug, traits::TreasuryAccount};
+use xpallet_support::traits::TreasuryAccount;
 
 use self::constants::*;
 pub use self::impls::{IdentificationTuple, SimpleValidatorRewardPotAccountDeterminer};
@@ -997,8 +997,9 @@ impl<T: Trait> Module<T> {
         target: &T::AccountId,
         value: BalanceOf<T>,
     ) -> Result<(), Error<T>> {
-        debug!(
-            "[apply_unbond] who:{:?}, target: {:?}, value: {:?}",
+        debug::debug!(
+            target: "xmining-staking",
+            "[apply_unbond] who:{:?}, target:{:?}, value:{:?}",
             who, target, value
         );
         Self::unbond_reserve(who, value)?;

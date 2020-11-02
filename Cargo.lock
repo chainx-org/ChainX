@@ -4299,7 +4299,6 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "xpallet-support",
 ]
 
 [[package]]

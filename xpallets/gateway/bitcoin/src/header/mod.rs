@@ -3,12 +3,9 @@
 mod header_proof;
 
 // Substrate
-use frame_support::{StorageMap, StorageValue};
+use frame_support::{debug, StorageMap, StorageValue};
 use sp_runtime::DispatchResult;
 use sp_std::{cmp::Ordering, prelude::*};
-
-// ChainX
-use xpallet_support::{error, info};
 
 // light-bitcoin
 use light_bitcoin::primitives::H256;
@@ -63,7 +60,7 @@ fn look_back_confirmed_header<T: Trait>(
         height: header_info.height,
     });
     // e.g. when confirmations is 4, loop 3 times max
-    for _i in 1..confirmations {
+    for i in 1..confirmations {
         if let Some(current_info) = Module::<T>::headers(&prev_hash) {
             chain.push(BtcHeaderIndex {
                 hash: prev_hash,
@@ -72,9 +69,10 @@ fn look_back_confirmed_header<T: Trait>(
             prev_hash = current_info.header.previous_header_hash;
         } else {
             // if not find current header info, should be exceed genesis height, jump out of loop
-            info!(
-                "[update_confirmed_header]|not find for hash:{:?}, current reverse count:{:}",
-                prev_hash, _i
+            debug::info!(
+                target: "xgateway-bitcoin",
+                "[update_confirmed_header] Cannot find header ({:?}), current reverse count:{}",
+                prev_hash, i
             );
             break;
         }
@@ -148,9 +146,13 @@ pub fn check_confirmed_header<T: Trait>(header_info: &BtcHeaderInfo) -> Dispatch
                     }
                 }
                 Ordering::Less => {
-                    // normal should not happen, for call `check_confirmed_header` should under
+                    // shouldn't be happened, for call `check_confirmed_header` should under
                     // current <= best
-                    error!("[check_confirmed_header]|should not happen, current confirmed is less than confirmed for this header|current:{:?}|now:{:?}", current_confirmed, now_confirmed);
+                    debug::error!(
+                        target: "xgateway-bitcoin",
+                        "[check_confirmed_header] Current confirmed number ({}) < Confirmed number of the header ({:?})",
+                        current_confirmed, now_confirmed
+                    );
                     Err(Error::<T>::AncientFork.into())
                 }
             };

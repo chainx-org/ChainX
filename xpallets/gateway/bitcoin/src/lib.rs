@@ -18,7 +18,7 @@ use sp_runtime::{traits::Zero, SaturatedConversion};
 use sp_std::{prelude::*, result};
 
 use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage,
+    debug, decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult, DispatchResultWithPostInfo, PostDispatchInfo},
     ensure,
     traits::{EnsureOrigin, UnixTime},
@@ -35,7 +35,7 @@ use xpallet_gateway_common::{
     traits::{AddrBinding, ChannelBinding, Extractable, TrusteeSession},
     trustees::bitcoin::BtcTrusteeAddrInfo,
 };
-use xpallet_support::{debug, ensure_with_errorlog, error, info, str, try_addr};
+use xpallet_support::{str, try_addr};
 
 // light-bitcoin
 #[cfg(feature = "std")]
@@ -59,17 +59,6 @@ use self::types::{
 use crate::trustee::get_trustee_address_pair;
 use crate::tx::remove_pending_deposit;
 use crate::weight_info::WeightInfo;
-
-// syntactic sugar for native log.
-#[macro_export]
-macro_rules! native {
-    ($level:tt, $patter:expr $(, $values:expr)* $(,)?) => {
-        frame_support::debug::native::$level!(
-            target: xpallet_support::RUNTIME_TARGET,
-            $patter $(, $values)*
-        )
-    };
-}
 
 pub trait Trait: xpallet_assets::Trait + xpallet_gateway_records::Trait {
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
@@ -249,7 +238,7 @@ decl_storage! {
             #[cfg(not(test))] {
             if let BtcNetwork::Mainnet = config.network_id {
                 if genesis_index.height % config.params_info.retargeting_interval() != 0 {
-                    panic!("the blocknumber[{:}] should start from a changed difficulty block", genesis_index.height);
+                    panic!("the block #{} should start from a changed difficulty block", genesis_index.height);
                 }
             }
             }
@@ -275,9 +264,9 @@ decl_module! {
         /// if use `BtcHeader` struct would export in metadata, cause complex in front-end
         #[weight = <T as Trait>::WeightInfo::push_header()]
         pub fn push_header(origin, header: Vec<u8>) -> DispatchResultWithPostInfo {
-            let _from = ensure_signed(origin)?;
+            let from = ensure_signed(origin)?;
             let header: BtcHeader = deserialize(header.as_slice()).map_err(|_| Error::<T>::DeserializeErr)?;
-            debug!("[push_header]|from:{:?}|header:{:?}", _from, header);
+            debug::debug!(target: "xgateway-bitcoin", "[push_header] from:{:?}, header:{:?}", from, header);
 
             Self::apply_push_header(header)?;
 
@@ -296,7 +285,7 @@ decl_module! {
             relayed_info: BtcRelayedTxInfo,
             prev_tx: Option<Vec<u8>>
         ) -> DispatchResultWithPostInfo {
-            let _from = ensure_signed(origin)?;
+            let from = ensure_signed(origin)?;
             let raw_tx = Self::deserialize_tx(raw_tx.as_slice())?;
             let prev = if let Some(prev) = prev_tx {
                 Some(Self::deserialize_tx(prev.as_slice())?)
@@ -304,7 +293,11 @@ decl_module! {
                 None
             };
             let relay_tx = relayed_info.into_relayed_tx(raw_tx);
-            native!(debug, "[push_transaction]|from:{:?}|relay_tx:{:?}|prev:{:?}", _from, relay_tx, prev);
+            debug::native::debug!(
+                target: "xgateway-bitcoin",
+                "[push_transaction] from:{:?}, relay_tx:{:?}, prev:{:?}",
+                from, relay_tx, prev
+            );
 
             Self::apply_push_transaction(relay_tx, prev)?;
 
@@ -325,9 +318,10 @@ decl_module! {
             Self::ensure_trustee(&from)?;
 
             let tx = Self::deserialize_tx(tx.as_slice())?;
-            native!(
-                debug,
-                "[create_withdraw_tx]|from:{:?}|withdrawal list:{:?}|tx:{:?}", from, withdrawal_id_list, tx
+            debug::native::debug!(
+                target: "xgateway-bitcoin",
+                "[create_withdraw_tx] from:{:?}, withdrawal list:{:?}, tx:{:?}",
+                from, withdrawal_id_list, tx
             );
 
             Self::apply_create_withdraw(from, tx, withdrawal_id_list)?;
@@ -347,7 +341,7 @@ decl_module! {
             } else {
                 None
             };
-            native!(debug, "[sign_withdraw_tx]|from:{:?}|vote_tx:{:?}", from, tx);
+            debug::native::debug!(target: "xgateway-bitcoin", "[sign_withdraw_tx] from:{:?}, vote_tx:{:?}", from, tx);
 
             Self::apply_sig_withdraw(from, tx)?;
             Ok(())
@@ -379,7 +373,11 @@ decl_module! {
             if let Some(w) = who {
                 remove_pending_deposit::<T>(&addr, &w);
             } else {
-                info!("[remove_pending]|release pending deposit directly, not deposit to someone|addr:{:?}", str!(&addr));
+                debug::info!(
+                    target: "xgateway-bitcoin",
+                    "[remove_pending] Release pending deposit directly, not deposit to someone, addr:{:?}",
+                    str!(&addr)
+                );
                 PendingDeposits::remove(&addr);
             }
             Ok(())
@@ -404,7 +402,7 @@ decl_module! {
         pub fn force_replace_proposal_tx(origin, tx: Vec<u8>) -> DispatchResult {
             T::TrusteeOrigin::try_origin(origin).map(|_| ()).or_else(ensure_root)?;
             let tx = Self::deserialize_tx(tx.as_slice())?;
-            native!(debug, "[force_replace_proposal_tx]|new_tx:{:?}", tx);
+            debug::native::debug!(target: "xgateway-bitcoin", "[force_replace_proposal_tx] new_tx:{:?}", tx);
             Self::force_replace_withdraw_tx(tx)
         }
 
@@ -435,12 +433,14 @@ impl<T: Trait> ChainT<BalanceOf<T>> for Module<T> {
 
     fn check_addr(addr: &[u8], _: &[u8]) -> DispatchResult {
         // this addr is base58 addr
-        let address = Self::verify_btc_address(addr).map_err(|e| {
-            error!(
-                "[verify_btc_address]|failed, source addr is:{:?}",
+        let address = Self::verify_btc_address(addr).map_err(|err| {
+            debug::error!(
+                target: "xgateway-bitcoin",
+                "[verify_btc_address] Verify error:{:?}, source addr:{:?}",
+                err,
                 try_addr!(addr)
             );
-            e
+            err
         })?;
 
         match get_trustee_address_pair::<T>() {
@@ -450,8 +450,8 @@ impl<T: Trait> ChainT<BalanceOf<T>> for Module<T> {
                     return Err(Error::<T>::InvalidAddress.into());
                 }
             }
-            Err(e) => {
-                error!("[check_addr]|not get trustee addr|err:{:?}", e);
+            Err(err) => {
+                debug::error!(target: "xgateway-bitcoin", "[check_addr] Cannot get trustee addr:{:?}", err);
             }
         }
 
@@ -490,17 +490,15 @@ impl<T: Trait> Module<T> {
 
     fn apply_push_header(header: BtcHeader) -> DispatchResult {
         // current should not exist
-        ensure_with_errorlog!(
-            Self::headers(&header.hash()).is_none(),
-            Error::<T>::ExistingHeader,
-            "Header already exists|hash:{:}",
-            header.hash(),
-        );
+        if Self::headers(&header.hash()).is_some() {
+            debug::error!(target: "xgateway-bitcoin", "Header already exists, hash:{:?}", header.hash());
+            return Err(Error::<T>::ExistingHeader.into());
+        }
         // prev header should exist, thus we reject orphan block
         let prev_info = Self::headers(header.previous_header_hash).ok_or_else(|| {
-            native!(
-                error,
-                "[check_prev_and_convert]|not find prev header|current header:{:?}",
+            debug::native::error!(
+                target: "xgateway-bitcoin",
+                "[check_prev_and_convert] Can't find prev header, current header:{:?}",
                 header
             );
             Error::<T>::PrevHeaderNotExisted
@@ -528,10 +526,12 @@ impl<T: Trait> Module<T> {
                 }
             });
 
-            debug!("[apply_push_header]|verify pass, insert to storage|height:{:}|hash:{:?}|block hashs for this height:{:?}",
-                   header_info.height,
-                   hash,
-                   Self::block_hash_for(header_info.height)
+            debug::debug!(
+                target: "xgateway-bitcoin",
+                "[apply_push_header] Verify pass, insert the header [height:{}, hash:{:?}, all hashes of the height:{:?}]",
+                header_info.height,
+                hash,
+                Self::block_hash_for(header_info.height)
             );
 
             let best_index = Self::best_index();
@@ -544,15 +544,20 @@ impl<T: Trait> Module<T> {
                 };
                 // note update_confirmed_header would mutate other storage depend on BlockHashFor
                 let confirmed_index = header::update_confirmed_header::<T>(&header_info);
-                info!(
-                    "[apply_push_header]|update to new height|height:{:}|hash:{:?}|confirm:{:?}",
+                debug::info!(
+                    target: "xgateway-bitcoin",
+                    "[apply_push_header] Update new height:{}, hash:{:?}, confirm:{:?}",
                     header_info.height, hash, confirmed_index
                 );
                 // change new best index
                 BestIndex::put(new_best_index);
             } else {
                 // forked chain
-                info!("[apply_push_header]|best index larger than this height|best height:{:}|this height{:}", best_index.height, header_info.height);
+                debug::info!(
+                    target: "xgateway-bitcoin",
+                    "[apply_push_header] Best index {} larger than the height {}",
+                    best_index.height, header_info.height
+                );
                 header::check_confirmed_header::<T>(&header_info)?;
             };
             Self::deposit_event(Event::<T>::HeaderInserted(hash));
@@ -564,8 +569,9 @@ impl<T: Trait> Module<T> {
         let tx_hash = tx.raw.hash();
         let block_hash = tx.block_hash;
         let header_info = Module::<T>::headers(&tx.block_hash).ok_or_else(|| {
-            error!(
-                "[apply_push_transaction]|tx's block header must exist before|block_hash:{:}",
+            debug::error!(
+                target: "xgateway-bitcoin",
+                "[apply_push_transaction] tx's block header ({:?}) must exist before",
                 block_hash
             );
             "tx's block header must already exist"
@@ -582,7 +588,11 @@ impl<T: Trait> Module<T> {
         let confirmed = Self::confirmed_index().ok_or(Error::<T>::UnconfirmedTx)?;
         let height = header_info.height;
         if height > confirmed.height {
-            error!("[apply_push_transaction]|receive an unconfirmed tx|tx hash:{:}|related block height:{:}|confirmed block height:{:}|hash:{:?}", tx_hash, height, confirmed.height, confirmed.hash);
+            debug::error!(
+                target: "xgateway-bitcoin",
+                "[apply_push_transaction] Receive an unconfirmed tx (height:{}, hash:{:?}), confirmed index (height:{}, hash:{:?})",
+                height, tx_hash, confirmed.height, confirmed.hash
+            );
             return Err(Error::<T>::UnconfirmedTx.into());
         }
         // check whether replayed tx has been processed, just process failed and not processed tx;
@@ -590,7 +600,11 @@ impl<T: Trait> Module<T> {
             None => { /* do nothing */ }
             Some(state) => {
                 if state.result == BtcTxResult::Success {
-                    error!("[apply_push_transaction]|reject processed tx|tx hash:{:}|type:{:?}|result:{:?}", tx_hash, state.tx_type, state.result);
+                    debug::error!(
+                        target: "xgateway-bitcoin",
+                        "[apply_push_transaction] Reject processed tx (hash:{:?}, type:{:?}, result:{:?})",
+                        tx_hash, state.tx_type, state.result
+                    );
                     return Err(Error::<T>::ReplayedTx.into());
                 }
             }

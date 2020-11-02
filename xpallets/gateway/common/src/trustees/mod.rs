@@ -8,10 +8,10 @@ use codec::{Decode, Encode, Error as CodecError};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
-use frame_support::{dispatch::DispatchError, traits::Contains};
+use frame_support::{debug, dispatch::DispatchError, traits::Contains};
 
 use xpallet_assets::Chain;
-use xpallet_support::{error, traits::MultiSig, warn};
+use xpallet_support::traits::MultiSig;
 
 use crate::traits::{BytesLike, ChainProvider, TrusteeSession};
 use crate::types::{TrusteeIntentionProps, TrusteeSessionInfo};
@@ -31,8 +31,9 @@ impl<T: Trait, TrusteeAddress: BytesLike + ChainProvider>
         let chain = TrusteeAddress::chain();
         let generic_info =
             Module::<T>::trustee_session_info_of(chain, number).ok_or_else(|| {
-                error!(
-                    "[trustee_session]|not found info for this session|chain:{:?}|number:{:}",
+                debug::error!(
+                    target: "xgateway-common",
+                    "[trustee_session] Session info not found, chain:{:?}, number:{}",
                     chain, number
                 );
                 Error::<T>::InvalidTrusteeSession
@@ -60,8 +61,9 @@ impl<T: Trait, TrusteeAddress: BytesLike + ChainProvider>
             None => u32::max_value(),
         };
         Self::trustee_session(number).map_err(|e| {
-            warn!(
-                "[last_trustee_session]|last trustee session not exist yet for this chain|Chain:{:?}",
+            debug::warn!(
+                target: "xgateway-common",
+                "[last_trustee_session] Last trustee session not exist yet for chain:{:?}",
                 chain
             );
             e

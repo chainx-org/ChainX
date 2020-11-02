@@ -15,7 +15,7 @@ mod weight_info;
 use sp_std::{collections::btree_map::BTreeMap, prelude::*, result};
 
 use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage,
+    debug, decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult},
     ensure, IterableStorageMap,
 };
@@ -27,7 +27,7 @@ use orml_utilities::with_transaction_result;
 use chainx_primitives::{AddrStr, AssetId};
 use xp_runtime::Memo;
 use xpallet_assets::{AssetType, BalanceOf, Chain};
-use xpallet_support::{error, info, try_addr};
+use xpallet_support::try_addr;
 
 pub use self::types::{Withdrawal, WithdrawalRecord, WithdrawalRecordId, WithdrawalState};
 use crate::weight_info::WeightInfo;
@@ -209,8 +209,9 @@ impl<T: Trait> Module<T> {
     pub fn deposit(who: &T::AccountId, asset_id: AssetId, balance: BalanceOf<T>) -> DispatchResult {
         xpallet_assets::Module::<T>::ensure_not_native_asset(&asset_id)?;
 
-        info!(
-            "[deposit]|who:{:?}|asset_id:{:}|balance:{:?}",
+        debug::info!(
+            target: "xgateway-records",
+            "[deposit] who:{:?}, id:{}, balance:{:?}",
             who, asset_id, balance
         );
 
@@ -235,8 +236,9 @@ impl<T: Trait> Module<T> {
         Self::ensure_withdrawal_available_balance(who, asset_id, balance)?;
 
         let id = Self::id();
-        info!(
-            "[apply_withdrawal]|id:{:}|who:{:?}|asset_id:{:}|balance:{:?}|addr:{:?}|memo:{:}",
+        debug::info!(
+            target: "xgateway-records",
+            "[apply_withdrawal] id:{}, who:{:?}, asset id:{}, balance:{:?}, addr:{:?}, memo:{}",
             id,
             who,
             asset_id,
@@ -275,8 +277,9 @@ impl<T: Trait> Module<T> {
         curr_state: WithdrawalState,
     ) -> DispatchResult {
         if curr_state != WithdrawalState::Applying {
-            error!(
-                "[process_withdrawal]|Current withdrawal state must be `Applying`|id:{:}|state:{:?}",
+            debug::error!(
+                target: "xgateway-records",
+                "[process_withdrawal] id:{}, current withdrawal state ({:?}) must be `Applying`",
                 id, curr_state
             );
             return Err(Error::<T>::NotApplyingState.into());
@@ -310,8 +313,9 @@ impl<T: Trait> Module<T> {
         curr_state: WithdrawalState,
     ) -> DispatchResult {
         if curr_state != WithdrawalState::Processing {
-            error!(
-                "[recover_withdrawal]|Current withdrawal state must be `Processing`|id:{:}|state:{:?}",
+            debug::error!(
+                target: "xgateway-records",
+                "[recover_withdrawal] id:{}, current withdrawal state ({:?}) must be `Processing`",
                 id, curr_state
             );
             return Err(Error::<T>::NotProcessingState.into());
@@ -327,10 +331,10 @@ impl<T: Trait> Module<T> {
     pub fn cancel_withdrawal(id: WithdrawalRecordId, who: &T::AccountId) -> DispatchResult {
         let (record, curr_state) = Self::ensure_withdrawal_records_exists(id)?;
         if record.applicant() != who {
-            error!(
-                "[cancel_withdrawal]|The applicant is not this account|applicant:{:?}|who:{:?}",
-                record.applicant(),
-                who
+            debug::error!(
+                target: "xgateway-records",
+                "[cancel_withdrawal] id:{}, account {:?} is not the applicant {:?}",
+                who, record.applicant()
             );
             return Err(Error::<T>::InvalidAccount.into());
         }
@@ -345,8 +349,9 @@ impl<T: Trait> Module<T> {
         new_state: WithdrawalState,
     ) -> DispatchResult {
         if curr_state != WithdrawalState::Applying {
-            error!(
-                "[cancel_withdrawal]|Current withdrawal state must be `Applying`|id:{:}|state:{:?}",
+            debug::error!(
+                target: "xgateway-records",
+                "[cancel_withdrawal] id:{}, current withdrawal state ({:?}) must be `Applying`",
                 id, curr_state
             );
             return Err(Error::<T>::NotApplyingState.into());
@@ -394,8 +399,9 @@ impl<T: Trait> Module<T> {
         new_state: WithdrawalState,
     ) -> DispatchResult {
         if curr_state != WithdrawalState::Processing {
-            error!(
-                "[finish_withdrawal]|Current withdrawal state must be `Processing`|id:{:}|state:{:?}",
+            debug::error!(
+                target: "xgateway-records",
+                "[finish_withdrawal] id:{}, current withdrawal state ({:?}) must be `Processing`",
                 id, curr_state
             );
             return Err(Error::<T>::NotProcessingState.into());
@@ -458,7 +464,12 @@ impl<T: Trait> Module<T> {
                 Self::finish_withdrawal_impl(id, record, curr_state, new_state)
             }
             _ => {
-                error!("[set_withdrawal_state_by_root]|Should not meet this branch in normally, except in root|current state:{:?}|new state:{:?}", curr_state, new_state);
+                debug::error!(
+                    target: "xgateway-records",
+                    "[set_withdrawal_state_by_root] Shouldn't happen in normally, unless called by root, \
+                    current state:{:?}, new state:{:?}",
+                    curr_state, new_state
+                );
                 Err("Do not expect this state in set_withdrawal_state_by_root".into())
             }
         }
@@ -472,14 +483,22 @@ impl<T: Trait> Module<T> {
         let (record, state) = Self::ensure_withdrawal_records_exists(id)?;
         Self::ensure_asset_belongs_to_chain(record.asset_id(), chain)?;
         if state != WithdrawalState::Processing {
-            error!("[set_withdrawal_state_by_trustees]|Current withdrawal state must be `Processing` for this WithdrawalRecord|id:{:}|state:{:?}", id, state);
+            debug::error!(
+                target: "xgateway-records",
+                "[set_withdrawal_state_by_trustees] id:{}, current withdrawal state ({:?}) must be `Processing`",
+                id, state
+            );
             return Err(Error::<T>::NotProcessingState.into());
         }
 
         match new_state {
             WithdrawalState::RootFinish | WithdrawalState::RootCancel => { /*do nothing*/ }
             _ => {
-                error!("[set_withdrawal_state_by_trustees]|New withdrawal state must be `RootFinish` or `RootCancel`|state:{:?}", new_state);
+                debug::error!(
+                    target: "xgateway-records",
+                    "[set_withdrawal_state_by_trustees] New withdrawal state ({:?}) must be `RootFinish` or `RootCancel`",
+                    new_state
+                );
                 return Err(Error::<T>::InvalidState.into());
             }
         }

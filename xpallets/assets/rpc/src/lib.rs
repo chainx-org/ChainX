@@ -21,15 +21,15 @@ use xpallet_assets_rpc_runtime_api::{
     AssetId, AssetType, TotalAssetInfo, XAssetsApi as XAssetsRuntimeApi,
 };
 
-pub struct Assets<C, B> {
+pub struct XAssets<C, B> {
     client: Arc<C>,
     _marker: std::marker::PhantomData<B>,
 }
 
-impl<C, B> Assets<C, B> {
+impl<C, B> XAssets<C, B> {
     /// Create new `Contracts` with the given reference to the client.
     pub fn new(client: Arc<C>) -> Self {
-        Assets {
+        Self {
             client,
             _marker: Default::default(),
         }
@@ -58,7 +58,7 @@ where
 }
 
 impl<C, Block, AccountId, Balance> XAssetsApi<<Block as BlockT>::Hash, AccountId, Balance>
-    for Assets<C, Block>
+    for XAssets<C, Block>
 where
     C: sp_api::ProvideRuntimeApi<Block>,
     C: HeaderBackend<Block>,

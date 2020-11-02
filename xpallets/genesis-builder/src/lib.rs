@@ -7,13 +7,12 @@
 
 use sp_std::prelude::*;
 
-use frame_support::{decl_module, decl_storage};
+use frame_support::{debug, decl_module, decl_storage};
 
 #[cfg(feature = "std")]
 use xp_genesis_builder::AllParams;
 use xpallet_assets::BalanceOf as AssetBalanceOf;
 use xpallet_mining_staking::BalanceOf as StakingBalanceOf;
-use xpallet_support::info;
 
 pub trait Trait:
     pallet_balances::Trait + xpallet_mining_asset::Trait + xpallet_mining_staking::Trait
@@ -38,7 +37,8 @@ decl_storage! {
             xstaking::initialize::<T>(&config.params.xstaking);
             xmining_asset::initialize::<T>(&config.params.xmining_asset);
 
-            info!(
+            debug::info!(
+                target: "xgenesis-builder",
                 "Took {:?}ms to orchestrate the exported state from ChainX 1.0",
                 now.elapsed().as_millis()
             );

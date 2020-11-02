@@ -418,7 +418,7 @@ where
                 .saturating_add(tip);
 
             frame_support::debug::native::debug!(
-                target: xpallet_support::RUNTIME_TARGET,
+                target: "transaction-payment",
                 "[compute_fee]|total:{:?}|base_fee:{:?}|fixed_len_fee:{:?}|adjusted_weight_fee:{:?}|tip:{:?}",
                 total, base_fee, fixed_len_fee, adjusted_weight_fee, tip
             );

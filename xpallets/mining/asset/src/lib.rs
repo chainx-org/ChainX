@@ -20,7 +20,7 @@ mod tests;
 use sp_std::prelude::*;
 
 use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage,
+    debug, decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult},
     ensure,
     storage::IterableStorageMap,
@@ -35,7 +35,7 @@ use xp_mining_common::{
     ZeroMiningWeightError,
 };
 use xpallet_assets::{AssetType, BalanceOf};
-use xpallet_support::{traits::TreasuryAccount, warn};
+use xpallet_support::traits::TreasuryAccount;
 
 pub use self::impls::SimpleAssetRewardPotAccountDeterminer;
 pub use self::rpc::*;
@@ -247,7 +247,8 @@ impl<T: Trait> Module<T> {
         if !frequency_limit.is_zero() {
             if let Some(last_claim) = Self::last_claim(who, asset_id) {
                 if current_block <= last_claim + frequency_limit {
-                    warn!(
+                    debug::warn!(
+                        target: "xmining-asset",
                         "{:?} can not claim until block {:?}",
                         who,
                         last_claim + frequency_limit
@@ -272,7 +273,8 @@ impl<T: Trait> Module<T> {
             if staking_locked.saturated_into::<BalanceOf<T>>()
                 < staking_requirement.saturated_into::<BalanceOf<T>>() * total_dividend
             {
-                warn!(
+                debug::warn!(
+                    target: "xmining-asset",
                     "{:?}'s staked balance is not insufficient, total dividend: {:?}, staked: {:?}, required: {:?}",
                     who,
                     total_dividend,
@@ -385,7 +387,8 @@ impl<T: Trait> Module<T> {
         if reward_pot_balance >= deposit_reward && Self::free_balance(depositor) <= deposit_reward {
             Self::transfer(&reward_pot, depositor, deposit_reward)?;
         } else {
-            warn!(
+            debug::warn!(
+                target: "xmining-asset",
                 "asset {}'s reward pot has only {:?}, skipped issuing deposit reward for depositor {:?}",
                 target,
                 reward_pot_balance,

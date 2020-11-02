@@ -35,14 +35,16 @@ impl<T: Trait> Module<T> {
                     .max(minimum_penalty);
                 match slasher.try_slash(&offender, penalty) {
                     Ok(_) => {
-                        debug!(
+                        debug::debug!(
+                            target: "xmining-staking",
                             "Slash the offender:{:?} for penalty {:?} by the given slash_fraction:{:?} successfully",
                             offender, penalty, slash_fraction
                         );
                         None
                     }
                     Err(actual_slashed) => {
-                        debug!(
+                        debug::debug!(
+                            target: "xmining-staking",
                             "Insufficient reward pot balance of {:?}, actual slashed:{:?}",
                             offender, actual_slashed
                         );

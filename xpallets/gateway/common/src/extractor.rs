@@ -1,10 +1,11 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
+use frame_support::debug;
 use sp_runtime::AccountId32;
 use sp_std::prelude::Vec;
 
 use chainx_primitives::ReferralId;
-use xpallet_support::{debug, error, str};
+use xpallet_support::str;
 
 use crate::traits::Extractable;
 
@@ -14,13 +15,14 @@ use crate::traits::Extractable;
 pub fn parse_address(data: &[u8]) -> Option<AccountId32> {
     use xp_io::ss_58_codec::from_ss58check;
     from_ss58check(data)
-        .map_err(|e| {
-            error!(
-                "[parse_address]|parse account error|src:{:?}|reason:{:?}",
+        .map_err(|err| {
+            debug::error!(
+                target: "xgateway-common",
+                "[parse_address] Parse account `{:?}` error:{:?}",
                 str!(data),
-                e
+                err
             );
-            e
+            err
         })
         .ok()
 }
@@ -35,19 +37,19 @@ pub fn parse_address(data: &[u8]) -> Option<AccountId32> {
     // parse data from base58 to raw
     let d = bs58::decode(data)
         .into_vec()
-        .map_err(|e| {
+        .map_err(|err| {
             error!(
-                "[parse_address]|parse base58 err|e:{:?}|data:{:?}",
-                e,
+                "[parse_address] Parse base58 err: {:?}, data:{:?}",
+                err,
                 str!(data)
             );
-            e
+            err
         })
         .ok()?;
     if d.len() != len + 3 {
         // Invalid length.
         error!(
-            "[parse_address]|bad length|data len:{:}|len:{:}",
+            "[parse_address] Bad length, data len:{}, len:{}",
             d.len(),
             len
         );
@@ -77,7 +79,10 @@ impl Extractable<AccountId32> for Extractor {
     fn account_info(data: &[u8]) -> Option<(AccountId32, Option<ReferralId>)> {
         let v = split(data);
         if v.is_empty() {
-            error!("[account_info]|can't parse data|data:{:?}", str!(data));
+            debug::error!(
+                target: "xgateway-common",
+                "[extract_account_info] Can't parse data:{:?}", str!(data)
+            );
             return None;
         }
 
@@ -89,8 +94,9 @@ impl Extractable<AccountId32> for Extractor {
             None
         };
 
-        debug!(
-            "[extract_account_info]||target_account:{:?}|referral_id:{:?}",
+        debug::debug!(
+            target: "xgateway-common",
+            "[extract_account_info] target_account:{:?}, referral_id:{:?}",
             target_account, referral_id
         );
         Some((target_account, referral_id))

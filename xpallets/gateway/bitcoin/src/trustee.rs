@@ -1,7 +1,7 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 use frame_support::{
-    debug::native,
+    debug,
     dispatch::{DispatchError, DispatchResult},
     ensure, StorageValue,
 };
@@ -23,7 +23,6 @@ use xpallet_gateway_common::{
     types::{TrusteeInfoConfig, TrusteeIntentionProps, TrusteeSessionInfo},
     utils::two_thirds_unsafe,
 };
-use xpallet_support::{debug, error, info};
 
 use crate::tx::utils::{addr2vecu8, ensure_identical, parse_output_addr};
 use crate::tx::validator::parse_and_check_signed_tx;
@@ -78,7 +77,7 @@ pub fn get_hot_trustee_redeem_script<T: Trait>() -> Result<Script, DispatchError
 fn check_keys<T: Trait>(keys: &[Public]) -> DispatchResult {
     let has_duplicate = (1..keys.len()).any(|i| keys[i..].contains(&keys[i - 1]));
     if has_duplicate {
-        error!("[generate_new_trustees]|keys contains duplicate pubkey");
+        debug::error!(target: "xgateway-bitcoin", "[generate_new_trustees] keys contains duplicate pubkey");
         return Err(Error::<T>::DuplicatedKeys.into());
     }
     let has_normal_pubkey = keys.iter().any(|public: &Public| {
@@ -108,22 +107,22 @@ impl<T: Trait> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo>
             .map_err(|_| Error::<T>::InvalidPublicKey)?;
         let public = trustee_type.0;
         if let Public::Normal(_) = public {
-            error!("not allow Normal Public for bitcoin now");
+            debug::error!(target: "xgateway-bitcoin", "not allow Normal Public for now");
             return Err(Error::<T>::InvalidPublicKey.into());
         }
 
         if 2 != raw_addr[0] && 3 != raw_addr[0] {
-            error!("not Compressed Public(prefix not 2|3)");
+            debug::error!(target: "xgateway-bitcoin", "not Compressed Public(prefix not 2|3)");
             return Err(Error::<T>::InvalidPublicKey.into());
         }
 
         if ZERO_P == raw_addr[1..33] {
-            error!("not Compressed Public(Zero32)");
+            debug::error!(target: "xgateway-bitcoin", "not Compressed Public(Zero32)");
             return Err(Error::<T>::InvalidPublicKey.into());
         }
 
         if &raw_addr[1..33] >= &EC_P {
-            error!("not Compressed Public(EC_P)");
+            debug::error!(target: "xgateway-bitcoin", "not Compressed Public(EC_P)");
             return Err(Error::<T>::InvalidPublicKey.into());
         }
 
@@ -153,8 +152,12 @@ impl<T: Trait> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo>
         if (trustees.len() as u32) < config.min_trustee_count
             || (trustees.len() as u32) > config.max_trustee_count
         {
-            error!("[generate_trustee_session_info]|trustees is less/more than {{min:[{:}], max:[{:}]}} people, can't generate trustee addr|trustees:{:?}",
-                   config.min_trustee_count, config.max_trustee_count, trustees);
+            debug::error!(
+                target: "xgateway-bitcoin",
+                "[generate_trustee_session_info] Trustees {:?} is less/more than {min:{}, max:{}} people, \
+                can't generate trustee addr",
+                trustees, config.min_trustee_count, config.max_trustee_count
+            );
             return Err(Error::<T>::InvalidTrusteeCount.into());
         }
 
@@ -166,15 +169,17 @@ impl<T: Trait> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo>
                 .join(", ")
         };
         #[cfg(feature = "std")]
-        info!(
-            "[generate_trustee_session_info]|hot_keys:[{}]|cold_keys:[{}]",
+        debug::info!(
+            target: "xgateway-bitcoin",
+            "[generate_trustee_session_info] hot_keys:[{}], cold_keys:[{}]",
             pretty_print_keys(&hot_keys),
             pretty_print_keys(&cold_keys)
         );
 
         #[cfg(not(feature = "std"))]
-        info!(
-            "[generate_trustee_session_info]|hot_keys:{:?}|cold_keys:{:?}",
+        debug::info!(
+            target: "xgateway-bitcoin",
+            "[generate_trustee_session_info] hot_keys:{:?}, cold_keys:{:?}",
             hot_keys, cold_keys
         );
 
@@ -182,8 +187,9 @@ impl<T: Trait> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo>
 
         let hot_trustee_addr_info: BtcTrusteeAddrInfo =
             create_multi_address::<T>(&hot_keys, sig_num).ok_or_else(|| {
-                error!(
-                    "[generate_trustee_session_info]|create hot_addr err!|hot_keys:{:?}",
+                debug::error!(
+                    target: "xgateway-bitcoin",
+                    "[generate_trustee_session_info] Create hot_addr error, hot_keys:{:?}",
                     hot_keys
                 );
                 Error::<T>::GenerateMultisigFailed
@@ -191,16 +197,17 @@ impl<T: Trait> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo>
 
         let cold_trustee_addr_info: BtcTrusteeAddrInfo =
             create_multi_address::<T>(&cold_keys, sig_num).ok_or_else(|| {
-                error!(
-                    "[generate_trustee_session_info]|create cold_addr err!|cold_keys:{:?}",
+                debug::error!(
+                    target: "xgateway-bitcoin",
+                    "[generate_trustee_session_info] Create cold_addr error, cold_keys:{:?}",
                     cold_keys
                 );
                 Error::<T>::GenerateMultisigFailed
             })?;
 
-        native::info!(
-            target: xpallet_support::RUNTIME_TARGET,
-            "[generate_trustee_session_info]|hot_addr:{:?}|cold_addr:{:?}|trustee_list:{:?}",
+        debug::native::info!(
+            target: "xgateway-bitcoin",
+            "[generate_trustee_session_info] hot_addr:{:?}, cold_addr:{:?}, trustee_list:{:?}",
             hot_trustee_addr_info,
             cold_trustee_addr_info,
             trustees
@@ -221,8 +228,8 @@ impl<T: Trait> Module<T> {
         if trustee_session_info.trustee_list.iter().any(|n| n == who) {
             Ok(())
         } else {
-            error!(
-                "[ensure_trustee]|Committer not in the trustee list!|who:{:?}|trustees:{:?}",
+            debug::error!(target: "xgateway-bitcoin",
+                "[ensure_trustee] Committer {:?} not in the trustee list:{:?}",
                 who, trustee_session_info.trustee_list
             );
             Err(Error::<T>::NotTrustee.into())
@@ -236,7 +243,11 @@ impl<T: Trait> Module<T> {
     ) -> DispatchResult {
         let withdraw_amount = Self::max_withdrawal_count();
         if withdrawal_id_list.len() > withdraw_amount as usize {
-            error!("[apply_create_withdraw]|Exceeding the maximum withdrawal amount|current list len:{:}|max:{:}", withdrawal_id_list.len(), withdraw_amount);
+            debug::error!(
+                target: "xgateway-bitcoin",
+                "[apply_create_withdraw] Current list (len:{}) exceeding the max withdrawal amount {}",
+                withdrawal_id_list.len(), withdraw_amount
+            );
             return Err(Error::<T>::WroungWithdrawalCount.into());
         }
         // remove duplicate
@@ -245,8 +256,9 @@ impl<T: Trait> Module<T> {
         withdrawal_id_list.dedup();
 
         check_withdraw_tx::<T>(&tx, &withdrawal_id_list)?;
-        info!(
-            "[apply_create_withdraw]|create new withdraw|withdrawal idlist:{:?}",
+        debug::info!(
+            target: "xgateway-bitcoin",
+            "[apply_create_withdraw] Create new withdraw, withdrawal id_list:{:?}",
             withdrawal_id_list
         );
 
@@ -257,7 +269,11 @@ impl<T: Trait> Module<T> {
         } else if sigs_count == 1 {
             true
         } else {
-            error!("[apply_create_withdraw]|the sigs for tx could not more than 1 in apply_create_withdraw|current sigs:{:}", sigs_count);
+            debug::error!(
+                target: "xgateway-bitcoin",
+                "[apply_create_withdraw] The sigs for tx could not more than 1, current sigs:{}",
+                sigs_count
+            );
             return Err(Error::<T>::InvalidSignCount.into());
         };
 
@@ -273,7 +289,7 @@ impl<T: Trait> Module<T> {
             Vec::new(),
         );
 
-        info!("[apply_create_withdraw]|Through the legality check of withdrawal");
+        debug::info!(target: "xgateway-bitcoin", "[apply_create_withdraw] Through the legality check of withdrawal");
 
         Self::deposit_event(Event::<T>::WithdrawalProposalCreated(
             who.clone(),
@@ -281,7 +297,7 @@ impl<T: Trait> Module<T> {
         ));
 
         if apply_sig {
-            info!("[apply_create_withdraw]apply sign after create proposal");
+            debug::info!(target: "xgateway-bitcoin", "[apply_create_withdraw] Apply sign after creating proposal");
             // due to `SignWithdrawalProposal` event should after `WithdrawalProposalCreated`, thus this function should after proposal
             // but this function would have an error return, this error return should not meet.
             if insert_trustee_vote_state::<T>(true, &who, &mut proposal.trustee_list).is_err() {
@@ -301,7 +317,11 @@ impl<T: Trait> Module<T> {
             Self::withdrawal_proposal().ok_or(Error::<T>::NoProposal)?;
 
         if proposal.sig_state == VoteResult::Finish {
-            error!("[apply_sig_withdraw]|proposal is on FINISH state, can't sign for this proposal|proposal：{:?}", proposal);
+            debug::error!(
+                target: "xgateway-bitcoin",
+                "[apply_sig_withdraw] Proposal is on FINISH state, can't sign for this proposal:{:?}",
+                proposal
+            );
             return Err(Error::<T>::RejectSig.into());
         }
 
@@ -315,7 +335,12 @@ impl<T: Trait> Module<T> {
                 // check first and get signatures from commit transaction
                 let sigs_count = parse_and_check_signed_tx::<T>(&tx)?;
                 if sigs_count == 0 {
-                    error!("[apply_sig_withdraw]|the tx sig should not be zero, zero is the source tx without any sig|tx{:?}", tx);
+                    debug::error!(
+                        target: "xgateway-bitcoin",
+                        "[apply_sig_withdraw] The tx sig should not be zero, zero is the source tx without any sig, \
+                        tx:{:?}",
+                        tx
+                    );
                     return Err(Error::<T>::InvalidSignCount.into());
                 }
 
@@ -326,10 +351,10 @@ impl<T: Trait> Module<T> {
                     .count() as u32;
 
                 if sigs_count != confirmed_count + 1 {
-                    error!(
-                        "[apply_sig_withdraw]|Need to sign on the latest signature results|sigs count:{:}|confirmed count:{:}",
-                        sigs_count,
-                        confirmed_count
+                    debug::error!(
+                        target: "xgateway-bitcoin",
+                        "[apply_sig_withdraw] Need to sign on the latest signature results, sigs count:{}, confirmed count:{}",
+                        sigs_count, confirmed_count
                     );
                     return Err(Error::<T>::InvalidSignCount.into());
                 }
@@ -340,7 +365,7 @@ impl<T: Trait> Module<T> {
                 // e.g. total=6 => required=2*6/3=4, thus equal to 4 should mark as finish
                 if sigs_count == sig_num {
                     // mark as finish, can't do anything for this proposal
-                    info!("[apply_sig_withdraw]Signature completed: {:}", sigs_count);
+                    debug::info!(target: "xgateway-bitcoin", "[apply_sig_withdraw] Signature completed:{}", sigs_count);
                     proposal.sig_state = VoteResult::Finish;
 
                     Self::deposit_event(Event::<T>::WithdrawalProposalCompleted(tx.hash()))
@@ -365,8 +390,9 @@ impl<T: Trait> Module<T> {
                 // > 2 equal to total - required + 1 = 6-4+1 = 3
                 let need_reject = total - sig_num + 1;
                 if reject_count == need_reject {
-                    info!(
-                        "[apply_sig_withdraw]|{:}/{:} opposition, clear withdrawal propoal",
+                    debug::info!(
+                        target: "xgateway-bitcoin",
+                        "[apply_sig_withdraw] {}/{} opposition, clear withdrawal proposal",
                         reject_count, total
                     );
 
@@ -390,8 +416,9 @@ impl<T: Trait> Module<T> {
             }
         }
 
-        info!(
-            "[apply_sig_withdraw]|current sig|state:{:?}|trustee vote:{:?}",
+        debug::info!(
+            target: "xgateway-bitcoin",
+            "[apply_sig_withdraw] current sig state:{:?}, trustee vote:{:?}",
             proposal.sig_state, proposal.trustee_list
         );
 
@@ -449,7 +476,7 @@ pub(crate) fn create_multi_address<T: Trait>(
         panic!("required sig num should less than trustee_num; qed")
     }
     if sum > 15 {
-        error!("bitcoin's multisig can't more than 15, current is:{:}", sum);
+        debug::error!(target: "xgateway-bitcoin", "bitcoin's multisig can't more than 15, current:{}", sum);
         return None;
     }
 
@@ -494,13 +521,18 @@ fn insert_trustee_vote_state<T: Trait>(
     match trustee_list.iter_mut().find(|ref info| info.0 == *who) {
         Some(_) => {
             // if account is exist, override state
-            error!("[inseRelayedTx_trustee_vote_state]|already vote for this withdrawal proposal|who:{:?}|old vote:{:}", who, state);
+            debug::error!(
+                target: "xgateway-bitcoin",
+                "[insert_trustee_vote_state] {:?} has already voted for this withdrawal proposal, old vote:{}",
+                who, state
+            );
             return Err("already vote for this withdrawal proposal".into());
         }
         None => {
             trustee_list.push((who.clone(), state));
-            debug!(
-                "[inseRelayedTx_trustee_vote_state]|inseRelayedTx new vote|who:{:?}|state:{:}",
+            debug::debug!(
+                target: "xgateway-bitcoin",
+                "[insert_trustee_vote_state] Insert new vote, who:{:?}, state:{}",
                 who, state
             );
         }
@@ -551,27 +583,33 @@ fn check_withdraw_tx_impl<T: Trait>(
 
     // appl_withdrawal_list must match to tx_withdraw_list
     if appl_withdrawal_list.len() != tx_withdraw_list.len() {
-        error!("withdrawal tx's outputs not equal to withdrawal application list, withdrawal application len:{:}, withdrawal tx's outputs len:{:}|withdrawal application list:{:?}, tx withdrawal outputs:{:?}",
-               appl_withdrawal_list.len(), tx_withdraw_list.len(),
-               withdrawal_id_list.iter().zip(appl_withdrawal_list).collect::<Vec<_>>(),
-               tx_withdraw_list
+        debug::error!(
+            target: "xgateway-bitcoin",
+            "Withdrawal tx's outputs (len:{}) != withdrawal application list (len:{}), \
+            withdrawal application list:{:?}, withdrawal tx's outputs:{:?}",
+            appl_withdrawal_list.len(), tx_withdraw_list.len(),
+            withdrawal_id_list.iter().zip(appl_withdrawal_list).collect::<Vec<_>>(), tx_withdraw_list
         );
         return Err(Error::<T>::InvalidProposal.into());
     }
 
-    let count = appl_withdrawal_list.iter().zip(tx_withdraw_list).filter(|(a,b)|{
-        if a.0 == b.0 && a.1 == b.1 {
-            true
-        }
-        else {
-            error!(
-                "withdrawal tx's output not match to withdrawal application. withdrawal application :{:?}, tx withdrawal output:{:?}",
-                a,
-                b
-            );
-            false
-        }
-    }).count();
+    let count = appl_withdrawal_list
+        .iter()
+        .zip(tx_withdraw_list)
+        .filter(|(a, b)| {
+            if a.0 == b.0 && a.1 == b.1 {
+                true
+            } else {
+                debug::error!(
+                    target: "xgateway-bitcoin",
+                    "Withdrawal tx's output not match to withdrawal application.\
+                    withdrawal application:{:?}, tx withdrawal output:{:?}",
+                    a, b
+                );
+                false
+            }
+        })
+        .count();
 
     if count != appl_withdrawal_list.len() {
         return Err(Error::<T>::InvalidProposal.into());

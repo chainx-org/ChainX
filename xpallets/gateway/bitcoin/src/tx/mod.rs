@@ -6,7 +6,7 @@ pub mod validator;
 
 // Substrate
 use frame_support::{
-    debug::native,
+    debug::{self, native},
     dispatch::{DispatchError, DispatchResult},
     StorageMap, StorageValue,
 };
@@ -16,7 +16,7 @@ use sp_std::{fmt::Debug, prelude::*, result};
 use chainx_primitives::{AssetId, ReferralId};
 use xpallet_assets::ChainT;
 use xpallet_gateway_common::traits::{AddrBinding, ChannelBinding, Extractable};
-use xpallet_support::{debug, error, info, str, warn};
+use xpallet_support::str;
 
 // light-bitcoin
 use light_bitcoin::{
@@ -133,8 +133,9 @@ where
                 return tx_type;
             }
             _ => {
-                warn!(
-                    "[detect_transaction_type_impl]|it's an irrelevance tx or deposit tx|tx_hash:{:?}",
+                debug::warn!(
+                    target: "xgateway-bitcoin",
+                    "[detect_transaction_type_impl] Irrelevance or Deposit Transaction:{:?}",
                     tx.hash()
                 );
             }
@@ -176,7 +177,11 @@ where
         };
         MetaTxType::Deposit(info)
     } else {
-        warn!("[detect_deposit_type]|receive a deposit tx but deposit value is too low, dropped|tx:{:?}", tx.hash());
+        debug::warn!(
+            target: "xgateway-bitcoin",
+            "[detect_deposit_type] Receive a Deposit tx ({:?}) but deposit value is too low, drop it",
+            tx.hash()
+        );
         MetaTxType::Irrelevance
     }
 }
@@ -264,8 +269,8 @@ where
     }
 
     native::debug!(
-        target: xpallet_support::RUNTIME_TARGET,
-        "[parse_deposit_outputs_impl]|parse outputs|account_info:{:?}|balance:{:}|opreturn:{:}|",
+        target: "xgateway-bitcoin",
+        "[parse_deposit_outputs_impl] Parse outputs, account_info:{:?}, balance:{}, opreturn:{}",
         account_info,
         deposit_balance,
         trick_format_opreturn(&_original)
@@ -289,7 +294,11 @@ pub(crate) fn handle_tx<T: Trait>(
 
 fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> BtcTxResult {
     if deposit_info.op_return.is_none() && deposit_info.input_addr.is_none() {
-        warn!("[deposit]|process a deposit tx but do not have valid opreturn & not have input addr|tx:{:?}", hash);
+        debug::warn!(
+            target: "xgateway-bitcoin",
+            "[deposit] Process a deposit tx ({:?}) but do not have valid opreturn & not have input addr",
+            hash
+        );
         return BtcTxResult::Failed;
     }
 
@@ -303,7 +312,11 @@ fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> Btc
                 T::AddrBinding::update_binding(Module::<T>::chain(), addr, accountid.clone());
             } else {
                 // no input addr
-                debug!("[deposit]|no input addr for this deposit tx, but has opreturn to get accountid|tx_hash:{:?}|who:{:?}", hash, accountid);
+                debug::debug!(
+                    target: "xgateway-bitcoin",
+                    "[deposit] The Deposit Tx ({:?}) has no input addr, but has opreturn, who:{:?}",
+                    hash, accountid
+                );
             }
             AccountInfo::<T::AccountId>::Account((accountid, channel_name))
         }
@@ -317,7 +330,11 @@ fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> Btc
                 }
             } else {
                 // should not meet this branch, due it's handled before, it's unreachable
-                error!("[deposit]|no input addr for this deposit tx, neither has opreturn to get accountid!|tx_hash:{:?}", hash);
+                debug::error!(
+                    target: "xgateway-bitcoin",
+                    "[deposit] The Deposit Tx ({:?}) has no input addr and opreturn",
+                    hash
+                );
                 return BtcTxResult::Failed;
             }
         }
@@ -334,18 +351,17 @@ fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> Btc
             if deposit_token::<T>(hash, &accountid, deposit_info.deposit_value).is_err() {
                 return BtcTxResult::Failed;
             }
-            info!(
-                "[deposit]|deposit success|who:{:?}|balance:{:}|tx_hash:{:}",
-                accountid, deposit_info.deposit_value, hash
+            debug::info!(
+                target: "xgateway-bitcoin",
+                "[deposit] Deposit Tx ({:?}) success, who:{:?}, balance:{}",
+                hash, accountid, deposit_info.deposit_value
             );
         }
         AccountInfo::<_>::Address(addr) => {
             insert_pending_deposit::<T>(&addr, &hash, deposit_info.deposit_value);
-            info!(
-                "[deposit]|deposit into pending|addr:{:?}|balance:{:}|tx_hash:{:}",
-                str!(addr2vecu8(&addr)),
-                deposit_info.deposit_value,
-                hash
+            debug::info!(target: "xgateway-bitcoin",
+                "[deposit] Deposit Tx ({:?}) into pending, addr:{:?}, balance:{}",
+                hash, str!(addr2vecu8(&addr)), deposit_info.deposit_value
             );
         }
     };
@@ -357,16 +373,17 @@ fn deposit_token<T: Trait>(tx_hash: H256, who: &T::AccountId, balance: u64) -> D
 
     let value: BalanceOf<T> = balance.saturated_into();
     match <xpallet_gateway_records::Module<T>>::deposit(&who, id, value) {
-        Ok(a) => {
+        Ok(()) => {
             Module::<T>::deposit_event(Event::<T>::Deposited(tx_hash, who.clone(), value));
-            Ok(a)
+            Ok(())
         }
-        Err(e) => {
-            error!(
-                "[deposit_token]deposit error, must use root to fix this error. reason:{:?}",
-                e
+        Err(err) => {
+            debug::error!(
+                target: "xgateway-bitcoin",
+                "[deposit_token] Deposit error:{:?}, must use root to fix it",
+                err
             );
-            Err(e.into())
+            Err(err.into())
         }
     }
 }
@@ -407,8 +424,9 @@ pub fn remove_pending_deposit<T: Trait>(input_address: &BtcAddress, who: &T::Acc
     for r in records {
         // ignore error
         let _ = deposit_token::<T>(r.txid, who, r.balance);
-        info!(
-            "[remove_pending_deposit]|use pending info to re-deposit|who:{:?}|balance:{:}|cached_tx:{:?}",
+        debug::info!(
+            target: "xgateway-bitcoin",
+            "[remove_pending_deposit] Use pending info to re-deposit, who:{:?}, balance:{}, cached_tx:{:?}",
             who, r.balance, r.txid,
         );
 
@@ -432,8 +450,8 @@ fn insert_pending_deposit<T: Trait>(input_address: &Address, txid: &H256, balanc
     PendingDeposits::mutate(&addr_bytes, |list| {
         if !list.contains(&cache) {
             native::debug!(
-                target: xpallet_support::RUNTIME_TARGET,
-                "[insert_pending_deposit]|Add pending deposit|address:{:?}|txhash:{:}|balance:{:}",
+                target: "xgateway-bitcoin",
+                "[insert_pending_deposit] Add pending deposit, address:{:?}, txhash:{:?}, balance:{}",
                 str!(addr_bytes),
                 txid,
                 balance
@@ -448,10 +466,10 @@ fn insert_pending_deposit<T: Trait>(input_address: &Address, txid: &H256, balanc
 fn withdraw<T: Trait>(tx: Transaction) -> BtcTxResult {
     if let Some(proposal) = WithdrawalProposal::<T>::take() {
         native::debug!(
-            target: xpallet_support::RUNTIME_TARGET,
-            "[withdraw]|withdraw handle|proposal:{:?}|tx:{:?}",
-            proposal,
-            tx
+            target: "xgateway-bitcoin",
+            "[withdraw] Withdraw Tx {:?}, proposal:{:?}",
+            tx,
+            proposal
         );
         let proposal_hash = proposal.tx.hash();
         let tx_hash = tx.hash();
@@ -468,10 +486,14 @@ fn withdraw<T: Trait>(tx: Transaction) -> BtcTxResult {
 
                 match xpallet_gateway_records::Module::<T>::finish_withdrawal(*number, None) {
                     Ok(_) => {
-                        info!("[withdraw]|ID of withdrawal completion: {:}", *number);
+                        debug::info!(target: "xgateway-bitcoin", "[withdraw] Withdrawal ({}) completion", *number);
                     }
-                    Err(_e) => {
-                        error!("[withdraw]|ID of withdrawal ERROR! {:}, reason:{:?}, please use root to fix it", *number, _e);
+                    Err(err) => {
+                        debug::error!(
+                            target: "xgateway-bitcoin",
+                            "[withdraw] Withdrawal ({}) Error:{:?}. Use root to fix it",
+                            *number, err
+                        );
                     }
                 }
             }
@@ -487,8 +509,11 @@ fn withdraw<T: Trait>(tx: Transaction) -> BtcTxResult {
             ));
             BtcTxResult::Success
         } else {
-            error!("[withdraw]|Withdrawal failed, mismatch withdraw. please use root to fix it|withdrawal idlist:{:?}|proposal id:{:?}|tx hash:{:}",
-                   proposal.withdrawal_id_list, proposal_hash, tx_hash);
+            debug::error!(
+                target: "xgateway-bitcoin",
+                "[withdraw] Withdraw Error: mismatch (tx_hash:{:?}, proposal_hash:{:?}), id_list:{:?}. Use root to fix it",
+                tx_hash, proposal_hash, proposal.withdrawal_id_list
+            );
             // re-store proposal into storage.
             WithdrawalProposal::<T>::put(proposal);
 
@@ -496,7 +521,11 @@ fn withdraw<T: Trait>(tx: Transaction) -> BtcTxResult {
             BtcTxResult::Failed
         }
     } else {
-        error!("[withdraw]|Withdrawal failed, the proposal is EMPTY, but receive a withdrawal tx, please use root to fix it|tx hash:{:}", tx.hash());
+        debug::error!(
+            target: "xgateway-bitcoin",
+            "[withdraw] Withdrawal ({:?}) Error: proposal is EMPTY, but receive a withdrawal tx. Use root to fix it",
+            tx.hash()
+        );
 
         // no proposal, but find a withdraw tx, it's a fatal error in withdrawal
         Module::<T>::deposit_event(Event::<T>::WithdrawalFatalErr(

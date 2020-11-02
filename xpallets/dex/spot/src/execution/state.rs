@@ -26,8 +26,9 @@ impl<T: Trait> Module<T> {
                         handicap.tick_up_lowest_ask(tick_decimals);
                         <HandicapOf<T>>::insert(pair.id, &handicap);
 
-                        debug!(
-                            "[update_handicap] pair_index: {:?}, lowest_ask: {:?}, side: {:?}",
+                        debug::debug!(
+                            target: "xspot",
+                            "[update_handicap] pair_index:{:?}, lowest_ask:{:?}, side:{:?}",
                             pair.id, handicap.lowest_ask, Sell,
                         );
                     }
@@ -39,8 +40,9 @@ impl<T: Trait> Module<T> {
                         handicap.tick_down_highest_bid(tick_decimals);
                         <HandicapOf<T>>::insert(pair.id, &handicap);
 
-                        debug!(
-                            "[update_handicap] pair_index: {:?}, highest_bid: {:?}, side: {:?}",
+                        debug::debug!(
+                            target: "xspot",
+                            "[update_handicap] pair_index:{:?}, highest_bid:{:?}, side: {:?}",
                             pair.id, handicap.highest_bid, Buy
                         );
                     }
@@ -81,8 +83,9 @@ impl<T: Trait> Module<T> {
 
                 if new_highest_bid >= handicap.lowest_ask {
                     handicap.lowest_ask = Self::tick_up(new_highest_bid, pair.tick());
-                    debug!(
-                        "[update_handicap]pair_id: {:?}, lowest_ask: {:?}, side: {:?}",
+                    debug::debug!(
+                        target: "xspot",
+                        "[update_handicap] pair_id: {:?}, lowest_ask: {:?}, side:{:?}",
                         order.pair_id(),
                         handicap.lowest_ask,
                         Side::Sell,
@@ -90,8 +93,9 @@ impl<T: Trait> Module<T> {
                 }
 
                 handicap.highest_bid = new_highest_bid;
-                debug!(
-                    "[update_handicap]pair_id: {:?}, highest_bid: {:?}, side: {:?}",
+                debug::debug!(
+                    target: "xspot",
+                    "[update_handicap] pair_id:{:?}, highest_bid:{:?}, side:{:?}",
                     order.pair_id(),
                     new_highest_bid,
                     Side::Buy
@@ -109,8 +113,9 @@ impl<T: Trait> Module<T> {
 
                 if new_lowest_ask <= handicap.highest_bid {
                     handicap.highest_bid = Self::tick_down(new_lowest_ask, pair.tick());
-                    debug!(
-                        "[update_handicap]pair_id: {:?}, highest_bid: {:?}, side: {:?}",
+                    debug::debug!(
+                        target: "xspot",
+                        "[update_handicap] pair_id:{:?}, highest_bid:{:?}, side:{:?}",
                         order.pair_id(),
                         handicap.highest_bid,
                         Side::Buy
@@ -118,8 +123,9 @@ impl<T: Trait> Module<T> {
                 }
 
                 handicap.lowest_ask = new_lowest_ask;
-                debug!(
-                    "[update_handicap]pair_id: {:?}, lowest_ask: {:?}, side: {:?}",
+                debug::debug!(
+                    target: "xspot",
+                    "[update_handicap] pair_id:{:?}, lowest_ask:{:?}, side:{:?}",
                     order.pair_id(),
                     new_lowest_ask,
                     Side::Sell,
@@ -136,8 +142,9 @@ impl<T: Trait> Module<T> {
         price: T::Price,
         fulfilled_orders: Vec<(T::AccountId, OrderId)>,
     ) {
-        debug!(
-            "[remove_orders_and_quotations] These fulfilled orders will be removed: {:?}",
+        debug::debug!(
+            target: "xspot",
+            "[remove_orders_and_quotations] Remove these fulfilled orders:{:?}",
             fulfilled_orders
         );
         for (who, order_idx) in fulfilled_orders.iter() {
@@ -160,10 +167,11 @@ impl<T: Trait> Module<T> {
         <QuotationsOf<T>>::mutate(pair_id, price, |quotations| {
             if let Some(idx) = quotations.iter().position(|i| i == &order_key) {
                 // NOTE: Can't use swap_remove since the original order must be preserved.
-                let _removed = quotations.remove(idx);
-                debug!(
-                    "[remove_quotation] (who, order_index): {:?}, removed order: {:?}",
-                    order_key, _removed
+                let removed = quotations.remove(idx);
+                debug::debug!(
+                    target: "xspot",
+                    "[remove_quotation] (who, order_index):{:?}, removed order:{:?}",
+                    order_key, removed
                 );
             }
         });

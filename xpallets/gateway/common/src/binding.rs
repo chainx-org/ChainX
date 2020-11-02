@@ -1,11 +1,11 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use frame_support::{IterableStorageDoubleMap, StorageDoubleMap};
+use frame_support::{debug, IterableStorageDoubleMap, StorageDoubleMap};
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
 use chainx_primitives::{AssetId, ChainAddress, ReferralId};
 use xpallet_assets::Chain;
-use xpallet_support::{debug, error, info, str, traits::Validator, try_addr, warn};
+use xpallet_support::{str, traits::Validator, try_addr};
 
 use crate::traits::{AddrBinding, ChannelBinding};
 use crate::{AddressBinding, BoundAddressOf, Module, Trait};
@@ -13,11 +13,12 @@ use crate::{AddressBinding, BoundAddressOf, Module, Trait};
 impl<T: Trait> ChannelBinding<T::AccountId> for Module<T> {
     fn update_binding(assert_id: &AssetId, who: &T::AccountId, channel_name: Option<ReferralId>) {
         let chain = match xpallet_assets_registrar::Module::<T>::chain_of(assert_id) {
-            Ok(c) => c,
-            Err(e) => {
-                error!(
-                    "[update_binding]|meed an unexpected asset_id:{:?}, error:{:?}",
-                    assert_id, e
+            Ok(chain) => chain,
+            Err(err) => {
+                debug::error!(
+                    target: "xgateway-bitcoin",
+                    "[update_channel_binding] unexpected asset_id:{:?}, error:{:?}",
+                    assert_id, err
                 );
                 return;
             }
@@ -30,13 +31,19 @@ impl<T: Trait> ChannelBinding<T::AccountId> for Module<T> {
                         // set to storage
                         Self::set_referral_binding(chain, who.clone(), channel);
                     }
-                    Some(_channel) => {
-                        debug!("[update_binding]|already has binding, do nothing|assert_id:{:}|chain:{:?}|who:{:?}|channel:{:?}", assert_id, chain, who, _channel);
+                    Some(channel) => {
+                        debug::debug!(
+                            target: "xgateway-bitcoin",
+                            "[update_channel_binding] Already has channel binding:\
+                            [assert id:{}, chain:{:?}, who:{:?}, channel:{:?}]",
+                            assert_id, chain, who, channel
+                        );
                     }
                 }
             } else {
-                warn!(
-                    "[update_binding]|channel not exist, do not set binding|name:{:?}",
+                debug::warn!(
+                    target: "xgateway-bitcoin",
+                    "[update_channel_binding] {:?} has no channel, cannot update binding",
                     str!(&name)
                 );
             };
@@ -54,8 +61,9 @@ impl<T: Trait, Addr: Into<Vec<u8>>> AddrBinding<T::AccountId, Addr> for Module<T
         let address = addr.into();
         if let Some(accountid) = AddressBinding::<T>::get(chain, &address) {
             if accountid != who {
-                debug!(
-                    "[apply_update_binding]|current binding need change|old:{:?}|new:{:?}",
+                debug::debug!(
+                    target: "xgateway-bitcoin",
+                    "[update_addr_binding] Current address binding need to changed (old:{:?} => new:{:?})",
                     accountid, who
                 );
                 // old accountid is not equal to new accountid, means should change this addr bind to new account
@@ -72,8 +80,9 @@ impl<T: Trait, Addr: Into<Vec<u8>>> AddrBinding<T::AccountId, Addr> for Module<T
             }
         });
 
-        info!(
-            "[apply_update_binding]|update binding|chain:{:?}|addr:{:?}|who:{:?}",
+        debug::info!(
+            target: "xgateway-bitcoin",
+            "[update_addr_binding] Update address binding:[chain:{:?}, addr:{:?}, who:{:?}]",
             chain,
             try_addr!(address),
             who,

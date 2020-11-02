@@ -123,7 +123,7 @@ where
 {
     use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
     use substrate_frame_rpc_system::{FullSystem, SystemApi};
-    use xpallet_assets_rpc::{Assets, XAssetsApi};
+    use xpallet_assets_rpc::{XAssets, XAssetsApi};
     use xpallet_dex_spot_rpc::{XSpot, XSpotApi};
     use xpallet_gateway_common_rpc::{XGatewayCommon, XGatewayCommonApi};
     use xpallet_gateway_records_rpc::{XGatewayRecords, XGatewayRecordsApi};
@@ -180,7 +180,7 @@ where
         ),
     ));
 
-    io.extend_with(XAssetsApi::to_delegate(Assets::new(client.clone())));
+    io.extend_with(XAssetsApi::to_delegate(XAssets::new(client.clone())));
     io.extend_with(XStakingApi::to_delegate(XStaking::new(client.clone())));
     io.extend_with(XSpotApi::to_delegate(XSpot::new(client.clone())));
     io.extend_with(XMiningAssetApi::to_delegate(XMiningAsset::new(

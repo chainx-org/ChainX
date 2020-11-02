@@ -1,11 +1,11 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 // Substrate
-use frame_support::dispatch::DispatchResult;
+use frame_support::{debug, dispatch::DispatchResult};
 use sp_std::prelude::Vec;
 
 // ChainX
-use xpallet_support::{error, try_hex, warn};
+use xpallet_support::try_hex;
 
 // light-bitcoin
 use light_bitcoin::{
@@ -14,7 +14,7 @@ use light_bitcoin::{
     script::{Opcode, Script, ScriptAddress},
 };
 
-use crate::{native, Error, Module, Trait};
+use crate::{Error, Module, Trait};
 
 pub fn parse_output_addr<T: Trait>(script: &Script) -> Option<Address> {
     let network = Module::<T>::network_id();
@@ -23,13 +23,14 @@ pub fn parse_output_addr<T: Trait>(script: &Script) -> Option<Address> {
 
 pub fn parse_output_addr_with_networkid(script: &Script, network: Network) -> Option<Address> {
     // only `p2pk`, `p2pkh`, `p2sh` could parse
-    script.extract_destinations().map_err(|_e|{
-        error!(
-            "[parse_output_addr]|parse output script error|e:{:}|script:{:?}",
-            _e,
+    script.extract_destinations().map_err(|err|{
+        debug::error!(
+            target: "xgateway-bitcoin",
+            "[parse_output_addr] Parse output script error:{}, script:{:?}",
+            err,
             try_hex!(&script)
         );
-        _e
+        err
     }).ok().and_then(|script_addresses| {
         // find addr in this transaction
         if script_addresses.len() == 1 {
@@ -42,7 +43,11 @@ pub fn parse_output_addr_with_networkid(script: &Script, network: Network) -> Op
             return Some(addr);
         }
         // the type is `NonStandard`, `Multisig`, `NullData`, `WitnessScript`, `WitnessKey`
-        warn!("[parse_output_addr]|can't parse addr from output script|type:{:?}|addr:{:?}|script:{:?}", script.script_type(), script_addresses, try_hex!(&script));
+        debug::warn!(
+            target: "xgateway-bitcoin",
+            "[parse_output_addr] Can't parse addr from output script, type:{:?}, addr:{:?}, script:{:?}",
+            script.script_type(), script_addresses, try_hex!(&script)
+        );
         None
     })
 }
@@ -84,7 +89,10 @@ pub fn parse_opreturn(script: &Script) -> Option<Vec<u8>> {
         // jump OP_RETURN, when after `is_null_data_script`, subscript must larger and equal than 1
         let s = script.subscript(1);
         if s.is_empty() {
-            error!("[parse_opreturn]|nothing after `OP_RETURN`, valid in rule but invalid for public consensus");
+            debug::error!(
+                target: "xgateway-bitcoin",
+                "[parse_opreturn] Nothing after `OP_RETURN`, valid in rule but invalid for public consensus"
+            );
             return None;
         }
         // script must large then 1
@@ -92,14 +100,19 @@ pub fn parse_opreturn(script: &Script) -> Option<Vec<u8>> {
             if s[0] as usize == (&s[1..]).len() {
                 Some(s[1..].to_vec())
             } else {
-                error!("[parse_opreturn]|unexpect! opreturn source error, len not equal to real len|len:{:?}|real:{:?}", s[0], &s[1..]);
+                debug::error!(
+                    target: "xgateway-bitcoin",
+                    "[parse_opreturn] Unexpect opreturn source error, len:{}, real:{:?}",
+                    s[0], &s[1..]
+                );
                 None
             }
         } else if s[0] == Opcode::OP_PUSHDATA1 as u8 {
             // when subscript [0] is `OP_PUSHDATA1`, must have [1], or is an invalid data
             if s.len() < 2 {
-                error!(
-                    "[parse_opreturn]|nothing after `OP_PUSHDATA1`, invalid opreturn|{:?}",
+                debug::error!(
+                    target: "xgateway-bitcoin",
+                    "[parse_opreturn] Nothing after `OP_PUSHDATA1`, invalid opreturn:{:?}",
                     s
                 );
                 return None;
@@ -108,11 +121,15 @@ pub fn parse_opreturn(script: &Script) -> Option<Vec<u8>> {
             if s[1] as usize == (&s[2..]).len() {
                 Some(s[2..].to_vec())
             } else {
-                error!("[parse_opreturn]|unexpect! opreturn source error, len not equal to real len|len mark:{:?}|len:{:?}|real:{:?}", s[0], s[1], &s[2..]);
+                debug::error!(
+                    target: "xgateway-bitcoin",
+                    "[parse_opreturn] Unexpect opreturn source error, len mark:{:?}, len:{:?}, real:{:?}",
+                    s[0], s[1], &s[2..]
+                );
                 None
             }
         } else {
-            error!("[parse_opreturn]|unexpect! opreturn source error, opreturn should not");
+            debug::error!(target: "xgateway-bitcoin", "[parse_opreturn] Unexpect opreturn source error");
             None
         }
     } else {
@@ -132,9 +149,9 @@ pub fn ensure_identical<T: Trait>(tx1: &Transaction, tx2: &Transaction) -> Dispa
             if tx1.inputs[i].previous_output != tx2.inputs[i].previous_output
                 || tx1.inputs[i].sequence != tx2.inputs[i].sequence
             {
-                native!(
-                    error,
-                    "[ensure_identical]|tx1 is different to tx2|tx1:{:?}|tx2:{:?}",
+                debug::native::error!(
+                    target: "xgateway-bitcoin",
+                    "[ensure_identical] tx1 is different to tx2, tx1:{:?}, tx2:{:?}",
                     tx1,
                     tx2
                 );
@@ -143,8 +160,8 @@ pub fn ensure_identical<T: Trait>(tx1: &Transaction, tx2: &Transaction) -> Dispa
         }
         return Ok(());
     }
-    native!(
-        error,
+    debug::native::error!(
+        target: "xgateway-bitcoin",
         "The transaction text does not match the original text to be signed",
     );
     Err(Error::<T>::MismatchedTx.into())

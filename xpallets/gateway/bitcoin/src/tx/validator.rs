@@ -2,6 +2,7 @@
 
 // Substrate
 use frame_support::{
+    debug,
     dispatch::{DispatchError, DispatchResult},
     ensure,
 };
@@ -11,7 +12,7 @@ use sp_std::{prelude::Vec, result};
 use light_bitcoin::{chain::Transaction, primitives::H256, script::Script};
 
 // ChainX
-use xpallet_support::{debug, error, try_hex};
+use xpallet_support::try_hex;
 
 // use crate::tx::utils::get_hot_trustee_redeem_script;
 use crate::trustee::get_hot_trustee_redeem_script;
@@ -24,8 +25,9 @@ pub fn validate_transaction<T: Trait>(
     prev_tx: Option<&Transaction>,
 ) -> DispatchResult {
     let tx_hash = tx.raw.hash();
-    debug!(
-        "[validate_transaction]|txhash:{:}|relay tx:{:?}",
+    debug::debug!(
+        target: "xgateway-bitcoin",
+        "[validate_transaction] tx_hash:{:?}, relay tx:{:?}",
         tx_hash, tx
     );
 
@@ -37,14 +39,15 @@ pub fn validate_transaction<T: Trait>(
         .extract_matches(&mut matches, &mut _indexes)
         .map_err(|_| Error::<T>::BadMerkleProof)?;
     if merkle_root != hash {
-        error!(
-            "[validate_transaction]|Check failed for merkle tree proof|merkle_root:{:?}|hash:{:?}",
+        debug::error!(
+            target: "xgateway-bitcoin",
+            "[validate_transaction] Check merkle tree proof error, merkle_root:{:?}, hash:{:?}",
             merkle_root, hash
         );
         return Err(Error::<T>::BadMerkleProof.into());
     }
     if !matches.iter().any(|h| *h == tx_hash) {
-        error!("[validate_transaction]|Tx hash should in matches of partial merkle tree");
+        debug::error!(target: "xgateway-bitcoin", "[validate_transaction] Tx hash should in matches of partial merkle tree");
         return Err(Error::<T>::BadMerkleProof.into());
     }
 
@@ -54,7 +57,11 @@ pub fn validate_transaction<T: Trait>(
         let previous_txid = prev.hash();
         let expected_id = tx.raw.inputs[0].previous_output.txid;
         if previous_txid != expected_id {
-            error!("[validate_transaction]|relay previou tx's hash not equail to relay tx first input|expected_id:{:?}|prev:{:?}", expected_id, previous_txid);
+            debug::error!(
+                target: "xgateway-bitcoin",
+                "[validate_transaction] Relay previous tx's hash not equal to relay tx first input, expected_id:{:?}, prev:{:?}",
+                expected_id, previous_txid
+            );
             return Err(Error::<T>::InvalidPrevTx.into());
         }
     }
@@ -97,7 +104,11 @@ pub fn parse_and_check_signed_tx_impl<T: Trait>(
                     .is_ok()
             });
             if !verify {
-                error!("[parse_and_check_signed_tx]|Verify sign failed|tx:{:?}|input:{:?}|bytes_sedeem_script:{:?}", tx, i, try_hex!(&bytes_redeem_script));
+                debug::error!(
+                    target: "xgateway-bitcoin",
+                    "[parse_and_check_signed_tx] Verify sign failed, tx:{:?}, input:{:?}, bytes_redeem_script:{:?}",
+                    tx, i, try_hex!(&bytes_redeem_script)
+                );
                 return Err(Error::<T>::VerifySignFailed.into());
             }
         }
