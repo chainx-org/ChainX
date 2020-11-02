@@ -115,6 +115,7 @@ where
         MiningWeight,
         BlockNumber,
     >,
+    C::Api: xpallet_transaction_fee_rpc_runtime_api::XTransactionFeeApi<Block, Balance>,
     <C::Api as sp_api::ApiErrorExt>::Error: fmt::Debug,
     P: TransactionPool + 'static,
     SC: SelectChain<Block> + 'static,
@@ -129,6 +130,7 @@ where
     use xpallet_gateway_records_rpc::{XGatewayRecords, XGatewayRecordsApi};
     use xpallet_mining_asset_rpc::{XMiningAsset, XMiningAssetApi};
     use xpallet_mining_staking_rpc::{XStaking, XStakingApi};
+    use xpallet_transaction_fee_rpc::{XTransactionFee, XTransactionFeeApi};
 
     let mut io = jsonrpc_core::IoHandler::default();
     let FullDeps {
@@ -180,6 +182,9 @@ where
         ),
     ));
 
+    io.extend_with(XTransactionFeeApi::to_delegate(XTransactionFee::new(
+        client.clone(),
+    )));
     io.extend_with(XAssetsApi::to_delegate(Assets::new(client.clone())));
     io.extend_with(XStakingApi::to_delegate(XStaking::new(client.clone())));
     io.extend_with(XSpotApi::to_delegate(XSpot::new(client.clone())));

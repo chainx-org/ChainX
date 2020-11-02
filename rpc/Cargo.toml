@@ -55,3 +55,5 @@ xpallet-mining-asset-rpc = { path = "../xpallets/mining/asset/rpc" }
 xpallet-mining-asset-rpc-runtime-api = { path = "../xpallets/mining/asset/rpc/runtime-api" }
 xpallet-mining-staking-rpc = { path = "../xpallets/mining/staking/rpc" }
 xpallet-mining-staking-rpc-runtime-api = { path = "../xpallets/mining/staking/rpc/runtime-api" }
+xpallet-transaction-fee-rpc = { path = "../xpallets/transaction-fee/rpc" }
+xpallet-transaction-fee-rpc-runtime-api = { path = "../xpallets/transaction-fee/rpc/runtime-api" }
