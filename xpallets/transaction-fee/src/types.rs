@@ -14,6 +14,7 @@ use sp_runtime::RuntimeDebug;
 /// ```
 #[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct InclusionFee<Balance> {
     /// This is the minimum amount a user pays for a transaction. It is declared
     /// as a base _weight_ in the runtime and converted to a fee using `WeightToFee`.
@@ -39,6 +40,7 @@ pub struct InclusionFee<Balance> {
 /// ```
 #[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct FeeDetails<Balance> {
     pub inclusion_fee: Option<InclusionFee<Balance>>,
     pub tip: Balance,
