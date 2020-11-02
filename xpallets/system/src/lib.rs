@@ -19,9 +19,6 @@ use xp_protocol::NetworkType;
 const PALLET_MARK: &[u8; 1] = b"#";
 const ALWAYS_ALLOW: [&str; 1] = ["Sudo"];
 
-type BalanceOf<T> =
-    <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
-
 /// The module's config trait.
 ///
 /// `frame_system::Trait` should always be included in our implied traits.
@@ -42,16 +39,12 @@ decl_event!(
     /// Event for the XSystem Module
     pub enum Event<T>
     where
-        Balance = BalanceOf<T>,
         <T as frame_system::Trait>::AccountId,
     {
         /// An account was added to the blacklist. [who]
         Blacklisted(AccountId),
         /// An account was removed from the blacklist. [who]
         Unblacklisted(AccountId),
-        /// Transaction fee was paid to the block author and its reward pot in 10:90.
-        /// [author, author_fee, reward_pot, reward_pot_fee]
-        TransactionFeePaid(AccountId, Balance, AccountId, Balance),
     }
 );
 

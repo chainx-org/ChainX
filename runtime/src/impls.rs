@@ -38,7 +38,7 @@ impl OnUnbalanced<NegativeImbalance> for DealWithFees {
         <pallet_balances::Module<Runtime>>::resolve_creating(&author, to_author);
         <pallet_balances::Module<Runtime>>::resolve_creating(&reward_pot, to_reward_pot);
         <frame_system::Module<Runtime>>::deposit_event(
-            xpallet_system::RawEvent::TransactionFeePaid(
+            xpallet_transaction_fee::Event::<Runtime>::FeePaid(
                 author,
                 to_author_numeric_amount,
                 reward_pot,

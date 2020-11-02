@@ -46,7 +46,7 @@ decl_event!(
     {
         /// Transaction fee was paid to the block author and its reward pot in 1:9.
         /// [author, author_fee, reward_pot, reward_pot_fee]
-        Paid(AccountId, Balance, AccountId, Balance),
+        FeePaid(AccountId, Balance, AccountId, Balance),
     }
 );
 
