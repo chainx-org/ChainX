@@ -1,19 +1,21 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 use std::collections::BTreeMap;
-use std::fmt::{Debug, Display};
+use std::fmt::Display;
 use std::str::FromStr;
 use std::sync::Arc;
 
 use codec::Codec;
-use jsonrpc_core::{Error, ErrorCode, Result};
 use jsonrpc_derive::rpc;
 
+use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{
     generic::BlockId,
     traits::{Block as BlockT, Zero},
 };
+
+use xp_rpc::{runtime_error_into_rpc_err, Result};
 
 use xpallet_support::RpcBalance;
 
@@ -29,7 +31,7 @@ pub struct Assets<C, B> {
 impl<C, B> Assets<C, B> {
     /// Create new `Contracts` with the given reference to the client.
     pub fn new(client: Arc<C>) -> Self {
-        Assets {
+        Self {
             client,
             _marker: Default::default(),
         }
@@ -60,9 +62,7 @@ where
 impl<C, Block, AccountId, Balance> XAssetsApi<<Block as BlockT>::Hash, AccountId, Balance>
     for Assets<C, Block>
 where
-    C: sp_api::ProvideRuntimeApi<Block>,
-    C: HeaderBackend<Block>,
-    C: Send + Sync + 'static,
+    C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
     C::Api: XAssetsRuntimeApi<Block, AccountId, Balance>,
     Block: BlockT,
     AccountId: Clone + Display + Codec,
@@ -127,15 +127,5 @@ where
                     .collect()
             })
             .map_err(runtime_error_into_rpc_err)
-    }
-}
-
-const RUNTIME_ERROR: i64 = 1;
-/// Converts a runtime trap into an RPC error.
-fn runtime_error_into_rpc_err(err: impl Debug) -> Error {
-    Error {
-        code: ErrorCode::ServerError(RUNTIME_ERROR),
-        message: "Runtime trapped".into(),
-        data: Some(format!("{:?}", err).into()),
     }
 }

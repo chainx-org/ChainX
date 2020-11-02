@@ -18,6 +18,9 @@ sp-api = "2.0.0"
 sp-blockchain = "2.0.0"
 sp-runtime = "2.0.0"
 
+# ChainX primitives
+xp-rpc = { path = "../../../../primitives/rpc" }
+
 # ChainX pallets
 xpallet-support = { path = "../../../support" }
 
