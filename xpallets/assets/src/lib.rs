@@ -621,7 +621,7 @@ impl<T: Trait> Module<T> {
         debug::debug!(
             target: "xassets",
             "[destroy] account:{:?}, asset:[id:{}, type:{:?}, current:{:?}, destroy:{:?}]",
-            id, who, type_, current, value
+            who, id, type_, current, value
         );
 
         let new = current

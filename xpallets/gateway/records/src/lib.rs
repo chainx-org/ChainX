@@ -334,7 +334,7 @@ impl<T: Trait> Module<T> {
             debug::error!(
                 target: "xgateway-records",
                 "[cancel_withdrawal] id:{}, account {:?} is not the applicant {:?}",
-                who, record.applicant()
+                id, who, record.applicant()
             );
             return Err(Error::<T>::InvalidAccount.into());
         }

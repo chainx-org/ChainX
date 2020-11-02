@@ -154,7 +154,7 @@ impl<T: Trait> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo>
         {
             debug::error!(
                 target: "xgateway-bitcoin",
-                "[generate_trustee_session_info] Trustees {:?} is less/more than {min:{}, max:{}} people, \
+                "[generate_trustee_session_info] Trustees {:?} is less/more than {{min:{}, max:{}}} people, \
                 can't generate trustee addr",
                 trustees, config.min_trustee_count, config.max_trustee_count
             );

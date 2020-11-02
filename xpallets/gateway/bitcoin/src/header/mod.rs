@@ -150,7 +150,8 @@ pub fn check_confirmed_header<T: Trait>(header_info: &BtcHeaderInfo) -> Dispatch
                     // current <= best
                     debug::error!(
                         target: "xgateway-bitcoin",
-                        "[check_confirmed_header] Current confirmed number ({}) < Confirmed number of the header ({:?})",
+                        "[check_confirmed_header] Shouldn't be happened, \
+                        current confirmed header ({:?}), Confirmed header ({:?})",
                         current_confirmed, now_confirmed
                     );
                     Err(Error::<T>::AncientFork.into())
