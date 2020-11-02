@@ -49,10 +49,8 @@ pallet-membership = { version = "2.0.0", default-features = false }
 pallet-multisig = { version = "2.0.0", default-features = false }
 pallet-offences = { version = "2.0.0", default-features = false }
 pallet-randomness-collective-flip = { version = "2.0.0", default-features = false }
-pallet-recovery = { version = "2.0.0", default-features = false }
 pallet-scheduler = { version = "2.0.0", default-features = false }
 pallet-session = { version = "2.0.0", default-features = false, features = ["historical"] }
-pallet-society = { version = "2.0.0", default-features = false }
 pallet-sudo = { version = "2.0.0", default-features = false }
 pallet-timestamp = { version = "2.0.0", default-features = false }
 pallet-transaction-payment = { version = "2.0.0", default-features = false }
@@ -138,10 +136,8 @@ std = [
     "pallet-multisig/std",
     "pallet-offences/std",
     "pallet-randomness-collective-flip/std",
-    "pallet-recovery/std",
     "pallet-scheduler/std",
     "pallet-session/std",
-    "pallet-society/std",
     "pallet-sudo/std",
     "pallet-timestamp/std",
     "pallet-transaction-payment/std",
@@ -185,7 +181,6 @@ runtime-benchmarks = [
     "sp-runtime/runtime-benchmarks",
     "pallet-balances/runtime-benchmarks",
     "pallet-collective/runtime-benchmarks",
-    "pallet-society/runtime-benchmarks",
     "xpallet-assets/runtime-benchmarks",
     "xpallet-assets-registrar/runtime-benchmarks",
     "xpallet-dex-spot/runtime-benchmarks",

@@ -27,8 +27,8 @@ use chainx_runtime::{
 };
 use chainx_runtime::{
     AuthorityDiscoveryConfig, BalancesConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
-    GenesisConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig, SocietyConfig,
-    SudoConfig, SystemConfig, TechnicalCommitteeConfig, XAssetsConfig, XAssetsRegistrarConfig,
+    GenesisConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig, SudoConfig,
+    SystemConfig, TechnicalCommitteeConfig, XAssetsConfig, XAssetsRegistrarConfig,
     XGatewayBitcoinConfig, XGatewayCommonConfig, XGenesisBuilderConfig, XMiningAssetConfig,
     XSpotConfig, XStakingConfig, XSystemConfig,
 };
@@ -662,8 +662,6 @@ fn build_genesis(
         .cloned()
         .collect::<Vec<_>>();
 
-    let society_members = tech_comm_members.clone();
-
     // PCX only reserves the native asset id in assets module,
     // the actual native fund management is handled by pallet_balances.
     let mut assets_endowed = endowed;
@@ -726,11 +724,6 @@ fn build_genesis(
         }),
         pallet_balances: Some(BalancesConfig { balances }),
         pallet_indices: Some(IndicesConfig { indices: vec![] }),
-        pallet_society: Some(SocietyConfig {
-            members: society_members,
-            pot: 0,
-            max_members: 999,
-        }),
         pallet_sudo: Some(SudoConfig { key: root_key }),
         xpallet_system: Some(XSystemConfig {
             network_props: NetworkType::Testnet,
