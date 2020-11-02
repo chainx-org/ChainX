@@ -4292,6 +4292,8 @@ dependencies = [
 [[package]]
 name = "pallet-transaction-payment"
 version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f9fe2fc67f2eb123199a5b8fb89a8e1c30e5d6d6b1d98e0330bac85c0d8c46f1"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4303,7 +4305,6 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "xpallet-support",
 ]
 
 [[package]]
