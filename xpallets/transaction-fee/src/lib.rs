@@ -33,8 +33,7 @@ type BalanceOf<T> = <<T as pallet_transaction_payment::Trait>::Currency as Curre
 pub trait Trait: pallet_transaction_payment::Trait {}
 
 decl_module! {
-    pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-    }
+    pub struct Module<T: Trait> for enum Call where origin: T::Origin {}
 }
 
 decl_event!(
