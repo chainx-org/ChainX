@@ -1,0 +1,8 @@
+[package]
+name = "xp-rpc"
+version = "2.0.0-alpha.3"
+authors = ["The ChainX Authors"]
+edition = "2018"
+
+[dependencies]
+jsonrpc-core = "15.0.0"
