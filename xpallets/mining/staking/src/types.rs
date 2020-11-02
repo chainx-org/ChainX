@@ -245,7 +245,8 @@ impl<T: Trait> Slasher<T> {
         let reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(offender);
         let reward_pot_balance = Module::<T>::free_balance(&reward_pot);
 
-        debug::debug!(target: "xmining-staking",
+        debug::debug!(
+            target: "xmining-staking",
             "[try_slash] reward_pot_balance:{:?}, expected_slash:{:?}",
             reward_pot_balance, expected_slash
         );

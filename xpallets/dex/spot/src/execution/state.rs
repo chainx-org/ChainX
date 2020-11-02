@@ -86,9 +86,7 @@ impl<T: Trait> Module<T> {
                     debug::debug!(
                         target: "xspot",
                         "[update_handicap] pair_id: {:?}, lowest_ask: {:?}, side:{:?}",
-                        order.pair_id(),
-                        handicap.lowest_ask,
-                        Side::Sell,
+                        order.pair_id(), handicap.lowest_ask, Side::Sell
                     );
                 }
 
@@ -96,9 +94,7 @@ impl<T: Trait> Module<T> {
                 debug::debug!(
                     target: "xspot",
                     "[update_handicap] pair_id:{:?}, highest_bid:{:?}, side:{:?}",
-                    order.pair_id(),
-                    new_highest_bid,
-                    Side::Buy
+                    order.pair_id(), new_highest_bid, Side::Buy
                 );
             }
         });
@@ -116,9 +112,7 @@ impl<T: Trait> Module<T> {
                     debug::debug!(
                         target: "xspot",
                         "[update_handicap] pair_id:{:?}, highest_bid:{:?}, side:{:?}",
-                        order.pair_id(),
-                        handicap.highest_bid,
-                        Side::Buy
+                        order.pair_id(), handicap.highest_bid, Side::Buy
                     );
                 }
 
@@ -126,9 +120,7 @@ impl<T: Trait> Module<T> {
                 debug::debug!(
                     target: "xspot",
                     "[update_handicap] pair_id:{:?}, lowest_ask:{:?}, side:{:?}",
-                    order.pair_id(),
-                    new_lowest_ask,
-                    Side::Sell,
+                    order.pair_id(), new_lowest_ask, Side::Sell
                 );
             }
         });

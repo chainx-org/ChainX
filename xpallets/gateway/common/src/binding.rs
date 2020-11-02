@@ -16,7 +16,7 @@ impl<T: Trait> ChannelBinding<T::AccountId> for Module<T> {
             Ok(chain) => chain,
             Err(err) => {
                 debug::error!(
-                    target: "xgateway-bitcoin",
+                    target: "xgateway-common",
                     "[update_channel_binding] unexpected asset_id:{:?}, error:{:?}",
                     assert_id, err
                 );
@@ -33,7 +33,7 @@ impl<T: Trait> ChannelBinding<T::AccountId> for Module<T> {
                     }
                     Some(channel) => {
                         debug::debug!(
-                            target: "xgateway-bitcoin",
+                            target: "xgateway-common",
                             "[update_channel_binding] Already has channel binding:\
                             [assert id:{}, chain:{:?}, who:{:?}, channel:{:?}]",
                             assert_id, chain, who, channel
@@ -42,7 +42,7 @@ impl<T: Trait> ChannelBinding<T::AccountId> for Module<T> {
                 }
             } else {
                 debug::warn!(
-                    target: "xgateway-bitcoin",
+                    target: "xgateway-common",
                     "[update_channel_binding] {:?} has no channel, cannot update binding",
                     str!(&name)
                 );
@@ -62,7 +62,7 @@ impl<T: Trait, Addr: Into<Vec<u8>>> AddrBinding<T::AccountId, Addr> for Module<T
         if let Some(accountid) = AddressBinding::<T>::get(chain, &address) {
             if accountid != who {
                 debug::debug!(
-                    target: "xgateway-bitcoin",
+                    target: "xgateway-common",
                     "[update_addr_binding] Current address binding need to changed (old:{:?} => new:{:?})",
                     accountid, who
                 );
@@ -81,7 +81,7 @@ impl<T: Trait, Addr: Into<Vec<u8>>> AddrBinding<T::AccountId, Addr> for Module<T
         });
 
         debug::info!(
-            target: "xgateway-bitcoin",
+            target: "xgateway-common",
             "[update_addr_binding] Update address binding:[chain:{:?}, addr:{:?}, who:{:?}]",
             chain,
             try_addr!(address),
