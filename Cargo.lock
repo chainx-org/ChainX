@@ -9310,6 +9310,7 @@ dependencies = [
  "sp-core",
  "sp-rpc",
  "sp-runtime",
+ "xpallet-support",
  "xpallet-transaction-fee-rpc-runtime-api",
 ]
 

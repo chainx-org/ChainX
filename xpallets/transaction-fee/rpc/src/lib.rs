@@ -19,7 +19,8 @@ use sp_runtime::{
 
 use pallet_transaction_payment_rpc::Error;
 
-use xpallet_transaction_fee_rpc_runtime_api::FeeDetails;
+use xpallet_support::RpcBalance;
+use xpallet_transaction_fee_rpc_runtime_api::{FeeDetails, InclusionFee};
 
 pub use xpallet_transaction_fee_rpc_runtime_api::XTransactionFeeApi as XTransactionFeeRuntimeApi;
 
@@ -45,7 +46,7 @@ impl<C, P> XTransactionFee<C, P> {
     }
 }
 
-impl<C, Block, Balance> XTransactionFeeApi<<Block as BlockT>::Hash, FeeDetails<Balance>>
+impl<C, Block, Balance> XTransactionFeeApi<<Block as BlockT>::Hash, FeeDetails<RpcBalance<Balance>>>
     for XTransactionFee<C, Block>
 where
     Block: BlockT,
@@ -57,7 +58,7 @@ where
         &self,
         encoded_xt: Bytes,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<FeeDetails<Balance>> {
+    ) -> Result<FeeDetails<RpcBalance<Balance>>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
@@ -66,6 +67,15 @@ where
         let uxt: Block::Extrinsic = Decode::decode(&mut &*encoded_xt).map_err(into_rpc_err)?;
 
         api.query_fee_details(&at, uxt, encoded_len)
+            .map(|fee_details| FeeDetails {
+                inclusion_fee: fee_details.inclusion_fee.map(|fee| InclusionFee {
+                    base_fee: fee.base_fee.into(),
+                    len_fee: fee.len_fee.into(),
+                    adjusted_weight_fee: fee.adjusted_weight_fee.into(),
+                }),
+                tip: fee_details.tip.into(),
+                final_fee: fee_details.final_fee.into(),
+            })
             .map_err(into_rpc_err)
     }
 }

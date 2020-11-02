@@ -7,7 +7,7 @@
 use codec::Codec;
 use sp_runtime::traits::{MaybeDisplay, MaybeFromStr};
 
-pub use xpallet_transaction_fee::FeeDetails;
+pub use xpallet_transaction_fee::{FeeDetails, InclusionFee};
 
 sp_api::decl_runtime_apis! {
     pub trait XTransactionFeeApi<Balance> where
