@@ -5,6 +5,9 @@
 //! This module is a complement to pallet-transaction-payment module, unlike
 //! pallet-transaction-payment which merely returns the value of final fee, it
 //! exposes all the details of calculated transation fee in a struct `FeeDetails`.
+//!
+//! The future improvement is to make this feature native to Substrate's transaction-payment
+//! module so that we don't have to copy and paste the core logic of fee calculation.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
