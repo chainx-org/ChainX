@@ -15,8 +15,8 @@ impl<T: Trait> Module<T> {
         // Set staking information for new era.
         let maybe_new_validators = Self::select_and_update_validators(current_era);
         debug!(
-            "[new_era]start_session_index:{:?}, maybe_new_validators:{:?}",
-            start_session_index, maybe_new_validators
+            "[new_era]era_index:{}, start_session_index:{}, maybe_new_validators:{:?}",
+            current_era, start_session_index, maybe_new_validators
         );
 
         maybe_new_validators
