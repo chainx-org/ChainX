@@ -9,13 +9,14 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use codec::Codec;
-use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
 use serde::{Deserialize, Serialize};
 
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
+
+use xp_rpc::{runtime_error_into_rpc_err, Result};
 
 use xpallet_support::{RpcBalance, RpcPrice};
 
@@ -216,31 +217,4 @@ pub struct Page<T> {
     pub page_index: u32,
     pub page_size: u32,
     pub data: T,
-}
-
-/// Error type of this RPC api.
-pub enum Error {
-    /// The transaction was not decodable.
-    DecodeError,
-    /// The call to runtime failed.
-    RuntimeError,
-}
-
-impl From<Error> for i64 {
-    fn from(e: Error) -> i64 {
-        match e {
-            Error::RuntimeError => 1,
-            Error::DecodeError => 2,
-        }
-    }
-}
-
-const RUNTIME_ERROR: i64 = 1;
-/// Converts a runtime trap into an RPC error.
-fn runtime_error_into_rpc_err(err: impl Debug) -> RpcError {
-    RpcError {
-        code: ErrorCode::ServerError(RUNTIME_ERROR),
-        message: "Runtime trapped".into(),
-        data: Some(format!("{:?}", err).into()),
-    }
 }
