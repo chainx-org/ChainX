@@ -60,7 +60,7 @@
                     "isOptional": true
                 }
             ],
-            "type": "Page<Vec<RpcOrder<TradingPairId, AccountId, RpcBalance<Balance>, RpcPrice<Price>, BlockNumber>>>"
+            "type": "Page<Vec<RpcOrder<TradingPairId,AccountId,RpcBalance<Balance>,RpcPrice<Price>,BlockNumber>>>"
         },
         "getDepth": {
             "description": "Get the depth of a trading pair.",
@@ -245,7 +245,7 @@
                     "isOptional": true
                 }
             ],
-            "type": "Vec<MiningAssetInfo<AccountId, RpcBalance<Balance>, RpcMiningWeight<MiningWeight>, BlockNumber>>"
+            "type": "Vec<MiningAssetInfo<AccountId,RpcBalance<Balance>,RpcMiningWeight<MiningWeight>,BlockNumber>>"
         },
         "getDividendByAccount": {
             "description": "Get the asset mining dividends info given the asset miner AccountId.",
@@ -333,7 +333,7 @@
                     "isOptional": true
                 }
             ],
-            "type": "BTreeMap<AccountId, NominatorLedger<RpcBalance<Balance>, RpcVoteWeight<VoteWeight>, BlockNumber>>"
+            "type": "BTreeMap<AccountId,NominatorLedger<RpcBalance<Balance>, RpcVoteWeight<VoteWeight>, BlockNumber>>"
         },
         "getNominatorByAccount": {
             "description": "Get individual nominator information given the nominator AccountId.",
