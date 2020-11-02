@@ -9283,7 +9283,6 @@ version = "2.0.0-alpha.3"
 dependencies = [
  "frame-support",
  "frame-system",
- "pallet-balances",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
  "parity-scale-codec",
@@ -9293,7 +9292,6 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "sp-storage",
  "xpallet-support",
 ]
 

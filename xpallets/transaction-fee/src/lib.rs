@@ -60,7 +60,6 @@ where
     /// the details of final fee instead.
     ///
     /// [`compute_fee`]: https://docs.rs/pallet-transaction-payment/2.0.0/pallet_transaction_payment/struct.Module.html#method.compute_fee
-    ///
     pub fn query_fee_details<Extrinsic: GetDispatchInfo>(
         unchecked_extrinsic: Extrinsic,
         len: u32,
