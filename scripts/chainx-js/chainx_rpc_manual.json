@@ -11,5 +11,21 @@
             ],
             "type": "BTreeMap<AssetId, RpcTotalAssetInfo>"
         }
+    },
+    "xfee": {
+        "queryDetails": {
+            "description": "get the fee details of extrinsic",
+            "params": [
+                {
+                    "name": "encoded_xt",
+                    "type": "Bytes"
+                },
+                {
+                    "name": "at",
+                    "type": "Option<BlockHash>"
+                }
+            ],
+            "type": "RpcFeeDetails"
+        }
     }
 }

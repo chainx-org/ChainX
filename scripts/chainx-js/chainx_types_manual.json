@@ -209,6 +209,16 @@
         "height": "BlockNumber",
         "state": "WithdrawalState"
     },
+    "RpcInclusionFee": {
+        "base_fee": "RpcBalance",
+        "len_fee": "RpcBalance",
+        "adjusted_weight_fee": "RpcBalance"
+    },
+    "RpcFeeDetails": {
+        "inclusion_fee": "Option<RpcInclusionFee>",
+        "tip": "RpcBalance",
+        "final_fee": "RpcBalance"
+    },
     "ValidatorInfo": {
         "account": "AccountId",
         "registered_at": "BlockNumber",

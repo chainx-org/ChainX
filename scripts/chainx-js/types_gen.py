@@ -49,11 +49,11 @@ NEW_TYPES = [
     "ClaimRestriction", "Desc", "FixedAssetPower", "GlobalDistribution",
     "HandicapInfo", "Memo", "MinerLedger", "MiningDistribution", "NetworkType",
     "NominatorLedger", "Order", "OrderExecutedInfo", "OrderId", "OrderInfo",
-    "OrderType", "Price", "PriceFluctuation", "Side",
-    "StakingRequirement", "Token", "TradingHistoryIndex", "TradingPairId",
-    "TradingPairInfo", "TradingPairProfile", "UnbondedIndex",
-    "ValidatorLedger", "ValidatorProfile",
-    "MiningAssetInfo", "LockedType", "NominatorInfo", "Unbonded"
+    "OrderType", "Price", "PriceFluctuation", "Side", "StakingRequirement",
+    "Token", "TradingHistoryIndex", "TradingPairId", "TradingPairInfo",
+    "TradingPairProfile", "UnbondedIndex", "ValidatorLedger",
+    "ValidatorProfile", "MiningAssetInfo", "LockedType", "NominatorInfo",
+    "Unbonded", "FeeDetails", "InclusionFee"
 ]
 
 # Change the working directory to project root directory.
@@ -426,8 +426,8 @@ def build_rpc():
                     if xmodule.startswith('x'):
                         fn_lines = []
                         #  Normally the fn defintion won't more than 10 lines
-                        for i in range(idx, idx +
-                                       MAX_RETURN_VALUE_SPANNED_LINES):
+                        for i in range(idx,
+                                       idx + MAX_RETURN_VALUE_SPANNED_LINES):
                             fn_lines.append(lines[i].strip())
                             if lines[i].strip().endswith(';'):
                                 break
