@@ -23,7 +23,7 @@ fn read_config_file(path: &Path) -> Result<HashMap<String, Value>, Box<dyn std::
 /// Only the options that do not appear in the command line will be appended.
 fn extend_cli_args(
     cli_args: Vec<String>,
-    path: &std::path::Path,
+    optional_path: Option<&std::path::Path>,
 ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     // Gather all the FLAGS/OPTIONS passed from the command line.
     let cli_opts = cli_args
@@ -34,42 +34,55 @@ fn extend_cli_args(
 
     let mut config_opts = Vec::new();
 
-    for (key, value) in read_config_file(path)?.into_iter() {
-        let opt = format!("--{}", key);
+    let mut port_opts = ::std::collections::HashMap::new();
+    port_opts.insert("port", 20222);
+    port_opts.insert("rpc-port", 8086);
+    port_opts.insert("ws-port", 8087);
 
-        match value {
-            Value::Bool(b) => {
-                if !cli_opts.contains(&opt.as_ref()) && b {
-                    config_opts.push(opt.to_string());
+    if let Some(path) = optional_path {
+        for (key, value) in read_config_file(path)?.into_iter() {
+            if port_opts.contains_key(key.as_str()) {
+                port_opts.remove(key.as_str());
+            }
+
+            let opt = format!("--{}", key);
+            match value {
+                Value::Bool(b) => {
+                    if !cli_opts.contains(&opt.as_ref()) && b {
+                        config_opts.push(opt.to_string());
+                    }
                 }
-            }
-            Value::Number(n) => {
-                if !cli_opts.contains(&opt.as_ref()) {
-                    config_opts.push(format!("{}={}", opt, n));
+                Value::Number(n) => {
+                    if !cli_opts.contains(&opt.as_ref()) {
+                        config_opts.push(format!("{}={}", opt, n));
+                    }
                 }
-            }
-            Value::String(s) => {
-                if !s.is_empty() && !cli_opts.contains(&opt.as_ref()) {
-                    config_opts.push(format!("{}={}", opt, s));
+                Value::String(s) => {
+                    if !s.is_empty() && !cli_opts.contains(&opt.as_ref()) {
+                        config_opts.push(format!("{}={}", opt, s));
+                    }
                 }
-            }
-            Value::Array(arr) => {
-                config_opts.extend(arr.into_iter().map(|a| {
-                    format!(
-                        "{}={}",
-                        opt,
-                        a.as_str().expect("Array item can always be a String; qed")
-                    )
-                }));
-            }
-            Value::Null => {}
-            Value::Object(_) => {
-                panic!("The nested configuration in the config file is unsupported.")
+                Value::Array(arr) => {
+                    config_opts.extend(arr.into_iter().map(|a| {
+                        format!(
+                            "{}={}",
+                            opt,
+                            a.as_str().expect("Array item can always be a String; qed")
+                        )
+                    }));
+                }
+                Value::Null => {}
+                Value::Object(_) => {
+                    panic!("The nested configuration in the config file is unsupported.")
+                }
             }
         }
     }
 
     let mut args = cli_args;
+    for (key_, value) in port_opts {
+        config_opts.push(format!("--{}={}", key_, value));
+    }
     args.extend(config_opts);
     Ok(args)
 }
@@ -93,11 +106,14 @@ pub fn preprocess_cli_args(cli_args: Vec<String>) -> Vec<String> {
     }
 
     if let Some(config) = config_path {
-        match extend_cli_args(cli_args, Path::new(&config)) {
+        match extend_cli_args(cli_args, Some(Path::new(&config))) {
             Ok(args) => args,
             Err(e) => panic!(e.to_string()),
         }
     } else {
-        cli_args
+        match extend_cli_args(cli_args, None) {
+            Ok(args) => args,
+            Err(e) => panic!(e.to_string()),
+        }
     }
 }
