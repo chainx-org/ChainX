@@ -23,7 +23,8 @@ fn read_config_file(path: &Path) -> Result<HashMap<String, Value>, Box<dyn std::
 /// Only the options that do not appear in the command line will be appended.
 fn extend_cli_args(
     cli_args: Vec<String>,
-    optional_path: Option<&std::path::Path>,
+    path: Option<&Path>,
+    default_opts: HashMap<String, String>,
 ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     // Gather all the FLAGS/OPTIONS passed from the command line.
     let cli_opts = cli_args
@@ -33,16 +34,12 @@ fn extend_cli_args(
         .collect::<Vec<_>>();
 
     let mut config_opts = Vec::new();
+    let mut filtered_default_opts = default_opts.clone();
 
-    let mut port_opts = ::std::collections::HashMap::new();
-    port_opts.insert("port", 20222);
-    port_opts.insert("rpc-port", 8086);
-    port_opts.insert("ws-port", 8087);
-
-    if let Some(path) = optional_path {
+    if let Some(path) = path {
         for (key, value) in read_config_file(path)?.into_iter() {
-            if port_opts.contains_key(key.as_str()) {
-                port_opts.remove(key.as_str());
+            if filtered_default_opts.contains_key(key.as_str()) {
+                filtered_default_opts.remove(key.as_str());
             }
 
             let opt = format!("--{}", key);
@@ -80,11 +77,19 @@ fn extend_cli_args(
     }
 
     let mut args = cli_args;
-    for (key_, value) in port_opts {
-        config_opts.push(format!("--{}={}", key_, value));
+    for (key, value) in filtered_default_opts {
+        config_opts.push(format!("--{}={}", key, value));
     }
     args.extend(config_opts);
     Ok(args)
+}
+
+fn default_opts() -> HashMap<String, String> {
+    let mut map = HashMap::new();
+    map.insert("port".into(), "20222".to_string());
+    map.insert("rpc-port".into(), "8086".to_string());
+    map.insert("ws-port".into(), "8087".to_string());
+    map
 }
 
 /// Try to inject the options from the config file.
@@ -105,15 +110,9 @@ pub fn preprocess_cli_args(cli_args: Vec<String>) -> Vec<String> {
         }
     }
 
-    if let Some(config) = config_path {
-        match extend_cli_args(cli_args, Some(Path::new(&config))) {
-            Ok(args) => args,
-            Err(e) => panic!(e.to_string()),
-        }
-    } else {
-        match extend_cli_args(cli_args, None) {
-            Ok(args) => args,
-            Err(e) => panic!(e.to_string()),
-        }
+    let path: Option<&Path> = config_path.as_ref().map(Path::new);
+    match extend_cli_args(cli_args, path, default_opts()) {
+        Ok(args) => args,
+        Err(e) => panic!(e.to_string()),
     }
 }
