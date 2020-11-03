@@ -76,10 +76,11 @@ fn extend_cli_args(
         }
     }
 
-    let mut args = cli_args;
     for (key, value) in filtered_default_opts {
         config_opts.push(format!("--{}={}", key, value));
     }
+
+    let mut args = cli_args;
     args.extend(config_opts);
     Ok(args)
 }
