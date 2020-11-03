@@ -23,7 +23,8 @@ fn read_config_file(path: &Path) -> Result<HashMap<String, Value>, Box<dyn std::
 /// Only the options that do not appear in the command line will be appended.
 fn extend_cli_args(
     cli_args: Vec<String>,
-    path: &std::path::Path,
+    path: Option<&Path>,
+    default_opts: HashMap<String, String>,
 ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     // Gather all the FLAGS/OPTIONS passed from the command line.
     let cli_opts = cli_args
@@ -33,45 +34,63 @@ fn extend_cli_args(
         .collect::<Vec<_>>();
 
     let mut config_opts = Vec::new();
+    let mut default_opts = default_opts;
 
-    for (key, value) in read_config_file(path)?.into_iter() {
-        let opt = format!("--{}", key);
+    if let Some(path) = path {
+        for (key, value) in read_config_file(path)?.into_iter() {
+            if default_opts.contains_key(key.as_str()) {
+                default_opts.remove(key.as_str());
+            }
 
-        match value {
-            Value::Bool(b) => {
-                if !cli_opts.contains(&opt.as_ref()) && b {
-                    config_opts.push(opt.to_string());
+            let opt = format!("--{}", key);
+            match value {
+                Value::Bool(b) => {
+                    if !cli_opts.contains(&opt.as_ref()) && b {
+                        config_opts.push(opt.to_string());
+                    }
                 }
-            }
-            Value::Number(n) => {
-                if !cli_opts.contains(&opt.as_ref()) {
-                    config_opts.push(format!("{}={}", opt, n));
+                Value::Number(n) => {
+                    if !cli_opts.contains(&opt.as_ref()) {
+                        config_opts.push(format!("{}={}", opt, n));
+                    }
                 }
-            }
-            Value::String(s) => {
-                if !s.is_empty() && !cli_opts.contains(&opt.as_ref()) {
-                    config_opts.push(format!("{}={}", opt, s));
+                Value::String(s) => {
+                    if !s.is_empty() && !cli_opts.contains(&opt.as_ref()) {
+                        config_opts.push(format!("{}={}", opt, s));
+                    }
                 }
-            }
-            Value::Array(arr) => {
-                config_opts.extend(arr.into_iter().map(|a| {
-                    format!(
-                        "{}={}",
-                        opt,
-                        a.as_str().expect("Array item can always be a String; qed")
-                    )
-                }));
-            }
-            Value::Null => {}
-            Value::Object(_) => {
-                panic!("The nested configuration in the config file is unsupported.")
+                Value::Array(arr) => {
+                    config_opts.extend(arr.into_iter().map(|a| {
+                        format!(
+                            "{}={}",
+                            opt,
+                            a.as_str().expect("Array item can always be a String; qed")
+                        )
+                    }));
+                }
+                Value::Null => {}
+                Value::Object(_) => {
+                    panic!("The nested configuration in the config file is unsupported.")
+                }
             }
         }
+    }
+
+    for (key, value) in default_opts {
+        config_opts.push(format!("--{}={}", key, value));
     }
 
     let mut args = cli_args;
     args.extend(config_opts);
     Ok(args)
+}
+
+fn default_opts() -> HashMap<String, String> {
+    let mut map = HashMap::new();
+    map.insert("port".into(), "20222".to_string());
+    map.insert("rpc-port".into(), "8086".to_string());
+    map.insert("ws-port".into(), "8087".to_string());
+    map
 }
 
 /// Try to inject the options from the config file.
@@ -92,12 +111,9 @@ pub fn preprocess_cli_args(cli_args: Vec<String>) -> Vec<String> {
         }
     }
 
-    if let Some(config) = config_path {
-        match extend_cli_args(cli_args, Path::new(&config)) {
-            Ok(args) => args,
-            Err(e) => panic!(e.to_string()),
-        }
-    } else {
-        cli_args
+    let path: Option<&Path> = config_path.as_ref().map(Path::new);
+    match extend_cli_args(cli_args, path, default_opts()) {
+        Ok(args) => args,
+        Err(e) => panic!(e.to_string()),
     }
 }
