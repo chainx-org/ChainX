@@ -60,13 +60,13 @@ impl<T: Trait, TrusteeAddress: BytesLike + ChainProvider>
             Some(r) => r,
             None => u32::max_value(),
         };
-        Self::trustee_session(number).map_err(|e| {
+        Self::trustee_session(number).map_err(|err| {
             debug::warn!(
                 target: "xgateway-common",
                 "[last_trustee_session] Last trustee session not exist yet for chain:{:?}",
                 chain
             );
-            e
+            err
         })
     }
 

@@ -6,7 +6,7 @@ pub mod validator;
 
 // Substrate
 use frame_support::{
-    debug::{self, native},
+    debug,
     dispatch::{DispatchError, DispatchResult},
     StorageMap, StorageValue,
 };
@@ -268,7 +268,7 @@ where
         }
     }
 
-    native::debug!(
+    debug::native::debug!(
         target: "xgateway-bitcoin",
         "[parse_deposit_outputs_impl] Parse outputs, account_info:{:?}, balance:{}, opreturn:{}",
         account_info,
@@ -449,7 +449,7 @@ fn insert_pending_deposit<T: Trait>(input_address: &Address, txid: &H256, balanc
 
     PendingDeposits::mutate(&addr_bytes, |list| {
         if !list.contains(&cache) {
-            native::debug!(
+            debug::native::debug!(
                 target: "xgateway-bitcoin",
                 "[insert_pending_deposit] Add pending deposit, address:{:?}, txhash:{:?}, balance:{}",
                 str!(addr_bytes),
@@ -465,7 +465,7 @@ fn insert_pending_deposit<T: Trait>(input_address: &Address, txid: &H256, balanc
 
 fn withdraw<T: Trait>(tx: Transaction) -> BtcTxResult {
     if let Some(proposal) = WithdrawalProposal::<T>::take() {
-        native::debug!(
+        debug::native::debug!(
             target: "xgateway-bitcoin",
             "[withdraw] Withdraw Tx {:?}, proposal:{:?}",
             tx,

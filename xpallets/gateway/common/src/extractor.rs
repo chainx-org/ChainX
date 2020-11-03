@@ -39,7 +39,7 @@ pub fn parse_address(data: &[u8]) -> Option<AccountId32> {
         .into_vec()
         .map_err(|err| {
             error!(
-                "[parse_address] Parse base58 err: {:?}, data:{:?}",
+                "[parse_address] Parse base58 err:{:?}, data:{:?}",
                 err,
                 str!(data)
             );

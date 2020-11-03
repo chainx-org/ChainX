@@ -289,7 +289,7 @@ impl<T: Trait> Module<T> {
             Vec::new(),
         );
 
-        debug::info!(target: "xgateway-bitcoin", "[apply_create_withdraw] Through the legality check of withdrawal");
+        debug::info!(target: "xgateway-bitcoin", "[apply_create_withdraw] Pass the legality check of withdrawal");
 
         Self::deposit_event(Event::<T>::WithdrawalProposalCreated(
             who.clone(),
@@ -338,8 +338,7 @@ impl<T: Trait> Module<T> {
                     debug::error!(
                         target: "xgateway-bitcoin",
                         "[apply_sig_withdraw] The tx sig should not be zero, zero is the source tx without any sig, \
-                        tx:{:?}",
-                        tx
+                        tx:{:?}", tx
                     );
                     return Err(Error::<T>::InvalidSignCount.into());
                 }
@@ -353,7 +352,8 @@ impl<T: Trait> Module<T> {
                 if sigs_count != confirmed_count + 1 {
                     debug::error!(
                         target: "xgateway-bitcoin",
-                        "[apply_sig_withdraw] Need to sign on the latest signature results, sigs count:{}, confirmed count:{}",
+                        "[apply_sig_withdraw] Need to sign on the latest signature results, \
+                        sigs count:{}, confirmed count:{}",
                         sigs_count, confirmed_count
                     );
                     return Err(Error::<T>::InvalidSignCount.into());
