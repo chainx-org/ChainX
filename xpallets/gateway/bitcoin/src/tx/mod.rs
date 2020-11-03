@@ -30,7 +30,7 @@ use light_bitcoin::{
 #[cfg(feature = "std")]
 use self::utils::trick_format_opreturn;
 use self::utils::{
-    equal_addr, inspect_address_from_transaction, is_key, parse_opreturn,
+    equal_addr, extract_opreturn_data, inspect_address_from_transaction, is_key,
     parse_output_addr_with_networkid,
 };
 pub use self::validator::validate_transaction;
@@ -95,7 +95,7 @@ pub fn detect_transaction_type_impl<AccountId, F>(
     min_deposit: u64,
     trustee_addr_pair: (Address, Address),
     old_trustee_addr_pair: Option<(Address, Address)>,
-    handle_opreturn: F,
+    parse_opreturn: F,
 ) -> MetaTxType<AccountId>
 where
     AccountId: Debug,
@@ -148,7 +148,7 @@ where
         &hot_addr,
         input_addr.as_ref(),
         network,
-        handle_opreturn,
+        parse_opreturn,
     )
 }
 
@@ -158,14 +158,14 @@ fn detect_deposit_type<AccountId, F>(
     hot_addr: &Address,
     input_addr: Option<&Address>,
     network: Network,
-    handle_opreturn: F,
+    parse_opreturn: F,
 ) -> MetaTxType<AccountId>
 where
     AccountId: Debug,
     F: Fn(&[u8]) -> Option<(AccountId, Option<ReferralId>)>,
 {
     let (opreturn, deposit_value) =
-        parse_deposit_outputs_impl(tx, hot_addr, network, handle_opreturn);
+        parse_deposit_outputs_impl(tx, hot_addr, network, parse_opreturn);
     if deposit_value >= min_deposit {
         // if opreturn.is_none() && input_addr.is_none() == true
         // we still think it's a deposit tx, but would not process it.
@@ -224,7 +224,7 @@ pub fn parse_deposit_outputs_impl<AccountId, F>(
     tx: &Transaction,
     hot_addr: &Address,
     network: Network,
-    handle_opreturn: F,
+    parse_opreturn: F,
 ) -> (Option<(AccountId, Option<ReferralId>)>, u64)
 where
     AccountId: Debug,
@@ -243,8 +243,8 @@ where
         if script.is_null_data_script() {
             // only handle first valid account info opreturn, other opreturn would drop
             if !has_opreturn {
-                if let Some(v) = parse_opreturn(&script) {
-                    let info = handle_opreturn(&v);
+                if let Some(data) = extract_opreturn_data(&script) {
+                    let info = parse_opreturn(&data);
                     if info.is_some() {
                         // only set first valid account info
                         _original = script.to_vec();

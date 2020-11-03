@@ -3207,7 +3207,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin#58547a04f5b45f9adf737c4fc564c500b8f6963e"
+source = "git+https://github.com/chainx-org/light-bitcoin#00b81fb49f16a295d05b77c932c3d06f3f83f170"
 dependencies = [
  "light-bitcoin-chain",
  "light-bitcoin-crypto",
@@ -3221,7 +3221,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-chain"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin#58547a04f5b45f9adf737c4fc564c500b8f6963e"
+source = "git+https://github.com/chainx-org/light-bitcoin#00b81fb49f16a295d05b77c932c3d06f3f83f170"
 dependencies = [
  "hex",
  "light-bitcoin-crypto",
@@ -3234,7 +3234,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-crypto"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin#58547a04f5b45f9adf737c4fc564c500b8f6963e"
+source = "git+https://github.com/chainx-org/light-bitcoin#00b81fb49f16a295d05b77c932c3d06f3f83f170"
 dependencies = [
  "digest 0.9.0",
  "light-bitcoin-primitives",
@@ -3247,7 +3247,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-keys"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin#58547a04f5b45f9adf737c4fc564c500b8f6963e"
+source = "git+https://github.com/chainx-org/light-bitcoin#00b81fb49f16a295d05b77c932c3d06f3f83f170"
 dependencies = [
  "bs58",
  "hex",
@@ -3262,7 +3262,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-merkle"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin#58547a04f5b45f9adf737c4fc564c500b8f6963e"
+source = "git+https://github.com/chainx-org/light-bitcoin#00b81fb49f16a295d05b77c932c3d06f3f83f170"
 dependencies = [
  "light-bitcoin-chain",
  "light-bitcoin-primitives",
@@ -3273,7 +3273,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-primitives"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin#58547a04f5b45f9adf737c4fc564c500b8f6963e"
+source = "git+https://github.com/chainx-org/light-bitcoin#00b81fb49f16a295d05b77c932c3d06f3f83f170"
 dependencies = [
  "byteorder 1.3.4",
  "fixed-hash",
@@ -3287,7 +3287,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-script"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin#58547a04f5b45f9adf737c4fc564c500b8f6963e"
+source = "git+https://github.com/chainx-org/light-bitcoin#00b81fb49f16a295d05b77c932c3d06f3f83f170"
 dependencies = [
  "hex",
  "light-bitcoin-chain",
@@ -3300,7 +3300,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-serialization"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin#58547a04f5b45f9adf737c4fc564c500b8f6963e"
+source = "git+https://github.com/chainx-org/light-bitcoin#00b81fb49f16a295d05b77c932c3d06f3f83f170"
 dependencies = [
  "light-bitcoin-primitives",
  "light-bitcoin-serialization-derive",
@@ -3309,7 +3309,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-serialization-derive"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin#58547a04f5b45f9adf737c4fc564c500b8f6963e"
+source = "git+https://github.com/chainx-org/light-bitcoin#00b81fb49f16a295d05b77c932c3d06f3f83f170"
 dependencies = [
  "proc-macro2",
  "quote",

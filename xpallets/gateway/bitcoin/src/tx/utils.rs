@@ -1,18 +1,15 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-// Substrate
 use frame_support::dispatch::DispatchResult;
-use sp_std::prelude::Vec;
+use sp_std::{cmp::Ordering, prelude::Vec};
 
-// ChainX
-use xpallet_support::{error, try_hex, warn};
-
-// light-bitcoin
 use light_bitcoin::{
     chain::{OutPoint, Transaction},
     keys::{Address, DisplayLayout, Network},
     script::{Opcode, Script, ScriptAddress},
 };
+
+use xpallet_support::{error, try_hex, warn};
 
 use crate::{native, Error, Module, Trait};
 
@@ -79,48 +76,6 @@ pub fn equal_addr(addr1: &Address, addr2: &Address) -> bool {
     addr1.hash == addr2.hash
 }
 
-pub fn parse_opreturn(script: &Script) -> Option<Vec<u8>> {
-    if script.is_null_data_script() {
-        // jump OP_RETURN, when after `is_null_data_script`, subscript must larger and equal than 1
-        let s = script.subscript(1);
-        if s.is_empty() {
-            error!("[parse_opreturn]|nothing after `OP_RETURN`, valid in rule but invalid for public consensus");
-            return None;
-        }
-        // script must large then 1
-        if s[0] < Opcode::OP_PUSHDATA1 as u8 {
-            if s[0] as usize == (&s[1..]).len() {
-                Some(s[1..].to_vec())
-            } else {
-                error!("[parse_opreturn]|unexpect! opreturn source error, len not equal to real len|len:{:?}|real:{:?}", s[0], &s[1..]);
-                None
-            }
-        } else if s[0] == Opcode::OP_PUSHDATA1 as u8 {
-            // when subscript [0] is `OP_PUSHDATA1`, must have [1], or is an invalid data
-            if s.len() < 2 {
-                error!(
-                    "[parse_opreturn]|nothing after `OP_PUSHDATA1`, invalid opreturn|{:?}",
-                    s
-                );
-                return None;
-            }
-            // script must large then 2
-            if s[1] as usize == (&s[2..]).len() {
-                Some(s[2..].to_vec())
-            } else {
-                error!("[parse_opreturn]|unexpect! opreturn source error, len not equal to real len|len mark:{:?}|len:{:?}|real:{:?}", s[0], s[1], &s[2..]);
-                None
-            }
-        } else {
-            error!("[parse_opreturn]|unexpect! opreturn source error, opreturn should not");
-            None
-        }
-    } else {
-        // do nothing
-        None
-    }
-}
-
 /// Returns Ok if `tx1` and `tx2` are the same transaction.
 pub fn ensure_identical<T: Trait>(tx1: &Transaction, tx2: &Transaction) -> DispatchResult {
     if tx1.version == tx2.version
@@ -164,4 +119,96 @@ pub fn trick_format_opreturn(opreturn: &[u8]) -> String {
     } else {
         format!("{:?}", opreturn)
     }
+}
+
+// Extract the opreturn data from btc script.
+// OP_RETURN format:
+// - op_return + op_push(<0x4c) + data (op_push == data.len())
+// - op_return + op_push(=0x4c) + data.len() + data
+pub fn extract_opreturn_data(script: &Script) -> Option<Vec<u8>> {
+    if !script.is_null_data_script() {
+        return None;
+    }
+
+    // jump `OP_RETURN`, after checking `is_null_data_script`
+    // subscript = `op_push + data` or `op_push + data.len() + data`
+    let subscript = script.subscript(1);
+    if subscript.is_empty() {
+        error!("[parse_opreturn] nothing after `OP_RETURN`, valid in rule but invalid for public consensus");
+        return None;
+    }
+
+    // parse op_push and data.
+    let op_push = subscript[0];
+    match op_push.cmp(&(Opcode::OP_PUSHDATA1 as u8)) {
+        Ordering::Less => {
+            // OP_RETURN format: op_return + op_push(<0x4c) + data (op_push == data.len())
+            if subscript.len() < 2 {
+                error!(
+                    "[parse_opreturn] nothing after `OP_PUSHDATA1`, invalid opreturn script:{:?}",
+                    script
+                );
+                return None;
+            }
+            let data = &subscript[1..];
+            if op_push as usize == data.len() {
+                Some(data.to_vec())
+            } else {
+                error!("[parse_opreturn] unexpected opreturn source error, expected data len:{}, actual data:{:?}", op_push, data);
+                None
+            }
+        }
+        Ordering::Equal => {
+            // OP_RETURN format: op_return + op_push(=0x4c) + data.len() + data
+            //
+            // if op_push == `OP_PUSHDATA1`, we must have extra byte for the length of data,
+            // otherwise it's an invalid data.
+            if subscript.len() < 3 {
+                error!(
+                    "[parse_opreturn] nothing after `OP_PUSHDATA1`, invalid opreturn script: {:?}",
+                    script
+                );
+                return None;
+            }
+            let data_len = subscript[1];
+            let data = &subscript[2..];
+            if data_len as usize == data.len() {
+                Some(data.to_vec())
+            } else {
+                error!("[parse_opreturn] unexpected opreturn source error, expected data len:{}, actual data:{:?}", data_len, data);
+                None
+            }
+        }
+        Ordering::Greater => {
+            error!(
+                "[parse_opreturn] unexpected opreturn source error, \
+                opreturn format should be `op_return+op_push+data` or `op_return+op_push+data_len+data`, \
+                op_push: {:?}", op_push
+            );
+            None
+        }
+    }
+}
+
+#[test]
+fn test_extract_opreturn_data() {
+    // tx: 6b2bea220fdecf30ae3d0e0fa6770f06f281999f81d485ebfc15bdf375268c59
+    // null data script: 6a 30 35524745397a4a79667834367934467948444a65317976394e44725946435446746e6e6d714e445077506a6877753871
+    let bytes = hex::decode("6a3035524745397a4a79667834367934467948444a65317976394e44725946435446746e6e6d714e445077506a6877753871").unwrap();
+    let script = Script::new(bytes.into());
+    let data = extract_opreturn_data(&script).unwrap();
+    assert_eq!(
+        data,
+        b"5RGE9zJyfx46y4FyHDJe1yv9NDrYFCTFtnnmqNDPwPjhwu8q".to_vec()
+    );
+
+    // tx: 003e7e005b172fe0046fd06a83679fbcdc5e3dd64c8ef9295662a463dea486aa
+    // null data script: 6a 38 35515a5947565655507370376362714755634873524a555a726e6d547545796836534c48366a6470667346786770524b404c616f63697573
+    let bytes = hex::decode("6a3835515a5947565655507370376362714755634873524a555a726e6d547545796836534c48366a6470667346786770524b404c616f63697573").unwrap();
+    let script = Script::new(bytes.into());
+    let data = extract_opreturn_data(&script).unwrap();
+    assert_eq!(
+        data,
+        b"5QZYGVVUPsp7cbqGUcHsRJUZrnmTuEyh6SLH6jdpfsFxgpRK@Laocius".to_vec()
+    );
 }
