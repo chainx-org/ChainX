@@ -22,42 +22,46 @@ use log4rs::{
 pub struct LoggerParams {
     /// Enable the log4rs feature, including the log rotation function.
     //  Use `log4rs` as `env_logger` can't print the message into file directly.
-    #[structopt(long = "log4rs")]
+    #[structopt(long)]
     pub log4rs: bool,
 
     /// Specify the path of directory which will contain the log files.
     ///
     /// The directory will be created if it does not exist.
-    #[structopt(long = "log-dir", default_value = "./log")]
+    #[structopt(long, default_value = "./log")]
     pub log_dir: String,
 
     /// Specify the name of log file.
     ///
     /// The latest log file would be created at ./log/chainx.log.
-    #[structopt(long = "log-filename", default_value = "chainx.log")]
+    #[structopt(long, default_value = "chainx.log")]
     pub log_filename: String,
 
     /// Rotate the log file when it exceeds this size (in MB).
-    #[structopt(long = "log-size", default_value = "300")]
+    #[structopt(long, default_value = "300")]
     pub log_size: u64,
 
-    /// The maximum number of log rorations.
+    /// The maximum number of log rotations.
     ///
     /// By default the generated log files would be like `chainx.log.0`,
     /// `chainx.log.1`, ... `chainx.log.10`. Once the number of generated log files
     /// are larger than this variable, the oldest one will be removed.
-    #[structopt(long = "log-roll-count", default_value = "10")]
+    #[structopt(long, default_value = "10")]
     pub log_roll_count: u32,
 
     /// Print the log message to the console aside from the log file.
-    #[structopt(long = "log-console")]
+    #[structopt(long)]
     pub log_console: bool,
 
     /// Compress the old log file to save some disk space.
     ///
     /// The compressed log file would be like `chainx.log.gz.0` by default.
-    #[structopt(long = "log-compression")]
+    #[structopt(long)]
     pub log_compression: bool,
+
+    /// Log the module and line that the log message came from.
+    #[structopt(long)]
+    pub log_module_line: bool,
 }
 
 #[derive(Debug)]
@@ -160,10 +164,17 @@ pub fn init(log_filters: &str, params: &LoggerParams) -> Result<(), String> {
             "{d(%Y-%m-%d %H:%M:%S:%3f)} {T} {l} {t}  {m}\n", // remove color
         )
     } else {
-        (
-            "{d(%Y-%m-%d %H:%M:%S:%3f)} {h({l})} {m}\n",
-            "{d(%Y-%m-%d %H:%M:%S:%3f)} {l} {m}\n", // remove color
-        )
+        if params.log_module_line {
+            (
+                "{d(%Y-%m-%d %H:%M:%S:%3f)} {h({l})} {M}:{L} {m}\n",
+                "{d(%Y-%m-%d %H:%M:%S:%3f)} {l} {M}:{L} {m}\n", // remove color
+            )
+        } else {
+            (
+                "{d(%Y-%m-%d %H:%M:%S:%3f)} {h({l})} {m}\n",
+                "{d(%Y-%m-%d %H:%M:%S:%3f)} {l} {m}\n", // remove color
+            )
+        }
     };
 
     let full_log_filename = format!(

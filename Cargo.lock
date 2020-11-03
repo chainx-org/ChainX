@@ -9257,7 +9257,6 @@ dependencies = [
 name = "xpallet-support"
 version = "2.0.0-alpha.3"
 dependencies = [
- "frame-support",
  "hex",
  "parity-scale-codec",
  "serde",
