@@ -24,10 +24,11 @@ pallet-session = { version = "2.0.0", default-features = false }
 
 # ChainX primitives
 chainx-primitives = { path = "../../../primitives", default-features = false }
-xp-runtime = { path = "../../../primitives/runtime", default-features = false }
+xp-genesis-builder = { path = "../../../primitives/genesis-builder", optional = true }
+xp-logging = { path  = "../../../primitives/logging", default-features = false }
 xp-mining-common = { path  = "../../../primitives/mining/common", default-features = false }
 xp-mining-staking = { path  = "../../../primitives/mining/staking", default-features = false }
-xp-genesis-builder = { path = "../../../primitives/genesis-builder", optional = true }
+xp-runtime = { path = "../../../primitives/runtime", default-features = false }
 
 # ChainX pallets
 xpallet-support = { path = "../../support", default-features = false }
@@ -59,6 +60,7 @@ std = [
     # ChainX primitives
     "chainx-primitives/std",
     "xp-genesis-builder/std",
+    "xp-logging/std",
     "xp-mining-common/std",
     "xp-mining-staking/std",
     "xp-runtime/std",

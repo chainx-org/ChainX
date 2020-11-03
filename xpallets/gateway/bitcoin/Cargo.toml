@@ -26,7 +26,7 @@ orml-utilities = { version = "0.3", default-features = false }
 
 # ChainX primitives
 chainx-primitives = { path = "../../../primitives", default-features = false }
-xp-io = { path = "../../../primitives/io", default-features = false }
+xp-logging = { path = "../../../primitives/logging", default-features = false }
 xp-protocol = { path = "../../../primitives/protocol", default-features = false }
 
 # ChainX pallets
@@ -65,7 +65,7 @@ std = [
     "orml-utilities/std",
     # ChainX primitives
     "chainx-primitives/std",
-    "xp-io/std",
+    "xp-logging/std",
     "xp-protocol/std",
     # ChainX pallets
     "xpallet-assets/std",

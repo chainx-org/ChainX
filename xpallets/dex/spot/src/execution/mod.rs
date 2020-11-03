@@ -4,9 +4,10 @@ mod asset;
 mod order;
 mod state;
 
+use xp_logging::debug;
+
 use super::*;
 use crate::types::*;
-use xpallet_support::debug;
 
 impl<T: Trait> Module<T> {
     fn check_bid_price(

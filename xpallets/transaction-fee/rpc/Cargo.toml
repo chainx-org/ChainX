@@ -14,14 +14,17 @@ jsonrpc-core-client = "15.0.0"
 jsonrpc-derive = "15.0.0"
 serde = { version = "1.0.101", features = ["derive"] }
 
+# Substrate primitives
 sp-api = "2.0.0"
 sp-blockchain = "2.0.0"
 sp-core = "2.0.0"
-sp-rpc = "2.0.0"
 sp-runtime = "2.0.0"
 
+# Substrate pallets
 pallet-transaction-payment-rpc = "2.0.0"
 
+# ChainX pallets
 xpallet-support = { path = "../../support" }
 
+# ChainX pallets api
 xpallet-transaction-fee-rpc-runtime-api = { path = "./runtime-api" }

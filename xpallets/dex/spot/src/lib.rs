@@ -36,8 +36,8 @@ use frame_support::{
 use frame_system::{ensure_root, ensure_signed};
 
 use chainx_primitives::AssetId;
+use xp_logging::info;
 use xpallet_assets::AssetErr;
-use xpallet_support::info;
 
 pub use rpc::*;
 pub use types::*;

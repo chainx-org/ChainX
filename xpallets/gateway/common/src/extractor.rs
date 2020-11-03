@@ -4,7 +4,8 @@ use sp_runtime::AccountId32;
 use sp_std::prelude::Vec;
 
 use chainx_primitives::ReferralId;
-use xpallet_support::{debug, error, str};
+use xp_logging::{debug, error};
+use xpallet_support::str;
 
 use crate::traits::Extractable;
 
@@ -14,13 +15,13 @@ use crate::traits::Extractable;
 pub fn parse_address(data: &[u8]) -> Option<AccountId32> {
     use xp_io::ss_58_codec::from_ss58check;
     from_ss58check(data)
-        .map_err(|e| {
+        .map_err(|err| {
             error!(
-                "[parse_address]|parse account error|src:{:?}|reason:{:?}",
+                "[parse_address] parse account `{:?}` error:{:?}",
                 str!(data),
-                e
+                err
             );
-            e
+            err
         })
         .ok()
 }
@@ -35,19 +36,19 @@ pub fn parse_address(data: &[u8]) -> Option<AccountId32> {
     // parse data from base58 to raw
     let d = bs58::decode(data)
         .into_vec()
-        .map_err(|e| {
+        .map_err(|err| {
             error!(
-                "[parse_address]|parse base58 err|e:{:?}|data:{:?}",
-                e,
-                str!(data)
+                "[parse_address] base58 decode `{:?}` err:{:?}",
+                str!(data),
+                err,
             );
-            e
+            err
         })
         .ok()?;
     if d.len() != len + 3 {
         // Invalid length.
         error!(
-            "[parse_address]|bad length|data len:{:}|len:{:}",
+            "[parse_address] bad length, data len:{}, len:{}",
             d.len(),
             len
         );
@@ -77,7 +78,7 @@ impl Extractable<AccountId32> for Extractor {
     fn account_info(data: &[u8]) -> Option<(AccountId32, Option<ReferralId>)> {
         let v = split(data);
         if v.is_empty() {
-            error!("[account_info]|can't parse data|data:{:?}", str!(data));
+            error!("[account_info] can't parse data:{:?}", str!(data));
             return None;
         }
 
@@ -90,7 +91,7 @@ impl Extractable<AccountId32> for Extractor {
         };
 
         debug!(
-            "[extract_account_info]||target_account:{:?}|referral_id:{:?}",
+            "[extract_account_info] target_account:{:?}, referral_id:{:?}",
             target_account, referral_id
         );
         Some((target_account, referral_id))
