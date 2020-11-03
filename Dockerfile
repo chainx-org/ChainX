@@ -18,7 +18,7 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
     export PATH=$PATH:$HOME/.cargo/bin && \
     rustup toolchain install $RUSTC_VERSION && \
     rustup target add wasm32-unknown-unknown --toolchain $RUSTC_VERSION && \
-    cargo build --$PROFILE
+    cargo build --$PROFILE +$RUSTC_VERSION
 
 # ===== SECOND STAGE ======
 
