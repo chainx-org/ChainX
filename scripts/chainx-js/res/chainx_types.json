@@ -149,6 +149,16 @@
         "asset": "u32",
         "staking": "u32"
     },
+    "InclusionFee": {
+        "baseFee": "Balance",
+        "lenFee": "Balance",
+        "adjustedWeightFee": "Balance"
+    },
+    "FeeDetails": {
+        "inclusionFee": "Option<InclusionFee<Balance>>",
+        "tip": "Balance",
+        "finalFee": "Balance"
+    },
     "UnbondedIndex": "u32",
     "Desc": "Text",
     "Token": "Text",
@@ -361,6 +371,16 @@
         "ext": "String",
         "height": "BlockNumber",
         "state": "WithdrawalState"
+    },
+    "RpcInclusionFee": {
+        "baseFee": "RpcBalance",
+        "lenFee": "RpcBalance",
+        "adjustedWeightFee": "RpcBalance"
+    },
+    "RpcFeeDetails": {
+        "inclusionFee": "Option<RpcInclusionFee>",
+        "tip": "RpcBalance",
+        "finalFee": "RpcBalance"
     },
     "ValidatorInfo": {
         "account": "AccountId",

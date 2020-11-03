@@ -806,6 +806,8 @@ dependencies = [
  "xpallet-mining-asset-rpc-runtime-api",
  "xpallet-mining-staking-rpc",
  "xpallet-mining-staking-rpc-runtime-api",
+ "xpallet-transaction-fee-rpc",
+ "xpallet-transaction-fee-rpc-runtime-api",
 ]
 
 [[package]]
@@ -883,6 +885,8 @@ dependencies = [
  "xpallet-mining-staking-rpc-runtime-api",
  "xpallet-support",
  "xpallet-system",
+ "xpallet-transaction-fee",
+ "xpallet-transaction-fee-rpc-runtime-api",
 ]
 
 [[package]]
@@ -4288,6 +4292,8 @@ dependencies = [
 [[package]]
 name = "pallet-transaction-payment"
 version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f9fe2fc67f2eb123199a5b8fb89a8e1c30e5d6d6b1d98e0330bac85c0d8c46f1"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -9270,6 +9276,48 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xp-protocol",
+]
+
+[[package]]
+name = "xpallet-transaction-fee"
+version = "2.0.0-alpha.3"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-transaction-payment",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "xpallet-transaction-fee-rpc"
+version = "2.0.0-alpha.3"
+dependencies = [
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "pallet-transaction-payment-rpc",
+ "parity-scale-codec",
+ "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-core",
+ "sp-runtime",
+ "xpallet-support",
+ "xpallet-transaction-fee-rpc-runtime-api",
+]
+
+[[package]]
+name = "xpallet-transaction-fee-rpc-runtime-api"
+version = "2.0.0-alpha.3"
+dependencies = [
+ "parity-scale-codec",
+ "sp-api",
+ "sp-runtime",
+ "xpallet-transaction-fee",
 ]
 
 [[package]]

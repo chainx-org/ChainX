@@ -116,6 +116,14 @@ macro_rules! endowed_gen {
     }
 }
 
+macro_rules! bootnodes {
+    ( $( $bootnode:expr, )+ ) => {
+        vec![
+            $($bootnode.to_string().try_into().expect("The bootnode is invalid"),)+
+        ]
+    }
+}
+
 /// Helper function to generate the network properties.
 fn as_properties(network: NetworkType) -> Properties {
     json!({
@@ -384,10 +392,10 @@ pub fn staging_testnet_config() -> Result<ChainSpec, String> {
         "chainx_staging_testnet",
         ChainType::Live,
         constructor,
-        vec![
-            "/dns/p2p.staging-1.chainx.org/tcp/30333/p2p/12D3KooWQq7h1cqwRqFaRnp7LxcWmBAzJtizS4uckJrxyK5KHron".to_string().try_into().expect("must be valid bootnode"),
-            "/dns/p2p.staging-2.chainx.org/tcp/30334/p2p/12D3KooWNKCPciz7iAJ6DBqSygsfzHCVdoMCMWoBgo1EgHMrTpDN".to_string().try_into().expect("must be valid bootnode"),
-            "/dns/p2p.staging-3.chainx.org/tcp/30335/p2p/12D3KooWLuxACVFoeddQ4ja68C7Y4qNrXtpBC9gx7akRPacnvoJe".to_string().try_into().expect("must be valid bootnode"),
+        bootnodes![
+            "/dns/p2p.staging-1.chainx.org/tcp/30333/p2p/12D3KooWQq7h1cqwRqFaRnp7LxcWmBAzJtizS4uckJrxyK5KHron",
+            "/dns/p2p.staging-2.chainx.org/tcp/30334/p2p/12D3KooWNKCPciz7iAJ6DBqSygsfzHCVdoMCMWoBgo1EgHMrTpDN",
+            "/dns/p2p.staging-3.chainx.org/tcp/30335/p2p/12D3KooWLuxACVFoeddQ4ja68C7Y4qNrXtpBC9gx7akRPacnvoJe",
         ],
         None,
         Some("chainx-staging-testnet"),
@@ -529,10 +537,10 @@ pub fn testnet_config() -> Result<ChainSpec, String> {
         "chainx_testnet",
         ChainType::Live,
         constructor,
-        vec![
-            "/dns/p2p.testnet-1.chainx.org/tcp/30333/p2p/12D3KooWQq7h1cqwRqFaRnp7LxcWmBAzJtizS4uckJrxyK5KHron".to_string().try_into().expect("must be valid bootnode"),
-            "/dns/p2p.testnet-2.chainx.org/tcp/30334/p2p/12D3KooWNKCPciz7iAJ6DBqSygsfzHCVdoMCMWoBgo1EgHMrTpDN".to_string().try_into().expect("must be valid bootnode"),
-            "/dns/p2p.testnet-3.chainx.org/tcp/30335/p2p/12D3KooWLuxACVFoeddQ4ja68C7Y4qNrXtpBC9gx7akRPacnvoJe".to_string().try_into().expect("must be valid bootnode"),
+        bootnodes![
+            "/dns/p2p.testnet-1.chainx.org/tcp/30333/p2p/12D3KooWQq7h1cqwRqFaRnp7LxcWmBAzJtizS4uckJrxyK5KHron",
+            "/dns/p2p.testnet-2.chainx.org/tcp/30334/p2p/12D3KooWNKCPciz7iAJ6DBqSygsfzHCVdoMCMWoBgo1EgHMrTpDN",
+            "/dns/p2p.testnet-3.chainx.org/tcp/30335/p2p/12D3KooWLuxACVFoeddQ4ja68C7Y4qNrXtpBC9gx7akRPacnvoJe",
         ],
         Some(TelemetryEndpoints::new(vec![(CHAINX_TELEMETRY_URL.to_string(), 0)]).expect("Testnet telemetry url is valid; qed")),
         Some("chainx-testnet"),
