@@ -4,18 +4,18 @@ on:
     tags:
       - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
 
-name: Create Release
+name: Create Draft Release
 
 jobs:
 
   release:
-    name: Create Release
+    name: Create Draft Release
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@master
 
-      - name: Create Release
+      - name: Create Draft Release
         id: create_release
         uses: actions/create-release@v1
         env:
@@ -45,7 +45,7 @@ jobs:
     - name: Install Rust toolchain
       uses: actions-rs/toolchain@v1
       with:
-        toolchain: nightly-2020-08-24
+        toolchain: nightly-2020-09-30
         target: wasm32-unknown-unknown
         profile: minimal
         override: true
