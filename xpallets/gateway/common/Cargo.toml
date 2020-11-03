@@ -73,6 +73,4 @@ runtime-benchmarks = [
     "sp-core",
     "frame-benchmarking",
 ]
-ss58check = [
-    "xp-io"
-]
+ss58check = ["xp-io"]

@@ -17,6 +17,7 @@ members = [
     "executor",
     "primitives",
     "primitives/assets-registrar",
+    "primitives/gateway/common",
     "primitives/genesis-builder",
     "primitives/io",
     "primitives/mining/common",

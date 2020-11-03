@@ -1,0 +1,21 @@
+[package]
+name = "xp-gateway-common"
+version = "2.0.0-alpha.4"
+authors = ["The ChainX Authors"]
+edition = "2018"
+
+[dependencies]
+bs58 = { version = "0.3", default-features = false, features = ["alloc"] }
+
+# ChainX primitives
+chainx-primitives = { path = "../../../primitives", default-features = false }
+xp-io = { path = "../../io", default-features = false, optional = true }
+
+[features]
+default = ["std"]
+std = [
+    "bs58/std",
+    # ChainX primitives
+    "chainx-primitives/std",
+]
+ss58check = ["xp-io"]

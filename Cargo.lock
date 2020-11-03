@@ -8792,6 +8792,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "xp-gateway-common"
+version = "2.0.0-alpha.4"
+dependencies = [
+ "bs58",
+ "chainx-primitives",
+ "xp-io",
+]
+
+[[package]]
 name = "xp-genesis-builder"
 version = "2.0.0-alpha.4"
 dependencies = [
