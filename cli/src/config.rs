@@ -34,12 +34,12 @@ fn extend_cli_args(
         .collect::<Vec<_>>();
 
     let mut config_opts = Vec::new();
-    let mut filtered_default_opts = default_opts.clone();
+    let mut default_opts = default_opts;
 
     if let Some(path) = path {
         for (key, value) in read_config_file(path)?.into_iter() {
-            if filtered_default_opts.contains_key(key.as_str()) {
-                filtered_default_opts.remove(key.as_str());
+            if default_opts.contains_key(key.as_str()) {
+                default_opts.remove(key.as_str());
             }
 
             let opt = format!("--{}", key);
@@ -76,7 +76,7 @@ fn extend_cli_args(
         }
     }
 
-    for (key, value) in filtered_default_opts {
+    for (key, value) in default_opts {
         config_opts.push(format!("--{}={}", key, value));
     }
 
