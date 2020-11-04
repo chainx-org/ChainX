@@ -12,9 +12,9 @@ use sp_runtime::{
 };
 
 use chainx_primitives::{AssetId, ReferralId};
+use xp_logging::debug;
 use xp_mining_common::{RewardPotAccountFor, WeightType};
 use xp_mining_staking::MiningPower;
-use xpallet_support::debug;
 
 use crate::{AssetMining, BalanceOf, EraIndex, Event, Module, Trait};
 

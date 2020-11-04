@@ -4,9 +4,10 @@ mod asset;
 mod order;
 mod state;
 
+use xp_logging::debug;
+
 use super::*;
 use crate::types::*;
-use xpallet_support::debug;
 
 impl<T: Trait> Module<T> {
     fn check_bid_price(
@@ -15,7 +16,7 @@ impl<T: Trait> Module<T> {
         fluctuation: T::Price,
     ) -> result::Result<(), Error<T>> {
         debug!(
-            "[check_bid_price]quote: {:?}, lowest_ask: {:?}, fluctuation: {:?}",
+            "[check_bid_price] quote: {:?}, lowest_ask: {:?}, fluctuation: {:?}",
             quote, lowest_ask, fluctuation
         );
 

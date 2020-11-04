@@ -15,7 +15,7 @@ impl<T: Trait> Module<T> {
         // Set staking information for new era.
         let maybe_new_validators = Self::select_and_update_validators(current_era);
         debug!(
-            "[new_era]era_index:{}, start_session_index:{}, maybe_new_validators:{:?}",
+            "[new_era] era_index:{}, start_session_index:{}, maybe_new_validators:{:?}",
             current_era, start_session_index, maybe_new_validators
         );
 
@@ -40,7 +40,7 @@ impl<T: Trait> Module<T> {
             Self::validator_self_bonded(who) >= self_bonded && Self::total_votes_of(who) >= total;
 
         if !threshold_satisfied && Self::try_force_chilled(who).is_ok() {
-            xpallet_support::info!("[meet_candidate_threshold] force {:?} to be inactive since it doesn't meet the minimum bond requirement", who);
+            xp_logging::info!("[meet_candidate_threshold] Force {:?} to be inactive since it doesn't meet the minimum bond requirement", who);
         }
 
         threshold_satisfied
@@ -66,7 +66,7 @@ impl<T: Trait> Module<T> {
         // TODO: might move to offchain worker solution in the future.
         // Currently there is no performance issue practically.
         let candidates = Self::filter_out_candidates();
-        debug!("[select_and_update_validators]candidates:{:?}", candidates);
+        debug!("[select_and_update_validators] candidates:{:?}", candidates);
 
         // Avoid reevaluate validator set if it would leave us with fewer than the minimum
         // needed validators.

@@ -21,6 +21,7 @@ frame-system = { version = "2.0.0", default-features = false }
 
 # ChainX primitives
 chainx-primitives = { path = "../../../primitives", default-features = false }
+xp-logging = { path = "../../../primitives/logging", default-features = false }
 xp-mining-common = { path  = "../../../primitives/mining/common", default-features = false }
 xp-mining-staking = { path  = "../../../primitives/mining/staking", default-features = false }
 xp-protocol = { path = "../../../primitives/protocol", default-features = false }
@@ -55,6 +56,7 @@ std = [
     "frame-system/std",
     # ChainX primitives
     "chainx-primitives/std",
+    "xp-logging/std",
     "xp-mining-common/std",
     "xp-mining-staking/std",
     "xp-protocol/std",
