@@ -2,7 +2,12 @@
 
 set -e
 
-SECRET="learn era fat agent beef tribe lens fame captain still soda owner"
+# SECRET="learn era fat agent beef tribe lens fame captain still soda owner"
+
+if [[ -z "${SECRET}" ]]; then
+  echo '$SECRET unset, please export the environment varible $SECRET first.'
+  exit 1
+fi
 
 CHAIN=testnet
 
@@ -45,25 +50,25 @@ for id in 1 2 3; do
   print_validator_address "$SECRET//validator//$id"
   print_validator_id  "$SECRET//validator//$id"
 
-  echo "                b\"ValidatorId"$id"\".to_vec(),"
+  echo "                b\"Validator"$id"\".to_vec(),"
   echo "            ),"
 
   print_address      "$SECRET//blockauthor//$id"
   print_account_key  "$SECRET//blockauthor//$id"
 
-  "$CHAINX" key insert --chain=$CHAIN --key-type babe -d $dir --scheme sr25519 --suri "$SECRET//$id//babe"
+  "$CHAINX" key insert --chain=$CHAIN --key-type babe -d $dir --scheme sr25519 --suri "$SECRET//babe//$id"
   print_address   "$SECRET//babe//$id"
   print_other_key "$SECRET//babe//$id"
 
-  "$CHAINX" key insert --chain=$CHAIN --key-type gran -d $dir --scheme ed25519 --suri "$SECRET//$id//grandpa"
+  "$CHAINX" key insert --chain=$CHAIN --key-type gran -d $dir --scheme ed25519 --suri "$SECRET//grandpa//$id"
   print_address    "$SECRET//grandpa//$id"
   print_other_key  "$SECRET//grandpa//$id"
 
-  "$CHAINX" key insert --chain=$CHAIN --key-type imon -d $dir --scheme sr25519 --suri "$SECRET//$id//im_online"
+  "$CHAINX" key insert --chain=$CHAIN --key-type imon -d $dir --scheme sr25519 --suri "$SECRET//im_online//$id"
   print_address    "$SECRET//im_online//$id"
   print_other_key  "$SECRET//im_online//$id"
 
-  "$CHAINX" key insert --chain=$CHAIN --key-type audi -d $dir --scheme sr25519 --suri "$SECRET//$id//authority_discovery"
+  "$CHAINX" key insert --chain=$CHAIN --key-type audi -d $dir --scheme sr25519 --suri "$SECRET//authority_discovery//$id"
   print_address    "$SECRET//authority_discovery//$id"
   print_other_key  "$SECRET//authority_discovery//$id"
   echo
