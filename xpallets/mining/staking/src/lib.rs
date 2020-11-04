@@ -43,10 +43,11 @@ use sp_runtime::{
 use sp_std::collections::btree_map::BTreeMap;
 
 use chainx_primitives::ReferralId;
+use xp_logging::debug;
 pub use xp_mining_common::RewardPotAccountFor;
 use xp_mining_common::{Claim, ComputeMiningWeight, Delta, ZeroMiningWeightError};
 use xp_mining_staking::{AssetMining, SessionIndex, UnbondedIndex};
-use xpallet_support::{debug, traits::TreasuryAccount};
+use xpallet_support::traits::TreasuryAccount;
 
 use self::constants::*;
 pub use self::impls::{IdentificationTuple, SimpleValidatorRewardPotAccountDeterminer};
@@ -998,7 +999,7 @@ impl<T: Trait> Module<T> {
         value: BalanceOf<T>,
     ) -> Result<(), Error<T>> {
         debug!(
-            "[apply_unbond] who:{:?}, target: {:?}, value: {:?}",
+            "[apply_unbond] who:{:?}, target:{:?}, value:{:?}",
             who, target, value
         );
         Self::unbond_reserve(who, value)?;

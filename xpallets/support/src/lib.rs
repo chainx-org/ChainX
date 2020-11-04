@@ -8,6 +8,4 @@ pub mod traits;
 #[cfg(feature = "std")]
 pub mod x_std;
 
-pub use frame_support::fail;
-
 pub use self::macros::*;

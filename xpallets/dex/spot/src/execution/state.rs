@@ -82,7 +82,7 @@ impl<T: Trait> Module<T> {
                 if new_highest_bid >= handicap.lowest_ask {
                     handicap.lowest_ask = Self::tick_up(new_highest_bid, pair.tick());
                     debug!(
-                        "[update_handicap]pair_id: {:?}, lowest_ask: {:?}, side: {:?}",
+                        "[update_handicap] pair_id: {:?}, lowest_ask: {:?}, side: {:?}",
                         order.pair_id(),
                         handicap.lowest_ask,
                         Side::Sell,
@@ -91,7 +91,7 @@ impl<T: Trait> Module<T> {
 
                 handicap.highest_bid = new_highest_bid;
                 debug!(
-                    "[update_handicap]pair_id: {:?}, highest_bid: {:?}, side: {:?}",
+                    "[update_handicap] pair_id: {:?}, highest_bid: {:?}, side: {:?}",
                     order.pair_id(),
                     new_highest_bid,
                     Side::Buy
@@ -110,7 +110,7 @@ impl<T: Trait> Module<T> {
                 if new_lowest_ask <= handicap.highest_bid {
                     handicap.highest_bid = Self::tick_down(new_lowest_ask, pair.tick());
                     debug!(
-                        "[update_handicap]pair_id: {:?}, highest_bid: {:?}, side: {:?}",
+                        "[update_handicap] pair_id: {:?}, highest_bid: {:?}, side: {:?}",
                         order.pair_id(),
                         handicap.highest_bid,
                         Side::Buy
@@ -119,7 +119,7 @@ impl<T: Trait> Module<T> {
 
                 handicap.lowest_ask = new_lowest_ask;
                 debug!(
-                    "[update_handicap]pair_id: {:?}, lowest_ask: {:?}, side: {:?}",
+                    "[update_handicap] pair_id: {:?}, lowest_ask: {:?}, side: {:?}",
                     order.pair_id(),
                     new_lowest_ask,
                     Side::Sell,

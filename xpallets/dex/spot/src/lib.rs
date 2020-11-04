@@ -36,8 +36,8 @@ use frame_support::{
 use frame_system::{ensure_root, ensure_signed};
 
 use chainx_primitives::AssetId;
+use xp_logging::info;
 use xpallet_assets::AssetErr;
-use xpallet_support::info;
 
 pub use rpc::*;
 pub use types::*;
@@ -289,7 +289,7 @@ decl_module! {
         #[weight = <T as Trait>::WeightInfo::set_handicap()]
         fn set_handicap(origin, #[compact] pair_id: TradingPairId, new: Handicap< T::Price>) {
             ensure_root(origin)?;
-            info!("[set_handicap]pair_id:{:?},new handicap:{:?}", pair_id, new);
+            info!("[set_handicap] pair_id:{:?}, new handicap:{:?}", pair_id, new);
             HandicapOf::<T>::insert(pair_id, new);
         }
 
@@ -388,7 +388,7 @@ impl<T: Trait> Module<T> {
             tradable,
         };
 
-        info!("new trading pair: {:?}", pair);
+        info!("New trading pair: {:?}", pair);
 
         TradingPairOf::insert(pair_id, &pair);
         TradingPairInfoOf::<T>::insert(
@@ -406,7 +406,7 @@ impl<T: Trait> Module<T> {
 
     fn apply_update_trading_pair(pair_id: TradingPairId, tick_decimals: u32, tradable: bool) {
         info!(
-            "[update_trading_pair]pair_id: {:}, tick_decimals: {:}, tradable:{:}",
+            "[update_trading_pair] pair_id: {:}, tick_decimals: {:}, tradable:{:}",
             pair_id, tick_decimals, tradable
         );
         TradingPairOf::mutate(pair_id, |pair| {
@@ -473,7 +473,7 @@ impl<T: Trait> Module<T> {
         order_id: OrderId,
     ) -> DispatchResult {
         info!(
-            "[apply_cancel_order]who:{:?}, pair_id:{}, order_id:{}",
+            "[apply_cancel_order] who:{:?}, pair_id:{}, order_id:{}",
             who, pair_id, order_id
         );
 

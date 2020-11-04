@@ -10,8 +10,9 @@ use serde::{Deserialize, Serialize};
 
 use frame_support::{dispatch::DispatchError, traits::Contains};
 
+use xp_logging::{error, warn};
 use xpallet_assets::Chain;
-use xpallet_support::{error, traits::MultiSig, warn};
+use xpallet_support::traits::MultiSig;
 
 use crate::traits::{BytesLike, ChainProvider, TrusteeSession};
 use crate::types::{TrusteeIntentionProps, TrusteeSessionInfo};
@@ -32,7 +33,7 @@ impl<T: Trait, TrusteeAddress: BytesLike + ChainProvider>
         let generic_info =
             Module::<T>::trustee_session_info_of(chain, number).ok_or_else(|| {
                 error!(
-                    "[trustee_session]|not found info for this session|chain:{:?}|number:{:}",
+                    "[trustee_session] Can not find session info, chain:{:?}, number:{}",
                     chain, number
                 );
                 Error::<T>::InvalidTrusteeSession
@@ -59,12 +60,12 @@ impl<T: Trait, TrusteeAddress: BytesLike + ChainProvider>
             Some(r) => r,
             None => u32::max_value(),
         };
-        Self::trustee_session(number).map_err(|e| {
+        Self::trustee_session(number).map_err(|err| {
             warn!(
-                "[last_trustee_session]|last trustee session not exist yet for this chain|Chain:{:?}",
+                "[last_trustee_session] Last trustee session not exist yet for chain:{:?}",
                 chain
             );
-            e
+            err
         })
     }
 

@@ -11,9 +11,9 @@ use frame_support::{decl_module, decl_storage};
 
 #[cfg(feature = "std")]
 use xp_genesis_builder::AllParams;
+use xp_logging::info;
 use xpallet_assets::BalanceOf as AssetBalanceOf;
 use xpallet_mining_staking::BalanceOf as StakingBalanceOf;
-use xpallet_support::info;
 
 pub trait Trait:
     pallet_balances::Trait + xpallet_mining_asset::Trait + xpallet_mining_staking::Trait

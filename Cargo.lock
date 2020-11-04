@@ -761,7 +761,6 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-std",
- "xpallet-support",
 ]
 
 [[package]]
@@ -865,6 +864,7 @@ dependencies = [
  "sp-version",
  "static_assertions",
  "substrate-wasm-builder-runner",
+ "xp-logging",
  "xp-mining-staking",
  "xp-protocol",
  "xp-runtime",
@@ -3207,7 +3207,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin#58547a04f5b45f9adf737c4fc564c500b8f6963e"
+source = "git+https://github.com/chainx-org/light-bitcoin#00b81fb49f16a295d05b77c932c3d06f3f83f170"
 dependencies = [
  "light-bitcoin-chain",
  "light-bitcoin-crypto",
@@ -3221,7 +3221,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-chain"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin#58547a04f5b45f9adf737c4fc564c500b8f6963e"
+source = "git+https://github.com/chainx-org/light-bitcoin#00b81fb49f16a295d05b77c932c3d06f3f83f170"
 dependencies = [
  "hex",
  "light-bitcoin-crypto",
@@ -3234,7 +3234,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-crypto"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin#58547a04f5b45f9adf737c4fc564c500b8f6963e"
+source = "git+https://github.com/chainx-org/light-bitcoin#00b81fb49f16a295d05b77c932c3d06f3f83f170"
 dependencies = [
  "digest 0.9.0",
  "light-bitcoin-primitives",
@@ -3247,7 +3247,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-keys"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin#58547a04f5b45f9adf737c4fc564c500b8f6963e"
+source = "git+https://github.com/chainx-org/light-bitcoin#00b81fb49f16a295d05b77c932c3d06f3f83f170"
 dependencies = [
  "bs58",
  "hex",
@@ -3262,7 +3262,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-merkle"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin#58547a04f5b45f9adf737c4fc564c500b8f6963e"
+source = "git+https://github.com/chainx-org/light-bitcoin#00b81fb49f16a295d05b77c932c3d06f3f83f170"
 dependencies = [
  "light-bitcoin-chain",
  "light-bitcoin-primitives",
@@ -3273,7 +3273,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-primitives"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin#58547a04f5b45f9adf737c4fc564c500b8f6963e"
+source = "git+https://github.com/chainx-org/light-bitcoin#00b81fb49f16a295d05b77c932c3d06f3f83f170"
 dependencies = [
  "byteorder 1.3.4",
  "fixed-hash",
@@ -3287,7 +3287,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-script"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin#58547a04f5b45f9adf737c4fc564c500b8f6963e"
+source = "git+https://github.com/chainx-org/light-bitcoin#00b81fb49f16a295d05b77c932c3d06f3f83f170"
 dependencies = [
  "hex",
  "light-bitcoin-chain",
@@ -3300,7 +3300,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-serialization"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin#58547a04f5b45f9adf737c4fc564c500b8f6963e"
+source = "git+https://github.com/chainx-org/light-bitcoin#00b81fb49f16a295d05b77c932c3d06f3f83f170"
 dependencies = [
  "light-bitcoin-primitives",
  "light-bitcoin-serialization-derive",
@@ -3309,7 +3309,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-serialization-derive"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin#58547a04f5b45f9adf737c4fc564c500b8f6963e"
+source = "git+https://github.com/chainx-org/light-bitcoin#00b81fb49f16a295d05b77c932c3d06f3f83f170"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -8147,7 +8147,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.7.3",
+ "rand 0.3.23",
  "static_assertions",
 ]
 
@@ -8787,8 +8787,8 @@ name = "xp-assets-registrar"
 version = "2.0.0-alpha.4"
 dependencies = [
  "chainx-primitives",
- "frame-support",
  "impl-trait-for-tuples",
+ "sp-runtime",
 ]
 
 [[package]]
@@ -8810,6 +8810,10 @@ dependencies = [
  "sp-runtime",
  "sp-runtime-interface",
 ]
+
+[[package]]
+name = "xp-logging"
+version = "2.0.0-alpha.4"
 
 [[package]]
 name = "xp-mining-common"
@@ -8881,6 +8885,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "xp-logging",
  "xp-protocol",
  "xpallet-assets-registrar",
  "xpallet-support",
@@ -8901,6 +8906,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xp-assets-registrar",
+ "xp-logging",
  "xp-protocol",
  "xp-rpc",
  "xp-runtime",
@@ -8950,6 +8956,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "xp-logging",
  "xp-protocol",
  "xpallet-assets",
  "xpallet-assets-registrar",
@@ -9005,7 +9012,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "xp-io",
+ "xp-logging",
  "xp-protocol",
  "xpallet-assets",
  "xpallet-assets-registrar",
@@ -9034,6 +9041,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xp-io",
+ "xp-logging",
  "xp-protocol",
  "xp-rpc",
  "xp-runtime",
@@ -9090,6 +9098,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "xp-logging",
  "xp-protocol",
  "xp-runtime",
  "xpallet-assets",
@@ -9139,6 +9148,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xp-genesis-builder",
+ "xp-logging",
  "xp-protocol",
  "xpallet-assets",
  "xpallet-mining-asset",
@@ -9165,6 +9175,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "xp-logging",
  "xp-mining-common",
  "xp-mining-staking",
  "xp-protocol",
@@ -9221,6 +9232,7 @@ dependencies = [
  "sp-staking",
  "sp-std",
  "xp-genesis-builder",
+ "xp-logging",
  "xp-mining-common",
  "xp-mining-staking",
  "xp-protocol",
@@ -9258,7 +9270,6 @@ dependencies = [
 name = "xpallet-support"
 version = "2.0.0-alpha.4"
 dependencies = [
- "frame-support",
  "hex",
  "sp-std",
 ]
@@ -9285,7 +9296,6 @@ dependencies = [
  "pallet-transaction-payment",
  "parity-scale-codec",
  "serde",
- "smallvec 1.4.2",
  "sp-runtime",
  "sp-std",
 ]
@@ -9303,7 +9313,6 @@ dependencies = [
  "sp-api",
  "sp-blockchain",
  "sp-core",
- "sp-rpc",
  "sp-runtime",
  "xp-rpc",
  "xpallet-transaction-fee-rpc-runtime-api",

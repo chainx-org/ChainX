@@ -17,9 +17,6 @@ sp-std = { version = "2.0.0", default-features = false }
 # Substrate pallets
 frame-system = { version = "2.0.0", default-features = false }
 
-# ChainX pallets
-xpallet-support = { path = "../xpallets/support", default-features = false }
-
 [features]
 default = ["std"]
 std = [
@@ -32,6 +29,4 @@ std = [
     "sp-std/std",
     # Substrate pallets
     "frame-system/std",
-    # ChainX pallets
-    "xpallet-support/std",
 ]
