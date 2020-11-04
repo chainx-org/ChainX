@@ -17,7 +17,7 @@ impl<T: Trait> ChannelBinding<T::AccountId> for Module<T> {
             Ok(chain) => chain,
             Err(err) => {
                 error!(
-                    "[update_channel_binding] unexpected asset_id:{:?}, error:{:?}",
+                    "[update_channel_binding] Unexpected asset_id:{:?}, error:{:?}",
                     assert_id, err
                 );
                 return;

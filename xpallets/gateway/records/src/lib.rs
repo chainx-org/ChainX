@@ -461,7 +461,7 @@ impl<T: Trait> Module<T> {
             }
             _ => {
                 error!(
-                    "[set_withdrawal_state_by_root] Shouldn't happen in normally, unless called by root, \
+                    "[set_withdrawal_state_by_root] Shouldn't happen normally, unless called by root, \
                     current state:{:?}, new state:{:?}",
                     curr_state, new_state
                 );

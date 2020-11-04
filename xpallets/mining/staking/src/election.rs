@@ -40,7 +40,7 @@ impl<T: Trait> Module<T> {
             Self::validator_self_bonded(who) >= self_bonded && Self::total_votes_of(who) >= total;
 
         if !threshold_satisfied && Self::try_force_chilled(who).is_ok() {
-            xp_logging::info!("[meet_candidate_threshold] force {:?} to be inactive since it doesn't meet the minimum bond requirement", who);
+            xp_logging::info!("[meet_candidate_threshold] Force {:?} to be inactive since it doesn't meet the minimum bond requirement", who);
         }
 
         threshold_satisfied
