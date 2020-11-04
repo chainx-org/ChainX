@@ -18,6 +18,23 @@ fn read_config_file(path: &Path) -> Result<HashMap<String, Value>, Box<dyn std::
     }))
 }
 
+const SUB_COMMANDS: [&str; 14] = [
+    "benchmark",
+    "build-spec",
+    "build-sync-spec",
+    "check-block",
+    "export-blocks",
+    "export-state",
+    "help",
+    "import-blocks",
+    "key",
+    "purge-chain",
+    "revert",
+    "sign",
+    "vanity",
+    "verify",
+];
+
 /// Extends the origin cli arg list with the options from the config file.
 ///
 /// Only the options that do not appear in the command line will be appended.
@@ -76,8 +93,14 @@ fn extend_cli_args(
         }
     }
 
-    for (key, value) in default_opts {
-        config_opts.push(format!("--{}={}", key, value));
+    if let Some(sub_command) = cli_args.get(1) {
+        // We are going to invoke the `Run` command.
+        if !SUB_COMMANDS.contains(&sub_command.as_str()) {
+            // `default_opts()` only makes sense in this context.
+            for (key, value) in default_opts {
+                config_opts.push(format!("--{}={}", key, value));
+            }
+        }
     }
 
     let mut args = cli_args;
