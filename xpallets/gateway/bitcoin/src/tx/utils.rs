@@ -26,7 +26,7 @@ pub fn parse_output_addr_with_networkid(script: &Script, network: Network) -> Op
     // only `p2pk`, `p2pkh`, `p2sh` could parse
     script.extract_destinations().map_err(|err|{
         error!(
-            "[parse_output_addr] parse output script error:{}, script:{:?}",
+            "[parse_output_addr] Parse output script error:{}, script:{:?}",
             err,
             try_hex!(&script)
         );
@@ -44,7 +44,7 @@ pub fn parse_output_addr_with_networkid(script: &Script, network: Network) -> Op
         }
         // the type is `NonStandard`, `Multisig`, `NullData`, `WitnessScript`, `WitnessKey`
         warn!(
-            "[parse_output_addr] can't parse addr from output script, type:{:?}, addr:{:?}, script:{:?}",
+            "[parse_output_addr] Can not parse addr from output script, type:{:?}, addr:{:?}, script:{:?}",
             script.script_type(), script_addresses, try_hex!(&script)
         );
         None
@@ -88,7 +88,7 @@ pub fn parse_opreturn(script: &Script) -> Option<Vec<u8>> {
         // jump OP_RETURN, when after `is_null_data_script`, subscript must larger and equal than 1
         let s = script.subscript(1);
         if s.is_empty() {
-            error!("[parse_opreturn] nothing after `OP_RETURN`, valid in rule but invalid for public consensus");
+            error!("[parse_opreturn] Nothing after `OP_RETURN`, valid in rule but invalid for public consensus");
             return None;
         }
         // script must large then 1
@@ -97,7 +97,7 @@ pub fn parse_opreturn(script: &Script) -> Option<Vec<u8>> {
                 Some(s[1..].to_vec())
             } else {
                 error!(
-                    "[parse_opreturn] unexpect opreturn source error, len:{}, real:{:?}",
+                    "[parse_opreturn] Unexpect opreturn source error, len:{}, real:{:?}",
                     s[0],
                     &s[1..]
                 );
@@ -107,7 +107,7 @@ pub fn parse_opreturn(script: &Script) -> Option<Vec<u8>> {
             // when subscript [0] is `OP_PUSHDATA1`, must have [1], or is an invalid data
             if s.len() < 2 {
                 error!(
-                    "[parse_opreturn] nothing after `OP_PUSHDATA1`, invalid opreturn:{:?}",
+                    "[parse_opreturn] Nothing after `OP_PUSHDATA1`, invalid opreturn:{:?}",
                     s
                 );
                 return None;
@@ -117,13 +117,13 @@ pub fn parse_opreturn(script: &Script) -> Option<Vec<u8>> {
                 Some(s[2..].to_vec())
             } else {
                 error!(
-                    "[parse_opreturn] unexpect opreturn source error, len mark:{:?}, len:{:?}, real:{:?}",
+                    "[parse_opreturn] Unexpect opreturn source error, len mark:{:?}, len:{:?}, real:{:?}",
                     s[0], s[1], &s[2..]
                 );
                 None
             }
         } else {
-            error!("[parse_opreturn] unexpect opreturn source error");
+            error!("[parse_opreturn] Unexpect opreturn source error");
             None
         }
     } else {
@@ -145,7 +145,7 @@ pub fn ensure_identical<T: Trait>(tx1: &Transaction, tx2: &Transaction) -> Dispa
             {
                 native!(
                     error,
-                    "[ensure_identical] tx1 is different to tx2, tx1:{:?}, tx2:{:?}",
+                    "[ensure_identical] Tx1 is different to Tx2, tx1:{:?}, tx2:{:?}",
                     tx1,
                     tx2
                 );

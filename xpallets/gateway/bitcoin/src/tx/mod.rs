@@ -135,7 +135,7 @@ where
             }
             _ => {
                 warn!(
-                    "[detect_transaction_type_impl] irrelevance or deposit transaction:{:?}",
+                    "[detect_transaction_type_impl] Irrelevance or Deposit transaction:{:?}",
                     tx.hash()
                 );
             }
@@ -177,7 +177,7 @@ where
         };
         MetaTxType::Deposit(info)
     } else {
-        warn!("[detect_deposit_type] receive a deposit tx ({:?}) but deposit value is too low, drop it", tx.hash());
+        warn!("[detect_deposit_type] Receive a deposit tx ({:?}) but deposit value is too low, drop it", tx.hash());
         MetaTxType::Irrelevance
     }
 }
@@ -290,7 +290,7 @@ pub(crate) fn handle_tx<T: Trait>(
 
 fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> BtcTxResult {
     if deposit_info.op_return.is_none() && deposit_info.input_addr.is_none() {
-        warn!("[deposit] process a deposit tx ({:?}) but do not have valid opreturn & not have input addr", hash);
+        warn!("[deposit] Process a deposit tx ({:?}) but do not have valid opreturn & not have input addr", hash);
         return BtcTxResult::Failed;
     }
 
@@ -305,7 +305,7 @@ fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> Btc
             } else {
                 // no input addr
                 debug!(
-                    "[deposit] deposit tx ({:?}) has no input addr, but has opreturn, who:{:?}",
+                    "[deposit] Deposit tx ({:?}) has no input addr, but has opreturn, who:{:?}",
                     hash, account
                 );
             }
@@ -322,7 +322,7 @@ fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> Btc
             } else {
                 // should not meet this branch, due it's handled before, it's unreachable
                 error!(
-                    "[deposit] deposit tx ({:?}) has no input addr and opreturn",
+                    "[deposit] The deposit tx ({:?}) has no input addr and opreturn",
                     hash
                 );
                 return BtcTxResult::Failed;
@@ -342,14 +342,14 @@ fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> Btc
                 return BtcTxResult::Failed;
             }
             info!(
-                "[deposit] deposit tx ({:?}) success, who:{:?}, balance:{}",
+                "[deposit] Deposit tx ({:?}) success, who:{:?}, balance:{}",
                 hash, accountid, deposit_info.deposit_value
             );
         }
         AccountInfo::<_>::Address(addr) => {
             insert_pending_deposit::<T>(&addr, &hash, deposit_info.deposit_value);
             info!(
-                "[deposit] deposit tx ({:?}) into pending, addr:{:?}, balance:{}",
+                "[deposit] Deposit tx ({:?}) into pending, addr:{:?}, balance:{}",
                 hash,
                 str!(addr2vecu8(&addr)),
                 deposit_info.deposit_value
@@ -370,7 +370,7 @@ fn deposit_token<T: Trait>(tx_hash: H256, who: &T::AccountId, balance: u64) -> D
         }
         Err(err) => {
             error!(
-                "[deposit_token] deposit error:{:?}, must use root to fix it",
+                "[deposit_token] Deposit error:{:?}, must use root to fix it",
                 err
             );
             Err(err.into())
@@ -415,7 +415,7 @@ pub fn remove_pending_deposit<T: Trait>(input_address: &BtcAddress, who: &T::Acc
         // ignore error
         let _ = deposit_token::<T>(r.txid, who, r.balance);
         info!(
-            "[remove_pending_deposit] use pending info to re-deposit, who:{:?}, balance:{}, cached_tx:{:?}",
+            "[remove_pending_deposit] Use pending info to re-deposit, who:{:?}, balance:{}, cached_tx:{:?}",
             who, r.balance, r.txid,
         );
 
@@ -440,7 +440,7 @@ fn insert_pending_deposit<T: Trait>(input_address: &Address, txid: &H256, balanc
         if !list.contains(&cache) {
             native::debug!(
                 target: xp_logging::RUNTIME_TARGET,
-                "[insert_pending_deposit] add pending deposit, address:{:?}, txhash:{:?}, balance:{}",
+                "[insert_pending_deposit] Add pending deposit, address:{:?}, txhash:{:?}, balance:{}",
                 str!(addr_bytes),
                 txid,
                 balance
@@ -456,7 +456,7 @@ fn withdraw<T: Trait>(tx: Transaction) -> BtcTxResult {
     if let Some(proposal) = WithdrawalProposal::<T>::take() {
         native::debug!(
             target: xp_logging::RUNTIME_TARGET,
-            "[withdraw] withdraw tx {:?}, proposal:{:?}",
+            "[withdraw] Withdraw tx {:?}, proposal:{:?}",
             proposal,
             tx
         );
@@ -475,11 +475,11 @@ fn withdraw<T: Trait>(tx: Transaction) -> BtcTxResult {
 
                 match xpallet_gateway_records::Module::<T>::finish_withdrawal(*number, None) {
                     Ok(_) => {
-                        info!("[withdraw] withdrawal ({}) completion", *number);
+                        info!("[withdraw] Withdrawal ({}) completion", *number);
                     }
                     Err(err) => {
                         error!(
-                            "[withdraw] withdrawal ({}) error:{:?}, must use root to fix it",
+                            "[withdraw] Withdrawal ({}) error:{:?}, must use root to fix it",
                             *number, err
                         );
                     }
@@ -498,7 +498,7 @@ fn withdraw<T: Trait>(tx: Transaction) -> BtcTxResult {
             BtcTxResult::Success
         } else {
             error!(
-                "[withdraw] withdraw error: mismatch (tx_hash:{:?}, proposal_hash:{:?}), id_list:{:?}, must use root to fix it",
+                "[withdraw] Withdraw error: mismatch (tx_hash:{:?}, proposal_hash:{:?}), id_list:{:?}, must use root to fix it",
                 tx_hash, proposal_hash, proposal.withdrawal_id_list
             );
             // re-store proposal into storage.
@@ -509,7 +509,7 @@ fn withdraw<T: Trait>(tx: Transaction) -> BtcTxResult {
         }
     } else {
         error!(
-            "[withdraw] withdrawal error: proposal is EMPTY (tx_hash:{:?}), but receive a withdrawal tx, must use root to fix it",
+            "[withdraw] Withdrawal error: proposal is EMPTY (tx_hash:{:?}), but receive a withdrawal tx, must use root to fix it",
             tx.hash()
         );
         // no proposal, but find a withdraw tx, it's a fatal error in withdrawal

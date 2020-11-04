@@ -237,7 +237,7 @@ decl_module! {
             ensure_root(origin)?;
 
             let who = T::Lookup::lookup(who)?;
-            info!("[set_balance] set balance by root, who:{:?}, id:{}, balances:{:?}", who, id, balances);
+            info!("[set_balance] Set balance by root, who:{:?}, id:{}, balances:{:?}", who, id, balances);
             Self::set_balance_impl(&who, &id, balances)?;
             Ok(())
         }
@@ -313,7 +313,7 @@ impl<T: Trait> Module<T> {
     #[inline]
     pub fn can_move(id: &AssetId) -> DispatchResult {
         if !Self::can_do(id, AssetRestrictions::MOVE) {
-            error!("Do not allow to move asset, id:{}", id);
+            error!("Not allowed to move asset, id:{}", id);
             return Err(Error::<T>::ActionNotAllowed.into());
         }
         Ok(())
@@ -322,7 +322,7 @@ impl<T: Trait> Module<T> {
     #[inline]
     pub fn can_transfer(id: &AssetId) -> DispatchResult {
         if !Self::can_do(id, AssetRestrictions::TRANSFER) {
-            error!("Do not allow to transfer asset, id:{}", id);
+            error!("Not allowed to transfer asset, id:{}", id);
             return Err(Error::<T>::ActionNotAllowed.into());
         }
         Ok(())
@@ -331,7 +331,7 @@ impl<T: Trait> Module<T> {
     #[inline]
     pub fn can_destroy_withdrawal(id: &AssetId) -> DispatchResult {
         if !Self::can_do(id, AssetRestrictions::DESTROY_WITHDRAWAL) {
-            error!("Do not allow to destroy withdrawal asset, id:{}", id);
+            error!("Not allowed to destroy withdrawal asset, id:{}", id);
             return Err(Error::<T>::ActionNotAllowed.into());
         }
         Ok(())
@@ -340,7 +340,7 @@ impl<T: Trait> Module<T> {
     #[inline]
     pub fn can_destroy_usable(id: &AssetId) -> DispatchResult {
         if !Self::can_do(id, AssetRestrictions::DESTROY_USABLE) {
-            error!("Do not allow to destroy usable asset, id:{}", id);
+            error!("Not allowed to destroy usable asset, id:{}", id);
             return Err(Error::<T>::ActionNotAllowed.into());
         }
         Ok(())

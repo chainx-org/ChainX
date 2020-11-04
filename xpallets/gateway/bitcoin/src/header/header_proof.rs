@@ -89,13 +89,13 @@ pub fn work_required<T: Trait>(parent_hash: H256, height: u32, params: &BtcParam
     if is_retarget_height(height, params) {
         let new_work = work_required_retarget::<T>(parent_header, height, params);
         info!(
-            "[work_required] retarget new work required, height:{}, retargeting_interval:{}, new_work:{:?}",
+            "[work_required] Retarget new work required, height:{}, retargeting_interval:{}, new_work:{:?}",
             height, params.retargeting_interval(), new_work
         );
         return new_work;
     }
     debug!(
-        "[work_required] use old work required, old bits:{:?}",
+        "[work_required] Use old work required, old bits:{:?}",
         parent_header.bits
     );
     parent_header.bits
@@ -233,7 +233,7 @@ impl<'a> HeaderTimestamp<'a> {
         if let Some(current_time) = self.current_time {
             if self.header.time > current_time + p.block_max_future() {
                 error!(
-                    "[check_header_timestamp] header time:{}, current time:{}, max_future{:?}",
+                    "[check_header_timestamp] Header time:{}, current time:{}, max_future{:?}",
                     self.header.time,
                     current_time,
                     p.block_max_future()
@@ -245,7 +245,7 @@ impl<'a> HeaderTimestamp<'a> {
         } else {
             // if get chain timestamp error, just ignore blockhead time check
             warn!(
-                "[check_header_timestamp] header:{:?}, get unix timestamp error, ignore it",
+                "[check_header_timestamp] Header:{:?}, get unix timestamp error, ignore it",
                 self.header.hash()
             );
             Ok(())

@@ -73,7 +73,7 @@ fn look_back_confirmed_header<T: Trait>(
         } else {
             // if not find current header info, should be exceed genesis height, jump out of loop
             info!(
-                "[update_confirmed_header] cannot find header ({:?}), current reverse count:{}",
+                "[update_confirmed_header] Can not find header ({:?}), current reverse count:{}",
                 prev_hash, i
             );
             break;
@@ -151,7 +151,7 @@ pub fn check_confirmed_header<T: Trait>(header_info: &BtcHeaderInfo) -> Dispatch
                     // normal should not happen, for call `check_confirmed_header` should under
                     // current <= best
                     error!(
-                        "[check_confirmed_header] shouldn't be happened, current confirmed is less than confirmed for this header, \
+                        "[check_confirmed_header] Should not happen, current confirmed is less than confirmed for this header, \
                         current:{:?}, now:{:?}", current_confirmed, now_confirmed
                     );
                     Err(Error::<T>::AncientFork.into())

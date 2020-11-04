@@ -16,7 +16,7 @@ impl<T: Trait> Module<T> {
         fluctuation: T::Price,
     ) -> result::Result<(), Error<T>> {
         debug!(
-            "[check_bid_price]quote: {:?}, lowest_ask: {:?}, fluctuation: {:?}",
+            "[check_bid_price] quote: {:?}, lowest_ask: {:?}, fluctuation: {:?}",
             quote, lowest_ask, fluctuation
         );
 

@@ -33,7 +33,7 @@ impl<T: Trait, TrusteeAddress: BytesLike + ChainProvider>
         let generic_info =
             Module::<T>::trustee_session_info_of(chain, number).ok_or_else(|| {
                 error!(
-                    "[trustee_session] cannot find session info, chain:{:?}, number:{}",
+                    "[trustee_session] Can not find session info, chain:{:?}, number:{}",
                     chain, number
                 );
                 Error::<T>::InvalidTrusteeSession
@@ -62,7 +62,7 @@ impl<T: Trait, TrusteeAddress: BytesLike + ChainProvider>
         };
         Self::trustee_session(number).map_err(|err| {
             warn!(
-                "[last_trustee_session] last trustee session not exist yet for chain:{:?}",
+                "[last_trustee_session] Last trustee session not exist yet for chain:{:?}",
                 chain
             );
             err

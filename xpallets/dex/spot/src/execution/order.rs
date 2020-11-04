@@ -66,7 +66,7 @@ impl<T: Trait> Module<T> {
             pair_id, price, order_id, submitter, order_type, side, amount, remaining,
         );
 
-        debug!("[inject_order]a new order injected:{:?}", order);
+        debug!("[inject_order] New order:{:?}", order);
         <OrderInfoOf<T>>::insert(&who, order_id, &order);
 
         // The order count of user should be increased after a new order is created.

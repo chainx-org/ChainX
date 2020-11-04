@@ -39,13 +39,13 @@ pub fn validate_transaction<T: Trait>(
         .map_err(|_| Error::<T>::BadMerkleProof)?;
     if merkle_root != hash {
         error!(
-            "[validate_transaction] check merkle tree proof error, merkle_root:{:?}, hash:{:?}",
+            "[validate_transaction] Check merkle tree proof error, merkle_root:{:?}, hash:{:?}",
             merkle_root, hash
         );
         return Err(Error::<T>::BadMerkleProof.into());
     }
     if !matches.iter().any(|h| *h == tx_hash) {
-        error!("[validate_transaction] tx hash should in matches of partial merkle tree");
+        error!("[validate_transaction] Tx hash should in matches of partial merkle tree");
         return Err(Error::<T>::BadMerkleProof.into());
     }
 
@@ -56,7 +56,7 @@ pub fn validate_transaction<T: Trait>(
         let expected_id = tx.raw.inputs[0].previous_output.txid;
         if previous_txid != expected_id {
             error!(
-                "[validate_transaction] relay previous tx's hash not equal to relay tx first input, expected_id:{:?}, prev:{:?}",
+                "[validate_transaction] Relay previous tx's hash not equal to relay tx first input, expected_id:{:?}, prev:{:?}",
                 expected_id, previous_txid
             );
             return Err(Error::<T>::InvalidPrevTx.into());
@@ -102,7 +102,7 @@ pub fn parse_and_check_signed_tx_impl<T: Trait>(
             });
             if !verify {
                 error!(
-                    "[parse_and_check_signed_tx] verify sign failed, tx:{:?}, input:{:?}, bytes_redeem_script:{:?}",
+                    "[parse_and_check_signed_tx] Verify sig failed, tx:{:?}, input:{:?}, bytes_redeem_script:{:?}",
                     tx, i, try_hex!(&bytes_redeem_script)
                 );
                 return Err(Error::<T>::VerifySignFailed.into());

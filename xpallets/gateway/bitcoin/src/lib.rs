@@ -250,7 +250,7 @@ decl_storage! {
             #[cfg(not(test))] {
             if let BtcNetwork::Mainnet = config.network_id {
                 if genesis_index.height % config.params_info.retargeting_interval() != 0 {
-                    panic!("the block #{} should start from a changed difficulty block", genesis_index.height);
+                    panic!("Block #{} should start from a changed difficulty block", genesis_index.height);
                 }
             }
             }
@@ -377,7 +377,7 @@ decl_module! {
             if let Some(w) = who {
                 remove_pending_deposit::<T>(&addr, &w);
             } else {
-                info!("[remove_pending] release pending deposit directly, not deposit to someone, addr:{:?}", str!(&addr));
+                info!("[remove_pending] Release pending deposit directly, not deposit to someone, addr:{:?}", str!(&addr));
                 PendingDeposits::remove(&addr);
             }
             Ok(())
@@ -435,7 +435,7 @@ impl<T: Trait> ChainT<BalanceOf<T>> for Module<T> {
         // this addr is base58 addr
         let address = Self::verify_btc_address(addr).map_err(|err| {
             error!(
-                "[verify_btc_address] verify error:{:?}, source addr:{:?}",
+                "[verify_btc_address] Verify failed, error:{:?}, source addr:{:?}",
                 err,
                 try_addr!(addr)
             );
@@ -450,7 +450,7 @@ impl<T: Trait> ChainT<BalanceOf<T>> for Module<T> {
                 }
             }
             Err(err) => {
-                error!("[check_addr] cannot get trustee addr:{:?}", err);
+                error!("[check_addr] Can not get trustee addr:{:?}", err);
             }
         }
 
@@ -491,7 +491,7 @@ impl<T: Trait> Module<T> {
         // current should not exist
         if Self::headers(&header.hash()).is_some() {
             error!(
-                "[apply_push_header] header already exists, hash:{:?}",
+                "[apply_push_header] The BTC header already exists, hash:{:?}",
                 header.hash()
             );
             return Err(Error::<T>::ExistingHeader.into());
@@ -500,7 +500,7 @@ impl<T: Trait> Module<T> {
         let prev_info = Self::headers(header.previous_header_hash).ok_or_else(|| {
             native!(
                 error,
-                "[check_prev_and_convert] cannot find prev header, current header:{:?}",
+                "[check_prev_and_convert] Can not find prev header, current header:{:?}",
                 header
             );
             Error::<T>::PrevHeaderNotExisted
@@ -529,7 +529,7 @@ impl<T: Trait> Module<T> {
             });
 
             debug!(
-                "[apply_push_header] verify pass, insert header to storage [height:{}, hash:{:?}, all hashes of the height:{:?}]",
+                "[apply_push_header] Verify successfully, insert header to storage [height:{}, hash:{:?}, all hashes of the height:{:?}]",
                 header_info.height,
                 hash,
                 Self::block_hash_for(header_info.height)
@@ -546,7 +546,7 @@ impl<T: Trait> Module<T> {
                 // note update_confirmed_header would mutate other storage depend on BlockHashFor
                 let confirmed_index = header::update_confirmed_header::<T>(&header_info);
                 info!(
-                    "[apply_push_header] update new height:{}, hash:{:?}, confirm:{:?}",
+                    "[apply_push_header] Update new height:{}, hash:{:?}, confirm:{:?}",
                     header_info.height, hash, confirmed_index
                 );
                 // change new best index
@@ -554,7 +554,7 @@ impl<T: Trait> Module<T> {
             } else {
                 // forked chain
                 info!(
-                    "[apply_push_header] best index {} larger than this height {}",
+                    "[apply_push_header] Best index {} larger than this height {}",
                     best_index.height, header_info.height
                 );
                 header::check_confirmed_header::<T>(&header_info)?;
@@ -569,10 +569,10 @@ impl<T: Trait> Module<T> {
         let block_hash = tx.block_hash;
         let header_info = Module::<T>::headers(&tx.block_hash).ok_or_else(|| {
             error!(
-                "[apply_push_transaction] tx's block header ({:?}) must exist before",
+                "[apply_push_transaction] Tx's block header ({:?}) must exist before",
                 block_hash
             );
-            "tx's block header must already exist"
+            "Tx's block header must already exist"
         })?;
         let merkle_root = header_info.header.merkle_root_hash;
         // verify, check merkle proof
@@ -587,7 +587,7 @@ impl<T: Trait> Module<T> {
         let height = header_info.height;
         if height > confirmed.height {
             error!(
-                "[apply_push_transaction] receive an unconfirmed tx (height:{}, hash:{:?}), confirmed index (height:{}, hash:{:?})", 
+                "[apply_push_transaction] Receive an unconfirmed tx (height:{}, hash:{:?}), confirmed index (height:{}, hash:{:?})", 
                 height, tx_hash, confirmed.height, confirmed.hash
             );
             return Err(Error::<T>::UnconfirmedTx.into());
@@ -598,7 +598,7 @@ impl<T: Trait> Module<T> {
             Some(state) => {
                 if state.result == BtcTxResult::Success {
                     error!(
-                        "[apply_push_transaction] reject processed tx (hash:{:?}, type:{:?}, result:{:?})", 
+                        "[apply_push_transaction] Reject processed tx (hash:{:?}, type:{:?}, result:{:?})", 
                         tx_hash, state.tx_type, state.result
                     );
                     return Err(Error::<T>::ReplayedTx.into());
