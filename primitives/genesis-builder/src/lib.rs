@@ -42,11 +42,11 @@ mod genesis_params {
     #[derive(Debug, Default, Clone, Serialize, Deserialize)]
     pub struct ValidatorInfo<AccountId, Balance> {
         pub who: AccountId,
-        #[serde(with = "xpallet_support::serde_text")]
+        #[serde(with = "xp_rpc::serde_text")]
         pub referral_id: Vec<u8>,
         pub self_bonded: Balance,
         pub total_nomination: Balance,
-        #[serde(with = "xpallet_support::serde_num_str")]
+        #[serde(with = "xp_rpc::serde_num_str")]
         pub total_weight: u128,
     }
 
@@ -54,7 +54,7 @@ mod genesis_params {
     pub struct Nomination<AccountId, Balance> {
         pub nominee: AccountId,
         pub nomination: Balance,
-        #[serde(with = "xpallet_support::serde_num_str")]
+        #[serde(with = "xp_rpc::serde_num_str")]
         pub weight: u128,
     }
 
@@ -73,14 +73,14 @@ mod genesis_params {
     #[derive(Debug, Default, Clone, Serialize, Deserialize)]
     pub struct XBtcInfo {
         pub balance: Balance,
-        #[serde(with = "xpallet_support::serde_num_str")]
+        #[serde(with = "xp_rpc::serde_num_str")]
         pub weight: u128,
     }
 
     #[derive(Debug, Default, Clone, Serialize, Deserialize)]
     pub struct XBtcMiner<AccountId> {
         pub who: AccountId,
-        #[serde(with = "xpallet_support::serde_num_str")]
+        #[serde(with = "xp_rpc::serde_num_str")]
         pub weight: u128,
     }
 

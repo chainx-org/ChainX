@@ -8,9 +8,9 @@ use sp_runtime::RuntimeDebug;
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct BtcTrusteeAddrInfo {
-    #[cfg_attr(feature = "std", serde(with = "xpallet_support::serde_text"))]
+    #[cfg_attr(feature = "std", serde(with = "xp_rpc::serde_text"))]
     pub addr: BtcAddress,
-    #[cfg_attr(feature = "std", serde(with = "xpallet_support::serde_hex"))]
+    #[cfg_attr(feature = "std", serde(with = "xp_rpc::serde_hex"))]
     pub redeem_script: Vec<u8>,
 }
 
@@ -74,7 +74,7 @@ impl Into<Vec<u8>> for BtcTrusteeType {
 mod serde_impl {
     use super::*;
     use serde::{de::Error, Deserializer, Serializer};
-    use xpallet_support::serde_hex;
+    use xp_rpc::serde_hex;
 
     impl Serialize for BtcTrusteeType {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>

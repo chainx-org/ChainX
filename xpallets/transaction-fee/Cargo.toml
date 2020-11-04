@@ -12,17 +12,12 @@ codec = { package = "parity-scale-codec", version = "1.3.1", default-features = 
 serde = { version = "1.0.101", optional = true }
 smallvec = "1.4.1"
 
-sp-core = { version = "2.0.0", default-features = false }
-sp-io = { version = "2.0.0", default-features = false }
 sp-runtime = { version = "2.0.0", default-features = false }
 sp-std = { version = "2.0.0", default-features = false }
 
 frame-support = { version = "2.0.0", default-features = false }
 frame-system = { version = "2.0.0", default-features = false }
 pallet-transaction-payment = { version = "2.0.0", default-features = false }
-pallet-transaction-payment-rpc-runtime-api = { version = "2.0.0", default-features = false }
-
-xpallet-support = { path = "../../xpallets/support", default-features = false }
 
 [features]
 default = ["std"]
@@ -30,15 +25,10 @@ std = [
     "codec/std",
     "serde",
 
-    "sp-core/std",
-    "sp-io/std",
     "sp-runtime/std",
     "sp-std/std",
 
     "frame-support/std",
     "frame-system/std",
     "pallet-transaction-payment/std",
-    "pallet-transaction-payment-rpc-runtime-api/std",
-
-    "xpallet-support/std",
 ]

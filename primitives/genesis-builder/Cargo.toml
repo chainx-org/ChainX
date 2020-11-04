@@ -9,9 +9,7 @@ serde = { version = "1.0", features = ["derive"], optional = true }
 
 # ChainX primitives
 chainx-primitives = { path = "../../primitives", default-features = false }
-
-# ChainX pallets
-xpallet-support = { path = "../../xpallets/support", default-features = false }
+xp-rpc = { path = "../../primitives/rpc", optional = true }
 
 [features]
 default = ["std"]
@@ -19,6 +17,5 @@ std = [
     "serde",
     # ChainX primitives
     "chainx-primitives/std",
-    # ChainX pallets
-    "xpallet-support/std",
+    "xp-rpc",
 ]

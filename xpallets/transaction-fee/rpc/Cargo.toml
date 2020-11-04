@@ -22,6 +22,6 @@ sp-runtime = "2.0.0"
 
 pallet-transaction-payment-rpc = "2.0.0"
 
-xpallet-support = { path = "../../support" }
+xp-rpc = { path = "../../../primitives/rpc" }
 
 xpallet-transaction-fee-rpc-runtime-api = { path = "./runtime-api" }

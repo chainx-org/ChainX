@@ -14,9 +14,7 @@ use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 
-use xp_rpc::{runtime_error_into_rpc_err, Result};
-
-use xpallet_support::{RpcBalance, RpcVoteWeight};
+use xp_rpc::{runtime_error_into_rpc_err, Result, RpcBalance, RpcVoteWeight};
 
 use xpallet_mining_staking_rpc_runtime_api::{
     NominatorInfo, NominatorLedger, Unbonded, ValidatorInfo, ValidatorLedger,

@@ -16,9 +16,7 @@ use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 
-use xp_rpc::{runtime_error_into_rpc_err, Result};
-
-use xpallet_support::{RpcBalance, RpcPrice};
+use xp_rpc::{runtime_error_into_rpc_err, Result, RpcBalance, RpcPrice};
 
 use xpallet_dex_spot_rpc_runtime_api::{
     Depth, FullPairInfo, Handicap, OrderProperty, RpcOrder, TradingPairId, TradingPairInfo,

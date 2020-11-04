@@ -25,7 +25,7 @@ pub struct TrusteeInfoConfig {
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct TrusteeIntentionProps<TrusteeEntity: BytesLike> {
-    #[cfg_attr(feature = "std", serde(with = "xpallet_support::serde_text"))]
+    #[cfg_attr(feature = "std", serde(with = "xp_rpc::serde_text"))]
     pub about: Text,
     pub hot_entity: TrusteeEntity,
     pub cold_entity: TrusteeEntity,

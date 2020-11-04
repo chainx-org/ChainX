@@ -22,8 +22,5 @@ sp-runtime = "2.0.0"
 # ChainX primitives
 xp-rpc = { path = "../../../../primitives/rpc" }
 
-# ChainX pallets
-xpallet-support = { path = "../../../support" }
-
 # ChainX pallets api
 xpallet-dex-spot-rpc-runtime-api = { path = "./runtime-api" }

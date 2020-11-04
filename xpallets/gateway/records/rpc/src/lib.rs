@@ -135,7 +135,7 @@ where
 pub struct RpcWithdrawalRecord<AccountId, Balance: Display + FromStr, BlockNumber> {
     pub asset_id: AssetId,
     pub applicant: AccountId,
-    #[serde(with = "xpallet_support::serde_num_str")]
+    #[serde(with = "xp_rpc::serde_num_str")]
     pub balance: Balance,
     pub addr: String,
     pub ext: String,

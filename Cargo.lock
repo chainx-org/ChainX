@@ -8797,7 +8797,7 @@ version = "2.0.0-alpha.4"
 dependencies = [
  "chainx-primitives",
  "serde",
- "xpallet-support",
+ "xp-rpc",
 ]
 
 [[package]]
@@ -8845,7 +8845,10 @@ dependencies = [
 name = "xp-rpc"
 version = "2.0.0-alpha.4"
 dependencies = [
+ "hex",
  "jsonrpc-core",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -8899,6 +8902,7 @@ dependencies = [
  "sp-std",
  "xp-assets-registrar",
  "xp-protocol",
+ "xp-rpc",
  "xp-runtime",
  "xpallet-support",
 ]
@@ -8916,7 +8920,6 @@ dependencies = [
  "sp-runtime",
  "xp-rpc",
  "xpallet-assets-rpc-runtime-api",
- "xpallet-support",
 ]
 
 [[package]]
@@ -8967,7 +8970,6 @@ dependencies = [
  "sp-runtime",
  "xp-rpc",
  "xpallet-dex-spot-rpc-runtime-api",
- "xpallet-support",
 ]
 
 [[package]]
@@ -9033,6 +9035,7 @@ dependencies = [
  "sp-std",
  "xp-io",
  "xp-protocol",
+ "xp-rpc",
  "xp-runtime",
  "xpallet-assets",
  "xpallet-assets-registrar",
@@ -9055,7 +9058,6 @@ dependencies = [
  "sp-runtime",
  "xp-rpc",
  "xpallet-gateway-common-rpc-runtime-api",
- "xpallet-support",
 ]
 
 [[package]]
@@ -9185,7 +9187,6 @@ dependencies = [
  "sp-runtime",
  "xp-rpc",
  "xpallet-mining-asset-rpc-runtime-api",
- "xpallet-support",
 ]
 
 [[package]]
@@ -9223,6 +9224,7 @@ dependencies = [
  "xp-mining-common",
  "xp-mining-staking",
  "xp-protocol",
+ "xp-rpc",
  "xp-runtime",
  "xpallet-support",
 ]
@@ -9240,7 +9242,6 @@ dependencies = [
  "sp-runtime",
  "xp-rpc",
  "xpallet-mining-staking-rpc-runtime-api",
- "xpallet-support",
 ]
 
 [[package]]
@@ -9259,9 +9260,6 @@ version = "2.0.0-alpha.4"
 dependencies = [
  "frame-support",
  "hex",
- "parity-scale-codec",
- "serde",
- "serde_json",
  "sp-std",
 ]
 
@@ -9285,15 +9283,11 @@ dependencies = [
  "frame-support",
  "frame-system",
  "pallet-transaction-payment",
- "pallet-transaction-payment-rpc-runtime-api",
  "parity-scale-codec",
  "serde",
  "smallvec 1.4.2",
- "sp-core",
- "sp-io",
  "sp-runtime",
  "sp-std",
- "xpallet-support",
 ]
 
 [[package]]
@@ -9311,7 +9305,7 @@ dependencies = [
  "sp-core",
  "sp-rpc",
  "sp-runtime",
- "xpallet-support",
+ "xp-rpc",
  "xpallet-transaction-fee-rpc-runtime-api",
 ]
 
