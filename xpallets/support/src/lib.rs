@@ -4,17 +4,8 @@
 
 #[macro_use]
 mod macros;
-#[cfg(feature = "std")]
-mod serde;
 pub mod traits;
 #[cfg(feature = "std")]
 pub mod x_std;
 
-pub use frame_support::fail;
-
 pub use self::macros::*;
-#[cfg(feature = "std")]
-pub use self::serde::{
-    serde_hex, serde_num_str, serde_text, RpcBalance, RpcMiningWeight, RpcPrice, RpcU128,
-    RpcVoteWeight,
-};

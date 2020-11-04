@@ -30,12 +30,13 @@ use frame_system::{ensure_root, ensure_signed};
 use sp_runtime::traits::{SaturatedConversion, Zero};
 
 use chainx_primitives::AssetId;
+use xp_logging::warn;
 use xp_mining_common::{
     Claim, ComputeMiningWeight, MiningWeight as _, RewardPotAccountFor, WeightType,
     ZeroMiningWeightError,
 };
 use xpallet_assets::{AssetType, BalanceOf};
-use xpallet_support::{traits::TreasuryAccount, warn};
+use xpallet_support::traits::TreasuryAccount;
 
 pub use self::impls::SimpleAssetRewardPotAccountDeterminer;
 pub use self::rpc::*;

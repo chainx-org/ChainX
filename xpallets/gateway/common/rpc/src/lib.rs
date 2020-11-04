@@ -17,10 +17,8 @@ use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 
 use xp_rpc::{
     hex_decode_error_into_rpc_err, runtime_error_into_rpc_err, trustee_decode_error_into_rpc_err,
-    trustee_inexistent_rpc_err, Result,
+    trustee_inexistent_rpc_err, Result, RpcBalance,
 };
-
-use xpallet_support::RpcBalance;
 
 use xpallet_gateway_common_rpc_runtime_api::trustees::bitcoin::{
     BtcTrusteeIntentionProps, BtcTrusteeSessionInfo,

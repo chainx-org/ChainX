@@ -23,20 +23,16 @@ use sp_std::{collections::btree_map::BTreeMap, convert::TryFrom, prelude::*, res
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult},
-    ensure,
-    traits::Currency,
-    IterableStorageMap,
+    ensure, IterableStorageMap,
 };
 use frame_system::{ensure_root, ensure_signed};
 
 use chainx_primitives::{AddrStr, AssetId, ChainAddress, Text};
+use xp_logging::{error, info};
 use xp_runtime::Memo;
-use xpallet_assets::{AssetRestrictions, Chain, ChainT, WithdrawalLimit};
+use xpallet_assets::{AssetRestrictions, BalanceOf, Chain, ChainT, WithdrawalLimit};
 use xpallet_gateway_records::WithdrawalState;
-use xpallet_support::{
-    error, info,
-    traits::{MultisigAddressFor, Validator},
-};
+use xpallet_support::traits::{MultisigAddressFor, Validator};
 
 use crate::traits::TrusteeForChain;
 use crate::types::{
@@ -44,10 +40,6 @@ use crate::types::{
     TrusteeIntentionProps,
 };
 use crate::weight_info::WeightInfo;
-
-pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
-    <T as frame_system::Trait>::AccountId,
->>::Balance;
 
 pub trait Trait: xpallet_gateway_records::Trait {
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
@@ -172,7 +164,7 @@ decl_module! {
             };
 
             info!(
-                "[transition_trustee_session_by_root]|try to transition trustee|chain:{:?}|new_trustees:{:?}",
+                "[transition_trustee_session_by_root] Try to transition trustees, chain:{:?}, new_trustees:{:?}",
                 chain,
                 new_trustees
             );
@@ -362,7 +354,7 @@ impl<T: Trait> Module<T> {
             (1..new_trustees.len()).any(|i| new_trustees[i..].contains(&new_trustees[i - 1]));
         if has_duplicate {
             error!(
-                "[try_generate_session_info]|existing duplicate account|candidates:{:?}",
+                "[try_generate_session_info] Duplicate account, candidates:{:?}",
                 new_trustees
             );
             return Err(Error::<T>::DuplicatedAccountId.into());
@@ -370,7 +362,10 @@ impl<T: Trait> Module<T> {
         let mut props = Vec::with_capacity(new_trustees.len());
         for accountid in new_trustees.into_iter() {
             let p = Self::trustee_intention_props_of(&accountid, chain).ok_or_else(|| {
-                error!("[transition_trustee_session]|some candidate has not registered as a trustee|who:{:?}",  accountid);
+                error!(
+                    "[transition_trustee_session] Candidate {:?} has not registered as a trustee",
+                    accountid
+                );
                 Error::<T>::NotRegistered
             })?;
             props.push((accountid, p));

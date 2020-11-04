@@ -20,6 +20,7 @@ members = [
     "primitives/gateway/common",
     "primitives/genesis-builder",
     "primitives/io",
+    "primitives/logging",
     "primitives/mining/common",
     "primitives/mining/staking",
     "primitives/protocol",

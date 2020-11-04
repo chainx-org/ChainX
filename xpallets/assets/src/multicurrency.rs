@@ -17,7 +17,8 @@ use orml_traits::{
 };
 
 use chainx_primitives::AssetId;
-use xpallet_support::{error, traits::TreasuryAccount};
+use xp_logging::error;
+use xpallet_support::traits::TreasuryAccount;
 
 use crate::types::{AssetType, BalanceLock};
 use crate::{BalanceOf, Error, Module, Trait};
@@ -214,7 +215,7 @@ impl<T: Trait> MultiReservableCurrency<T::AccountId> for Module<T> {
         let actual = reserved_balance.min(value);
 
         let treasury = T::TreasuryAccount::treasury_account();
-        if let Err(e) = Self::move_balance(
+        if let Err(err) = Self::move_balance(
             &currency_id,
             who,
             AssetType::Reserved,
@@ -223,8 +224,9 @@ impl<T: Trait> MultiReservableCurrency<T::AccountId> for Module<T> {
             actual,
         ) {
             error!(
-                "[slash_reserved]|should not failed when this move|who:{:?}|asset_id:{:}|err:{:?}",
-                who, currency_id, e
+                "[slash_reserved] Should not be failed when move asset (reserved => usable), \
+                who:{:?}, id:{}, err:{:?}",
+                who, currency_id, err
             );
         }
         value - actual
@@ -263,7 +265,7 @@ impl<T: Trait> MultiReservableCurrency<T::AccountId> for Module<T> {
             return Zero::zero();
         }
         let actual = Self::reserved_balance(currency_id, who).min(value);
-        if let Err(e) = Self::move_balance(
+        if let Err(err) = Self::move_balance(
             &currency_id,
             who,
             AssetType::Reserved,
@@ -272,8 +274,9 @@ impl<T: Trait> MultiReservableCurrency<T::AccountId> for Module<T> {
             actual,
         ) {
             error!(
-                "[unreserve]|should not failed when this move|who:{:?}|asset_id:{:}|err:{:?}",
-                who, currency_id, e
+                "[unreserve] Should not be failed when move asset (reserved => usable), \
+                who:{:?}, id:{}, err:{:?}",
+                who, currency_id, err
             );
         }
         value - actual

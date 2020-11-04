@@ -43,8 +43,9 @@ use sp_runtime::traits::{
 };
 
 use chainx_primitives::AssetId;
+use xp_logging::{debug, error, info};
 pub use xpallet_assets_registrar::{AssetInfo, Chain};
-use xpallet_support::{debug, ensure_with_errorlog, error, info, traits::TreasuryAccount};
+use xpallet_support::traits::TreasuryAccount;
 
 pub use self::traits::{ChainT, OnAssetChanged};
 use self::trigger::AssetChangedTrigger;
@@ -198,7 +199,7 @@ decl_module! {
         ) -> DispatchResult {
             let transactor = ensure_signed(origin)?;
             let dest = T::Lookup::lookup(dest)?;
-            debug!("[transfer]|from:{:?}|to:{:?}|id:{:}|value:{:?}", transactor, dest, id, value);
+            debug!("[transfer] from:{:?}, to:{:?}, id:{}, value:{:?}", transactor, dest, id, value);
             Self::can_transfer(&id)?;
 
             Self::move_usable_balance(&id, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;
@@ -219,7 +220,7 @@ decl_module! {
 
             let transactor = T::Lookup::lookup(transactor)?;
             let dest = T::Lookup::lookup(dest)?;
-            debug!("[force_transfer]|from:{:?}|to:{:?}|id:{:}|value:{:?}", transactor, dest, id, value);
+            debug!("[force_transfer] from:{:?}, to:{:?}, id:{}, value:{:?}", transactor, dest, id, value);
             Self::can_transfer(&id)?;
             Self::move_usable_balance(&id, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;
             Ok(())
@@ -236,7 +237,7 @@ decl_module! {
             ensure_root(origin)?;
 
             let who = T::Lookup::lookup(who)?;
-            info!("[set_balance]|set balances by root|who:{:?}|id:{:}|balances_map:{:?}", who, id, balances);
+            info!("[set_balance] Set balance by root, who:{:?}, id:{}, balances:{:?}", who, id, balances);
             Self::set_balance_impl(&who, &id, balances)?;
             Ok(())
         }
@@ -311,49 +312,37 @@ impl<T: Trait> Module<T> {
     // can do wrapper
     #[inline]
     pub fn can_move(id: &AssetId) -> DispatchResult {
-        ensure_with_errorlog!(
-            Self::can_do(id, AssetRestrictions::MOVE),
-            Error::<T>::ActionNotAllowed,
-            "this asset do not allow move|id:{:}|action:{:?}",
-            id,
-            AssetRestrictions::MOVE,
-        );
+        if !Self::can_do(id, AssetRestrictions::MOVE) {
+            error!("Not allowed to move asset, id:{}", id);
+            return Err(Error::<T>::ActionNotAllowed.into());
+        }
         Ok(())
     }
 
     #[inline]
     pub fn can_transfer(id: &AssetId) -> DispatchResult {
-        ensure_with_errorlog!(
-            Self::can_do(id, AssetRestrictions::TRANSFER),
-            Error::<T>::ActionNotAllowed,
-            "this asset do not allow transfer|id:{:}|action:{:?}",
-            id,
-            AssetRestrictions::TRANSFER,
-        );
+        if !Self::can_do(id, AssetRestrictions::TRANSFER) {
+            error!("Not allowed to transfer asset, id:{}", id);
+            return Err(Error::<T>::ActionNotAllowed.into());
+        }
         Ok(())
     }
 
     #[inline]
     pub fn can_destroy_withdrawal(id: &AssetId) -> DispatchResult {
-        ensure_with_errorlog!(
-            Self::can_do(id, AssetRestrictions::DESTROY_WITHDRAWAL),
-            Error::<T>::ActionNotAllowed,
-            "this asset do not allow destroy withdrawal|id:{:}|action:{:?}",
-            id,
-            AssetRestrictions::DESTROY_WITHDRAWAL,
-        );
+        if !Self::can_do(id, AssetRestrictions::DESTROY_WITHDRAWAL) {
+            error!("Not allowed to destroy withdrawal asset, id:{}", id);
+            return Err(Error::<T>::ActionNotAllowed.into());
+        }
         Ok(())
     }
 
     #[inline]
     pub fn can_destroy_usable(id: &AssetId) -> DispatchResult {
-        ensure_with_errorlog!(
-            Self::can_do(id, AssetRestrictions::DESTROY_USABLE),
-            Error::<T>::ActionNotAllowed,
-            "this asset do not allow destroy free|id:{:}|action:{:?}",
-            id,
-            AssetRestrictions::DESTROY_USABLE,
-        );
+        if !Self::can_do(id, AssetRestrictions::DESTROY_USABLE) {
+            error!("Not allowed to destroy usable asset, id:{}", id);
+            return Err(Error::<T>::ActionNotAllowed.into());
+        }
         Ok(())
     }
 }
@@ -450,8 +439,10 @@ impl<T: Trait> Module<T> {
         let from_balance = Self::asset_typed_balance(from, id, from_type);
         let to_balance = Self::asset_typed_balance(to, id, to_type);
 
-        debug!("[move_balance]|id:{:}|from:{:?}|f_type:{:?}|f_balance:{:?}|to:{:?}|t_type:{:?}|t_balance:{:?}|value:{:?}",
-               id, from, from_type, from_balance, to, to_type, to_balance, value);
+        debug!(
+            "[move_balance] id:{}, from:[who:{:?}, type:{:?}, balance:{:?}], to:[who:{:?}, type:{:?}, balance:{:?}], value:{:?}",
+            id, from, from_type, from_balance, to, to_type, to_balance, value
+        );
 
         // judge balance is enough and test overflow
         let new_from_balance = from_balance
@@ -519,7 +510,7 @@ impl<T: Trait> Module<T> {
     }
 
     fn new_account(who: &T::AccountId) {
-        info!("[new_account]|create new account|who:{:?}", who);
+        info!("[new_account] account:{:?}", who);
         T::OnCreatedAccount::happened(&who)
     }
 
@@ -589,8 +580,8 @@ impl<T: Trait> Module<T> {
         let current = Self::asset_typed_balance(&who, id, type_);
 
         debug!(
-            "[issue]|issue to account|id:{:}|who:{:?}|type:{:?}|current:{:?}|value:{:?}",
-            id, who, type_, current, value
+            "[issue] account:{:?}, asset:[id:{}, type:{:?}, current:{:?}, issue:{:?}]",
+            who, id, type_, current, value
         );
 
         let new = current.checked_add(&value).ok_or(Error::<T>::Overflow)?;
@@ -611,8 +602,10 @@ impl<T: Trait> Module<T> {
     ) -> result::Result<(), DispatchError> {
         let current = Self::asset_typed_balance(&who, id, type_);
 
-        debug!("[destroy_directly]|destroy asset for account|id:{:}|who:{:?}|type:{:?}|current:{:?}|destroy:{:?}",
-               id, who, type_, current, value);
+        debug!(
+            "[destroy] account:{:?}, asset:[id:{}, type:{:?}, current:{:?}, destroy:{:?}]",
+            who, id, type_, current, value
+        );
 
         let new = current
             .checked_sub(&value)
@@ -660,11 +653,12 @@ impl<T: Trait> Module<T> {
                     Ok(())
                 }
             };
-            if let Err(e) = result {
+            if let Err(err) = result {
                 // should not fail, for set lock need to check free_balance, free_balance = usable + free
                 error!(
-                    "[update_locks]|move between usable and locked should not fail|asset_id:{:}|who:{:?}|max_locked:{:?}|current locked:{:?}|err:{:?}",
-                    currency_id, who, max_locked, current_locked, e
+                    "[update_locks] Should not be failed when move asset (usable <=> locked), \
+                    who:{:?}, asset:[id:{}, max_locked:{:?}, current_locked:{:?}], err:{:?}",
+                    who, currency_id, max_locked, current_locked, err
                 );
             }
         }

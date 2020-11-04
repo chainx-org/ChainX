@@ -5,8 +5,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![deny(missing_docs)]
 
+use sp_runtime::DispatchResult;
+
 use chainx_primitives::AssetId;
-use frame_support::dispatch::DispatchResult;
 
 /// Trait for doing some stuff on the registration/deregistration of a foreign asset.
 pub trait RegistrarHandler {

@@ -230,7 +230,7 @@ impl<T: Trait> Module<T> {
         if let Some(offenders) = SessionOffenders::<T>::take() {
             let force_chilled = Self::slash_offenders_in_session(offenders, validator_rewards);
             if !force_chilled.is_empty() {
-                debug!("Force chilled: {:?}", force_chilled);
+                debug!("Force chilled:{:?}", force_chilled);
                 Self::deposit_event(Event::<T>::ForceChilled(session_index, force_chilled));
                 // Force a new era if some offender's reward pot has been wholly slashed.
                 Self::ensure_new_era();
@@ -242,7 +242,7 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> Module<T> {
     fn new_session(session_index: SessionIndex) -> Option<Vec<T::AccountId>> {
         debug!(
-            "[new_session]session_index:{:?}, current_era:{:?}",
+            "[new_session] session_index:{:?}, current_era:{:?}",
             session_index,
             Self::current_era(),
         );
@@ -296,7 +296,7 @@ impl<T: Trait> Module<T> {
 
         let next_active_era = Self::active_era().map(|e| e.index + 1).unwrap_or(0);
         debug!(
-            "[start_session]start_session:{}, next_active_era:{:?}",
+            "[start_session] start_session:{}, next_active_era:{:?}",
             start_session, next_active_era
         );
         if let Some(next_active_era_start_session_index) =
@@ -410,7 +410,7 @@ where
             .collect::<BTreeMap<_, _>>();
 
         debug!(
-            "Reported the offenders:{:?} happend in session {:?}",
+            "Reported the offenders:{:?} happened in session {:?}",
             offenders_tuple, slash_session
         );
 

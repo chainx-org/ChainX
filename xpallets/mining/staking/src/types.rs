@@ -12,9 +12,9 @@ use sp_runtime::{
 };
 
 use chainx_primitives::{AssetId, ReferralId};
+use xp_logging::debug;
 use xp_mining_common::{RewardPotAccountFor, WeightType};
 use xp_mining_staking::MiningPower;
-use xpallet_support::debug;
 
 use crate::{AssetMining, BalanceOf, EraIndex, Event, Module, Trait};
 
@@ -106,7 +106,7 @@ pub struct ValidatorProfile<BlockNumber> {
     /// Block number of last performed `chill` operation.
     pub last_chilled: Option<BlockNumber>,
     /// Referral identity that belongs to the validator.
-    #[cfg_attr(feature = "std", serde(with = "xpallet_support::serde_text"))]
+    #[cfg_attr(feature = "std", serde(with = "xp_rpc::serde_text"))]
     pub referral_id: ReferralId,
 }
 

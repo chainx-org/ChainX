@@ -28,7 +28,7 @@ use frame_support::{
 use frame_system::ensure_root;
 
 use chainx_primitives::{AssetId, Desc, Token};
-use xpallet_support::info;
+use xp_logging::info;
 
 pub use self::types::{AssetInfo, Chain};
 pub use self::weight_info::WeightInfo;
@@ -140,7 +140,10 @@ decl_module! {
             asset.is_valid::<T>()?;
             ensure!(!Self::exists(&asset_id), Error::<T>::AssetAlreadyExists);
 
-            info!("[register_asset]|id:{:}|{:?}|is_online:{:}|has_mining_rights:{:}", asset_id, asset, is_online, has_mining_rights);
+            info!(
+                "[register_asset] id:{}, info:{:?}, is_online:{}, has_mining_rights:{}",
+                asset_id, asset, is_online, has_mining_rights
+            );
 
             Self::apply_register(asset_id, asset)?;
 

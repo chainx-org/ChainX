@@ -1,6 +1,6 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use frame_support::dispatch::DispatchResult;
+use sp_runtime::DispatchResult;
 use sp_std::{cmp::Ordering, prelude::Vec};
 
 use light_bitcoin::{
@@ -9,7 +9,8 @@ use light_bitcoin::{
     script::{Opcode, Script, ScriptAddress},
 };
 
-use xpallet_support::{error, try_hex, warn};
+use xp_logging::{error, warn};
+use xpallet_support::try_hex;
 
 use crate::{native, Error, Module, Trait};
 
@@ -20,13 +21,13 @@ pub fn parse_output_addr<T: Trait>(script: &Script) -> Option<Address> {
 
 pub fn parse_output_addr_with_networkid(script: &Script, network: Network) -> Option<Address> {
     // only `p2pk`, `p2pkh`, `p2sh` could parse
-    script.extract_destinations().map_err(|_e|{
+    script.extract_destinations().map_err(|err|{
         error!(
-            "[parse_output_addr]|parse output script error|e:{:}|script:{:?}",
-            _e,
+            "[parse_output_addr] Parse output script error:{}, script:{:?}",
+            err,
             try_hex!(&script)
         );
-        _e
+        err
     }).ok().and_then(|script_addresses| {
         // find addr in this transaction
         if script_addresses.len() == 1 {
@@ -39,7 +40,10 @@ pub fn parse_output_addr_with_networkid(script: &Script, network: Network) -> Op
             return Some(addr);
         }
         // the type is `NonStandard`, `Multisig`, `NullData`, `WitnessScript`, `WitnessKey`
-        warn!("[parse_output_addr]|can't parse addr from output script|type:{:?}|addr:{:?}|script:{:?}", script.script_type(), script_addresses, try_hex!(&script));
+        warn!(
+            "[parse_output_addr] Can not parse addr from output script, type:{:?}, addr:{:?}, script:{:?}",
+            script.script_type(), script_addresses, try_hex!(&script)
+        );
         None
     })
 }
@@ -89,7 +93,7 @@ pub fn ensure_identical<T: Trait>(tx1: &Transaction, tx2: &Transaction) -> Dispa
             {
                 native!(
                     error,
-                    "[ensure_identical]|tx1 is different to tx2|tx1:{:?}|tx2:{:?}",
+                    "[ensure_identical] Tx1 is different to Tx2, tx1:{:?}, tx2:{:?}",
                     tx1,
                     tx2
                 );
