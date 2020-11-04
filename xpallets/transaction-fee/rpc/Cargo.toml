@@ -23,8 +23,7 @@ sp-runtime = "2.0.0"
 # Substrate pallets
 pallet-transaction-payment-rpc = "2.0.0"
 
-# ChainX pallets
-xpallet-support = { path = "../../support" }
+xp-rpc = { path = "../../../primitives/rpc" }
 
 # ChainX pallets api
 xpallet-transaction-fee-rpc-runtime-api = { path = "./runtime-api" }

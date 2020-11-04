@@ -25,6 +25,7 @@ chainx-primitives = { path = "../../../primitives", default-features = false }
 xp-logging =  { path = "../../../primitives/logging", default-features = false }
 xp-io = { path = "../../../primitives/io", default-features = false, optional = true }
 xp-protocol = { path = "../../../primitives/protocol", default-features = false }
+xp-rpc = { path = "../../../primitives/rpc", optional = true }
 xp-runtime = { path = "../../../primitives/runtime", default-features = false }
 
 # ChainX pallets
@@ -62,6 +63,7 @@ std = [
     "xp-logging/std",
     "xp-io/std",
     "xp-protocol/std",
+    "xp-rpc",
     "xp-runtime/std",
     # ChainX pallets
     "xpallet-assets/std",

@@ -19,7 +19,7 @@ use sp_runtime::{
 
 use pallet_transaction_payment_rpc::Error;
 
-use xpallet_support::RpcBalance;
+use xp_rpc::RpcBalance;
 use xpallet_transaction_fee_rpc_runtime_api::{FeeDetails, InclusionFee};
 
 pub use xpallet_transaction_fee_rpc_runtime_api::XTransactionFeeApi as XTransactionFeeRuntimeApi;

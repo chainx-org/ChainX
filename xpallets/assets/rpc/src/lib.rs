@@ -15,9 +15,7 @@ use sp_runtime::{
     traits::{Block as BlockT, Zero},
 };
 
-use xp_rpc::{runtime_error_into_rpc_err, Result};
-
-use xpallet_support::RpcBalance;
+use xp_rpc::{runtime_error_into_rpc_err, Result, RpcBalance};
 
 use xpallet_assets_rpc_runtime_api::{
     AssetId, AssetType, TotalAssetInfo, XAssetsApi as XAssetsRuntimeApi,

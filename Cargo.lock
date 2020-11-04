@@ -8797,7 +8797,7 @@ version = "2.0.0-alpha.4"
 dependencies = [
  "chainx-primitives",
  "serde",
- "xpallet-support",
+ "xp-rpc",
 ]
 
 [[package]]
@@ -8849,7 +8849,10 @@ dependencies = [
 name = "xp-rpc"
 version = "2.0.0-alpha.4"
 dependencies = [
+ "hex",
  "jsonrpc-core",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -8905,6 +8908,7 @@ dependencies = [
  "xp-assets-registrar",
  "xp-logging",
  "xp-protocol",
+ "xp-rpc",
  "xp-runtime",
  "xpallet-support",
 ]
@@ -8922,7 +8926,6 @@ dependencies = [
  "sp-runtime",
  "xp-rpc",
  "xpallet-assets-rpc-runtime-api",
- "xpallet-support",
 ]
 
 [[package]]
@@ -8974,7 +8977,6 @@ dependencies = [
  "sp-runtime",
  "xp-rpc",
  "xpallet-dex-spot-rpc-runtime-api",
- "xpallet-support",
 ]
 
 [[package]]
@@ -9041,6 +9043,7 @@ dependencies = [
  "xp-io",
  "xp-logging",
  "xp-protocol",
+ "xp-rpc",
  "xp-runtime",
  "xpallet-assets",
  "xpallet-assets-registrar",
@@ -9063,7 +9066,6 @@ dependencies = [
  "sp-runtime",
  "xp-rpc",
  "xpallet-gateway-common-rpc-runtime-api",
- "xpallet-support",
 ]
 
 [[package]]
@@ -9196,7 +9198,6 @@ dependencies = [
  "sp-runtime",
  "xp-rpc",
  "xpallet-mining-asset-rpc-runtime-api",
- "xpallet-support",
 ]
 
 [[package]]
@@ -9235,6 +9236,7 @@ dependencies = [
  "xp-mining-common",
  "xp-mining-staking",
  "xp-protocol",
+ "xp-rpc",
  "xp-runtime",
  "xpallet-support",
 ]
@@ -9252,7 +9254,6 @@ dependencies = [
  "sp-runtime",
  "xp-rpc",
  "xpallet-mining-staking-rpc-runtime-api",
- "xpallet-support",
 ]
 
 [[package]]
@@ -9270,9 +9271,6 @@ name = "xpallet-support"
 version = "2.0.0-alpha.4"
 dependencies = [
  "hex",
- "parity-scale-codec",
- "serde",
- "serde_json",
  "sp-std",
 ]
 
@@ -9316,7 +9314,7 @@ dependencies = [
  "sp-blockchain",
  "sp-core",
  "sp-runtime",
- "xpallet-support",
+ "xp-rpc",
  "xpallet-transaction-fee-rpc-runtime-api",
 ]
 
