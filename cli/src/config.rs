@@ -94,9 +94,8 @@ fn extend_cli_args(
     }
 
     if let Some(sub_command) = cli_args.get(1) {
-        // We are going to invoke the `Run` command.
+        // Injecting `default_opts()` only makes sense in the context of no specified subcommands.
         if !SUB_COMMANDS.contains(&sub_command.as_str()) {
-            // `default_opts()` only makes sense in this context.
             for (key, value) in default_opts {
                 config_opts.push(format!("--{}={}", key, value));
             }
