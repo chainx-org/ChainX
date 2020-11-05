@@ -407,9 +407,9 @@ pub fn staging_testnet_config() -> Result<ChainSpec, String> {
 pub fn testnet_config() -> Result<ChainSpec, String> {
     let wasm_binary = include_bytes!("./wasm/chainx_runtime_testnet.compact.wasm");
     // subkey inspect-key --uri "$SECRET"
-    // 5ERUBzfWtZzB59HM2qekCKzPm9sFo433z3V4rGgJXd7ugWNv
+    // 5DevKrCXVnGtJ5epm19VCQwdbjXVGLvDVVe86b67sRweMh8P
     let root_key: AccountId =
-        hex!["684e9d27ae6b5ab3a673616de27bd3e455062c83090de607ab49a2f7396b5a19"].into();
+        hex!["46548ce2fca0244d9ca8bc2b82d599458d340d0da3c13078689cf4f17bbb3017"].into();
     // bash:
     // for i in 1 2 3; do for j in validator blockauthor; do subkey inspect-key --uri "$SECRET//$i//$j"; done; done
     // for i in 1 2 3; do for j in babe; do subkey inspect-key --scheme sr25519  --uri "$SECRET//$i//$j"; done; done
