@@ -51,10 +51,14 @@ fn extend_cli_args(
         .collect::<Vec<_>>();
 
     let mut config_opts = Vec::new();
-    let mut default_opts = default_opts;
+    let mut default_opts = default_opts
+        .into_iter()
+        .filter(|(k, _)| !cli_opts.contains(&format!("--{}", k).as_ref()))
+        .collect::<HashMap<_, _>>();
 
     if let Some(path) = path {
         for (key, value) in read_config_file(path)?.into_iter() {
+            // remove key has been configured in config file or in cli arguments.
             if default_opts.contains_key(key.as_str()) {
                 default_opts.remove(key.as_str());
             }
