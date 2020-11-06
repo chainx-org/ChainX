@@ -36,7 +36,7 @@ use chainx_runtime::{
 use crate::genesis::bitcoin::{BtcGenesisParams, BtcTrusteeParams};
 
 // Note this is the URL for the telemetry server
-//const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
+const POLKADOT_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 const CHAINX_TELEMETRY_URL: &str = "ws://stats.chainx.org:1024/submit/";
 
 /// Node `ChainSpec` extensions.
@@ -542,7 +542,13 @@ pub fn testnet_config() -> Result<ChainSpec, String> {
             "/dns/p2p.testnet-2.chainx.org/tcp/30334/p2p/12D3KooWNKCPciz7iAJ6DBqSygsfzHCVdoMCMWoBgo1EgHMrTpDN",
             "/dns/p2p.testnet-3.chainx.org/tcp/30335/p2p/12D3KooWLuxACVFoeddQ4ja68C7Y4qNrXtpBC9gx7akRPacnvoJe",
         ],
-        Some(TelemetryEndpoints::new(vec![(CHAINX_TELEMETRY_URL.to_string(), 0)]).expect("Testnet telemetry url is valid; qed")),
+        Some(
+            TelemetryEndpoints::new(vec![
+                (CHAINX_TELEMETRY_URL.to_string(), 0),
+                (POLKADOT_TELEMETRY_URL.to_string(), 0),
+            ])
+            .expect("Testnet telemetry url is valid; qed"),
+        ),
         Some("chainx-testnet"),
         Some(as_properties(NetworkType::Testnet)),
         Default::default(),
