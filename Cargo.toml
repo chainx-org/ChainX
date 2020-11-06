@@ -1,6 +1,6 @@
 [package]
 name = "chainx"
-version = "2.0.0-beta.0"
+version = "2.0.0-beta.1"
 authors = ["The ChainX Authors"]
 edition = "2018"
 description = "Fully Decentralized Interchain Crypto Asset Management on Polkadot"
