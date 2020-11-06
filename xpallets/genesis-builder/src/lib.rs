@@ -32,7 +32,7 @@ decl_module! {
             let old = get_storage_value::<T::Balance>(b"Balances", b"TotalIssuance", b"").unwrap_or_default();
             const TOTAL_ISSUANCE_1_0: u128 = 700_000_000_000_000;
             put_storage_value::<T::Balance>(b"Balances", b"TotalIssuance", b"", old + TOTAL_ISSUANCE_1_0.saturated_into());
-            1
+            2
         }
     }
 }
