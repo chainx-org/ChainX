@@ -688,14 +688,14 @@ dependencies = [
 
 [[package]]
 name = "chainx"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "chainx-cli",
 ]
 
 [[package]]
 name = "chainx-cli"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "chainx-executor",
  "chainx-primitives",
@@ -742,7 +742,7 @@ dependencies = [
 
 [[package]]
 name = "chainx-executor"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "chainx-runtime",
  "frame-benchmarking",
@@ -752,7 +752,7 @@ dependencies = [
 
 [[package]]
 name = "chainx-primitives"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -765,7 +765,7 @@ dependencies = [
 
 [[package]]
 name = "chainx-rpc"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "chainx-primitives",
  "chainx-runtime",
@@ -811,7 +811,7 @@ dependencies = [
 
 [[package]]
 name = "chainx-runtime"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "chainx-primitives",
  "frame-benchmarking",
@@ -8784,7 +8784,7 @@ dependencies = [
 
 [[package]]
 name = "xp-assets-registrar"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "chainx-primitives",
  "impl-trait-for-tuples",
@@ -8793,7 +8793,7 @@ dependencies = [
 
 [[package]]
 name = "xp-genesis-builder"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "chainx-primitives",
  "serde",
@@ -8802,7 +8802,7 @@ dependencies = [
 
 [[package]]
 name = "xp-io"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "hex",
  "parity-scale-codec",
@@ -8813,11 +8813,11 @@ dependencies = [
 
 [[package]]
 name = "xp-logging"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 
 [[package]]
 name = "xp-mining-common"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "chainx-primitives",
  "sp-arithmetic",
@@ -8827,7 +8827,7 @@ dependencies = [
 
 [[package]]
 name = "xp-mining-staking"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "chainx-primitives",
  "sp-runtime",
@@ -8837,7 +8837,7 @@ dependencies = [
 
 [[package]]
 name = "xp-protocol"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "chainx-primitives",
  "parity-scale-codec",
@@ -8847,7 +8847,7 @@ dependencies = [
 
 [[package]]
 name = "xp-rpc"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "hex",
  "jsonrpc-core",
@@ -8857,7 +8857,7 @@ dependencies = [
 
 [[package]]
 name = "xp-runtime"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "hex",
  "parity-scale-codec",
@@ -8869,7 +8869,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-assets"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "bitflags",
  "chainx-primitives",
@@ -8893,7 +8893,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-assets-registrar"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "chainx-primitives",
  "frame-benchmarking",
@@ -8915,7 +8915,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-assets-rpc"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -8930,7 +8930,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-assets-rpc-runtime-api"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "chainx-primitives",
  "parity-scale-codec",
@@ -8941,7 +8941,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-dex-spot"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "chainx-primitives",
  "env_logger",
@@ -8965,7 +8965,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-dex-spot-rpc"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -8981,7 +8981,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-dex-spot-rpc-runtime-api"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
@@ -8991,7 +8991,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-gateway-bitcoin"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "bs58",
  "chainx-primitives",
@@ -9023,7 +9023,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-gateway-common"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "bs58",
  "chainx-primitives",
@@ -9054,7 +9054,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-gateway-common-rpc"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "hex",
  "jsonrpc-core",
@@ -9070,7 +9070,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-gateway-common-rpc-runtime-api"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "chainx-primitives",
  "parity-scale-codec",
@@ -9084,7 +9084,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-gateway-records"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "chainx-primitives",
  "frame-benchmarking",
@@ -9108,7 +9108,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-gateway-records-rpc"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -9125,7 +9125,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-gateway-records-rpc-runtime-api"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "chainx-primitives",
  "parity-scale-codec",
@@ -9137,7 +9137,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-genesis-builder"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "chainx-primitives",
  "frame-support",
@@ -9145,6 +9145,7 @@ dependencies = [
  "pallet-balances",
  "parity-scale-codec",
  "serde",
+ "sp-core",
  "sp-runtime",
  "sp-std",
  "xp-genesis-builder",
@@ -9158,7 +9159,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-mining-asset"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "chainx-primitives",
  "env_logger",
@@ -9187,7 +9188,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-mining-asset-rpc"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -9202,7 +9203,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-mining-asset-rpc-runtime-api"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "chainx-primitives",
  "parity-scale-codec",
@@ -9213,7 +9214,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-mining-staking"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "chainx-primitives",
  "env_logger",
@@ -9243,7 +9244,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-mining-staking-rpc"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -9258,7 +9259,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-mining-staking-rpc-runtime-api"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
@@ -9268,7 +9269,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-support"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "hex",
  "sp-std",
@@ -9276,7 +9277,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-system"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -9289,7 +9290,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-transaction-fee"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -9302,7 +9303,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-transaction-fee-rpc"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -9320,7 +9321,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-transaction-fee-rpc-runtime-api"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
