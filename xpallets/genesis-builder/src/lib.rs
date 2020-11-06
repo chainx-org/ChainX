@@ -50,7 +50,7 @@ decl_storage! {
 mod genesis {
     pub mod balances {
         use crate::Trait;
-        use frame_support::traits::StoredMap;
+        use frame_support::{sp_runtime::traits::Saturating, traits::StoredMap, StorageValue};
         use pallet_balances::AccountData;
         use xp_genesis_builder::{BalancesParams, FreeBalanceInfo, WellknownAccounts};
         use xpallet_support::traits::TreasuryAccount;
@@ -91,6 +91,8 @@ mod genesis {
 
             let vesting_account = xpallet_mining_staking::Module::<T>::vesting_account();
 
+            let mut issuance = T::Balance::default();
+
             for FreeBalanceInfo { who, free } in free_balances {
                 if *who == *legacy_council {
                     set_free_balance(&treasury_account, free);
@@ -102,7 +104,10 @@ mod genesis {
                 } else {
                     set_free_balance(who, free);
                 }
+                issuance += *free;
             }
+
+            pallet_balances::TotalIssuance::<T>::mutate(|v| *v = v.saturating_add(issuance));
         }
     }
 
