@@ -7,7 +7,12 @@
 
 use sp_std::prelude::*;
 
-use frame_support::{decl_module, decl_storage};
+use frame_support::{
+    decl_module, decl_storage,
+    migration::{get_storage_value, put_storage_value},
+    sp_runtime::traits::SaturatedConversion,
+    weights::Weight,
+};
 
 #[cfg(feature = "std")]
 use xp_genesis_builder::AllParams;
@@ -21,7 +26,15 @@ pub trait Trait:
 }
 
 decl_module! {
-    pub struct Module<T: Trait> for enum Call where origin: T::Origin {}
+    pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+        // Remove this once new version is released.
+        fn on_runtime_upgrade() -> Weight {
+            let old = get_storage_value::<T::Balance>(b"Balances", b"TotalIssuance", b"").unwrap_or_default();
+            const TOTAL_ISSUANCE_1_0: u128 = 700_000_000_000_000;
+            put_storage_value::<T::Balance>(b"Balances", b"TotalIssuance", b"", old + TOTAL_ISSUANCE_1_0.saturated_into());
+            1
+        }
+    }
 }
 
 decl_storage! {
