@@ -720,7 +720,7 @@ impl pallet_treasury::Trait for Runtime {
     type BountyCuratorDeposit = BountyCuratorDeposit;
     type BountyValueMinimum = BountyValueMinimum;
     type MaximumReasonLength = MaximumReasonLength;
-    type BurnDestination = (); // todo maybe we should define it?
+    type BurnDestination = ();
     type WeightInfo = weights::pallet_treasury::WeightInfo;
 }
 
