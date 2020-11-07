@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use sc_chain_spec::ChainSpecExtension;
-use sc_service::{config::TelemetryEndpoints, ChainType, Properties};
+use sc_service::{ChainType, Properties};
 
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use sp_consensus_babe::AuthorityId as BabeId;
@@ -36,8 +36,8 @@ use chainx_runtime::{
 use crate::genesis::bitcoin::{BtcGenesisParams, BtcTrusteeParams};
 
 // Note this is the URL for the telemetry server
-const POLKADOT_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
-const CHAINX_TELEMETRY_URL: &str = "ws://stats.chainx.org:1024/submit/";
+// const POLKADOT_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
+// const CHAINX_TELEMETRY_URL: &str = "ws://stats.chainx.org:1024/submit/";
 
 /// Node `ChainSpec` extensions.
 ///
