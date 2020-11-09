@@ -18,6 +18,23 @@ fn read_config_file(path: &Path) -> Result<HashMap<String, Value>, Box<dyn std::
     }))
 }
 
+const SUB_COMMANDS: [&str; 14] = [
+    "benchmark",
+    "build-spec",
+    "build-sync-spec",
+    "check-block",
+    "export-blocks",
+    "export-state",
+    "help",
+    "import-blocks",
+    "key",
+    "purge-chain",
+    "revert",
+    "sign",
+    "vanity",
+    "verify",
+];
+
 /// Extends the origin cli arg list with the options from the config file.
 ///
 /// Only the options that do not appear in the command line will be appended.
@@ -34,10 +51,14 @@ fn extend_cli_args(
         .collect::<Vec<_>>();
 
     let mut config_opts = Vec::new();
-    let mut default_opts = default_opts;
+    let mut default_opts = default_opts
+        .into_iter()
+        .filter(|(k, _)| !cli_opts.contains(&format!("--{}", k).as_ref()))
+        .collect::<HashMap<_, _>>();
 
     if let Some(path) = path {
         for (key, value) in read_config_file(path)?.into_iter() {
+            // Remove the option that has been configured in the config file.
             if default_opts.contains_key(key.as_str()) {
                 default_opts.remove(key.as_str());
             }
@@ -76,8 +97,13 @@ fn extend_cli_args(
         }
     }
 
-    for (key, value) in default_opts {
-        config_opts.push(format!("--{}={}", key, value));
+    if let Some(sub_command) = cli_args.get(1) {
+        // Injecting `default_opts()` only makes sense in the context of no specified subcommands.
+        if !SUB_COMMANDS.contains(&sub_command.as_str()) {
+            for (key, value) in default_opts {
+                config_opts.push(format!("--{}={}", key, value));
+            }
+        }
     }
 
     let mut args = cli_args;

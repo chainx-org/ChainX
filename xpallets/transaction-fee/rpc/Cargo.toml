@@ -1,6 +1,6 @@
 [package]
 name = "xpallet-transaction-fee-rpc"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 authors = ["The ChainX Authors"]
 edition = "2018"
 

@@ -36,7 +36,7 @@ use chainx_runtime::{
 use crate::genesis::bitcoin::{BtcGenesisParams, BtcTrusteeParams};
 
 // Note this is the URL for the telemetry server
-//const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
+const POLKADOT_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 const CHAINX_TELEMETRY_URL: &str = "ws://stats.chainx.org:1024/submit/";
 
 /// Node `ChainSpec` extensions.
@@ -407,9 +407,9 @@ pub fn staging_testnet_config() -> Result<ChainSpec, String> {
 pub fn testnet_config() -> Result<ChainSpec, String> {
     let wasm_binary = include_bytes!("./wasm/chainx_runtime_testnet.compact.wasm");
     // subkey inspect-key --uri "$SECRET"
-    // 5ERUBzfWtZzB59HM2qekCKzPm9sFo433z3V4rGgJXd7ugWNv
+    // 5DevKrCXVnGtJ5epm19VCQwdbjXVGLvDVVe86b67sRweMh8P
     let root_key: AccountId =
-        hex!["684e9d27ae6b5ab3a673616de27bd3e455062c83090de607ab49a2f7396b5a19"].into();
+        hex!["46548ce2fca0244d9ca8bc2b82d599458d340d0da3c13078689cf4f17bbb3017"].into();
     // bash:
     // for i in 1 2 3; do for j in validator blockauthor; do subkey inspect-key --uri "$SECRET//$i//$j"; done; done
     // for i in 1 2 3; do for j in babe; do subkey inspect-key --scheme sr25519  --uri "$SECRET//$i//$j"; done; done
@@ -542,7 +542,13 @@ pub fn testnet_config() -> Result<ChainSpec, String> {
             "/dns/p2p.testnet-2.chainx.org/tcp/30334/p2p/12D3KooWNKCPciz7iAJ6DBqSygsfzHCVdoMCMWoBgo1EgHMrTpDN",
             "/dns/p2p.testnet-3.chainx.org/tcp/30335/p2p/12D3KooWLuxACVFoeddQ4ja68C7Y4qNrXtpBC9gx7akRPacnvoJe",
         ],
-        Some(TelemetryEndpoints::new(vec![(CHAINX_TELEMETRY_URL.to_string(), 0)]).expect("Testnet telemetry url is valid; qed")),
+        Some(
+            TelemetryEndpoints::new(vec![
+                (CHAINX_TELEMETRY_URL.to_string(), 0),
+                (POLKADOT_TELEMETRY_URL.to_string(), 0),
+            ])
+            .expect("Testnet telemetry url is valid; qed"),
+        ),
         Some("chainx-testnet"),
         Some(as_properties(NetworkType::Testnet)),
         Default::default(),
