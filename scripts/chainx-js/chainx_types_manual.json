@@ -217,6 +217,7 @@
     "RpcFeeDetails": {
         "inclusion_fee": "Option<RpcInclusionFee>",
         "tip": "RpcBalance",
+        "extra_fee": "RpcBalance",
         "final_fee": "RpcBalance"
     },
     "ValidatorInfo": {
