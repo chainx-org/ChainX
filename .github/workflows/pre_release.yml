@@ -32,7 +32,7 @@ jobs:
 
   release:
     name: Create Pre-release
-    needs: Prepare wasm
+    needs: prepare-wasm
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
