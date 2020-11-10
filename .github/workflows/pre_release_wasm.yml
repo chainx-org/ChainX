@@ -9,8 +9,8 @@ name: Create wasm Pre-release
 
 jobs:
 
-  release:
-    name: Create Pre-release
+  release-wasm:
+    name: Create wasm Pre-release
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
