@@ -124,7 +124,7 @@ impl ChargeExtraFee {
             ExistenceRequirement::KeepAlive,
         ) {
             Ok(fee) => {
-                DealWithFees::on_nonzero_unbalanced(NegativeImbalance::new(fee));
+                DealWithFees::on_nonzero_unbalanced(fee);
                 Ok(ValidTransaction::default())
             }
             Err(_) => Err(InvalidTransaction::Payment.into()),
