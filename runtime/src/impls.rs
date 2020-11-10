@@ -95,6 +95,26 @@ pub type SlowAdjustingFeeUpdate<R> =
 pub struct ChargeExtraFee;
 
 impl ChargeExtraFee {
+    pub fn has_extra_fee(call: &Call) -> Option<Balance> {
+        const BASE_EXTRA_FEE: Balance = 100_000_000;
+
+        let extra_cofficient: Option<u32> = match call {
+            Call::XGatewayCommon(xgateway_common) => match xgateway_common {
+                XGatewayCommonCall::setup_trustee(..) => Some(5),
+                _ => None,
+            },
+            Call::XStaking(xstaking) => match xstaking {
+                XStakingCall::register(..) => Some(10),
+                XStakingCall::rebond(..) => Some(1),
+                XStakingCall::validate(..) => Some(5),
+                _ => None,
+            },
+            _ => None,
+        };
+
+        extra_cofficient.map(|cofficient| Balance::from(cofficient) * BASE_EXTRA_FEE)
+    }
+
     pub fn withdraw_fee(who: &AccountId, fee: Balance) -> TransactionValidity {
         if let Err(_) = Balances::withdraw(
             who,
@@ -129,23 +149,7 @@ impl SignedExtension for ChargeExtraFee {
         _info: &DispatchInfoOf<Self::Call>,
         _len: usize,
     ) -> TransactionValidity {
-        const BASE_EXTRA_FEE: Balance = 100_000_000;
-        let extra_cofficient: Option<u32> = match call {
-            Call::XGatewayCommon(xgateway_common) => match xgateway_common {
-                XGatewayCommonCall::setup_trustee(..) => Some(5),
-                _ => None,
-            },
-            Call::XStaking(xstaking) => match xstaking {
-                XStakingCall::register(..) => Some(10),
-                XStakingCall::rebond(..) => Some(1),
-                XStakingCall::validate(..) => Some(5),
-                _ => None,
-            },
-            _ => None,
-        };
-
-        if let Some(cofficient) = extra_cofficient {
-            let fee = Balance::from(cofficient) * BASE_EXTRA_FEE;
+        if let Some(fee) = ChargeExtraFee::has_extra_fee(call) {
             ChargeExtraFee::withdraw_fee(who, fee)?;
         }
 
