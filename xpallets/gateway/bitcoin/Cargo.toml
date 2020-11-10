@@ -42,6 +42,7 @@ light-bitcoin = { git = "https://github.com/chainx-org/light-bitcoin", branch = 
 hex = "0.4"
 lazy_static = "1.4"
 serde_json = "1.0"
+frame-benchmarking = "2.0.0"
 pallet-balances = "2.0.0"
 pallet-multisig = "2.0.0"
 xpallet-assets-registrar = { path = "../../assets-registrar" }
