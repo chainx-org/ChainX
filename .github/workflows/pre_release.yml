@@ -32,6 +32,7 @@ jobs:
 
   release:
     name: Create Pre-release
+    needs: Prepare wasm
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -96,7 +97,6 @@ jobs:
 
   publish-wasm:
     name: Publish wasm 
-    needs: release
     runs-on: ubuntu-latest 
 
     steps:
