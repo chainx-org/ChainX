@@ -69,7 +69,7 @@ jobs:
     name: Publish wasm 
     runs-on: ubuntu-latest 
     container:
-      image: chainxcn/srtool:nightly-2020-09-30
+      image: chainxcn/srtools:nightly-2020-09-30
       volumes:
         - ${{ github.workspace }}:/build
     env:
