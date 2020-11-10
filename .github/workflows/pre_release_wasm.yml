@@ -41,7 +41,7 @@ jobs:
       RUSTC_VERSION: nightly-2020-09-30
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
 
     - name: Build
       shell: bash
@@ -50,7 +50,6 @@ jobs:
         pwd
         ls -la 
         build --json | tee srtool_output.json
-        cat srtool_output.json
 
     - name: Get the version
       id: get_version
