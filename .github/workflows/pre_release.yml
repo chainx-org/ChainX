@@ -71,7 +71,7 @@ jobs:
         with:
           tag_name: ${{ github.ref }}
           release_name: Release ${{ github.ref }}
-          body_path: release_log.md
+          body_path: release_log.md/release_log.md
           draft: false
           prerelease: true
 
@@ -119,22 +119,13 @@ jobs:
     runs-on: ubuntu-latest 
 
     steps:
-    - uses: actions/checkout@v2
-
-    - name: Get the version
-      id: get_version
-      run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/}
-
-    - name: Build Info
-      shell: bash
-      run: |
-        pwd
-        ls -al
+    - name: Download artifacts
+      uses: actions/download-artifact@v2
 
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v1-release
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: target/srtool/release/wbuild/chainx-runtime/chainx_runtime.compact.wasm
+        file: chainx_runtime.compact.wasm/chainx_runtime.compact.wasm
         asset_name: chainx_runtime-${{ steps.get_version.outputs.VERSION }}.compact.wasm
         tag: ${{ github.ref }}
