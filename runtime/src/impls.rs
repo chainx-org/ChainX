@@ -117,18 +117,18 @@ impl ChargeExtraFee {
     }
 
     pub fn withdraw_fee(who: &AccountId, fee: Balance) -> TransactionValidity {
-        if let Err(_) = Balances::withdraw(
+        match Balances::withdraw(
             who,
             fee,
             WithdrawReason::TransactionPayment.into(),
             ExistenceRequirement::KeepAlive,
         ) {
-            return Err(InvalidTransaction::Payment.into());
+            Ok(fee) => {
+                DealWithFees::on_nonzero_unbalanced(NegativeImbalance::new(fee));
+                Ok(ValidTransaction::default())
+            }
+            Err(_) => Err(InvalidTransaction::Payment.into()),
         }
-
-        DealWithFees::on_nonzero_unbalanced(NegativeImbalance::new(fee));
-
-        Ok(ValidTransaction::default())
     }
 }
 
