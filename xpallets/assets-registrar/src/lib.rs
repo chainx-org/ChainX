@@ -30,9 +30,9 @@ use frame_system::ensure_root;
 use chainx_primitives::{AssetId, Desc, Token};
 use xp_logging::info;
 
-pub use self::types::{AssetInfo, Chain};
+pub use self::types::AssetInfo;
 pub use self::weight_info::WeightInfo;
-pub use xp_assets_registrar::RegistrarHandler;
+pub use xp_assets_registrar::{Chain, RegistrarHandler};
 
 /// The module's config trait.
 ///

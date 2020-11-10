@@ -8147,7 +8147,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.3.23",
+ "rand 0.7.3",
  "static_assertions",
 ]
 
@@ -8788,7 +8788,10 @@ version = "2.0.0-beta.0"
 dependencies = [
  "chainx-primitives",
  "impl-trait-for-tuples",
+ "parity-scale-codec",
+ "serde",
  "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]

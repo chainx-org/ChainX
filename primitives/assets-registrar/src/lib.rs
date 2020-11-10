@@ -5,9 +5,48 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![deny(missing_docs)]
 
-use sp_runtime::DispatchResult;
+use codec::{Decode, Encode};
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
+
+use sp_runtime::{DispatchResult, RuntimeDebug};
+use sp_std::slice::Iter;
 
 use chainx_primitives::AssetId;
+
+const CHAINS: [Chain; 4] = [
+    Chain::ChainX,
+    Chain::Bitcoin,
+    Chain::Ethereum,
+    Chain::Polkadot,
+];
+
+/// The blockchain types.
+#[derive(PartialEq, Eq, Ord, PartialOrd, Clone, Copy, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub enum Chain {
+    /// ChainX
+    ChainX,
+    /// Bitcoin
+    Bitcoin,
+    /// Ethereum
+    Ethereum,
+    /// Polkadot
+    Polkadot,
+}
+
+impl Default for Chain {
+    fn default() -> Self {
+        Chain::ChainX
+    }
+}
+
+impl Chain {
+    /// Returns an iterator of all `Chain`.
+    pub fn iter() -> Iter<'static, Chain> {
+        CHAINS.iter()
+    }
+}
 
 /// Trait for doing some stuff on the registration/deregistration of a foreign asset.
 pub trait RegistrarHandler {

@@ -1,48 +1,17 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use sp_std::{fmt, result, slice::Iter};
-
 use codec::{Decode, Encode};
-use frame_support::{
-    dispatch::{DispatchError, DispatchResult},
-    RuntimeDebug,
-};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
+use frame_support::dispatch::{DispatchError, DispatchResult};
+use sp_std::{fmt, result};
+
 use chainx_primitives::{Decimals, Desc, Token};
+use xp_assets_registrar::Chain;
 
 use crate::verifier::*;
 use crate::Trait;
-
-#[derive(PartialEq, Eq, Ord, PartialOrd, Clone, Copy, Encode, Decode, RuntimeDebug)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub enum Chain {
-    ChainX,
-    Bitcoin,
-    Ethereum,
-    Polkadot,
-}
-
-const CHAINS: [Chain; 4] = [
-    Chain::ChainX,
-    Chain::Bitcoin,
-    Chain::Ethereum,
-    Chain::Polkadot,
-];
-
-impl Chain {
-    /// Returns an iterator of all `Chain`.
-    pub fn iter() -> Iter<'static, Chain> {
-        CHAINS.iter()
-    }
-}
-
-impl Default for Chain {
-    fn default() -> Self {
-        Chain::ChainX
-    }
-}
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -70,8 +39,8 @@ impl fmt::Debug for AssetInfo {
             .finish()
     }
     #[cfg(not(feature = "std"))]
-    fn fmt(&self, _f: &mut fmt::Formatter) -> fmt::Result {
-        Ok(())
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str("<wasm:stripped>")
     }
 }
 
