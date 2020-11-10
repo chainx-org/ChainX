@@ -9,28 +9,9 @@ name: Create wasm Pre-release
 
 jobs:
 
-  release-wasm:
-    name: Create wasm Pre-release
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@master
-
-      - name: Create Pre-release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          body: |
-            ${{ github.ref }}
-          draft: false
-          prerelease: true
-
   publish-wasm:
     name: Publish wasm 
+    needs: release
     runs-on: ubuntu-latest 
     container:
       image: chainxcn/srtools:nightly-2020-09-30
@@ -54,6 +35,14 @@ jobs:
     - name: Get the version
       id: get_version
       run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/}
+
+    - name: Upload json to release
+      uses: svenstaro/upload-release-action@v1-release
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: srtool_output.json
+        asset_name: chainx-${{ steps.get_version.outputs.VERSION }}.build.json
+        tag: ${{ github.ref }}
 
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v1-release
