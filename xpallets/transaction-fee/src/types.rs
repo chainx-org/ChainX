@@ -43,6 +43,8 @@ pub struct InclusionFee<Balance> {
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct FeeDetails<Balance> {
     pub inclusion_fee: Option<InclusionFee<Balance>>,
+    /// Some calls might be charged extra fee besides the essential `inclusion_fee`.
+    pub extra_fee: Balance,
     pub tip: Balance,
     pub final_fee: Balance,
 }

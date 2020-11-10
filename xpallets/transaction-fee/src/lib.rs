@@ -139,12 +139,14 @@ where
                     adjusted_weight_fee,
                 }),
                 tip,
+                extra_fee: 0u32.into(),
                 final_fee: total,
             }
         } else {
             FeeDetails {
                 inclusion_fee: None,
                 tip,
+                extra_fee: 0u32.into(),
                 final_fee: tip,
             }
         }
