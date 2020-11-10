@@ -58,7 +58,7 @@ fn extend_cli_args(
 
     if let Some(path) = path {
         for (key, value) in read_config_file(path)?.into_iter() {
-            // remove key has been configured in config file or in cli arguments.
+            // Remove the option that has been configured in the config file.
             if default_opts.contains_key(key.as_str()) {
                 default_opts.remove(key.as_str());
             }
