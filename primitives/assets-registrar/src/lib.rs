@@ -14,6 +14,13 @@ use sp_std::slice::Iter;
 
 use chainx_primitives::AssetId;
 
+const CHAINS: [Chain; 4] = [
+    Chain::ChainX,
+    Chain::Bitcoin,
+    Chain::Ethereum,
+    Chain::Polkadot,
+];
+
 /// The blockchain types.
 #[derive(PartialEq, Eq, Ord, PartialOrd, Clone, Copy, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -40,13 +47,6 @@ impl Chain {
         CHAINS.iter()
     }
 }
-
-const CHAINS: [Chain; 4] = [
-    Chain::ChainX,
-    Chain::Bitcoin,
-    Chain::Ethereum,
-    Chain::Polkadot,
-];
 
 /// Trait for doing some stuff on the registration/deregistration of a foreign asset.
 pub trait RegistrarHandler {
