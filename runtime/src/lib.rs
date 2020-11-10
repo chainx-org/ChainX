@@ -1172,9 +1172,8 @@ impl_runtime_apis! {
         ) -> pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo<Balance> {
             if let Some(extra_fee) = ChargeExtraFee::has_extra_fee(&uxt.function) {
                 let base_info = TransactionPayment::query_info(uxt, len);
-                let partial_fee = base_info.partial_fee + extra_fee;
                 pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo {
-                    partial_fee,
+                    partial_fee: base_info.partial_fee + extra_fee,
                     ..base_info
                 }
             } else {

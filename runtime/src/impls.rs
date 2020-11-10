@@ -96,17 +96,18 @@ pub struct ChargeExtraFee;
 
 impl ChargeExtraFee {
     pub fn has_extra_fee(call: &Call) -> Option<Balance> {
+        // 1 PCX
         const BASE_EXTRA_FEE: Balance = 100_000_000;
 
         let extra_cofficient: Option<u32> = match call {
             Call::XGatewayCommon(xgateway_common) => match xgateway_common {
-                XGatewayCommonCall::setup_trustee(..) => Some(5),
+                XGatewayCommonCall::setup_trustee(..) => Some(1),
                 _ => None,
             },
             Call::XStaking(xstaking) => match xstaking {
                 XStakingCall::register(..) => Some(10),
+                XStakingCall::validate(..) => Some(1),
                 XStakingCall::rebond(..) => Some(1),
-                XStakingCall::validate(..) => Some(5),
                 _ => None,
             },
             _ => None,
