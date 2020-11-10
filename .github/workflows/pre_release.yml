@@ -32,7 +32,7 @@ jobs:
         pwd
         ls -la 
         build --json | tee srtool_output.json
-        scripts/release_log.py > release_log.md
+        scripts/release_log.py | tee release_log.md
 
     - name: Upload release log
       uses: actions/upload-artifact@v2
@@ -58,6 +58,11 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v2
 
+      - name: Echo info
+        shell: bash
+        run: |
+          pwd
+          ls -R
       - name: Create Pre-release
         id: create_release
         uses: actions/create-release@v1
