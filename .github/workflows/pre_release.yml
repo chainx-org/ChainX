@@ -8,8 +8,7 @@ name: Create Pre-release
 jobs:
 
   prepare-wasm:
-    name: Prepare wasm
-    runs-on: ubuntu-latest 
+    name: Prepare wasm runs-on: ubuntu-latest 
     container:
       image: chainxcn/srtools:nightly-2020-09-30
       volumes:
@@ -97,6 +96,7 @@ jobs:
 
   publish-wasm:
     name: Publish wasm 
+    needs: release
     runs-on: ubuntu-latest 
 
     steps:
@@ -105,14 +105,6 @@ jobs:
     - name: Get the version
       id: get_version
       run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/}
-
-    - name: Upload json to release
-      uses: svenstaro/upload-release-action@v1-release
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: srtool_output.json
-        asset_name: chainx-${{ steps.get_version.outputs.VERSION }}.build.json
-        tag: ${{ github.ref }}
 
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v1-release
