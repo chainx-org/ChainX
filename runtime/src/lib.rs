@@ -99,7 +99,7 @@ pub mod impls;
 mod weights;
 
 use self::constants::{currency::*, fee::WeightToFee, time::*};
-use self::impls::{CurrencyToVoteHandler, DealWithFees, SlowAdjustingFeeUpdate};
+use self::impls::{ChargeExtraFee, CurrencyToVoteHandler, DealWithFees, SlowAdjustingFeeUpdate};
 
 /// This runtime version.
 pub const VERSION: RuntimeVersion = RuntimeVersion {
@@ -467,6 +467,7 @@ where
             frame_system::CheckWeight::<Runtime>::new(),
             pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(tip),
             BaseFilter,
+            ChargeExtraFee,
         );
         let raw_payload = SignedPayload::new(call, extra)
             .map_err(|e| {
@@ -984,6 +985,7 @@ pub type SignedExtra = (
     frame_system::CheckWeight<Runtime>,
     pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
     BaseFilter,
+    ChargeExtraFee,
 );
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
