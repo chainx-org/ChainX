@@ -3,12 +3,13 @@ on:
     # Sequence of patterns matched against refs/tags
     tags:
       - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+
 name: Create Pre-release
 
 jobs:
   prepare-wasm:
-    name: Prepare wasm 
-    runs-on: ubuntu-latest 
+    name: Prepare wasm
+    runs-on: ubuntu-latest
     container:
       image: chainxcn/srtools:nightly-2020-09-30
       volumes:
@@ -22,7 +23,7 @@ jobs:
 
     - uses: actions/setup-python@v2
       with:
-        python-version: '3.x'
+        python-version: '3.8'
         architecture: 'x64'
 
     - name: Build
@@ -30,19 +31,19 @@ jobs:
       run: |
         cd /build
         pwd
-        ls -la 
+        ls -la
         build --json | tee srtool_output.json
-        scripts/release_log.py | tee release_log.md
+        scripts/ci/generate_release_note.py | tee release_note.md
 
-    - name: Upload release log
+    - name: Upload release note
       uses: actions/upload-artifact@v2
-      with:   
-        name: release_log.md
-        path: release_log.md
+      with:
+        name: release_note.md
+        path: release_note.md
 
-    - name: Upload release wasm
+    - name: Upload chainx runtime wasm
       uses: actions/upload-artifact@v2
-      with:   
+      with:
         name: chainx_runtime.compact.wasm
         path: target/srtool/release/wbuild/chainx-runtime/chainx_runtime.compact.wasm
 
@@ -54,7 +55,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@master
-    
+
       - name: Download artifacts
         uses: actions/download-artifact@v2
 
@@ -71,7 +72,7 @@ jobs:
         with:
           tag_name: ${{ github.ref }}
           release_name: Release ${{ github.ref }}
-          body_path: release_log.md/release_log.md
+          body_path: release_note.md/release_note.md
           draft: false
           prerelease: true
 
@@ -115,9 +116,9 @@ jobs:
         tag: ${{ github.ref }}
 
   publish-wasm:
-    name: Publish wasm 
+    name: Publish wasm
     needs: ['release']
-    runs-on: ubuntu-latest 
+    runs-on: ubuntu-latest
 
     steps:
     - name: Download artifacts
