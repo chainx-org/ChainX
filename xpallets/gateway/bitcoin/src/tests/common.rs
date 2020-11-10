@@ -1,10 +1,12 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 pub use codec::{Decode, Encode};
-#[cfg(test)]
-pub use frame_support::{assert_noop, assert_ok};
+
 pub use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
+use sp_runtime::AccountId32;
+
+pub use crate::*;
 pub use light_bitcoin::{
     primitives::H256,
     script::{Builder, Opcode, Script},
@@ -13,8 +15,12 @@ pub use light_bitcoin::{
 
 #[cfg(test)]
 pub use super::mock::*;
-pub use crate::*;
+#[cfg(test)]
+pub use for_tests::force_ss58_version;
+#[cfg(test)]
+pub use frame_support::{assert_noop, assert_ok};
 
+#[allow(unused)]
 pub fn reverse_h256(mut hash: H256) -> H256 {
     let bytes = hash.as_bytes_mut();
     bytes.reverse();
@@ -40,7 +46,7 @@ pub fn generate_blocks() -> BTreeMap<u32, BtcHeader> {
         })
         .collect()
 }
-#[cfg(feature = "runtime-benchmarks")]
+#[cfg(any(feature = "runtime-benchmarks", test))]
 pub fn generate_blocks_from_raw() -> BTreeMap<u32, BtcHeader> {
     let bytes = include_bytes!("./res/headers-576576-578692.raw");
     Decode::decode(&mut &bytes[..]).expect("must decode success")
@@ -135,16 +141,6 @@ pub fn trustees<T: Trait>() -> Vec<(T::AccountId, Vec<u8>, Vec<u8>, Vec<u8>)> {
     btc_trustees
 }
 
-// #[test]
-// #[ignore]
-// fn tmp_generate_raw_headers_file() {
-//     use codec::Encode;
-//     let raw_headers = generate_blocks();
-//     let bytes = raw_headers.encode();
-//     // rep
-//     std::fs::write("/home/king/workspace/chainx-org/ChainX/xpallets/gateway/bitcoin/src/tests/res/headers-576576-578692.raw", bytes).unwrap();
-// }
-
 #[cfg(test)]
 pub mod for_tests {
     use sp_core::crypto::{set_default_ss58_version, Ss58AddressFormat};
@@ -157,9 +153,11 @@ pub mod for_tests {
             set_default_ss58_version((self.0).1)
         }
     }
+
     lazy_static::lazy_static!(
         static ref LOCK: Mutex<()> = Mutex::new(());
     );
+
     pub fn force_ss58_version() -> Guard<'static> {
         let c = LOCK.lock().unwrap();
         let default = Ss58AddressFormat::default();
@@ -167,7 +165,3 @@ pub mod for_tests {
         Guard((c, default))
     }
 }
-
-#[cfg(test)]
-pub use for_tests::force_ss58_version;
-use sp_runtime::AccountId32;
