@@ -78,9 +78,9 @@ xpallet-assets-registrar = { path = "../xpallets/assets-registrar", default-feat
 xpallet-assets-rpc-runtime-api = { path = "../xpallets/assets/rpc/runtime-api", default-features = false }
 xpallet-dex-spot = { path = "../xpallets/dex/spot", default-features = false }
 xpallet-dex-spot-rpc-runtime-api = { path = "../xpallets/dex/spot/rpc/runtime-api", default-features = false }
-xpallet-gateway-bitcoin = { path = "../xpallets/gateway/bitcoin", default-features = false }
 # we use feature "ss48check" for using local runtime-interface to check address, if in parachain, do not use this feature
-xpallet-gateway-common = { path = "../xpallets/gateway/common", default-features = false, features = ["ss58check"] }
+xpallet-gateway-bitcoin = { path = "../xpallets/gateway/bitcoin", default-features = false, features = ["ss58check"] }
+xpallet-gateway-common = { path = "../xpallets/gateway/common", default-features = false }
 xpallet-gateway-common-rpc-runtime-api = { path = "../xpallets/gateway/common/rpc/runtime-api", default-features = false }
 xpallet-gateway-records = { path = "../xpallets/gateway/records", default-features = false }
 xpallet-gateway-records-rpc-runtime-api = { path = "../xpallets/gateway/records/rpc/runtime-api", default-features = false }

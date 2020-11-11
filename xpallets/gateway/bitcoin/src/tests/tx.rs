@@ -81,7 +81,7 @@ fn mock_detect_transaction_type<T: Trait>(
         addr_pair,
         last_addr_pair,
         |script| {
-            <Test as Trait>::AccountExtractor::account_info(script).map(|(a, b)| {
+            <Test as Trait>::AccountExtractor::extract_account(script).map(|(a, b)| {
                 let v = a.encode();
                 let accountid = T::AccountId::decode(&mut &v[..]).unwrap();
                 (accountid, b)

@@ -10,7 +10,6 @@
 mod benchmarks;
 
 mod binding;
-pub mod extractor;
 pub mod traits;
 pub mod trustees;
 pub mod types;

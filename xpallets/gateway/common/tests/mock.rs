@@ -165,7 +165,7 @@ impl UnixTime for Timestamp {
 impl xpallet_gateway_bitcoin::Trait for Test {
     type Event = ();
     type UnixTime = Timestamp;
-    type AccountExtractor = xpallet_gateway_common::extractor::Extractor;
+    type AccountExtractor = xpallet_gateway_bitcoin::OpReturnExtractor;
     type TrusteeSessionProvider =
         xpallet_gateway_common::trustees::bitcoin::BtcTrusteeSessionManager<Test>;
     type TrusteeOrigin = EnsureSignedBy<trustees::bitcoin::BtcTrusteeMultisig<Test>, AccountId>;
