@@ -7,14 +7,63 @@ on:
 name: Create Pre-release
 
 jobs:
+  prepare-wasm:
+    name: Prepare wasm
+    runs-on: ubuntu-latest
+    container:
+      image: chainxcn/srtools:nightly-2020-09-30
+      volumes:
+        - ${{ github.workspace }}:/build
+    env:
+      PACKAGE: chainx-runtime
+      RUSTC_VERSION: nightly-2020-09-30
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - uses: actions/setup-python@v2
+      with:
+        python-version: '3.8'
+        architecture: 'x64'
+
+    - name: Build
+      shell: bash
+      run: |
+        cd /build
+        pwd
+        ls -la
+        build --json | tee srtool_output.json
+        scripts/ci/generate_release_note.py | tee release_note.md
+
+    - name: Upload release note
+      uses: actions/upload-artifact@v2
+      with:
+        name: release_note.md
+        path: release_note.md
+
+    - name: Upload chainx runtime wasm
+      uses: actions/upload-artifact@v2
+      with:
+        name: chainx_runtime.compact.wasm
+        path: target/srtool/release/wbuild/chainx-runtime/chainx_runtime.compact.wasm
+
 
   release:
     name: Create Pre-release
+    needs: ['prepare-wasm']
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@master
 
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
+
+      - name: Echo info
+        shell: bash
+        run: |
+          pwd
+          ls -R
       - name: Create Pre-release
         id: create_release
         uses: actions/create-release@v1
@@ -23,13 +72,13 @@ jobs:
         with:
           tag_name: ${{ github.ref }}
           release_name: Release ${{ github.ref }}
-          body: |
-            ${{ github.ref }}
+          body_path: release_note.md/release_note.md
           draft: false
           prerelease: true
 
   publish:
     name: Publish for ${{ matrix.os }}
+    needs: ["release"]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -64,4 +113,25 @@ jobs:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: target/release/chainx
         asset_name: chainx-${{ steps.get_version.outputs.VERSION }}-${{ matrix.os }}-x86_64-unknown-linux-gnu
+        tag: ${{ github.ref }}
+
+  publish-wasm:
+    name: Publish wasm
+    needs: ['release']
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Download artifacts
+      uses: actions/download-artifact@v2
+
+    - name: Get the version
+      id: get_version
+      run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/}
+
+    - name: Upload binaries to release
+      uses: svenstaro/upload-release-action@v1-release
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: chainx_runtime.compact.wasm/chainx_runtime.compact.wasm
+        asset_name: chainx_runtime-${{ steps.get_version.outputs.VERSION }}.compact.wasm
         tag: ${{ github.ref }}
