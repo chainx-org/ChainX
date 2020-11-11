@@ -9,8 +9,8 @@ use sp_core::crypto::AccountId32;
 
 use xp_logging::error;
 
-/// Trait for extracting the account and possible extra (e.g. like referral) from
-/// the external world data (e.g. like btc op_return).
+/// Trait for extracting the account and possible extra data (e.g. referral) from
+/// the external world data (e.g. btc op_return).
 pub trait AccountExtractor<Account, Extra: AsRef<[u8]>> {
     /// Extract the account and possible extra from the data.
     fn extract_account(data: &[u8]) -> Option<(Account, Option<Extra>)>;
@@ -41,8 +41,8 @@ pub fn from_ss58_check(raw_account: &[u8]) -> Option<AccountId32> {
     }
 
     // Due to current parachain do not allow custom runtime-interface, thus we just could
-    // impl ss58 check in runtime, and ignore address version and hash checksum check.
-    // Same as `substrate/core/primitives/src/crypto.rs:trait Ss58Codec`
+    // impl ss58 check in runtime, and ignore ss58 address version and hash checksum checking.
+    // Same as `substrate/primitives/core/src/crypto.rs:trait Ss58Codec`
     #[cfg(not(feature = "ss58check"))]
     {
         let mut res: [u8; 32] = Default::default();
@@ -68,7 +68,7 @@ pub fn from_ss58_check(raw_account: &[u8]) -> Option<AccountId32> {
             return None;
         }
 
-        // ignore the ss58 address version checking and hash checksum checking
+        // ignore the ss58 address version and hash checksum checking
 
         res.as_mut().copy_from_slice(&d[1..len + 1]);
         Some(res.into())
