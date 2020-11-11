@@ -7,5 +7,7 @@ if __name__ == '__main__':
 WASM runtime built with [srtool](TODO: link to docker image) using `{env['rustc']}`.
 
 chainx runtime proposal hash: `{env['prop']}`.
+
+#### Changes
     """
     print(message)
