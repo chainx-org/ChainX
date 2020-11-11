@@ -125,7 +125,7 @@ pub fn trick_format_opreturn(opreturn: &[u8]) -> String {
     }
 }
 
-// Extract the opreturn data from btc script.
+// Extract the opreturn data from btc null data script.
 // OP_RETURN format:
 // - op_return + op_push(<0x4c) + data (op_push == data.len())
 // - op_return + op_push(=0x4c) + data.len() + data
@@ -198,8 +198,7 @@ pub fn extract_opreturn_data(script: &Script) -> Option<Vec<u8>> {
 fn test_extract_opreturn_data() {
     // tx: 6b2bea220fdecf30ae3d0e0fa6770f06f281999f81d485ebfc15bdf375268c59
     // null data script: 6a 30 35524745397a4a79667834367934467948444a65317976394e44725946435446746e6e6d714e445077506a6877753871
-    let bytes = hex::decode("6a3035524745397a4a79667834367934467948444a65317976394e44725946435446746e6e6d714e445077506a6877753871").unwrap();
-    let script = Script::new(bytes.into());
+    let script = "6a3035524745397a4a79667834367934467948444a65317976394e44725946435446746e6e6d714e445077506a6877753871".parse::<Script>().unwrap();
     let data = extract_opreturn_data(&script).unwrap();
     assert_eq!(
         data,
@@ -208,8 +207,7 @@ fn test_extract_opreturn_data() {
 
     // tx: 003e7e005b172fe0046fd06a83679fbcdc5e3dd64c8ef9295662a463dea486aa
     // null data script: 6a 38 35515a5947565655507370376362714755634873524a555a726e6d547545796836534c48366a6470667346786770524b404c616f63697573
-    let bytes = hex::decode("6a3835515a5947565655507370376362714755634873524a555a726e6d547545796836534c48366a6470667346786770524b404c616f63697573").unwrap();
-    let script = Script::new(bytes.into());
+    let script = "6a3835515a5947565655507370376362714755634873524a555a726e6d547545796836534c48366a6470667346786770524b404c616f63697573".parse::<Script>().unwrap();
     let data = extract_opreturn_data(&script).unwrap();
     assert_eq!(
         data,
