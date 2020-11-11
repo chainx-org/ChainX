@@ -8,7 +8,7 @@ use sp_core::crypto::AccountId32;
 use sp_runtime::RuntimeDebug;
 use sp_runtime_interface::runtime_interface;
 
-#[derive(Encode, Decode, Clone, Copy, RuntimeDebug)]
+#[derive(Clone, Copy, Eq, PartialEq, Encode, Decode, RuntimeDebug)]
 pub enum Ss58CheckError {
     /// Bad alphabet.
     BadBase58,
@@ -40,8 +40,8 @@ pub trait Ss58Codec {
                 PublicError::InvalidFormat => Ss58CheckError::InvalidFormat,
                 PublicError::InvalidPath => Ss58CheckError::InvalidPath,
             })
-            .and_then(|(r, v)| match v {
-                v if v == Ss58AddressFormat::default() => Ok(r),
+            .and_then(|(account, ver)| match ver {
+                ver if ver == Ss58AddressFormat::default() => Ok(account),
                 _ => Err(Ss58CheckError::MismatchVersion),
             })
     }
@@ -51,15 +51,18 @@ pub trait Ss58Codec {
 fn ss58_check() {
     use sp_core::crypto::{set_default_ss58_version, Ss58AddressFormat};
 
-    set_default_ss58_version(Ss58AddressFormat::ChainXAccount);
-
     let addr42 = b"5CE864FPj1Z48qrvdCAQ48iTfkcBFMoUWt2UAnR4Np22kZFM";
     let addr44 = b"5PoSc3LCVbJWSxfrSFvSowFJxitmMj4Wtm8jQ9hfJXD1K5vF";
     let pubkey =
         hex::decode("072ec6e199a69a1a38f0299afc083b2b6c85899bdad56d250b2ec39a9788b7a2").unwrap();
 
-    assert!(ss_58_codec::from_ss58check(addr42).is_err());
-
+    set_default_ss58_version(Ss58AddressFormat::ChainXAccount);
     let account = ss_58_codec::from_ss58check(addr44).unwrap();
     assert_eq!(AsRef::<[u8]>::as_ref(&account), pubkey.as_slice());
+    assert!(ss_58_codec::from_ss58check(addr42).is_err());
+
+    set_default_ss58_version(Ss58AddressFormat::SubstrateAccount);
+    let account = ss_58_codec::from_ss58check(addr42).unwrap();
+    assert_eq!(AsRef::<[u8]>::as_ref(&account), pubkey.as_slice());
+    assert!(ss_58_codec::from_ss58check(addr44).is_err());
 }

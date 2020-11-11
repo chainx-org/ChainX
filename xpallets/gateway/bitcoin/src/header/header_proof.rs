@@ -229,6 +229,7 @@ impl<'a> HeaderTimestamp<'a> {
         }
     }
 
+    #[allow(unused)]
     fn check<T: Trait>(&self, p: &BtcParams) -> DispatchResult {
         if let Some(current_time) = self.current_time {
             if self.header.time > current_time + p.block_max_future() {

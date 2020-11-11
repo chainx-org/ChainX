@@ -736,7 +736,6 @@ dependencies = [
  "structopt",
  "substrate-build-script-utils",
  "xp-genesis-builder",
- "xp-io",
  "xp-protocol",
 ]
 
@@ -3207,7 +3206,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin#00b81fb49f16a295d05b77c932c3d06f3f83f170"
+source = "git+https://github.com/chainx-org/light-bitcoin#b70aa84eecc2eb6a6cb9d4e8ee786e8bf9c5a63f"
 dependencies = [
  "light-bitcoin-chain",
  "light-bitcoin-crypto",
@@ -3221,7 +3220,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-chain"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin#00b81fb49f16a295d05b77c932c3d06f3f83f170"
+source = "git+https://github.com/chainx-org/light-bitcoin#b70aa84eecc2eb6a6cb9d4e8ee786e8bf9c5a63f"
 dependencies = [
  "hex",
  "light-bitcoin-crypto",
@@ -3234,7 +3233,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-crypto"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin#00b81fb49f16a295d05b77c932c3d06f3f83f170"
+source = "git+https://github.com/chainx-org/light-bitcoin#b70aa84eecc2eb6a6cb9d4e8ee786e8bf9c5a63f"
 dependencies = [
  "digest 0.9.0",
  "light-bitcoin-primitives",
@@ -3247,7 +3246,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-keys"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin#00b81fb49f16a295d05b77c932c3d06f3f83f170"
+source = "git+https://github.com/chainx-org/light-bitcoin#b70aa84eecc2eb6a6cb9d4e8ee786e8bf9c5a63f"
 dependencies = [
  "bs58",
  "hex",
@@ -3262,7 +3261,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-merkle"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin#00b81fb49f16a295d05b77c932c3d06f3f83f170"
+source = "git+https://github.com/chainx-org/light-bitcoin#b70aa84eecc2eb6a6cb9d4e8ee786e8bf9c5a63f"
 dependencies = [
  "light-bitcoin-chain",
  "light-bitcoin-primitives",
@@ -3273,7 +3272,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-primitives"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin#00b81fb49f16a295d05b77c932c3d06f3f83f170"
+source = "git+https://github.com/chainx-org/light-bitcoin#b70aa84eecc2eb6a6cb9d4e8ee786e8bf9c5a63f"
 dependencies = [
  "byteorder 1.3.4",
  "fixed-hash",
@@ -3287,7 +3286,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-script"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin#00b81fb49f16a295d05b77c932c3d06f3f83f170"
+source = "git+https://github.com/chainx-org/light-bitcoin#b70aa84eecc2eb6a6cb9d4e8ee786e8bf9c5a63f"
 dependencies = [
  "hex",
  "light-bitcoin-chain",
@@ -3300,7 +3299,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-serialization"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin#00b81fb49f16a295d05b77c932c3d06f3f83f170"
+source = "git+https://github.com/chainx-org/light-bitcoin#b70aa84eecc2eb6a6cb9d4e8ee786e8bf9c5a63f"
 dependencies = [
  "light-bitcoin-primitives",
  "light-bitcoin-serialization-derive",
@@ -3309,7 +3308,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-serialization-derive"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin#00b81fb49f16a295d05b77c932c3d06f3f83f170"
+source = "git+https://github.com/chainx-org/light-bitcoin#b70aa84eecc2eb6a6cb9d4e8ee786e8bf9c5a63f"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -8147,7 +8146,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.3.23",
+ "rand 0.7.3",
  "static_assertions",
 ]
 
@@ -8788,7 +8787,10 @@ version = "2.0.0-beta.0"
 dependencies = [
  "chainx-primitives",
  "impl-trait-for-tuples",
+ "parity-scale-codec",
+ "serde",
  "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
@@ -8796,8 +8798,11 @@ name = "xp-gateway-common"
 version = "2.0.0-alpha.4"
 dependencies = [
  "bs58",
- "chainx-primitives",
+ "frame-support",
+ "hex",
+ "sp-core",
  "xp-io",
+ "xp-logging",
 ]
 
 [[package]]
@@ -9021,6 +9026,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "xp-gateway-common",
  "xp-logging",
  "xp-protocol",
  "xpallet-assets",
@@ -9034,7 +9040,6 @@ dependencies = [
 name = "xpallet-gateway-common"
 version = "2.0.0-beta.0"
 dependencies = [
- "bs58",
  "chainx-primitives",
  "frame-benchmarking",
  "frame-support",
@@ -9049,7 +9054,6 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "xp-io",
  "xp-logging",
  "xp-protocol",
  "xp-rpc",

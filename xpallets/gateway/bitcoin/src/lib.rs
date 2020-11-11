@@ -4,8 +4,9 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#[cfg(feature = "runtime-benchmarks")]
+#[cfg(any(feature = "runtime-benchmarks", test))]
 mod benchmarking;
+mod extractor;
 pub mod header;
 mod tests;
 pub mod trustee;
@@ -29,11 +30,12 @@ use frame_system::{ensure_root, ensure_signed};
 use orml_utilities::with_transaction_result;
 
 // ChainX
-use chainx_primitives::AssetId;
+use chainx_primitives::{AssetId, ReferralId};
+use xp_gateway_common::AccountExtractor;
 use xp_logging::{debug, error, info};
 use xpallet_assets::{BalanceOf, Chain, ChainT, WithdrawalLimit};
 use xpallet_gateway_common::{
-    traits::{AddrBinding, ChannelBinding, Extractable, TrusteeSession},
+    traits::{AddrBinding, ChannelBinding, TrusteeSession},
     trustees::bitcoin::BtcTrusteeAddrInfo,
 };
 use xpallet_support::{str, try_addr};
@@ -52,6 +54,7 @@ use light_bitcoin::{
     serialization::{deserialize, Reader},
 };
 
+pub use self::extractor::OpReturnExtractor;
 pub use self::types::{BtcAddress, BtcParams, BtcTxVerifier, BtcWithdrawalProposal};
 use self::types::{
     BtcDepositCache, BtcHeaderIndex, BtcHeaderInfo, BtcRelayedTx, BtcRelayedTxInfo, BtcTxResult,
@@ -75,7 +78,7 @@ macro_rules! native {
 pub trait Trait: xpallet_assets::Trait + xpallet_gateway_records::Trait {
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
     type UnixTime: UnixTime;
-    type AccountExtractor: Extractable<Self::AccountId>;
+    type AccountExtractor: AccountExtractor<Self::AccountId, ReferralId>;
     type TrusteeSessionProvider: TrusteeSession<Self::AccountId, BtcTrusteeAddrInfo>;
     type TrusteeOrigin: EnsureOrigin<Self::Origin, Success = Self::AccountId>;
     type Channel: ChannelBinding<Self::AccountId>;

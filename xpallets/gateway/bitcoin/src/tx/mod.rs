@@ -14,9 +14,10 @@ use sp_runtime::{traits::Zero, SaturatedConversion};
 use sp_std::{fmt::Debug, prelude::*, result};
 // ChainX
 use chainx_primitives::{AssetId, ReferralId};
+use xp_gateway_common::AccountExtractor;
 use xp_logging::{debug, error, info, warn};
 use xpallet_assets::ChainT;
-use xpallet_gateway_common::traits::{AddrBinding, ChannelBinding, Extractable};
+use xpallet_gateway_common::traits::{AddrBinding, ChannelBinding};
 use xpallet_support::str;
 
 // light-bitcoin
@@ -67,7 +68,7 @@ pub fn detect_transaction_type<T: Trait>(
         min_deposit,
         addr_pair,
         last_addr_pair,
-        |script| T::AccountExtractor::account_info(script),
+        |script| T::AccountExtractor::extract_account(script),
     );
     Ok(meta_type)
 }

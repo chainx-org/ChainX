@@ -64,3 +64,6 @@ jobs:
 
     - name: Compile
       run: cargo test --no-run
+
+    - name: Runtime benchmarks
+      run: cargo build --features runtime-benchmarks
