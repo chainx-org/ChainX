@@ -16,5 +16,5 @@ fn test_accountid() {
             .to_vec(),
     );
     let s = script.to_bytes();
-    assert!(<Test as Trait>::AccountExtractor::account_info(&s).is_some());
+    assert!(<Test as Trait>::AccountExtractor::extract_account(&s).is_some());
 }

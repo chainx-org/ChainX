@@ -1,0 +1,31 @@
+[package]
+name = "xp-gateway-common"
+version = "2.0.0-alpha.4"
+authors = ["The ChainX Authors"]
+edition = "2018"
+
+[dependencies]
+bs58 = { version = "0.3", default-features = false, features = ["alloc"] }
+hex = { version = "0.4", default-features = false }
+
+# Substrate primitives
+sp-core = { version = "2.0.0", default-features = false }
+frame-support = { version = "2.0.0", default-features = false }
+
+# ChainX primitives
+xp-logging = { path = "../../logging", default-features = false }
+xp-io = { path = "../../io", default-features = false, optional = true }
+
+[features]
+default = ["std"]
+std = [
+    "bs58/std",
+    "hex/std",
+    # Substrate primitives
+    "sp-core/std",
+    "frame-support/std",
+    # ChainX primitives
+    "xp-logging/std",
+    "xp-io/std",
+]
+ss58check = ["xp-io"]

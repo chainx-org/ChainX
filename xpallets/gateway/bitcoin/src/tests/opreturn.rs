@@ -60,7 +60,7 @@ fn test_opreturn() {
             hot_addr: &Address,
         ) -> (Option<(AccountId, Option<Vec<u8>>)>, u64) {
             parse_deposit_outputs_impl(tx, hot_addr, BtcNetwork::Mainnet, |script| {
-                <Test as Trait>::AccountExtractor::account_info(script)
+                <Test as Trait>::AccountExtractor::extract_account(script)
             })
         }
         let r = mock_parse_deposit_outputs(&t1, &hot_addr);

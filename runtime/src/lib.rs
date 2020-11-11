@@ -830,7 +830,7 @@ impl xpallet_gateway_common::Trait for Runtime {
 impl xpallet_gateway_bitcoin::Trait for Runtime {
     type Event = Event;
     type UnixTime = Timestamp;
-    type AccountExtractor = xpallet_gateway_common::extractor::Extractor;
+    type AccountExtractor = xpallet_gateway_bitcoin::OpReturnExtractor;
     type TrusteeSessionProvider = trustees::bitcoin::BtcTrusteeSessionManager<Runtime>;
     type TrusteeOrigin = EnsureSignedBy<trustees::bitcoin::BtcTrusteeMultisig<Runtime>, AccountId>;
     type Channel = XGatewayCommon;

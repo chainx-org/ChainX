@@ -8,18 +8,6 @@ use xpallet_assets::Chain;
 
 use crate::types::{TrusteeInfoConfig, TrusteeIntentionProps, TrusteeSessionInfo};
 
-/// Trait for extracting the deposit info from op_return.
-pub trait Extractable<AccountId> {
-    /// Returns the target deposit account and possible referral id.
-    fn account_info(data: &[u8]) -> Option<(AccountId, Option<ReferralId>)>;
-}
-
-impl<AccountId> Extractable<AccountId> for () {
-    fn account_info(_data: &[u8]) -> Option<(AccountId, Option<ReferralId>)> {
-        None
-    }
-}
-
 pub trait BytesLike: Into<Vec<u8>> + TryFrom<Vec<u8>> {}
 
 impl<T: Into<Vec<u8>> + TryFrom<Vec<u8>>> BytesLike for T {}
