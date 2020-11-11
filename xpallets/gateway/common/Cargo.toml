@@ -36,7 +36,6 @@ xpallet-support = { path = "../../support", default-features = false }
 light-bitcoin = { git = "https://github.com/chainx-org/light-bitcoin", branch = "master", default-features = false }
 
 [dev-dependencies]
-hex = "0.4"
 lazy_static = "1.4"
 sp-io = "2.0.0"
 pallet-balances = "2.0.0"
