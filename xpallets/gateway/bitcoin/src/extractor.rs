@@ -7,7 +7,7 @@ use chainx_primitives::ReferralId;
 use xp_gateway_common::{from_ss58_check, AccountExtractor};
 use xp_logging::{debug, error};
 
-/// A helper struct that implementing the `AccountExtractor` trait for Bitcoin OP_RETURN data.
+/// A helper struct that implements the `AccountExtractor` trait for Bitcoin OP_RETURN data.
 ///
 /// OP_RETURN data format:
 /// - `account`, e.g. 5VEW3R1T4LR3kDhYwXeeCnYrHRwRaH7E9V1KprypBe68XmY4
@@ -84,13 +84,9 @@ fn test_opreturn_extractor() {
             "5VEW3R1T4LR3kDhYwXeeCnYrHRwRaH7E9V1KprypBe68XmY4".as_bytes(),
         );
         #[cfg(feature = "ss58check")]
-        {
-            assert_eq!(result, None);
-        }
+        assert_eq!(result, None);
         #[cfg(not(feature = "ss58check"))]
-        {
-            assert_eq!(result, Some((addr.unchecked_into(), None)));
-        }
+        assert_eq!(result, Some((addr.unchecked_into(), None)));
     }
     {
         // test for checksum
@@ -105,16 +101,12 @@ fn test_opreturn_extractor() {
             "5C4xGQZwoNEM5mdk2U3vJbFZPr6ZKFSiqWnc9JRDcJ3w2x5D".as_bytes(),
         );
 
+        // would check ss58version
         #[cfg(feature = "ss58check")]
-        {
-            // would check ss58version
-            assert_eq!(result, None);
-        }
+        assert_eq!(result, None);
+        // would not check ss58 version and hash checksum
         #[cfg(not(feature = "ss58check"))]
-        {
-            // would not check ss58 version and hash checksum
-            assert_eq!(result, Some((addr.unchecked_into(), None)));
-        }
+        assert_eq!(result, Some((addr.unchecked_into(), None)));
 
         // new checksum
         let result = OpReturnExtractor::extract_account(
