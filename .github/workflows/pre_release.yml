@@ -124,6 +124,10 @@ jobs:
     - name: Download artifacts
       uses: actions/download-artifact@v2
 
+    - name: Get the version
+      id: get_version
+      run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/}
+
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v1-release
       with:
