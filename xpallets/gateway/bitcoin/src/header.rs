@@ -322,7 +322,7 @@ impl<'a> HeaderProofOfWork<'a> {
     }
 }
 
-pub fn is_valid_proof_of_work(max_work_bits: Compact, bits: Compact, hash: H256) -> bool {
+fn is_valid_proof_of_work(max_work_bits: Compact, bits: Compact, hash: H256) -> bool {
     match (max_work_bits.to_u256(), bits.to_u256()) {
         (Ok(max), Ok(target)) => {
             let value = U256::from(hash_rev(hash).as_bytes());

@@ -3,17 +3,18 @@
 use super::common::*;
 
 use frame_system::RawOrigin;
-use sp_std::str::FromStr;
 
-use light_bitcoin::crypto::dhash160;
-use light_bitcoin::keys::{Public, Type};
-use light_bitcoin::serialization;
+use light_bitcoin::{
+    crypto::dhash160,
+    keys::{Public, Type},
+    serialization,
+};
 
 use xpallet_gateway_common::traits::TrusteeForChain;
 
-use crate::trustee::create_multi_address;
-use crate::tx::validator::parse_and_check_signed_tx_impl;
-use crate::types::VoteResult;
+use crate::{
+    trustee::create_multi_address, tx::validator::parse_and_check_signed_tx_impl, types::VoteResult,
+};
 
 #[test]
 pub fn test_check_trustee_entity() {
@@ -136,7 +137,7 @@ fn test_create_multi_address() {
             169, 20, 87, 55, 193, 151, 147, 67, 146, 12, 238, 164, 14, 124, 125, 104, 178, 100,
             176, 239, 250, 62, 135,
         ];
-        let addr = Address::from_str(&String::from_utf8_lossy(&hot_info.addr)).expect("");
+        let addr: Address = String::from_utf8_lossy(&hot_info.addr).parse().unwrap();
         let pk = addr.hash.as_bytes();
         let mut pubkeys = Vec::new();
         pubkeys.push(Opcode::OP_HASH160 as u8);

@@ -33,11 +33,13 @@ use self::utils::{
     parse_output_addr_with_networkid,
 };
 pub use self::validator::validate_transaction;
-use crate::trustee::{get_last_trustee_address_pair, get_trustee_address_pair};
-use crate::types::{
-    AccountInfo, BtcAddress, BtcDepositCache, BtcTxResult, BtcTxState, DepositInfo, MetaTxType,
+use crate::{
+    trustee::{get_last_trustee_address_pair, get_trustee_address_pair},
+    types::{
+        AccountInfo, BtcAddress, BtcDepositCache, BtcTxResult, BtcTxState, DepositInfo, MetaTxType,
+    },
+    BalanceOf, Event, Module, PendingDeposits, Trait, WithdrawalProposal,
 };
-use crate::{BalanceOf, Event, Module, PendingDeposits, Trait, WithdrawalProposal};
 
 pub fn process_tx<T: Trait>(
     tx: Transaction,

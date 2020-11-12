@@ -8,6 +8,7 @@ use sp_runtime::AccountId32;
 
 pub use crate::*;
 pub use light_bitcoin::{
+    chain::Transaction,
     primitives::H256,
     script::{Builder, Opcode, Script},
     serialization,
