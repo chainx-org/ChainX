@@ -348,9 +348,10 @@ impl_opaque_keys! {
     }
 }
 
-/// Substrate has the controller/stash concept, the according `Convert` implementation
-/// is used to find the stash of the given controller account.
-/// There is no such concepts in the context of ChainX, the stash account is also the controller account.
+/// Substrate has the controller/stash concept, the according `Convert`
+/// implementation is used to find the stash of the given controller
+/// account. There is no such concept in the context of ChainX, the
+/// _stash_ account is also the _controller_ account.
 pub struct SimpleValidatorIdConverter;
 
 impl Convert<AccountId, Option<AccountId>> for SimpleValidatorIdConverter {
@@ -609,7 +610,7 @@ parameter_types! {
     pub const TermDuration: BlockNumber = 7 * DAYS;
     pub const DesiredMembers: u32 = 13;
     pub const DesiredRunnersUp: u32 = 7;
-    pub const ElectionsPhragmenModuleId: LockIdentifier = *b"phrelect";
+    pub const ElectionsPhragmenModuleId: LockIdentifier = *b"pcx/phre";
 }
 
 // Make sure that there are no more than `MaxMembers` members elected via elections-phragmen.
@@ -680,7 +681,7 @@ parameter_types! {
     pub const DataDepositPerByte: Balance = 1 * CENTS;
     pub const BountyDepositBase: Balance = 1 * DOLLARS;
     pub const BountyDepositPayoutDelay: BlockNumber = 8 * DAYS; // TODO may need to change this
-    pub const TreasuryModuleId: ModuleId = ModuleId(*b"py/trsry");
+    pub const TreasuryModuleId: ModuleId = ModuleId(*b"pcx/trsy");
     pub const BountyUpdatePeriod: BlockNumber = 90 * DAYS; // TODO may need to change this
     pub const MaximumReasonLength: u32 = 16384;
     pub const BountyCuratorDeposit: Permill = Permill::from_percent(50);
