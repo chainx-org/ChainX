@@ -84,7 +84,9 @@ pub fn work_required<T: Trait>(parent_hash: H256, height: u32, params: &BtcParam
         return max_bits;
     }
 
-    let parent_header: BtcHeader = Module::<T>::headers(&parent_hash).unwrap().header;
+    let parent_header: BtcHeader = Module::<T>::headers(&parent_hash)
+        .expect("pre header must exist here")
+        .header;
 
     if is_retarget_height(height, params) {
         let new_work = work_required_retarget::<T>(parent_header, height, params);
