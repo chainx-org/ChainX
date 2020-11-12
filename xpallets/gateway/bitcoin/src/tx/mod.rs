@@ -4,7 +4,6 @@ mod secp256k1_verifier;
 pub mod utils;
 pub mod validator;
 
-// Substrate
 use frame_support::{
     debug::native,
     dispatch::{DispatchError, DispatchResult},
@@ -12,15 +11,7 @@ use frame_support::{
 };
 use sp_runtime::{traits::Zero, SaturatedConversion};
 use sp_std::{fmt::Debug, prelude::*, result};
-// ChainX
-use chainx_primitives::{AssetId, ReferralId};
-use xp_gateway_common::AccountExtractor;
-use xp_logging::{debug, error, info, warn};
-use xpallet_assets::ChainT;
-use xpallet_gateway_common::traits::{AddrBinding, ChannelBinding};
-use xpallet_support::str;
 
-// light-bitcoin
 use light_bitcoin::{
     chain::Transaction,
     keys::{Address, Network},
@@ -28,16 +19,21 @@ use light_bitcoin::{
     script::Script,
 };
 
-// use crate::traits::RelayTransaction;
+use chainx_primitives::{AssetId, ReferralId};
+use xp_gateway_common::AccountExtractor;
+use xp_logging::{debug, error, info, warn};
+use xpallet_assets::ChainT;
+use xpallet_gateway_common::traits::{AddrBinding, ChannelBinding};
+use xpallet_support::str;
+
 #[cfg(feature = "std")]
 use self::utils::trick_format_opreturn;
 use self::utils::{
-    equal_addr, extract_opreturn_data, inspect_address_from_transaction, is_key,
+    addr2vecu8, equal_addr, extract_opreturn_data, inspect_address_from_transaction, is_key,
     parse_output_addr_with_networkid,
 };
 pub use self::validator::validate_transaction;
 use crate::trustee::{get_last_trustee_address_pair, get_trustee_address_pair};
-use crate::tx::utils::addr2vecu8;
 use crate::types::{
     AccountInfo, BtcAddress, BtcDepositCache, BtcTxResult, BtcTxState, DepositInfo, MetaTxType,
 };

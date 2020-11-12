@@ -1,20 +1,16 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-// Substrate
 use frame_support::{dispatch::DispatchResult, traits::UnixTime};
-use sp_std::{cmp, convert::TryFrom, result};
+use sp_std::{cmp, convert::TryFrom};
 
-// ChainX
-use xp_logging::{debug, error, info, warn};
-
-// light-bitcoin
 use light_bitcoin::{
     chain::BlockHeader as BtcHeader,
     keys::Network,
     primitives::{Compact, H256, U256},
 };
 
-use super::ChainErr;
+use xp_logging::{debug, error, info, warn};
+
 use crate::types::{BtcHeaderInfo, BtcParams};
 use crate::{Error, Module, Trait};
 
@@ -25,17 +21,17 @@ pub struct HeaderVerifier<'a> {
 }
 
 impl<'a> HeaderVerifier<'a> {
-    pub fn new<T: Trait>(header_info: &'a BtcHeaderInfo) -> result::Result<Self, ChainErr> {
+    pub fn new<T: Trait>(header_info: &'a BtcHeaderInfo) -> Self {
         let current = T::UnixTime::now();
         // if convert from u64 to u32 failed, ignore timestamp check
         // timestamp check are not important
         let current_time = u32::try_from(current.as_secs()).ok();
 
-        Ok(Self {
+        Self {
             work: HeaderWork::new(header_info),
             proof_of_work: HeaderProofOfWork::new(&header_info.header),
             timestamp: HeaderTimestamp::new(&header_info.header, current_time),
-        })
+        }
     }
 
     pub fn check<T: Trait>(&self) -> DispatchResult {
