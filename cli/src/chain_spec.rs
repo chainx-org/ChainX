@@ -18,12 +18,12 @@ use sp_runtime::traits::{IdentifyAccount, Verify};
 
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 
-use xp_protocol::{BTC_DECIMALS, PCX, PCX_DECIMALS, X_BTC};
+use xp_protocol::{PCX, PCX_DECIMALS, X_BTC};
 
 use chainx_runtime::{
     constants::{currency::DOLLARS, time::DAYS},
-    AccountId, AssetId, AssetInfo, AssetRestrictions, Balance, BtcParams, BtcTxVerifier, Chain,
-    NetworkType, ReferralId, Runtime, SessionKeys, Signature, TrusteeInfoConfig, WASM_BINARY,
+    AccountId, AssetId, Balance, BtcParams, BtcTxVerifier, Chain, NetworkType, ReferralId,
+    SessionKeys, Signature, TrusteeInfoConfig, WASM_BINARY,
 };
 use chainx_runtime::{
     AuthorityDiscoveryConfig, BalancesConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
@@ -33,6 +33,7 @@ use chainx_runtime::{
     XSpotConfig, XStakingConfig, XSystemConfig,
 };
 
+use crate::genesis::assets::{init_assets, pcx, testnet_assets, AssetParams};
 use crate::genesis::bitcoin::{BtcGenesisParams, BtcTrusteeParams};
 
 // Note this is the URL for the telemetry server
@@ -117,9 +118,9 @@ macro_rules! endowed_gen {
 }
 
 macro_rules! bootnodes {
-    ( $( $bootnode:expr, )+ ) => {
+    ( $( $bootnode:expr, )* ) => {
         vec![
-            $($bootnode.to_string().try_into().expect("The bootnode is invalid"),)+
+            $($bootnode.to_string().try_into().expect("The bootnode is invalid"),)*
         ]
     }
 }
@@ -720,50 +721,6 @@ pub fn mainnet_config() -> Result<ChainSpec, String> {
     ))
 }
 
-fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
-    (
-        PCX,
-        AssetInfo::new::<Runtime>(
-            b"PCX".to_vec(),
-            b"Polkadot ChainX".to_vec(),
-            Chain::ChainX,
-            PCX_DECIMALS,
-            b"ChainX's crypto currency in Polkadot ecology".to_vec(),
-        )
-        .unwrap(),
-        AssetRestrictions::DEPOSIT
-            | AssetRestrictions::WITHDRAW
-            | AssetRestrictions::DESTROY_WITHDRAWAL
-            | AssetRestrictions::DESTROY_USABLE,
-    )
-}
-
-fn xbtc() -> (AssetId, AssetInfo, AssetRestrictions) {
-    (
-        X_BTC,
-        AssetInfo::new::<Runtime>(
-            b"XBTC".to_vec(),
-            b"ChainX Bitcoin".to_vec(),
-            Chain::Bitcoin,
-            BTC_DECIMALS,
-            b"ChainX's Cross-chain Bitcoin".to_vec(),
-        )
-        .unwrap(),
-        AssetRestrictions::DESTROY_USABLE,
-    )
-}
-
-// asset_id, asset_info, asset_restrictions, is_online, has_mining_rights
-fn testnet_assets() -> Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)> {
-    let pcx = pcx();
-    let btc = xbtc();
-    let assets = vec![
-        (pcx.0, pcx.1, pcx.2, true, false),
-        (btc.0, btc.1, btc.2, true, true),
-    ];
-    assets
-}
-
 fn session_keys(
     babe: BabeId,
     grandpa: GrandpaId,
@@ -776,22 +733,6 @@ fn session_keys(
         im_online,
         authority_discovery,
     }
-}
-
-type AssetParams = (AssetId, AssetInfo, AssetRestrictions, bool, bool);
-fn init_assets(
-    assets: Vec<AssetParams>,
-) -> (
-    Vec<(AssetId, AssetInfo, bool, bool)>,
-    Vec<(AssetId, AssetRestrictions)>,
-) {
-    let mut init_assets = vec![];
-    let mut assets_restrictions = vec![];
-    for (a, b, c, d, e) in assets {
-        init_assets.push((a, b, d, e));
-        assets_restrictions.push((a, c))
-    }
-    (init_assets, assets_restrictions)
 }
 
 fn build_genesis(
