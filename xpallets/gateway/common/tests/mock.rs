@@ -249,7 +249,6 @@ impl ExtBuilder {
             ), // retargeting_factor
             verifier: BtcTxVerifier::Recover,
             confirmation_number: 4,
-            reserved_block: 2100,
             btc_withdrawal_fee: 500000,
             max_withdrawal_count: 100,
         }

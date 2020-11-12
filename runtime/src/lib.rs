@@ -99,7 +99,7 @@ pub mod impls;
 mod weights;
 
 use self::constants::{currency::*, fee::WeightToFee, time::*};
-use self::impls::{CurrencyToVoteHandler, DealWithFees, SlowAdjustingFeeUpdate};
+use self::impls::{ChargeExtraFee, CurrencyToVoteHandler, DealWithFees, SlowAdjustingFeeUpdate};
 
 /// This runtime version.
 pub const VERSION: RuntimeVersion = RuntimeVersion {
@@ -125,11 +125,11 @@ pub fn native_version() -> NativeVersion {
 pub struct BaseFilter;
 impl Filter<Call> for BaseFilter {
     fn filter(call: &Call) -> bool {
+        use frame_support::dispatch::GetCallMetadata;
         match call {
             Call::Currencies(_) => return false, // forbidden Currencies call now
             _ => {}
         }
-        use frame_support::dispatch::GetCallMetadata;
         let metadata = call.get_call_metadata();
         !XSystem::is_paused(metadata)
     }
@@ -158,14 +158,10 @@ impl SignedExtension for BaseFilter {
         _len: usize,
     ) -> TransactionValidity {
         if !Self::filter(&call) {
-            return Err(TransactionValidityError::from(InvalidTransaction::Custom(
-                FORBIDDEN_CALL,
-            )));
+            return Err(InvalidTransaction::Custom(FORBIDDEN_CALL).into());
         }
         if XSystem::blacklist(who) {
-            return Err(TransactionValidityError::from(InvalidTransaction::Custom(
-                FORBIDDEN_ACCOUNT,
-            )));
+            return Err(InvalidTransaction::Custom(FORBIDDEN_ACCOUNT).into());
         }
         Ok(ValidTransaction::default())
     }
@@ -467,6 +463,7 @@ where
             frame_system::CheckWeight::<Runtime>::new(),
             pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(tip),
             BaseFilter,
+            ChargeExtraFee,
         );
         let raw_payload = SignedPayload::new(call, extra)
             .map_err(|e| {
@@ -984,6 +981,7 @@ pub type SignedExtra = (
     frame_system::CheckWeight<Runtime>,
     pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
     BaseFilter,
+    ChargeExtraFee,
 );
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
@@ -1168,7 +1166,15 @@ impl_runtime_apis! {
             uxt: <Block as BlockT>::Extrinsic,
             len: u32,
         ) -> pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo<Balance> {
-            TransactionPayment::query_info(uxt, len)
+            if let Some(extra_fee) = ChargeExtraFee::has_extra_fee(&uxt.function) {
+                let base_info = TransactionPayment::query_info(uxt, len);
+                pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo {
+                    partial_fee: base_info.partial_fee + extra_fee,
+                    ..base_info
+                }
+            } else {
+                TransactionPayment::query_info(uxt, len)
+            }
         }
     }
 
@@ -1177,7 +1183,17 @@ impl_runtime_apis! {
             uxt: <Block as BlockT>::Extrinsic,
             len: u32,
         ) -> xpallet_transaction_fee::FeeDetails<Balance> {
-            XTransactionFee::query_fee_details(uxt, len)
+            if let Some(extra_fee) = ChargeExtraFee::has_extra_fee(&uxt.function) {
+                let details = XTransactionFee::query_fee_details(uxt, len);
+                xpallet_transaction_fee::FeeDetails {
+                    extra_fee,
+                    final_fee: details.final_fee + extra_fee,
+                    ..details
+                }
+            } else {
+                XTransactionFee::query_fee_details(uxt, len)
+            }
+
         }
     }
 

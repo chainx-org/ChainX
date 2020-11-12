@@ -222,8 +222,6 @@ decl_storage! {
         pub ParamsInfo get(fn params_info) config(): BtcParams;
         ///  NetworkId for testnet or mainnet
         pub NetworkId get(fn network_id) config(): BtcNetwork;
-        /// reserved count for block
-        pub ReservedBlock get(fn reserved_block) config(): u32;
         /// get ConfirmationNumber from genesis_config
         pub ConfirmationNumber get(fn confirmation_number) config(): u32;
         /// get BtcWithdrawalFee from genesis_config
@@ -249,14 +247,6 @@ decl_storage! {
                 header: genesis_header,
                 height: genesis_height,
             };
-            // would ignore check for bitcoin testnet
-            #[cfg(not(test))] {
-            if let BtcNetwork::Mainnet = config.network_id {
-                if genesis_index.height % config.params_info.retargeting_interval() != 0 {
-                    panic!("Block #{} should start from a changed difficulty block", genesis_index.height);
-                }
-            }
-            }
 
             Headers::insert(&genesis_hash, header_info);
             BlockHashFor::insert(&genesis_index.height, vec![genesis_hash]);

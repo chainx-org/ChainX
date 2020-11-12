@@ -761,7 +761,6 @@ fn build_genesis(
                 10 * 60,              // target_spacing_seconds
                 4,                    // retargeting_factor
             ), // retargeting_factor
-            reserved_block: 2100,
             btc_withdrawal_fee: 500000,
             max_withdrawal_count: 100,
             verifier: BtcTxVerifier::Recover,
