@@ -7,10 +7,10 @@
 #[cfg(any(feature = "runtime-benchmarks", test))]
 mod benchmarking;
 mod extractor;
-pub mod header;
+mod header;
 mod tests;
-pub mod trustee;
-pub mod tx;
+mod trustee;
+mod tx;
 mod types;
 mod weight_info;
 

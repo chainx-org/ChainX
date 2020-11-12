@@ -206,7 +206,7 @@ impl<'a> HeaderWork<'a> {
     }
 }
 
-pub fn work_required<T: Trait>(parent_hash: H256, height: u32, params: &BtcParams) -> Compact {
+fn work_required<T: Trait>(parent_hash: H256, height: u32, params: &BtcParams) -> Compact {
     let max_bits = params.max_bits();
     if height == 0 {
         return max_bits;
