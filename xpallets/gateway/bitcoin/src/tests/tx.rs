@@ -213,7 +213,7 @@ fn test_process_tx() {
 
         // no prev, would judge a failed deposit
         let r = mock_process_tx::<Test>(deposit3_1.clone(), None);
-        assert_eq!(r.result, BtcTxResult::Failed);
+        assert_eq!(r.result, BtcTxResult::Failure);
         // with prev, would deposit use the input_addr, but due to no relationship of addr
         // and accountid before, thus this become a cache deposit
         let r = mock_process_tx::<Test>(deposit3_1.clone(), Some(deposit3_1_prev.clone()));
@@ -228,7 +228,7 @@ fn test_process_tx() {
 
         // 4
         let r = mock_process_tx::<Test>(deposit4_0.clone(), None);
-        assert_eq!(r.result, BtcTxResult::Failed);
+        assert_eq!(r.result, BtcTxResult::Failure);
         let r = mock_process_tx::<Test>(deposit4_0.clone(), Some(deposit4_0_prev.clone()));
         assert_eq!(r.result, BtcTxResult::Success);
         assert_eq!(
@@ -256,12 +256,12 @@ fn test_process_tx() {
 
         // hot and cold
         let r = mock_process_tx::<Test>(hot_to_cold.clone(), None);
-        assert_eq!(r.result, BtcTxResult::Failed);
+        assert_eq!(r.result, BtcTxResult::Failure);
         let r = mock_process_tx::<Test>(hot_to_cold.clone(), Some(hot_to_cold_prev.clone()));
         assert_eq!(r.result, BtcTxResult::Success);
 
         let r = mock_process_tx::<Test>(cold_to_hot.clone(), None);
-        assert_eq!(r.result, BtcTxResult::Failed);
+        assert_eq!(r.result, BtcTxResult::Failure);
         let r = mock_process_tx::<Test>(cold_to_hot.clone(), Some(cold_to_hot_prev.clone()));
         assert_eq!(r.result, BtcTxResult::Success);
 
@@ -275,7 +275,7 @@ fn test_process_tx() {
         });
 
         let r = mock_process_tx::<Test>(withdraw.clone(), None);
-        assert_eq!(r.result, BtcTxResult::Failed);
+        assert_eq!(r.result, BtcTxResult::Failure);
         let r = mock_process_tx::<Test>(withdraw.clone(), Some(withdraw_prev.clone()));
         assert_eq!(r.result, BtcTxResult::Success);
     })

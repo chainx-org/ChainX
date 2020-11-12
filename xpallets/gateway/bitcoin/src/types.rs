@@ -4,19 +4,17 @@ use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
-// Substrate
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 
-use chainx_primitives::ReferralId;
-
-// light-bitcoin
 use light_bitcoin::{
     chain::{BlockHeader as BtcHeader, Transaction as BtcTransaction},
     keys::Address,
     merkle::PartialMerkleTree,
     primitives::{Compact, H256},
 };
+
+use chainx_primitives::ReferralId;
 
 /// BtcAddress is an bitcoin address encoded in base58
 /// like: "1Nekoo5VTe7yQQ8WFqrva2UbdyRMVYCP1t" or "3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy"
@@ -113,13 +111,13 @@ impl<AccountId> MetaTxType<AccountId> {
 #[derive(PartialEq, Clone, Copy, Eq, Encode, Decode, RuntimeDebug)]
 pub enum BtcTxResult {
     Success,
-    Failed,
+    Failure,
 }
 
 #[derive(PartialEq, Clone, Copy, Eq, Encode, Decode, RuntimeDebug)]
 pub struct BtcTxState {
-    pub result: BtcTxResult,
     pub tx_type: BtcTxType,
+    pub result: BtcTxResult,
 }
 
 #[derive(PartialEq, Clone, Encode, Decode, Default, RuntimeDebug)]
@@ -164,7 +162,6 @@ pub enum VoteResult {
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct BtcParams {
     max_bits: u32,
-    //Compact
     block_max_future: u32,
 
     target_timespan_seconds: u32,
@@ -201,23 +198,21 @@ impl BtcParams {
     pub fn max_bits(&self) -> Compact {
         Compact::new(self.max_bits)
     }
+    pub fn block_max_future(&self) -> u32 {
+        self.block_max_future
+    }
+    pub fn target_timespan_seconds(&self) -> u32 {
+        self.target_timespan_seconds
+    }
 
     pub fn retargeting_interval(&self) -> u32 {
         self.retargeting_interval
     }
-
-    pub fn block_max_future(&self) -> u32 {
-        self.block_max_future
-    }
     pub fn min_timespan(&self) -> u32 {
         self.min_timespan
     }
-
     pub fn max_timespan(&self) -> u32 {
         self.max_timespan
-    }
-    pub fn target_timespan_seconds(&self) -> u32 {
-        self.target_timespan_seconds
     }
 }
 

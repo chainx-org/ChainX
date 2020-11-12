@@ -279,7 +279,7 @@ pub(crate) fn handle_tx<T: Trait>(
     let result = match meta_type {
         MetaTxType::<_>::Deposit(deposit_info) => deposit::<T>(tx.hash(), deposit_info),
         MetaTxType::<_>::Withdrawal => withdraw::<T>(tx),
-        MetaTxType::<_>::Irrelevance => BtcTxResult::Failed, // mark Irrelevance be Failed, for it may be replayed in future
+        MetaTxType::<_>::Irrelevance => BtcTxResult::Failure, // mark Irrelevance be Failure, for it may be replayed in future
         _ => BtcTxResult::Success,
     };
     BtcTxState { result, tx_type }
@@ -288,7 +288,7 @@ pub(crate) fn handle_tx<T: Trait>(
 fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> BtcTxResult {
     if deposit_info.op_return.is_none() && deposit_info.input_addr.is_none() {
         warn!("[deposit] Process a deposit tx ({:?}) but do not have valid opreturn & not have input addr", hash);
-        return BtcTxResult::Failed;
+        return BtcTxResult::Failure;
     }
 
     let account_info = match deposit_info.op_return {
@@ -319,10 +319,10 @@ fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> Btc
             } else {
                 // should not meet this branch, due it's handled before, it's unreachable
                 error!(
-                    "[deposit] The deposit tx ({:?}) has no input addr and opreturn",
+                    "[deposit] The deposit tx ({:?}) has no input addr and no opreturn",
                     hash
                 );
-                return BtcTxResult::Failed;
+                return BtcTxResult::Failure;
             }
         }
     };
@@ -336,7 +336,7 @@ fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> Btc
             );
 
             if deposit_token::<T>(hash, &accountid, deposit_info.deposit_value).is_err() {
-                return BtcTxResult::Failed;
+                return BtcTxResult::Failure;
             }
             info!(
                 "[deposit] Deposit tx ({:?}) success, who:{:?}, balance:{}",
@@ -502,7 +502,7 @@ fn withdraw<T: Trait>(tx: Transaction) -> BtcTxResult {
             WithdrawalProposal::<T>::put(proposal);
 
             Module::<T>::deposit_event(Event::<T>::WithdrawalFatalErr(proposal_hash, tx_hash));
-            BtcTxResult::Failed
+            BtcTxResult::Failure
         }
     } else {
         error!(
@@ -515,6 +515,6 @@ fn withdraw<T: Trait>(tx: Transaction) -> BtcTxResult {
             Default::default(),
         ));
 
-        BtcTxResult::Failed
+        BtcTxResult::Failure
     }
 }

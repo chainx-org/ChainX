@@ -14,7 +14,6 @@ pub mod tx;
 mod types;
 mod weight_info;
 
-// Substrate
 use sp_runtime::{traits::Zero, SaturatedConversion};
 use sp_std::{prelude::*, result};
 
@@ -26,10 +25,21 @@ use frame_support::{
     weights::Pays,
 };
 use frame_system::{ensure_root, ensure_signed};
-
 use orml_utilities::with_transaction_result;
 
-// ChainX
+#[cfg(feature = "std")]
+pub use light_bitcoin::primitives::h256_rev;
+pub use light_bitcoin::{
+    chain::BlockHeader as BtcHeader,
+    keys::Network as BtcNetwork,
+    primitives::{hash_rev, Compact, H256, H264},
+};
+use light_bitcoin::{
+    chain::Transaction as BtcTransaction,
+    keys::{Address, DisplayLayout},
+    serialization::{deserialize, Reader},
+};
+
 use chainx_primitives::{AssetId, ReferralId};
 use xp_gateway_common::AccountExtractor;
 use xp_logging::{debug, error, info};
@@ -39,20 +49,6 @@ use xpallet_gateway_common::{
     trustees::bitcoin::BtcTrusteeAddrInfo,
 };
 use xpallet_support::{str, try_addr};
-
-// light-bitcoin
-#[cfg(feature = "std")]
-pub use light_bitcoin::primitives::h256_rev;
-pub use light_bitcoin::{
-    chain::BlockHeader as BtcHeader,
-    keys::Network as BtcNetwork,
-    primitives::{hash_rev, Compact, H256, H264},
-};
-use light_bitcoin::{
-    chain::Transaction,
-    keys::{Address, DisplayLayout},
-    serialization::{deserialize, Reader},
-};
 
 pub use self::extractor::OpReturnExtractor;
 pub use self::types::{BtcAddress, BtcParams, BtcTxVerifier, BtcWithdrawalProposal};
@@ -486,7 +482,7 @@ impl<T: Trait> Module<T> {
 
     /// Helper function for deserializing the slice of raw tx.
     #[inline]
-    fn deserialize_tx(input: &[u8]) -> result::Result<Transaction, Error<T>> {
+    fn deserialize_tx(input: &[u8]) -> result::Result<BtcTransaction, Error<T>> {
         deserialize(Reader::new(input)).map_err(|_| Error::<T>::DeserializeErr)
     }
 
@@ -566,7 +562,7 @@ impl<T: Trait> Module<T> {
         })
     }
 
-    fn apply_push_transaction(tx: BtcRelayedTx, prev: Option<Transaction>) -> DispatchResult {
+    fn apply_push_transaction(tx: BtcRelayedTx, prev: Option<BtcTransaction>) -> DispatchResult {
         let tx_hash = tx.raw.hash();
         let block_hash = tx.block_hash;
         let header_info = Module::<T>::headers(&tx.block_hash).ok_or_else(|| {
@@ -613,7 +609,7 @@ impl<T: Trait> Module<T> {
         Self::deposit_event(Event::<T>::TxProcessed(tx_hash, block_hash, state));
         match state.result {
             BtcTxResult::Success => Ok(()),
-            BtcTxResult::Failed => Err(Error::<T>::ProcessTxFailed.into()),
+            BtcTxResult::Failure => Err(Error::<T>::ProcessTxFailed.into()),
         }
     }
 }
