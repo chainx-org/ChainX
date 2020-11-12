@@ -125,11 +125,11 @@ pub fn native_version() -> NativeVersion {
 pub struct BaseFilter;
 impl Filter<Call> for BaseFilter {
     fn filter(call: &Call) -> bool {
+        use frame_support::dispatch::GetCallMetadata;
         match call {
             Call::Currencies(_) => return false, // forbidden Currencies call now
             _ => {}
         }
-        use frame_support::dispatch::GetCallMetadata;
         let metadata = call.get_call_metadata();
         !XSystem::is_paused(metadata)
     }
@@ -158,14 +158,10 @@ impl SignedExtension for BaseFilter {
         _len: usize,
     ) -> TransactionValidity {
         if !Self::filter(&call) {
-            return Err(TransactionValidityError::from(InvalidTransaction::Custom(
-                FORBIDDEN_CALL,
-            )));
+            return Err(InvalidTransaction::Custom(FORBIDDEN_CALL).into());
         }
         if XSystem::blacklist(who) {
-            return Err(TransactionValidityError::from(InvalidTransaction::Custom(
-                FORBIDDEN_ACCOUNT,
-            )));
+            return Err(InvalidTransaction::Custom(FORBIDDEN_ACCOUNT).into());
         }
         Ok(ValidTransaction::default())
     }
