@@ -74,6 +74,7 @@ where
                     adjusted_weight_fee: fee.adjusted_weight_fee.into(),
                 }),
                 tip: fee_details.tip.into(),
+                extra_fee: fee_details.extra_fee.into(),
                 final_fee: fee_details.final_fee.into(),
             })
             .map_err(into_rpc_err)

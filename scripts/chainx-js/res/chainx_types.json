@@ -1,4 +1,12 @@
 {
+    "Chain": {
+        "_enum": [
+            "ChainX",
+            "Bitcoin",
+            "Ethereum",
+            "Polkadot"
+        ]
+    },
     "NetworkType": {
         "_enum": [
             "Mainnet",
@@ -12,14 +20,6 @@
             "Reserved",
             "ReservedWithdrawal",
             "ReservedDexSpot"
-        ]
-    },
-    "Chain": {
-        "_enum": [
-            "ChainX",
-            "Bitcoin",
-            "Ethereum",
-            "Polkadot"
         ]
     },
     "OrderType": {
@@ -156,6 +156,7 @@
     },
     "FeeDetails": {
         "inclusionFee": "Option<InclusionFee<Balance>>",
+        "extraFee": "Balance",
         "tip": "Balance",
         "finalFee": "Balance"
     },
@@ -380,6 +381,7 @@
     "RpcFeeDetails": {
         "inclusionFee": "Option<RpcInclusionFee>",
         "tip": "RpcBalance",
+        "extraFee": "RpcBalance",
         "finalFee": "RpcBalance"
     },
     "ValidatorInfo": {
