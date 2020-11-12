@@ -931,7 +931,6 @@ construct_runtime!(
 
         Utility: pallet_utility::{Module, Call, Event},
         Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
-        Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 
         // orml
         // we retain Currencies Call for this call may be used in future, but we do not need this now,
@@ -958,6 +957,8 @@ construct_runtime!(
         XTransactionFee: xpallet_transaction_fee::{Module, Event<T>},
 
         XGenesisBuilder: xpallet_genesis_builder::{Module, Config<T>},
+
+        Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
     }
 );
 
