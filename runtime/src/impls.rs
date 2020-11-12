@@ -91,10 +91,12 @@ parameter_types! {
 pub type SlowAdjustingFeeUpdate<R> =
     TargetedFeeAdjustment<R, TargetBlockFullness, AdjustmentVariable, MinimumMultiplier>;
 
+/// A struct for charging additional fee for some special calls.
 #[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug)]
 pub struct ChargeExtraFee;
 
 impl ChargeExtraFee {
+    /// Returns the optional extra fee for the given `call`.
     pub fn has_extra_fee(call: &Call) -> Option<Balance> {
         // 1 PCX
         const BASE_EXTRA_FEE: Balance = 100_000_000;
@@ -116,6 +118,7 @@ impl ChargeExtraFee {
         extra_cofficient.map(|cofficient| Balance::from(cofficient) * BASE_EXTRA_FEE)
     }
 
+    /// Actually withdraws the extra `fee` from account `who`.
     pub fn withdraw_fee(who: &AccountId, fee: Balance) -> TransactionValidity {
         if let Err(_) = Balances::withdraw(
             who,
