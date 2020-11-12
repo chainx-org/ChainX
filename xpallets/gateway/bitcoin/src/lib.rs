@@ -35,7 +35,7 @@ pub use light_bitcoin::{
     primitives::{hash_rev, Compact, H256, H264},
 };
 use light_bitcoin::{
-    chain::Transaction as BtcTransaction,
+    chain::Transaction,
     keys::{Address, DisplayLayout},
     serialization::{deserialize, Reader},
 };
@@ -50,15 +50,19 @@ use xpallet_gateway_common::{
 };
 use xpallet_support::{str, try_addr};
 
-pub use self::extractor::OpReturnExtractor;
-pub use self::types::{BtcAddress, BtcParams, BtcTxVerifier, BtcWithdrawalProposal};
-use self::types::{
-    BtcDepositCache, BtcHeaderIndex, BtcHeaderInfo, BtcRelayedTx, BtcRelayedTxInfo, BtcTxResult,
-    BtcTxState,
+pub use self::{
+    extractor::OpReturnExtractor,
+    types::{BtcAddress, BtcParams, BtcTxVerifier, BtcWithdrawalProposal},
 };
-use crate::trustee::get_trustee_address_pair;
-use crate::tx::remove_pending_deposit;
-use crate::weight_info::WeightInfo;
+use self::{
+    trustee::get_trustee_address_pair,
+    tx::remove_pending_deposit,
+    types::{
+        BtcDepositCache, BtcHeaderIndex, BtcHeaderInfo, BtcRelayedTx, BtcRelayedTxInfo,
+        BtcTxResult, BtcTxState,
+    },
+    weight_info::WeightInfo,
+};
 
 // syntactic sugar for native log.
 #[macro_export]
@@ -482,7 +486,7 @@ impl<T: Trait> Module<T> {
 
     /// Helper function for deserializing the slice of raw tx.
     #[inline]
-    fn deserialize_tx(input: &[u8]) -> result::Result<BtcTransaction, Error<T>> {
+    fn deserialize_tx(input: &[u8]) -> result::Result<Transaction, Error<T>> {
         deserialize(Reader::new(input)).map_err(|_| Error::<T>::DeserializeErr)
     }
 
@@ -562,7 +566,7 @@ impl<T: Trait> Module<T> {
         })
     }
 
-    fn apply_push_transaction(tx: BtcRelayedTx, prev: Option<BtcTransaction>) -> DispatchResult {
+    fn apply_push_transaction(tx: BtcRelayedTx, prev: Option<Transaction>) -> DispatchResult {
         let tx_hash = tx.raw.hash();
         let block_hash = tx.block_hash;
         let header_info = Module::<T>::headers(&tx.block_hash).ok_or_else(|| {
