@@ -3,6 +3,7 @@
 #![allow(non_upper_case_globals)]
 
 use codec::{Decode, Encode};
+
 use light_bitcoin::{merkle::PartialMerkleTree, serialization};
 
 use super::common::*;

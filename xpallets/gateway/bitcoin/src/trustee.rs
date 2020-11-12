@@ -6,7 +6,7 @@ use frame_support::{
     ensure, StorageValue,
 };
 use sp_runtime::SaturatedConversion;
-use sp_std::{convert::TryFrom, prelude::*, result};
+use sp_std::{convert::TryFrom, prelude::*};
 
 use light_bitcoin::{
     chain::Transaction,
@@ -103,7 +103,7 @@ const EC_P: [u8; 32] = [
 const ZERO_P: [u8; 32] = [0; 32];
 
 impl<T: Trait> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo> for Module<T> {
-    fn check_trustee_entity(raw_addr: &[u8]) -> result::Result<BtcTrusteeType, DispatchError> {
+    fn check_trustee_entity(raw_addr: &[u8]) -> Result<BtcTrusteeType, DispatchError> {
         let trustee_type = BtcTrusteeType::try_from(raw_addr.to_vec())
             .map_err(|_| Error::<T>::InvalidPublicKey)?;
         let public = trustee_type.0;
@@ -133,7 +133,7 @@ impl<T: Trait> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo>
     fn generate_trustee_session_info(
         props: Vec<(T::AccountId, TrusteeIntentionProps<BtcTrusteeType>)>,
         config: TrusteeInfoConfig,
-    ) -> result::Result<TrusteeSessionInfo<T::AccountId, BtcTrusteeAddrInfo>, DispatchError> {
+    ) -> Result<TrusteeSessionInfo<T::AccountId, BtcTrusteeAddrInfo>, DispatchError> {
         // judge all props has different pubkey
         // check
         let (trustees, props_info): (

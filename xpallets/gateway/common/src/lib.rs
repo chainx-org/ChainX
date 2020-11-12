@@ -17,7 +17,7 @@ pub mod utils;
 mod weight_info;
 
 use sp_runtime::traits::StaticLookup;
-use sp_std::{collections::btree_map::BTreeMap, convert::TryFrom, prelude::*, result};
+use sp_std::{collections::btree_map::BTreeMap, convert::TryFrom, prelude::*};
 
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
@@ -269,7 +269,7 @@ decl_storage! {
 impl<T: Trait> Module<T> {
     pub fn withdrawal_limit(
         asset_id: &AssetId,
-    ) -> result::Result<WithdrawalLimit<BalanceOf<T>>, DispatchError> {
+    ) -> Result<WithdrawalLimit<BalanceOf<T>>, DispatchError> {
         let chain = xpallet_assets_registrar::Module::<T>::chain_of(asset_id)?;
         match chain {
             Chain::Bitcoin => T::Bitcoin::withdrawal_limit(&asset_id),
@@ -347,7 +347,7 @@ impl<T: Trait> Module<T> {
     pub fn try_generate_session_info(
         chain: Chain,
         new_trustees: Vec<T::AccountId>,
-    ) -> result::Result<GenericTrusteeSessionInfo<T::AccountId>, DispatchError> {
+    ) -> Result<GenericTrusteeSessionInfo<T::AccountId>, DispatchError> {
         let config = Self::trustee_info_config(chain);
         let has_duplicate =
             (1..new_trustees.len()).any(|i| new_trustees[i..].contains(&new_trustees[i - 1]));
@@ -412,7 +412,7 @@ impl<T: Trait> Module<T> {
     pub fn generate_multisig_addr(
         chain: Chain,
         info: &GenericTrusteeSessionInfo<T::AccountId>,
-    ) -> result::Result<T::AccountId, DispatchError> {
+    ) -> Result<T::AccountId, DispatchError> {
         let multi_addr =
             T::DetermineMultisigAddress::calc_multisig(&info.trustee_list, info.threshold);
 

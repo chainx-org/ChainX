@@ -15,7 +15,7 @@ mod types;
 mod weight_info;
 
 use sp_runtime::{traits::Zero, SaturatedConversion};
-use sp_std::{prelude::*, result};
+use sp_std::prelude::*;
 
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
@@ -452,7 +452,7 @@ impl<T: Trait> ChainT<BalanceOf<T>> for Module<T> {
 
     fn withdrawal_limit(
         asset_id: &AssetId,
-    ) -> result::Result<WithdrawalLimit<BalanceOf<T>>, DispatchError> {
+    ) -> Result<WithdrawalLimit<BalanceOf<T>>, DispatchError> {
         if *asset_id != Self::ASSET_ID {
             return Err(xpallet_assets::Error::<T>::ActionNotAllowed.into());
         }
@@ -466,7 +466,7 @@ impl<T: Trait> ChainT<BalanceOf<T>> for Module<T> {
 }
 
 impl<T: Trait> Module<T> {
-    pub fn verify_btc_address(data: &[u8]) -> result::Result<Address, DispatchError> {
+    pub fn verify_btc_address(data: &[u8]) -> Result<Address, DispatchError> {
         let r = bs58::decode(data)
             .into_vec()
             .map_err(|_| Error::<T>::InvalidBase58)?;
@@ -476,7 +476,7 @@ impl<T: Trait> Module<T> {
 
     /// Helper function for deserializing the slice of raw tx.
     #[inline]
-    fn deserialize_tx(input: &[u8]) -> result::Result<Transaction, Error<T>> {
+    fn deserialize_tx(input: &[u8]) -> Result<Transaction, Error<T>> {
         deserialize(Reader::new(input)).map_err(|_| Error::<T>::DeserializeErr)
     }
 

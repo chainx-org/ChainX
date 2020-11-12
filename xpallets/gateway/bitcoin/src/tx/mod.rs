@@ -10,7 +10,7 @@ use frame_support::{
     StorageMap, StorageValue,
 };
 use sp_runtime::{traits::Zero, SaturatedConversion};
-use sp_std::{fmt::Debug, prelude::*, result};
+use sp_std::{fmt::Debug, prelude::*};
 
 use light_bitcoin::{
     chain::Transaction,
@@ -44,16 +44,85 @@ use crate::{
 pub fn process_tx<T: Trait>(
     tx: Transaction,
     prev: Option<Transaction>,
-) -> result::Result<BtcTxState, DispatchError> {
+) -> Result<BtcTxState, DispatchError> {
     let meta_type = detect_transaction_type::<T>(&tx, prev.as_ref())?;
     let state = handle_tx::<T>(tx, meta_type);
     Ok(state)
+    /*
+    let tx_type = meta_type.ref_into();
+    let result = match meta_type {
+        MetaTxType::<_>::Deposit(deposit_info) => deposit::<T>(tx.hash(), deposit_info),
+        MetaTxType::<_>::Withdrawal => withdraw::<T>(tx),
+        MetaTxType::HotAndCold | MetaTxType::TrusteeTransition => BtcTxResult::Success,
+        // mark Irrelevance be Failure so that it could be replayed in the future
+        MetaTxType::<_>::Irrelevance => BtcTxResult::Failure,
+    };
+    Ok(BtcTxState { tx_type, result })
+    */
 }
 
-pub fn detect_transaction_type<T: Trait>(
+/*
+pub struct BtcTxTypeDetector {
+    network: Network,
+    min_deposit: u64,
+    current_trustee_pair: (Address, Address),
+    previous_trustee_pair: Option<(Address, Address)>,
+}
+
+impl BtcTxTypeDetector {
+    pub fn new(
+        network: Network,
+        min_deposit: u64,
+        current_trustee_pair: (Address, Address),
+        previous_trustee_pair: Option<(Address, Address)>,
+    ) -> Self {
+        Self {
+            network,
+            min_deposit,
+            current_trustee_pair,
+            previous_trustee_pair,
+        }
+    }
+
+    pub fn detect_transaction_type<AccountId, Extractor>(
+        &self,
+        tx: &Transaction,
+        prev_tx: Option<&Transaction>,
+        extractor: Extractor,
+    ) -> MetaTxType<AccountId>
+    where
+        AccountId: Debug,
+        Extractor: AccountExtractor<AccountId, ReferralId>,
+    {
+        let input_addr = prev_tx.and_then(|prev_tx| {
+            // parse input addr
+            let outpoint = &tx.inputs[0].previous_output;
+            inspect_address_from_transaction(prev_tx, outpoint, network)
+        });
+
+        if let Some(input_addr) = input_addr {}
+
+        self.detect_deposit_transaction_type(tx, input_addr, extractor)
+    }
+
+    pub fn detect_deposit_transaction_type<AccountId, Extractor>(
+        &self,
+        tx: &Transaction,
+        input_addr: Option<&Address>,
+        extractor: Extractor,
+    ) -> MetaTxType<AccountId>
+    where
+        AccountId: Debug,
+        Extractor: AccountExtractor<AccountId, ReferralId>,
+    {
+    }
+}
+*/
+
+fn detect_transaction_type<T: Trait>(
     tx: &Transaction,
     prev: Option<&Transaction>,
-) -> result::Result<MetaTxType<T::AccountId>, DispatchError> {
+) -> Result<MetaTxType<T::AccountId>, DispatchError> {
     let addr_pair = get_trustee_address_pair::<T>()?;
     let last_addr_pair = get_last_trustee_address_pair::<T>().ok();
     let network = Module::<T>::network_id();
