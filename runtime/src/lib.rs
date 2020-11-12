@@ -375,7 +375,7 @@ impl pallet_session::Trait for Runtime {
 }
 
 parameter_types! {
-    // There is no dusty accounts in ChainX.
+    /// No dusty accounts in ChainX.
     pub const ExistentialDeposit: Balance = 0;
     // For weight estimation, we assume that the most locks on an individual account will be 50.
     // This number may need to be adjusted in the future if this assumption no longer holds true.
@@ -532,13 +532,14 @@ impl pallet_sudo::Trait for Runtime {
 }
 
 parameter_types! {
-    pub const LaunchPeriod: BlockNumber = 28 * 24 * 60 * MINUTES;
-    pub const VotingPeriod: BlockNumber = 28 * 24 * 60 * MINUTES;
-    pub const FastTrackVotingPeriod: BlockNumber = 3 * 24 * 60 * MINUTES;
+    pub const LaunchPeriod: BlockNumber = 7 * DAYS;
+    pub const VotingPeriod: BlockNumber = 7 * DAYS;
+    pub const FastTrackVotingPeriod: BlockNumber = 3 * HOURS;
     pub const InstantAllowed: bool = true;
-    pub const MinimumDeposit: Balance = 100 * DOLLARS;
-    pub const EnactmentPeriod: BlockNumber = 30 * 24 * 60 * MINUTES;
-    pub const CooloffPeriod: BlockNumber = 28 * 24 * 60 * MINUTES;
+    // 10 PCX
+    pub const MinimumDeposit: Balance = 1000 * DOLLARS;
+    pub const EnactmentPeriod: BlockNumber = 8 * DAYS;
+    pub const CooloffPeriod: BlockNumber = 7 * DAYS;
     // One cent: $10,000 / MB
     pub const PreimageByteDeposit: Balance = 1 * CENTS;
     pub const MaxVotes: u32 = 100;
@@ -587,7 +588,7 @@ impl pallet_democracy::Trait for Runtime {
 }
 
 parameter_types! {
-    pub const CouncilMotionDuration: BlockNumber = 5 * DAYS;
+    pub const CouncilMotionDuration: BlockNumber = 7 * DAYS;
     pub const CouncilMaxProposals: u32 = 100;
     pub const CouncilMaxMembers: u32 = 100;
 }
@@ -605,10 +606,11 @@ impl pallet_collective::Trait<CouncilCollective> for Runtime {
 }
 
 parameter_types! {
-    pub const CandidacyBond: Balance = 10 * DOLLARS;
+    // 10 PCX
+    pub const CandidacyBond: Balance = 1000 * DOLLARS;
     pub const VotingBond: Balance = 1 * DOLLARS;
     pub const TermDuration: BlockNumber = 7 * DAYS;
-    pub const DesiredMembers: u32 = 13;
+    pub const DesiredMembers: u32 = 11;
     pub const DesiredRunnersUp: u32 = 7;
     pub const ElectionsPhragmenModuleId: LockIdentifier = *b"pcx/phre";
 }
