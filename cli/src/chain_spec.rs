@@ -678,26 +678,13 @@ pub fn mainnet_config() -> Result<ChainSpec, String> {
         ),
     ];
 
-    let assets = genesis_assets();
-    // 1000PCX
-    // TODO: deduct 5000 PCX from legacy team account.
-    let endowed_balance = 100_000 * DOLLARS;
-    let mut endowed = BTreeMap::new();
-    let pcx_id = pcx().0;
-    let endowed_info = initial_authorities
-        .iter()
-        .map(|i| ((i.0).0.clone(), endowed_balance))
-        .collect::<Vec<_>>();
-    endowed.insert(pcx_id, endowed_info);
-
     let constructor = move || {
-        build_genesis(
+        mainnet_genesis(
             &wasm_binary[..],
             initial_authorities.clone(),
             root_key.clone(),
             vesting_key.clone(),
-            assets.clone(),
-            endowed.clone(),
+            genesis_assets(),
             // FIXME update btc mainnet header
             crate::genesis::bitcoin::btc_genesis_params(include_str!(
                 "res/btc_genesis_params_mainnet.json"
@@ -705,6 +692,7 @@ pub fn mainnet_config() -> Result<ChainSpec, String> {
             crate::genesis::bitcoin::staging_testnet_trustees(),
         )
     };
+
     Ok(ChainSpec::from_genesis(
         "ChainX",
         "chainx",
@@ -855,6 +843,146 @@ fn build_genesis(
         xpallet_assets: Some(XAssetsConfig {
             assets_restrictions,
             endowed: assets_endowed,
+        }),
+        xpallet_gateway_common: Some(XGatewayCommonConfig { trustees }),
+        xpallet_gateway_bitcoin: Some(XGatewayBitcoinConfig {
+            genesis_trustees: btc_genesis_trustees,
+            network_id: bitcoin.network,
+            confirmation_number: bitcoin.confirmation_number,
+            genesis_hash: bitcoin.hash(),
+            genesis_info: (bitcoin.header(), bitcoin.height),
+            params_info: BtcParams::new(
+                486604799,            // max_bits
+                2 * 60 * 60,          // block_max_future
+                2 * 7 * 24 * 60 * 60, // target_timespan_seconds
+                10 * 60,              // target_spacing_seconds
+                4,                    // retargeting_factor
+            ), // retargeting_factor
+            btc_withdrawal_fee: 500000,
+            max_withdrawal_count: 100,
+            verifier: BtcTxVerifier::Recover,
+        }),
+        xpallet_mining_staking: Some(XStakingConfig {
+            validators,
+            validator_count: 50,
+            sessions_per_era: 12,
+            vesting_account,
+            glob_dist_ratio: (12, 88), // (Treasury, X-type Asset and Staking) = (12, 88)
+            mining_ratio: (10, 90),    // (Asset Mining, Staking) = (10, 90)
+            minimum_penalty: 2 * DOLLARS,
+            ..Default::default()
+        }),
+        xpallet_mining_asset: Some(XMiningAssetConfig {
+            claim_restrictions: vec![(X_BTC, (10, DAYS * 7))],
+            mining_power_map: vec![(X_BTC, 400)],
+        }),
+        xpallet_dex_spot: Some(XSpotConfig {
+            trading_pairs: vec![(PCX, X_BTC, 9, 2, 100000, true)],
+        }),
+        xpallet_genesis_builder: Some(XGenesisBuilderConfig {
+            params: crate::genesis::genesis_builder_params(),
+        }),
+    }
+}
+
+fn mainnet_genesis(
+    wasm_binary: &[u8],
+    initial_authorities: Vec<AuthorityKeysTuple>,
+    root_key: AccountId,
+    vesting_account: AccountId,
+    assets: Vec<AssetParams>,
+    bitcoin: BtcGenesisParams,
+    trustees: Vec<(Chain, TrusteeInfoConfig, Vec<BtcTrusteeParams>)>,
+) -> GenesisConfig {
+    // 1000 PCX
+    const STAKING_LOCKED: Balance = 100_000 * DOLLARS;
+
+    let (assets, assets_restrictions) = init_assets(assets);
+
+    let initial_authorities_len = initial_authorities.len();
+
+    let tech_comm_members = initial_authorities
+        .iter()
+        .map(|((validator, _), _, _, _, _, _)| validator)
+        .take((initial_authorities_len + 1) / 2)
+        .cloned()
+        .collect::<Vec<_>>();
+
+    // 1000PCX
+    // TODO: deduct 5000 PCX from legacy team account.
+    let balances = initial_authorities
+        .iter()
+        .map(|((validator, _), _, _, _, _, _)| validator)
+        .cloned()
+        .map(|validator| (validator, STAKING_LOCKED))
+        .collect::<Vec<_>>();
+
+    let validators = initial_authorities
+        .clone()
+        .into_iter()
+        .map(|((validator, referral_id), _, _, _, _, _)| (validator, referral_id, STAKING_LOCKED))
+        .collect::<Vec<_>>();
+
+    let btc_genesis_trustees = trustees
+        .iter()
+        .find_map(|(chain, _, trustee_params)| {
+            if *chain == Chain::Bitcoin {
+                Some(
+                    trustee_params
+                        .iter()
+                        .map(|i| (i.0).clone())
+                        .collect::<Vec<_>>(),
+                )
+            } else {
+                None
+            }
+        })
+        .expect("bitcoin trustees generation can not fail; qed");
+
+    GenesisConfig {
+        frame_system: Some(SystemConfig {
+            code: wasm_binary.to_vec(),
+            changes_trie_config: Default::default(),
+        }),
+        pallet_babe: Some(Default::default()),
+        pallet_grandpa: Some(GrandpaConfig {
+            authorities: vec![],
+        }),
+        pallet_collective_Instance1: Some(CouncilConfig::default()),
+        pallet_collective_Instance2: Some(TechnicalCommitteeConfig {
+            members: tech_comm_members,
+            phantom: Default::default(),
+        }),
+        pallet_membership_Instance1: Some(Default::default()),
+        pallet_democracy: Some(DemocracyConfig::default()),
+        pallet_treasury: Some(Default::default()),
+        pallet_elections_phragmen: Some(ElectionsConfig {
+            members: Default::default(),
+        }),
+        pallet_im_online: Some(ImOnlineConfig { keys: vec![] }),
+        pallet_authority_discovery: Some(AuthorityDiscoveryConfig { keys: vec![] }),
+        pallet_session: Some(SessionConfig {
+            keys: initial_authorities
+                .iter()
+                .map(|x| {
+                    (
+                        (x.0).0.clone(),
+                        (x.0).0.clone(),
+                        session_keys(x.2.clone(), x.3.clone(), x.4.clone(), x.5.clone()),
+                    )
+                })
+                .collect::<Vec<_>>(),
+        }),
+        pallet_balances: Some(BalancesConfig { balances }),
+        pallet_indices: Some(IndicesConfig { indices: vec![] }),
+        pallet_sudo: Some(SudoConfig { key: root_key }),
+        xpallet_system: Some(XSystemConfig {
+            network_props: NetworkType::Mainnet,
+        }),
+        xpallet_assets_registrar: Some(XAssetsRegistrarConfig { assets }),
+        xpallet_assets: Some(XAssetsConfig {
+            assets_restrictions,
+            endowed: Default::default(),
         }),
         xpallet_gateway_common: Some(XGatewayCommonConfig { trustees }),
         xpallet_gateway_bitcoin: Some(XGatewayBitcoinConfig {
