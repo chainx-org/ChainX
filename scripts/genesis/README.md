@@ -24,7 +24,7 @@ $ ./btc_genesis_params_gen.py 576576 --network Testnet
 
 ## `generate_keys.sh`
 
-This script can be used for generating the various keys for the multiple genesis validators, e.g., babe, grandpa.
+This script can be used for generating the various keys for the multiple genesis validators, e.g., babe, grandpa. It's useful when you plan to start a brand new chain.
 
 Note: If the output format of command `subkey key inspect-key` changes, this script probably should be updated accordingly, it's only guaranteed to work with the following output of `subkey key inspect-key`:
 
