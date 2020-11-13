@@ -4,15 +4,55 @@ use sp_runtime::DispatchResult;
 use sp_std::{cmp::Ordering, prelude::Vec};
 
 use light_bitcoin::{
-    chain::{OutPoint, Transaction},
+    chain::{OutPoint, Transaction, TransactionOutput},
     keys::{Address, DisplayLayout, Network},
-    script::{Opcode, Script, ScriptAddress},
+    script::{Opcode, Script, ScriptAddress, ScriptType},
 };
 
 use xp_logging::{error, warn};
 use xpallet_support::try_hex;
 
 use crate::{native, Error, Module, Trait};
+
+pub fn extract_output_addr(output: &TransactionOutput, network: Network) -> Option<Address> {
+    let script = Script::new(output.script_pubkey.clone());
+
+    // only support `p2pk`, `p2pkh` and `p2sh` script
+    let script_type = script.script_type();
+    match script_type {
+        ScriptType::PubKey | ScriptType::PubKeyHash | ScriptType::ScriptHash => {
+            let script_addresses = script
+                .extract_destinations()
+                .map_err(|err| {
+                    error!(
+                        "[extract_output_addr] Can't extract destinations of btc script err:{}, type:{:?}, script:{}",
+                        err, script_type, script
+                    );
+                }).unwrap_or_default();
+            // find address in this transaction
+            if script_addresses.len() == 1 {
+                let address = &script_addresses[0];
+                Some(Address {
+                    network,
+                    kind: address.kind,
+                    hash: address.hash,
+                })
+            } else {
+                warn!(
+                    "[extract_output_addr] Can't extract address of btc script, type:{:?}, address:{:?}, script:{}",
+                    script_addresses, script_type, script
+                );
+                None
+            }
+        }
+        _ => None,
+    }
+}
+
+pub fn is_trustee_addr(addr: Address, trustee_pair: (Address, Address)) -> bool {
+    let (hot_addr, cold_addr) = trustee_pair;
+    addr.hash == hot_addr.hash || addr.hash == cold_addr.hash
+}
 
 pub fn parse_output_addr<T: Trait>(script: &Script) -> Option<Address> {
     let network = Module::<T>::network_id();

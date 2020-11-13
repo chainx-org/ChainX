@@ -15,7 +15,7 @@ use sp_std::{fmt::Debug, prelude::*};
 use light_bitcoin::{
     chain::Transaction,
     keys::{Address, Network},
-    primitives::H256,
+    primitives::{hash_rev, H256},
     script::Script,
 };
 
@@ -29,8 +29,8 @@ use xpallet_support::str;
 #[cfg(feature = "std")]
 use self::utils::trick_format_opreturn;
 use self::utils::{
-    addr2vecu8, equal_addr, extract_opreturn_data, inspect_address_from_transaction, is_key,
-    parse_output_addr_with_networkid,
+    addr2vecu8, equal_addr, extract_opreturn_data, extract_output_addr,
+    inspect_address_from_transaction, is_key, is_trustee_addr, parse_output_addr_with_networkid,
 };
 pub use self::validator::validate_transaction;
 use crate::{
@@ -46,9 +46,6 @@ pub fn process_tx<T: Trait>(
     prev: Option<Transaction>,
 ) -> Result<BtcTxState, DispatchError> {
     let meta_type = detect_transaction_type::<T>(&tx, prev.as_ref())?;
-    let state = handle_tx::<T>(tx, meta_type);
-    Ok(state)
-    /*
     let tx_type = meta_type.ref_into();
     let result = match meta_type {
         MetaTxType::<_>::Deposit(deposit_info) => deposit::<T>(tx.hash(), deposit_info),
@@ -58,14 +55,14 @@ pub fn process_tx<T: Trait>(
         MetaTxType::<_>::Irrelevance => BtcTxResult::Failure,
     };
     Ok(BtcTxState { tx_type, result })
-    */
 }
 
-/*
 pub struct BtcTxTypeDetector {
     network: Network,
     min_deposit: u64,
+    // (current hot trustee address, current cold trustee address)
     current_trustee_pair: (Address, Address),
+    // (previous hot trustee address, previous cold trustee address)
     previous_trustee_pair: Option<(Address, Address)>,
 }
 
@@ -88,36 +85,117 @@ impl BtcTxTypeDetector {
         &self,
         tx: &Transaction,
         prev_tx: Option<&Transaction>,
-        extractor: Extractor,
+        extract_account: Extractor,
     ) -> MetaTxType<AccountId>
     where
         AccountId: Debug,
-        Extractor: AccountExtractor<AccountId, ReferralId>,
+        Extractor: Fn(&[u8]) -> Option<(AccountId, Option<ReferralId>)>,
     {
+        // parse input addr
         let input_addr = prev_tx.and_then(|prev_tx| {
-            // parse input addr
             let outpoint = &tx.inputs[0].previous_output;
-            inspect_address_from_transaction(prev_tx, outpoint, network)
+            inspect_address_from_transaction(prev_tx, outpoint, self.network)
         });
 
-        if let Some(input_addr) = input_addr {}
+        // detect X-BTC `Withdrawal`/`HotAndCold`/`TrusteeTransition` transaction
+        if let Some(input_addr) = input_addr {
+            let all_outputs_is_trustee = tx
+                .outputs
+                .iter()
+                .map(|output| extract_output_addr(output, self.network).unwrap_or_default())
+                .all(|addr| is_trustee_addr(addr, self.current_trustee_pair));
 
-        self.detect_deposit_transaction_type(tx, input_addr, extractor)
+            if is_trustee_addr(input_addr, self.current_trustee_pair) {
+                return if all_outputs_is_trustee {
+                    MetaTxType::HotAndCold
+                } else {
+                    MetaTxType::Withdrawal
+                };
+            }
+            if let Some(previous_trustee_pair) = self.previous_trustee_pair {
+                if is_trustee_addr(input_addr, previous_trustee_pair) && all_outputs_is_trustee {
+                    return MetaTxType::TrusteeTransition;
+                }
+            }
+        }
+        // detect X-BTC `Deposit` transaction
+        self.detect_deposit_transaction_type(tx, input_addr, extract_account)
     }
 
+    /// Detect X-BTC `Deposit` transaction
+    /// The outputs of X-BTC `Deposit` transaction must be in the following
+    /// format (ignore the outputs order):
+    /// - 2 outputs (e.g. txid=e3639343ca806fe3bf2513971b79130eef88aa05000ce538c6af199dd8ef3ca7):
+    ///   --> X-BTC hot trustee address (deposit value)
+    ///   --> Null data transaction
+    /// - 3 outputs (e.g. txid=003e7e005b172fe0046fd06a83679fbcdc5e3dd64c8ef9295662a463dea486aa):
+    ///   --> X-BTC hot trustee address (deposit value)
+    ///   --> Change address (don't care)
+    ///   --> Null data transaction
     pub fn detect_deposit_transaction_type<AccountId, Extractor>(
         &self,
         tx: &Transaction,
-        input_addr: Option<&Address>,
-        extractor: Extractor,
+        input_addr: Option<Address>,
+        extract_account: Extractor,
     ) -> MetaTxType<AccountId>
     where
         AccountId: Debug,
-        Extractor: AccountExtractor<AccountId, ReferralId>,
+        Extractor: Fn(&[u8]) -> Option<(AccountId, Option<ReferralId>)>,
     {
+        // The numbers of deposit transaction outputs must be 2 or 3.
+        if tx.outputs.len() != 2 && tx.outputs.len() != 3 {
+            warn!(
+                "[detect_deposit_transaction_type] Receive a deposit tx ({:?}), but outputs len ({}) is not 2 or 3, drop it", 
+                hash_rev(tx.hash()), tx.outputs.len()
+            );
+            return MetaTxType::Irrelevance;
+        }
+
+        // only handle first valid opreturn with account info, other opreturn would be dropped
+        let opreturn_script = tx
+            .outputs
+            .iter()
+            .map(|output| Script::new(output.script_pubkey.clone()))
+            .filter(|script| script.is_null_data_script())
+            .take(1)
+            .next();
+
+        let (hot_addr, _) = self.current_trustee_pair;
+        for output in &tx.outputs {
+            // extract destination address from the script of output.
+            if let Some(dest_addr) = extract_output_addr(output, self.network) {
+                // check if the script address of the output is the hot trustee address
+                // and if deposit value is greater than minimum deposit value.
+                let deposit_value = output.value;
+                if dest_addr.hash == hot_addr.hash {
+                    if deposit_value < self.min_deposit {
+                        warn!(
+                            "[detect_deposit_transaction_type] Receive a deposit tx ({:?}), but deposit value ({:}) is too low, drop it",
+                            hash_rev(tx.hash()), deposit_value,
+                        );
+                        return MetaTxType::Irrelevance;
+                    }
+
+                    let account_info = opreturn_script
+                        .and_then(|script| extract_opreturn_data(&script))
+                        .and_then(|opreturn| extract_account(&opreturn));
+                    native::debug!(
+                        target: xp_logging::RUNTIME_TARGET,
+                        "[detect_deposit_transaction_type] account_info:{:?}, deposit_value:{}",
+                        account_info,
+                        deposit_value,
+                    );
+                    return MetaTxType::Deposit(DepositInfo {
+                        deposit_value,
+                        op_return: account_info,
+                        input_addr,
+                    });
+                }
+            }
+        }
+        MetaTxType::Irrelevance
     }
 }
-*/
 
 fn detect_transaction_type<T: Trait>(
     tx: &Transaction,
@@ -399,19 +477,15 @@ fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> Btc
     };
 
     match account_info {
-        AccountInfo::<_>::Account((accountid, channel_name)) => {
-            T::Channel::update_binding(
-                &<Module<T> as ChainT<_>>::ASSET_ID,
-                &accountid,
-                channel_name,
-            );
+        AccountInfo::<_>::Account((account, referral)) => {
+            T::Channel::update_binding(&<Module<T> as ChainT<_>>::ASSET_ID, &account, referral);
 
-            if deposit_token::<T>(hash, &accountid, deposit_info.deposit_value).is_err() {
+            if deposit_token::<T>(hash, &account, deposit_info.deposit_value).is_err() {
                 return BtcTxResult::Failure;
             }
             info!(
                 "[deposit] Deposit tx ({:?}) success, who:{:?}, balance:{}",
-                hash, accountid, deposit_info.deposit_value
+                hash, account, deposit_info.deposit_value
             );
         }
         AccountInfo::<_>::Address(addr) => {
