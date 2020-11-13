@@ -609,7 +609,7 @@ parameter_types! {
     // 10 PCX
     pub const CandidacyBond: Balance = 1000 * DOLLARS;
     pub const VotingBond: Balance = 1 * DOLLARS;
-    pub const TermDuration: BlockNumber = 7 * DAYS;
+    pub const TermDuration: BlockNumber = 1 * DAYS;
     pub const DesiredMembers: u32 = 11;
     pub const DesiredRunnersUp: u32 = 7;
     pub const ElectionsPhragmenModuleId: LockIdentifier = *b"pcx/phre";
@@ -629,9 +629,9 @@ impl pallet_elections_phragmen::Trait for Runtime {
     type CurrencyToVote = CurrencyToVoteHandler;
     type CandidacyBond = CandidacyBond;
     type VotingBond = VotingBond;
-    type LoserCandidate = ();
-    type BadReport = ();
-    type KickedMember = ();
+    type LoserCandidate = Treasury;
+    type BadReport = Treasury;
+    type KickedMember = Treasury;
     type DesiredMembers = DesiredMembers;
     type DesiredRunnersUp = DesiredRunnersUp;
     type TermDuration = TermDuration;
@@ -674,8 +674,9 @@ impl pallet_membership::Trait<pallet_membership::Instance1> for Runtime {
 
 parameter_types! {
     pub const ProposalBond: Permill = Permill::from_percent(5);
-    pub const ProposalBondMinimum: Balance = 1 * DOLLARS;
-    pub const SpendPeriod: BlockNumber = 1 * DAYS;
+    // 10 PCX
+    pub const ProposalBondMinimum: Balance = 1000 * DOLLARS;
+    pub const SpendPeriod: BlockNumber = 6 * DAYS;
     pub const NoBurn: Permill = Permill::from_percent(0);
     pub const TipCountdown: BlockNumber = 1 * DAYS;
     pub const TipFindersFee: Percent = Percent::from_percent(20);
@@ -1091,8 +1092,6 @@ impl_runtime_apis! {
             _slot_number: sp_consensus_babe::SlotNumber,
             authority_id: sp_consensus_babe::AuthorityId,
         ) -> Option<sp_consensus_babe::OpaqueKeyOwnershipProof> {
-            use codec::Encode;
-
             Historical::prove((sp_consensus_babe::KEY_TYPE, authority_id))
                 .map(|p| p.encode())
                 .map(sp_consensus_babe::OpaqueKeyOwnershipProof::new)
