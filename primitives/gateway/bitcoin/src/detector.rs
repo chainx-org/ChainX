@@ -15,8 +15,7 @@ use light_bitcoin::{
 use crate::{
     types::{DepositInfo, MetaTxType},
     utils::{
-        extract_opreturn_data, extract_output_addr, inspect_address_from_transaction,
-        is_trustee_addr,
+        extract_addr_from_transaction, extract_opreturn_data, extract_output_addr, is_trustee_addr,
     },
 };
 
@@ -57,10 +56,10 @@ impl BtcTxTypeDetector {
         AccountId: Debug,
         Extractor: Fn(&[u8]) -> Option<(AccountId, Option<ReferralId>)>,
     {
-        // parse input addr
+        // extract input addr from the output of previous transaction
         let input_addr = prev_tx.and_then(|prev_tx| {
             let outpoint = &tx.inputs[0].previous_output;
-            inspect_address_from_transaction(prev_tx, outpoint, self.network)
+            extract_addr_from_transaction(prev_tx, outpoint.index as usize, self.network)
         });
 
         // detect X-BTC `Withdrawal`/`HotAndCold`/`TrusteeTransition` transaction

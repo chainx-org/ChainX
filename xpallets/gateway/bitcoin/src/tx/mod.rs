@@ -20,6 +20,7 @@ use light_bitcoin::{
 };
 
 use chainx_primitives::{AssetId, ReferralId};
+use xp_gateway_bitcoin::extract_opreturn_data;
 use xp_gateway_common::AccountExtractor;
 use xp_logging::{debug, error, info, warn};
 use xpallet_assets::ChainT;
@@ -29,7 +30,7 @@ use xpallet_support::str;
 #[cfg(feature = "std")]
 use self::utils::trick_format_opreturn;
 use self::utils::{
-    addr2vecu8, equal_addr, extract_opreturn_data, inspect_address_from_transaction, is_key,
+    addr2vecu8, equal_addr, inspect_address_from_transaction, is_key,
     parse_output_addr_with_networkid,
 };
 pub use self::validator::validate_transaction;

@@ -5,12 +5,24 @@ use sp_std::{cmp::Ordering, prelude::Vec};
 use xp_logging::{error, warn};
 
 use light_bitcoin::{
-    chain::{OutPoint, Transaction, TransactionOutput},
+    chain::{Transaction, TransactionOutput},
     keys::{Address, Network},
     script::{Opcode, Script, ScriptType},
 };
 
-///
+/// Extract address from a transaction output specified by outpoint_index.
+pub fn extract_addr_from_transaction(
+    tx: &Transaction,
+    outpoint_index: usize,
+    network: Network,
+) -> Option<Address> {
+    tx.outputs
+        .get(outpoint_index)
+        .and_then(|output| extract_output_addr(output, network))
+}
+
+/// Extract address from a transaction output script.
+/// only support `p2pk`, `p2pkh` and `p2sh` output script
 pub fn extract_output_addr(output: &TransactionOutput, network: Network) -> Option<Address> {
     let script = Script::new(output.script_pubkey.clone());
 
@@ -46,23 +58,10 @@ pub fn extract_output_addr(output: &TransactionOutput, network: Network) -> Opti
     }
 }
 
-///
+/// Check if the `addr` is hot trustee address or cold trustee address.
 pub fn is_trustee_addr(addr: Address, trustee_pair: (Address, Address)) -> bool {
     let (hot_addr, cold_addr) = trustee_pair;
     addr.hash == hot_addr.hash || addr.hash == cold_addr.hash
-}
-
-/// parse addr from a transaction output, getting addr from prev_tx output
-/// notice, only can parse `p2pk`, `p2pkh`, `p2sh` output,
-/// other type would return None
-pub fn inspect_address_from_transaction(
-    tx: &Transaction,
-    outpoint: &OutPoint,
-    network: Network,
-) -> Option<Address> {
-    tx.outputs
-        .get(outpoint.index as usize)
-        .and_then(|output| extract_output_addr(output, network))
 }
 
 /// Extract the opreturn data from btc null data script.
