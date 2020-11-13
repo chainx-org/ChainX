@@ -4,16 +4,13 @@ use sp_runtime::DispatchResult;
 use sp_std::prelude::Vec;
 
 use light_bitcoin::{
-    chain::{OutPoint, Transaction},
-    keys::{Address, DisplayLayout, Network},
-    script::{Script, ScriptAddress},
+    chain::Transaction,
+    keys::{Address, DisplayLayout},
 };
 
-use xp_logging::{error, warn};
-use xpallet_support::try_hex;
+use crate::{native, Error, Trait};
 
-use crate::{native, Error, Module, Trait};
-
+/*
 pub fn parse_output_addr<T: Trait>(script: &Script) -> Option<Address> {
     let network = Module::<T>::network_id();
     parse_output_addr_with_networkid(script, network)
@@ -79,6 +76,7 @@ pub fn is_key(script: &Script, trustee_address: &Address, network: Network) -> b
 pub fn equal_addr(addr1: &Address, addr2: &Address) -> bool {
     addr1.hash == addr2.hash
 }
+*/
 
 /// Returns Ok if `tx1` and `tx2` are the same transaction.
 pub fn ensure_identical<T: Trait>(tx1: &Transaction, tx2: &Transaction) -> DispatchResult {
@@ -114,6 +112,7 @@ pub fn addr2vecu8(addr: &Address) -> Vec<u8> {
     bs58::encode(&*addr.layout()).into_vec()
 }
 
+/*
 #[cfg(feature = "std")]
 #[inline]
 pub fn trick_format_opreturn(opreturn: &[u8]) -> String {
@@ -124,3 +123,4 @@ pub fn trick_format_opreturn(opreturn: &[u8]) -> String {
         format!("{:?}", opreturn)
     }
 }
+*/

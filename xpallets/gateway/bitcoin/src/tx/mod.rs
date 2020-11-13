@@ -10,46 +10,47 @@ use frame_support::{
     StorageMap, StorageValue,
 };
 use sp_runtime::{traits::Zero, SaturatedConversion};
-use sp_std::{fmt::Debug, prelude::*};
+use sp_std::prelude::*;
 
-use light_bitcoin::{
-    chain::Transaction,
-    keys::{Address, Network},
-    primitives::H256,
-    script::Script,
-};
+use light_bitcoin::{chain::Transaction, keys::Address, primitives::H256};
 
-use chainx_primitives::{AssetId, ReferralId};
-use xp_gateway_bitcoin::extract_opreturn_data;
+use chainx_primitives::AssetId;
+use xp_gateway_bitcoin::{BtcTxTypeDetector, DepositInfo, MetaTxType};
 use xp_gateway_common::AccountExtractor;
 use xp_logging::{debug, error, info, warn};
 use xpallet_assets::ChainT;
 use xpallet_gateway_common::traits::{AddrBinding, ChannelBinding};
 use xpallet_support::str;
 
-#[cfg(feature = "std")]
-use self::utils::trick_format_opreturn;
-use self::utils::{
-    addr2vecu8, equal_addr, inspect_address_from_transaction, is_key,
-    parse_output_addr_with_networkid,
-};
+use self::utils::addr2vecu8;
 pub use self::validator::validate_transaction;
 use crate::{
     trustee::{get_last_trustee_address_pair, get_trustee_address_pair},
-    types::{
-        AccountInfo, BtcAddress, BtcDepositCache, BtcTxResult, BtcTxState, DepositInfo, MetaTxType,
-    },
+    types::{AccountInfo, BtcAddress, BtcDepositCache, BtcTxResult, BtcTxState},
     BalanceOf, Event, Module, PendingDeposits, Trait, WithdrawalProposal,
 };
 
 pub fn process_tx<T: Trait>(
     tx: Transaction,
-    prev: Option<Transaction>,
+    prev_tx: Option<Transaction>,
 ) -> Result<BtcTxState, DispatchError> {
-    let meta_type = detect_transaction_type::<T>(&tx, prev.as_ref())?;
-    let state = handle_tx::<T>(tx, meta_type);
-    Ok(state)
-    /*
+    let network = Module::<T>::network_id();
+    let min_deposit = Module::<T>::btc_min_deposit();
+    let current_trustee_pair = get_trustee_address_pair::<T>()?;
+    let previous_trustee_pair = get_last_trustee_address_pair::<T>().ok();
+
+    let btc_tx_detector = BtcTxTypeDetector::new(
+        network,
+        min_deposit,
+        current_trustee_pair,
+        previous_trustee_pair,
+    );
+    let meta_type = btc_tx_detector.detect_transaction_type::<T::AccountId, _>(
+        &tx,
+        prev_tx.as_ref(),
+        T::AccountExtractor::extract_account,
+    );
+
     let tx_type = meta_type.ref_into();
     let result = match meta_type {
         MetaTxType::<_>::Deposit(deposit_info) => deposit::<T>(tx.hash(), deposit_info),
@@ -59,9 +60,9 @@ pub fn process_tx<T: Trait>(
         MetaTxType::<_>::Irrelevance => BtcTxResult::Failure,
     };
     Ok(BtcTxState { tx_type, result })
-    */
 }
 
+/*
 fn detect_transaction_type<T: Trait>(
     tx: &Transaction,
     prev: Option<&Transaction>,
@@ -298,6 +299,7 @@ pub(crate) fn handle_tx<T: Trait>(
     };
     BtcTxState { result, tx_type }
 }
+*/
 
 fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> BtcTxResult {
     if deposit_info.op_return.is_none() && deposit_info.input_addr.is_none() {

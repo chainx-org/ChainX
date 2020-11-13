@@ -132,6 +132,37 @@ impl BtcTxTypeDetector {
             return MetaTxType::Irrelevance;
         }
 
+        let (op_return, deposit_value) =
+            self.parse_deposit_transaction_outputs(tx, extract_account);
+        // check if deposit value is greater than minimum deposit value.
+        if deposit_value >= self.min_deposit {
+            // if opreturn.is_none() && input_addr.is_none()
+            // we still think it's a deposit tx, but won't process it.
+            MetaTxType::Deposit(DepositInfo {
+                deposit_value,
+                op_return,
+                input_addr,
+            })
+        } else {
+            warn!(
+                "[detect_deposit_transaction_type] Receive a deposit tx ({:?}), but deposit value ({:}) is too low, drop it",
+                hash_rev(tx.hash()), deposit_value,
+            );
+            MetaTxType::Irrelevance
+        }
+    }
+
+    /// Parse the outputs of X-BTC `Deposit` transaction.
+    /// Return the account info that extracted from OP_RETURN data and the deposit value.
+    pub fn parse_deposit_transaction_outputs<AccountId, Extractor>(
+        &self,
+        tx: &Transaction,
+        extract_account: Extractor,
+    ) -> (Option<(AccountId, Option<ReferralId>)>, u64)
+    where
+        AccountId: Debug,
+        Extractor: Fn(&[u8]) -> Option<(AccountId, Option<ReferralId>)>,
+    {
         // only handle first valid opreturn with account info, other opreturn would be dropped
         let opreturn_script = tx
             .outputs
@@ -140,38 +171,30 @@ impl BtcTxTypeDetector {
             .filter(|script| script.is_null_data_script())
             .take(1)
             .next();
+        debug!(
+            "[parse_deposit_transaction_outputs] opreturn_script:{:?}",
+            opreturn_script
+        );
+
+        let account_info = opreturn_script
+            .and_then(|script| extract_opreturn_data(&script))
+            .and_then(|opreturn| extract_account(&opreturn));
+        let mut deposit_value = 0;
 
         let (hot_addr, _) = self.current_trustee_pair;
         for output in &tx.outputs {
             // extract destination address from the script of output.
             if let Some(dest_addr) = extract_output_addr(output, self.network) {
                 // check if the script address of the output is the hot trustee address
-                // and if deposit value is greater than minimum deposit value.
-                let deposit_value = output.value;
                 if dest_addr.hash == hot_addr.hash {
-                    if deposit_value < self.min_deposit {
-                        warn!(
-                            "[detect_deposit_transaction_type] Receive a deposit tx ({:?}), but deposit value ({:}) is too low, drop it",
-                            hash_rev(tx.hash()), deposit_value,
-                        );
-                        return MetaTxType::Irrelevance;
-                    }
-
-                    let account_info = opreturn_script
-                        .and_then(|script| extract_opreturn_data(&script))
-                        .and_then(|opreturn| extract_account(&opreturn));
-                    debug!(
-                        "[detect_deposit_transaction_type] account_info:{:?}, deposit_value:{}",
-                        account_info, deposit_value,
-                    );
-                    return MetaTxType::Deposit(DepositInfo {
-                        deposit_value,
-                        op_return: account_info,
-                        input_addr,
-                    });
+                    deposit_value += output.value;
                 }
             }
         }
-        MetaTxType::Irrelevance
+        debug!(
+            "[parse_deposit_transaction_outputs] account_info:{:?}, deposit_value:{}",
+            account_info, deposit_value
+        );
+        (account_info, deposit_value)
     }
 }

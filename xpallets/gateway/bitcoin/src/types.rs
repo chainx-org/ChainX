@@ -15,6 +15,7 @@ use light_bitcoin::{
 };
 
 use chainx_primitives::ReferralId;
+use xp_gateway_bitcoin::BtcTxType;
 
 /// BtcAddress is an bitcoin address encoded in base58
 /// like: "1Nekoo5VTe7yQQ8WFqrva2UbdyRMVYCP1t" or "3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy"
@@ -57,55 +58,10 @@ pub struct BtcHeaderIndex {
     pub height: u32,
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub enum BtcTxType {
-    Withdrawal,
-    Deposit,
-    HotAndCold,
-    TrusteeTransition,
-    Irrelevance,
-}
-
-impl Default for BtcTxType {
-    fn default() -> Self {
-        BtcTxType::Irrelevance
-    }
-}
-
-pub enum AccountInfo<AccountId> {
-    /// A value of type `L`.
-    Account((AccountId, Option<ReferralId>)),
-    /// A value of type `R`.
-    Address(Address),
-}
-
-#[derive(PartialEq, Eq, Clone, RuntimeDebug)]
-pub struct DepositInfo<AccountId> {
-    pub deposit_value: u64,
-    pub op_return: Option<(AccountId, Option<ReferralId>)>,
-    pub input_addr: Option<Address>,
-}
-
-#[derive(PartialEq, Eq, Clone, RuntimeDebug)]
-pub enum MetaTxType<AccountId> {
-    Withdrawal,
-    Deposit(DepositInfo<AccountId>),
-    HotAndCold,
-    TrusteeTransition,
-    Irrelevance,
-}
-
-impl<AccountId> MetaTxType<AccountId> {
-    pub fn ref_into(&self) -> BtcTxType {
-        match self {
-            Self::Withdrawal => BtcTxType::Withdrawal,
-            Self::Deposit(_) => BtcTxType::Deposit,
-            Self::HotAndCold => BtcTxType::HotAndCold,
-            Self::TrusteeTransition => BtcTxType::TrusteeTransition,
-            Self::Irrelevance => BtcTxType::Irrelevance,
-        }
-    }
+#[derive(PartialEq, Clone, Copy, Eq, Encode, Decode, RuntimeDebug)]
+pub struct BtcTxState {
+    pub tx_type: BtcTxType,
+    pub result: BtcTxResult,
 }
 
 #[derive(PartialEq, Clone, Copy, Eq, Encode, Decode, RuntimeDebug)]
@@ -114,10 +70,11 @@ pub enum BtcTxResult {
     Failure,
 }
 
-#[derive(PartialEq, Clone, Copy, Eq, Encode, Decode, RuntimeDebug)]
-pub struct BtcTxState {
-    pub tx_type: BtcTxType,
-    pub result: BtcTxResult,
+pub enum AccountInfo<AccountId> {
+    /// A value of type `L`.
+    Account((AccountId, Option<ReferralId>)),
+    /// A value of type `R`.
+    Address(Address),
 }
 
 #[derive(PartialEq, Clone, Encode, Decode, Default, RuntimeDebug)]
