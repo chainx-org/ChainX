@@ -751,12 +751,16 @@ fn build_genesis(
 
     let num_endowed_accounts = endowed_accounts.len();
 
+    let mut total_endowed = Balance::default();
     let balances = endowed
         .get(&PCX)
         .expect("PCX endowed; qed")
         .iter()
         .cloned()
-        .map(|(k, _)| (k, ENDOWMENT))
+        .map(|(k, _)| {
+            total_endowed += ENDOWMENT;
+            (k, ENDOWMENT)
+        })
         .collect::<Vec<_>>();
 
     // The value of STASH balance will be reserved per phragmen member.
@@ -881,6 +885,7 @@ fn build_genesis(
         }),
         xpallet_genesis_builder: Some(XGenesisBuilderConfig {
             params: crate::genesis::genesis_builder_params(),
+            total_endowed,
         }),
     }
 }
@@ -908,14 +913,14 @@ fn mainnet_genesis(
         .cloned()
         .collect::<Vec<_>>();
 
-    // 1000PCX
-    // TODO: deduct 5000 PCX from legacy team account.
     let balances = initial_authorities
         .iter()
         .map(|((validator, _), _, _, _, _, _)| validator)
         .cloned()
         .map(|validator| (validator, STAKING_LOCKED))
         .collect::<Vec<_>>();
+
+    let total_endowed = initial_authorities_len as Balance * STAKING_LOCKED;
 
     let validators = initial_authorities
         .clone()
@@ -1021,6 +1026,7 @@ fn mainnet_genesis(
         }),
         xpallet_genesis_builder: Some(XGenesisBuilderConfig {
             params: crate::genesis::genesis_builder_params(),
+            total_endowed,
         }),
     }
 }
