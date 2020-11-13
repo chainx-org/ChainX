@@ -12,7 +12,11 @@ use frame_support::{
 use sp_runtime::{traits::Zero, SaturatedConversion};
 use sp_std::prelude::*;
 
-use light_bitcoin::{chain::Transaction, keys::Address, primitives::H256};
+use light_bitcoin::{
+    chain::Transaction,
+    keys::Address,
+    primitives::{hash_rev, H256},
+};
 
 use chainx_primitives::AssetId;
 use xp_gateway_bitcoin::{BtcTxTypeDetector, DepositInfo, MetaTxType};
@@ -301,80 +305,78 @@ pub(crate) fn handle_tx<T: Trait>(
 }
 */
 
-fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> BtcTxResult {
-    if deposit_info.op_return.is_none() && deposit_info.input_addr.is_none() {
-        warn!("[deposit] Process a deposit tx ({:?}) but do not have valid opreturn & not have input addr", hash);
-        return BtcTxResult::Failure;
-    }
-
-    let account_info = match deposit_info.op_return {
-        Some((account, referral)) => {
-            if let Some(addr) = deposit_info.input_addr {
-                let addr = addr2vecu8(&addr);
-                // remove old unbinding deposit info
-                remove_pending_deposit::<T>(&addr, &account);
-                // update or override binding info
-                T::AddrBinding::update_binding(Module::<T>::chain(), addr, account.clone());
-            } else {
-                // no input addr
-                debug!(
-                    "[deposit] Deposit tx ({:?}) has no input addr, but has opreturn, who:{:?}",
-                    hash, account
-                );
-            }
+fn deposit<T: Trait>(txid: H256, deposit_info: DepositInfo<T::AccountId>) -> BtcTxResult {
+    let account_info = match (deposit_info.op_return, deposit_info.input_addr) {
+        (Some((account, referral)), Some(input_addr)) => {
+            let input_addr = addr2vecu8(&input_addr);
+            // remove old unbinding deposit info
+            remove_pending_deposit::<T>(&input_addr, &account);
+            // update or override binding info
+            T::AddrBinding::update_binding(Module::<T>::chain(), input_addr, account.clone());
             AccountInfo::<T::AccountId>::Account((account, referral))
         }
-        None => {
-            if let Some(addr) = deposit_info.input_addr {
-                // no opreturn, use addr to get accountid
-                let addr_bytes = addr2vecu8(&addr);
-                match T::AddrBinding::get_binding(Module::<T>::chain(), addr_bytes) {
-                    Some(account) => AccountInfo::Account((account, None)),
-                    None => AccountInfo::Address(addr),
-                }
-            } else {
-                // should not meet this branch, due it's handled before, it's unreachable
-                error!(
-                    "[deposit] The deposit tx ({:?}) has no input addr and no opreturn",
-                    hash
-                );
-                return BtcTxResult::Failure;
+        (Some((account, referral)), None) => {
+            // has opreturn but no input addr
+            debug!(
+                "[deposit] Deposit tx ({:?}) has no input addr, but has opreturn, who:{:?}",
+                hash_rev(txid),
+                account
+            );
+            AccountInfo::<T::AccountId>::Account((account, referral))
+        }
+        (None, Some(input_addr)) => {
+            // no opreturn but have input addr, use input addr to get accountid
+            let addr_bytes = addr2vecu8(&input_addr);
+            match T::AddrBinding::get_binding(Module::<T>::chain(), addr_bytes) {
+                Some(account) => AccountInfo::Account((account, None)),
+                None => AccountInfo::Address(input_addr),
             }
+        }
+        (None, None) => {
+            warn!(
+                "[deposit] Process deposit tx ({:?}) but missing valid opreturn and input addr",
+                hash_rev(txid)
+            );
+            return BtcTxResult::Failure;
         }
     };
 
     match account_info {
         AccountInfo::<_>::Account((account, referral)) => {
             T::Channel::update_binding(&<Module<T> as ChainT<_>>::ASSET_ID, &account, referral);
-
-            if deposit_token::<T>(hash, &account, deposit_info.deposit_value).is_err() {
-                return BtcTxResult::Failure;
+            match deposit_token::<T>(txid, &account, deposit_info.deposit_value) {
+                Ok(_) => {
+                    info!(
+                        "[deposit] Deposit tx ({:?}) success, who:{:?}, balance:{}",
+                        hash_rev(txid),
+                        account,
+                        deposit_info.deposit_value
+                    );
+                    BtcTxResult::Success
+                }
+                Err(_) => BtcTxResult::Failure,
             }
-            info!(
-                "[deposit] Deposit tx ({:?}) success, who:{:?}, balance:{}",
-                hash, account, deposit_info.deposit_value
-            );
         }
-        AccountInfo::<_>::Address(addr) => {
-            insert_pending_deposit::<T>(&addr, &hash, deposit_info.deposit_value);
+        AccountInfo::<_>::Address(input_addr) => {
+            insert_pending_deposit::<T>(&input_addr, txid, deposit_info.deposit_value);
             info!(
                 "[deposit] Deposit tx ({:?}) into pending, addr:{:?}, balance:{}",
-                hash,
-                str!(addr2vecu8(&addr)),
+                hash_rev(txid),
+                str!(addr2vecu8(&input_addr)),
                 deposit_info.deposit_value
             );
+            BtcTxResult::Success
         }
-    };
-    BtcTxResult::Success
+    }
 }
 
-fn deposit_token<T: Trait>(tx_hash: H256, who: &T::AccountId, balance: u64) -> DispatchResult {
+fn deposit_token<T: Trait>(txid: H256, who: &T::AccountId, balance: u64) -> DispatchResult {
     let id: AssetId = <Module<T> as ChainT<_>>::ASSET_ID;
 
     let value: BalanceOf<T> = balance.saturated_into();
     match <xpallet_gateway_records::Module<T>>::deposit(&who, id, value) {
         Ok(()) => {
-            Module::<T>::deposit_event(Event::<T>::Deposited(tx_hash, who.clone(), value));
+            Module::<T>::deposit_event(Event::<T>::Deposited(txid, who.clone(), value));
             Ok(())
         }
         Err(err) => {
@@ -420,30 +422,27 @@ fn update_binding<T: Trait>(address: &Address, who: &T::AccountId) {
 pub fn remove_pending_deposit<T: Trait>(input_address: &BtcAddress, who: &T::AccountId) {
     // notice this would delete this cache
     let records = PendingDeposits::take(input_address);
-    for r in records {
+    for record in records {
         // ignore error
-        let _ = deposit_token::<T>(r.txid, who, r.balance);
+        let _ = deposit_token::<T>(record.txid, who, record.balance);
         info!(
             "[remove_pending_deposit] Use pending info to re-deposit, who:{:?}, balance:{}, cached_tx:{:?}",
-            who, r.balance, r.txid,
+            who, record.balance, record.txid,
         );
 
         Module::<T>::deposit_event(Event::<T>::PendingDepositRemoved(
             who.clone(),
-            r.balance.saturated_into(),
-            r.txid,
+            record.balance.saturated_into(),
+            record.txid,
             input_address.clone(),
         ));
     }
 }
 
-fn insert_pending_deposit<T: Trait>(input_address: &Address, txid: &H256, balance: u64) {
+fn insert_pending_deposit<T: Trait>(input_address: &Address, txid: H256, balance: u64) {
     let addr_bytes = addr2vecu8(input_address);
 
-    let cache = BtcDepositCache {
-        txid: *txid,
-        balance,
-    };
+    let cache = BtcDepositCache { txid, balance };
 
     PendingDeposits::mutate(&addr_bytes, |list| {
         if !list.contains(&cache) {
@@ -456,7 +455,7 @@ fn insert_pending_deposit<T: Trait>(input_address: &Address, txid: &H256, balanc
             );
             list.push(cache);
 
-            Module::<T>::deposit_event(Event::<T>::UnclaimedDeposit(*txid, addr_bytes.clone()));
+            Module::<T>::deposit_event(Event::<T>::UnclaimedDeposit(txid, addr_bytes.clone()));
         }
     });
 }
