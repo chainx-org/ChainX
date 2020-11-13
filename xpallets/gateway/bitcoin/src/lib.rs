@@ -6,7 +6,6 @@
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
 mod benchmarking;
-mod extractor;
 mod header;
 mod tests;
 mod trustee;
@@ -50,10 +49,7 @@ use xpallet_gateway_common::{
 };
 use xpallet_support::{str, try_addr};
 
-pub use self::{
-    extractor::OpReturnExtractor,
-    types::{BtcAddress, BtcParams, BtcTxVerifier, BtcWithdrawalProposal},
-};
+pub use self::types::{BtcAddress, BtcParams, BtcTxVerifier, BtcWithdrawalProposal};
 use self::{
     trustee::get_trustee_address_pair,
     tx::remove_pending_deposit,

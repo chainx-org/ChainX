@@ -18,6 +18,7 @@ members = [
     "primitives",
     "primitives/assets-registrar",
     "primitives/gateway/common",
+    "primitives/gateway/bitcoin",
     "primitives/genesis-builder",
     "primitives/io",
     "primitives/logging",
