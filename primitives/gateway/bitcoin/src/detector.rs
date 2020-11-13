@@ -19,9 +19,11 @@ use crate::{
     },
 };
 
-///
+/// A helper struct for detecting the bitcoin transaction type.
 pub struct BtcTxTypeDetector {
+    // The bitcoin network type (mainnet/testnet)
     network: Network,
+    // The minimum deposit value of the `Deposit` transaction.
     min_deposit: u64,
     // (current hot trustee address, current cold trustee address)
     current_trustee_pair: (Address, Address),
@@ -30,7 +32,7 @@ pub struct BtcTxTypeDetector {
 }
 
 impl BtcTxTypeDetector {
-    ///
+    /// Create a new bitcoin tx type detector.
     pub fn new(
         network: Network,
         min_deposit: u64,
@@ -45,7 +47,21 @@ impl BtcTxTypeDetector {
         }
     }
 
+    /// Detect X-BTC transaction type.
     ///
+    /// We would try to detect `Withdrawal`/`TrusteeTransition`/`HotAndCold` transaction types
+    /// when passing `Some(prev_tx)`, otherwise, we would just detect `Deposit` type.
+    ///
+    /// If the transaction type is `Deposit`, and parsing opreturn successfully,
+    /// we would use opreturn data as account info, otherwise, we would use input_addr, which is
+    /// extracted from `prev_tx`, as the account.
+    ///
+    /// If we meet with `prev_tx`, we would parse tx's inputs/outputs into Option<Address>.
+    /// e.g. notice the relay tx only has the first input
+    ///        _________
+    ///  addr |        | Some(addr)
+    ///       |   tx   | Some(addr)
+    ///       |________| None (OP_RETURN or something unknown)
     pub fn detect_transaction_type<AccountId, Extractor>(
         &self,
         tx: &Transaction,
