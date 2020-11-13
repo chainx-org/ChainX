@@ -55,32 +55,37 @@ generate_aux_key() {
   print_aux_key  "$scheme" "$uri"
 }
 
-for id in 1 2 3 4 5; do
-  echo "SECRET//validator//$id:"
-  echo "SECRET//blockauthor/$id, SECRET//babe//$id, SECRET//grandpa//$id, SECRET//im_online//$id, SECRET//authority_discovery//$id"
-  echo
+main() {
+  # Generate 5 pairs of genesis keys given the root secret
+  for id in 1 2 3 4 5; do
+    echo "SECRET//validator//$id:"
+    echo "SECRET//blockauthor/$id, SECRET//babe//$id, SECRET//grandpa//$id, SECRET//im_online//$id, SECRET//authority_discovery//$id"
+    echo
 
-  echo "            ("
-  print_validator_address "$SECRET//validator//$id"
-  print_validator_id      "$SECRET//validator//$id"
+    echo "            ("
+    print_validator_address "$SECRET//validator//$id"
+    print_validator_id      "$SECRET//validator//$id"
 
-  referral_id="Validator$id"
-  echo "                b\""$referral_id"\".to_vec(),"
-  echo "            ),"
+    referral_id="Validator$id"
+    echo "                b\""$referral_id"\".to_vec(),"
+    echo "            ),"
 
-  print_address      sr25519 "$SECRET//blockauthor//$id"
-  print_account_key          "$SECRET//blockauthor//$id"
+    print_address      sr25519 "$SECRET//blockauthor//$id"
+    print_account_key          "$SECRET//blockauthor//$id"
 
-  generate_aux_key babe sr25519 "$DIR/$id" "$SECRET//babe//$id"
-  # Grandpa must use ed25519.
-  generate_aux_key gran ed25519 "$DIR/$id" "$SECRET//grandpa//$id"
-  generate_aux_key imon sr25519 "$DIR/$id" "$SECRET//im_online//$id"
-  generate_aux_key audi sr25519 "$DIR/$id" "$SECRET//authority_discovery//$id"
+    generate_aux_key babe sr25519 "$DIR/$id" "$SECRET//babe//$id"
+    # Grandpa must use ed25519.
+    generate_aux_key gran ed25519 "$DIR/$id" "$SECRET//grandpa//$id"
+    generate_aux_key imon sr25519 "$DIR/$id" "$SECRET//im_online//$id"
+    generate_aux_key audi sr25519 "$DIR/$id" "$SECRET//authority_discovery//$id"
 
-  echo
-done
+    echo
+  done
 
-echo 'Root:'
-print_address     sr25519 "$SECRET"
-print_account_key         "$SECRET"
-echo "The generated keys are in directory $DIR"
+  echo 'Root:'
+  print_address     sr25519 "$SECRET"
+  print_account_key         "$SECRET"
+  echo "The generated keys are in directory $DIR"
+}
+
+main
