@@ -559,8 +559,12 @@ pub fn testnet_config() -> Result<ChainSpec, String> {
 pub fn mainnet_config() -> Result<ChainSpec, String> {
     let wasm_binary = WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
 
-    // 5E9upTw5KfKuVa9nA5E9sfiC3S6pToZmm5NKkdWnfaArA1zD
+    // 5HNeqQYeyqcaBTHHjSbFnEvhCeg6jKcRrV2zeHgXQhvjK8XY
     let root_key: AccountId =
+        hex!["eadd6992f5b27027c9424be83d460fcd71550aa8ba3c322ff25548565ca6395d"].into();
+
+    // 5E9upTw5KfKuVa9nA5E9sfiC3S6pToZmm5NKkdWnfaArA1zD
+    let vesting_key: AccountId =
         hex!["5c70f62d9ac4bc0a314100d5d3b74d127dbcf8628329ffa799361ae69e104768"].into();
 
     // export SECRET="YOUR SECRET"
@@ -691,7 +695,7 @@ pub fn mainnet_config() -> Result<ChainSpec, String> {
             &wasm_binary[..],
             initial_authorities.clone(),
             root_key.clone(),
-            root_key.clone(), // use root key as vesting_account
+            vesting_key.clone(),
             assets.clone(),
             endowed.clone(),
             // FIXME update btc mainnet header
