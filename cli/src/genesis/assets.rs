@@ -55,7 +55,7 @@ pub(crate) fn xbtc() -> (AssetId, AssetInfo, AssetRestrictions) {
 }
 
 // asset_id, asset_info, asset_restrictions, is_online, has_mining_rights
-pub(crate) fn testnet_assets() -> Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)> {
+pub(crate) fn genesis_assets() -> Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)> {
     let pcx = pcx();
     let btc = xbtc();
     let assets = vec![

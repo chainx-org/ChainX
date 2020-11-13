@@ -33,7 +33,7 @@ use chainx_runtime::{
     XSpotConfig, XStakingConfig, XSystemConfig,
 };
 
-use crate::genesis::assets::{init_assets, pcx, testnet_assets, AssetParams};
+use crate::genesis::assets::{genesis_assets, init_assets, pcx, AssetParams};
 use crate::genesis::bitcoin::{BtcGenesisParams, BtcTrusteeParams};
 
 // Note this is the URL for the telemetry server
@@ -148,7 +148,7 @@ pub fn development_config() -> Result<ChainSpec, String> {
             vec![authority_keys_from_seed("Alice")],
             get_account_id_from_seed::<sr25519::Public>("Alice"),
             get_account_id_from_seed::<sr25519::Public>("vesting"),
-            testnet_assets(),
+            genesis_assets(),
             endowed_gen![
                 ("Alice", endowed_balance),
                 ("Bob", endowed_balance),
@@ -185,7 +185,7 @@ pub fn benchmarks_config() -> Result<ChainSpec, String> {
             vec![authority_keys_from_seed("Alice")],
             get_account_id_from_seed::<sr25519::Public>("Alice"),
             get_account_id_from_seed::<sr25519::Public>("vesting"),
-            testnet_assets(),
+            genesis_assets(),
             endowed_gen![
                 ("Alice", endowed_balance),
                 ("Bob", endowed_balance),
@@ -225,7 +225,7 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
             ],
             get_account_id_from_seed::<sr25519::Public>("Alice"),
             get_account_id_from_seed::<sr25519::Public>("vesting"),
-            testnet_assets(),
+            genesis_assets(),
             endowed_gen![
                 ("Alice", endowed_balance),
                 ("Bob", endowed_balance),
@@ -364,7 +364,7 @@ pub fn staging_testnet_config() -> Result<ChainSpec, String> {
         ),
     ];
 
-    let assets = testnet_assets();
+    let assets = genesis_assets();
     let endowed_balance = 50 * DOLLARS;
     let mut endowed = BTreeMap::new();
     let pcx_id = pcx().0;
@@ -509,7 +509,7 @@ pub fn testnet_config() -> Result<ChainSpec, String> {
         ),
     ];
 
-    let assets = testnet_assets();
+    let assets = genesis_assets();
     let endowed_balance = 50 * DOLLARS;
     let mut endowed = BTreeMap::new();
     let pcx_id = pcx().0;
@@ -559,10 +559,9 @@ pub fn testnet_config() -> Result<ChainSpec, String> {
 pub fn mainnet_config() -> Result<ChainSpec, String> {
     let wasm_binary = WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
 
-    // subkey inspect-key --uri "$SECRET"
-    // 5HNeqQYeyqcaBTHHjSbFnEvhCeg6jKcRrV2zeHgXQhvjK8XY
+    // 5E9upTw5KfKuVa9nA5E9sfiC3S6pToZmm5NKkdWnfaArA1zD
     let root_key: AccountId =
-        hex!["eadd6992f5b27027c9424be83d460fcd71550aa8ba3c322ff25548565ca6395d"].into();
+        hex!["5c70f62d9ac4bc0a314100d5d3b74d127dbcf8628329ffa799361ae69e104768"].into();
 
     // export SECRET="YOUR SECRET"
     // cd scripts/genesis/generate_keys.sh && bash generate_keys.sh
@@ -675,7 +674,7 @@ pub fn mainnet_config() -> Result<ChainSpec, String> {
         ),
     ];
 
-    let assets = testnet_assets();
+    let assets = genesis_assets();
     // 1000PCX
     // TODO: deduct 5000 PCX from legacy team account.
     let endowed_balance = 100_000 * DOLLARS;
