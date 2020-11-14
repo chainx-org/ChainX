@@ -1,9 +1,10 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
+/*
 use super::common::*;
 use crate::tx::parse_deposit_outputs_impl;
 
-use sp_std::str::FromStr;
+use xp_gateway_bitcoin::BtcTxTypeDetector;
 
 #[test]
 fn test_opreturn() {
@@ -78,10 +79,9 @@ fn test_opreturn() {
             r,
             (
                 Some((
-                    AccountId::from_str(
-                        "e101b125be8161a1198d29e719424a126ce448d2da0459ff621688d56278a21e"
-                    )
-                    .expect(""),
+                    "e101b125be8161a1198d29e719424a126ce448d2da0459ff621688d56278a21e"
+                        .parse::<AccountId>()
+                        .unwrap(),
                     None
                 )),
                 30000
@@ -93,10 +93,9 @@ fn test_opreturn() {
             r,
             (
                 Some((
-                    AccountId::from_str(
-                        "265c210541e4fe09e174486d2a7584073b275ce8eab2c48babf881d6b857215e"
-                    )
-                    .expect(""),
+                    "265c210541e4fe09e174486d2a7584073b275ce8eab2c48babf881d6b857215e"
+                        .parse::<AccountId>()
+                        .unwrap(),
                     Some("Axonomy".as_bytes().to_vec())
                 )),
                 950000000
@@ -108,10 +107,9 @@ fn test_opreturn() {
             r,
             (
                 Some((
-                    AccountId::from_str(
-                        "bbd52f388a42abde1d597f0436c3e5f539d7f54c61a86d75968c1c1d50759c45"
-                    )
-                    .expect(""),
+                    "bbd52f388a42abde1d597f0436c3e5f539d7f54c61a86d75968c1c1d50759c45"
+                        .parse::<AccountId>()
+                        .unwrap(),
                     Some("MathWallet".as_bytes().to_vec())
                 )),
                 11000
@@ -123,10 +121,9 @@ fn test_opreturn() {
             r,
             (
                 Some((
-                    AccountId::from_str(
-                        "2347cf540209771b27b22ab0b592e2b25c13ddac03b4ce836370a8ab8aa0eaae"
-                    )
-                    .expect(""),
+                    "2347cf540209771b27b22ab0b592e2b25c13ddac03b4ce836370a8ab8aa0eaae"
+                        .parse::<AccountId>()
+                        .unwrap(),
                     None
                 )),
                 10000,
@@ -138,10 +135,9 @@ fn test_opreturn() {
             r,
             (
                 Some((
-                    AccountId::from_str(
-                        "bbd52f388a42abde1d597f0436c3e5f539d7f54c61a86d75968c1c1d50759c45"
-                    )
-                    .expect(""),
+                    "bbd52f388a42abde1d597f0436c3e5f539d7f54c61a86d75968c1c1d50759c45"
+                        .parse::<AccountId>()
+                        .unwrap(),
                     Some("MathWallet".as_bytes().to_vec())
                 )),
                 900000,
@@ -153,10 +149,9 @@ fn test_opreturn() {
             r,
             (
                 Some((
-                    AccountId::from_str(
-                        "2347cf540209771b27b22ab0b592e2b25c13ddac03b4ce836370a8ab8aa0eaae"
-                    )
-                    .expect(""),
+                    "2347cf540209771b27b22ab0b592e2b25c13ddac03b4ce836370a8ab8aa0eaae"
+                        .parse::<AccountId>()
+                        .unwrap(),
                     None
                 )),
                 900000,
@@ -164,3 +159,4 @@ fn test_opreturn() {
         );
     });
 }
+*/

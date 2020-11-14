@@ -4,13 +4,13 @@
 
 use codec::{Decode, Encode};
 
+use xp_gateway_bitcoin::MetaTxType;
+
 use light_bitcoin::{merkle::PartialMerkleTree, serialization};
 
 use super::common::*;
-use crate::{
-    tx::detect_transaction_type_impl,
-    types::{MetaTxType, VoteResult},
-};
+use crate::types::VoteResult;
+// use crate::{tx::detect_transaction_type_impl, types::VoteResult};
 
 const DEPOSIT_HOT_ADDR: &'static str = "3LFSUKkP26hun42J1Dy6RATsbgmBJb27NF";
 const DEPOSIT_COLD_ADDR: &'static str = "3FLBhPfEqmw4Wn5EQMeUzPLrQtJMprgwnw";
@@ -63,6 +63,7 @@ lazy_static::lazy_static! {
     static ref normal_deposit: Transaction = "0200000003a50c032806a643a0ad85803ff77e0ecb58baf327bcc91e269945402c551fada5000000006a473044022031d06016a6e996a07ca1881c70fc328b4ca075d80f5284378c11c9fc018112c00220480b8371bf9967da2af205dacc7ee4ff880b1bebd6c8a77f3cd24bae425c672f01210223222d4d30dce7a7842b4d38e467eb93680f610a5156d8ef18918682a1010396000000003fd0c0f65304982c8ff0ce9a38bcdffc8afdf8e76f1ff518a0db3fa943992f94590000006a473044022012e3920b2e2a45f6c28667f5854f894077b140a8267c6da0069fcf9c541e4db60220382e1f09267ba2f3d2d2a7bf77daf8b9bdacc6693b760d477657cd0b64bdf7c801210223222d4d30dce7a7842b4d38e467eb93680f610a5156d8ef18918682a1010396000000009d61e22d5434504c247ffb5be5a744a513b1cf274da8be492e401495b2aaafd0180000006b48304502210097491bd7c5aad0fca30b022b3d7bbae50dcd3658dddd4dd9ab6da6217863c7f902205e8ef79cf2f8620398de9812f5d5a5cb04e96f674a9f1af9e872b82623de802d01210223222d4d30dce7a7842b4d38e467eb93680f610a5156d8ef18918682a101039600000000032077fc020000000017a914cb94110435d0635223eebe25ed2aaabc03781c45871a7c0000000000001976a91427f82ed8de307712c1f5fbbb3a52a96163449c3d88ac00000000000000003d6a3b355555716e46544e52596d656b6d5a4e5375335041695050476b737635746169373752625a366173365468773837704a40436861696e5846616e7300000000".parse().unwrap();
 }
 
+/*
 fn mock_detect_transaction_type<T: Trait>(
     tx: &Transaction,
     prev: Option<&Transaction>,
@@ -281,6 +282,7 @@ fn test_process_tx() {
         assert_eq!(r.result, BtcTxResult::Success);
     })
 }
+*/
 
 #[test]
 fn test_push_tx_call() {

@@ -8796,7 +8796,7 @@ dependencies = [
 
 [[package]]
 name = "xp-gateway-bitcoin"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "chainx-primitives",
  "frame-support",
@@ -8813,7 +8813,7 @@ dependencies = [
 
 [[package]]
 name = "xp-gateway-common"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "bs58",
  "frame-support",
@@ -9031,6 +9031,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "hex",
+ "hex-literal",
  "lazy_static",
  "light-bitcoin",
  "orml-utilities",
@@ -9042,6 +9043,7 @@ dependencies = [
  "serde_json",
  "sp-core",
  "sp-io",
+ "sp-keyring",
  "sp-runtime",
  "sp-std",
  "xp-gateway-bitcoin",

@@ -26,8 +26,8 @@ use xpallet_gateway_common::{
     utils::two_thirds_unsafe,
 };
 
-use crate::tx::utils::{addr2vecu8, ensure_identical};
 use crate::tx::validator::parse_and_check_signed_tx;
+use crate::tx::{addr2vecu8, ensure_identical};
 use crate::types::{BtcWithdrawalProposal, VoteResult};
 use crate::{Error, Event, Module, Trait, WithdrawalProposal};
 

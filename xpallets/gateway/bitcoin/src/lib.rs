@@ -4,14 +4,16 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#[cfg(any(feature = "runtime-benchmarks", test))]
-mod benchmarking;
 mod header;
-mod tests;
 mod trustee;
 mod tx;
 mod types;
 mod weight_info;
+
+#[cfg(any(feature = "runtime-benchmarks", test))]
+mod benchmarking;
+#[cfg(test)]
+mod tests;
 
 use sp_runtime::{traits::Zero, SaturatedConversion};
 use sp_std::prelude::*;

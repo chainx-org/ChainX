@@ -1,12 +1,9 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use std::cell::RefCell;
-use std::str::FromStr;
-use std::time::Duration;
+use std::{cell::RefCell, str::FromStr, time::Duration};
 
 use codec::{Decode, Encode};
 
-// Substrate
 use frame_support::traits::UnixTime;
 use frame_support::{impl_outer_origin, parameter_types, sp_io, weights::Weight};
 use frame_system::EnsureSignedBy;
@@ -17,6 +14,8 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
     AccountId32, Perbill,
 };
+
+use light_bitcoin::primitives::h256_rev;
 
 use chainx_primitives::AssetId;
 pub use xp_protocol::{X_BTC, X_ETH};
@@ -269,25 +268,15 @@ impl ExtBuilder {
     }
 }
 
-fn as_h256(s: &str) -> H256 {
-    let h = H256::from_str(s).unwrap();
-    fn reverse_h256(mut hash: H256) -> H256 {
-        let bytes = hash.as_bytes_mut();
-        bytes.reverse();
-        H256::from_slice(bytes)
-    }
-    reverse_h256(h)
-}
-
 pub fn load_mainnet_btc_genesis_header_info() -> ((BtcHeader, u32), H256, BtcNetwork) {
     (
         (
             BtcHeader {
                 version: 536870912,
-                previous_header_hash: as_h256(
+                previous_header_hash: h256_rev(
                     "0000000000000000000a4adf6c5192128535d4dcb56cfb5753755f8d392b26bf",
                 ),
-                merkle_root_hash: as_h256(
+                merkle_root_hash: h256_rev(
                     "1d21e60acb0b12e5cfd3f775edb647f982a2d666f9886b2f61ea5e72577b0f5e",
                 ),
                 time: 1558168296,
@@ -296,7 +285,7 @@ pub fn load_mainnet_btc_genesis_header_info() -> ((BtcHeader, u32), H256, BtcNet
             },
             576576,
         ),
-        as_h256("0000000000000000001721f58deb88b0710295a02551f0dde1e2e231a15f1882"),
+        h256_rev("0000000000000000001721f58deb88b0710295a02551f0dde1e2e231a15f1882"),
         BtcNetwork::Mainnet,
     )
 }

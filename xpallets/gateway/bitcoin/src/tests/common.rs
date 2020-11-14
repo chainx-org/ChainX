@@ -20,18 +20,7 @@ pub use for_tests::force_ss58_version;
 #[cfg(test)]
 pub use frame_support::{assert_noop, assert_ok};
 
-#[allow(unused)]
-pub fn reverse_h256(mut hash: H256) -> H256 {
-    let bytes = hash.as_bytes_mut();
-    bytes.reverse();
-    H256::from_slice(bytes)
-}
-
-#[cfg(test)]
-pub fn as_h256(s: &str) -> H256 {
-    h256_rev(s)
-}
-
+/*
 #[cfg(test)]
 pub fn generate_blocks() -> BTreeMap<u32, BtcHeader> {
     let bytes = include_bytes!("./res/headers-576576-578692.json");
@@ -140,7 +129,9 @@ pub fn trustees<T: Trait>() -> Vec<(T::AccountId, Vec<u8>, Vec<u8>, Vec<u8>)> {
     ];
     btc_trustees
 }
+*/
 
+/*
 #[cfg(test)]
 pub mod for_tests {
     use sp_core::crypto::{set_default_ss58_version, Ss58AddressFormat};
@@ -165,3 +156,4 @@ pub mod for_tests {
         Guard((c, default))
     }
 }
+*/

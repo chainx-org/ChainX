@@ -43,8 +43,10 @@ light-bitcoin = { git = "https://github.com/chainx-org/light-bitcoin", branch = 
 
 [dev-dependencies]
 hex = "0.4"
+hex-literal = "0.3"
 lazy_static = "1.4"
 serde_json = "1.0"
+sp-keyring = "2.0.0"
 frame-benchmarking = "2.0.0"
 pallet-balances = "2.0.0"
 pallet-multisig = "2.0.0"
@@ -82,10 +84,5 @@ std = [
     # light-bitcoin
     "light-bitcoin/std",
 ]
-runtime-benchmarks = [
-    "frame-benchmarking",
-]
-ss58check = [
-    "xp-gateway-common/ss58check",
-    "xp-gateway-bitcoin/ss58check",
-]
+runtime-benchmarks = ["frame-benchmarking"]
+ss58check = ["xp-gateway-common/ss58check"]

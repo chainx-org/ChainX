@@ -23,7 +23,7 @@ use xpallet_assets_registrar::AssetInfo;
 use xpallet_gateway_common::types::TrusteeInfoConfig;
 
 // light-bitcoin
-use light_bitcoin::primitives::Compact;
+use light_bitcoin::primitives::{h256_rev, Compact};
 
 /// The AccountId alias in this test module.
 pub(crate) type AccountId = AccountId32;
@@ -329,10 +329,10 @@ pub fn load_mainnet_btc_genesis_header_info() -> ((BtcHeader, u32), H256, BtcNet
         (
             BtcHeader {
                 version: 536870912,
-                previous_header_hash: as_h256(
+                previous_header_hash: h256_rev(
                     "0000000000000000000a4adf6c5192128535d4dcb56cfb5753755f8d392b26bf",
                 ),
-                merkle_root_hash: as_h256(
+                merkle_root_hash: h256_rev(
                     "1d21e60acb0b12e5cfd3f775edb647f982a2d666f9886b2f61ea5e72577b0f5e",
                 ),
                 time: 1558168296,
@@ -341,7 +341,7 @@ pub fn load_mainnet_btc_genesis_header_info() -> ((BtcHeader, u32), H256, BtcNet
             },
             576576,
         ),
-        as_h256("0000000000000000001721f58deb88b0710295a02551f0dde1e2e231a15f1882"),
+        h256_rev("0000000000000000001721f58deb88b0710295a02551f0dde1e2e231a15f1882"),
         BtcNetwork::Mainnet,
     )
 }
@@ -362,10 +362,10 @@ fn trustees_info() -> Vec<(
 pub fn generate_mock_blocks() -> (u32, Vec<BtcHeader>, Vec<BtcHeader>) {
     let b0 = BtcHeader {
         version: 0x20000002,
-        previous_header_hash: as_h256(
+        previous_header_hash: h256_rev(
             "0000000000000000004801aaa0db00c30a6c8d89d16fd30a2115dda5a9fc3469",
         ),
-        merkle_root_hash: as_h256(
+        merkle_root_hash: h256_rev(
             "b2f6c37fb65308f2ff12cfc84e3b4c8d49b02534b86794d7f1dd6d6457327200",
         ),
         time: 1501593084,
@@ -375,10 +375,10 @@ pub fn generate_mock_blocks() -> (u32, Vec<BtcHeader>, Vec<BtcHeader>) {
 
     let b1: BtcHeader = BtcHeader {
         version: 0x20000002,
-        previous_header_hash: as_h256(
+        previous_header_hash: h256_rev(
             "000000000000000000eb9bc1f9557dc9e2cfe576f57a52f6be94720b338029e4",
         ),
-        merkle_root_hash: as_h256(
+        merkle_root_hash: h256_rev(
             "5b65144f6518bf4795abd428acd0c3fb2527e4e5c94b0f5a7366f4826001884a",
         ),
         time: 1501593374,
@@ -388,10 +388,10 @@ pub fn generate_mock_blocks() -> (u32, Vec<BtcHeader>, Vec<BtcHeader>) {
 
     let b2: BtcHeader = BtcHeader {
         version: 0x20000002,
-        previous_header_hash: as_h256(
+        previous_header_hash: h256_rev(
             "0000000000000000011865af4122fe3b144e2cbeea86142e8ff2fb4107352d43",
         ),
-        merkle_root_hash: as_h256(
+        merkle_root_hash: h256_rev(
             "5fa62e1865455037450b7275d838d04f00230556129a4e86621a6bc4ad318c18",
         ),
         time: 1501593780,
@@ -401,10 +401,10 @@ pub fn generate_mock_blocks() -> (u32, Vec<BtcHeader>, Vec<BtcHeader>) {
 
     let b3: BtcHeader = BtcHeader {
         version: 0x20000002,
-        previous_header_hash: as_h256(
+        previous_header_hash: h256_rev(
             "00000000000000000019f112ec0a9982926f1258cdcc558dd7c3b7e5dc7fa148",
         ),
-        merkle_root_hash: as_h256(
+        merkle_root_hash: h256_rev(
             "8bd5e10005d8e01aa60278def2025d39b5a441261d934a24bd39e7423866787c",
         ),
         time: 1501594184,
@@ -414,10 +414,10 @@ pub fn generate_mock_blocks() -> (u32, Vec<BtcHeader>, Vec<BtcHeader>) {
 
     let b4: BtcHeader = BtcHeader {
         version: 0x20000002,
-        previous_header_hash: as_h256(
+        previous_header_hash: h256_rev(
             "000000000000000000e512213f7303f72c5f7446e6e295f73c28cb024dd79e34",
         ),
-        merkle_root_hash: as_h256(
+        merkle_root_hash: h256_rev(
             "aaa533386910909ed6e6319a3ed2bb86774a8d1d9b373f975d53daad6b12170e",
         ),
         time: 1501594485,
@@ -427,10 +427,10 @@ pub fn generate_mock_blocks() -> (u32, Vec<BtcHeader>, Vec<BtcHeader>) {
 
     let b5: BtcHeader = BtcHeader {
         version: 0x20000002,
-        previous_header_hash: as_h256(
+        previous_header_hash: h256_rev(
             "0000000000000000008876768068eea31f8f34e2f029765cd2ac998bdc3a2b2d",
         ),
-        merkle_root_hash: as_h256(
+        merkle_root_hash: h256_rev(
             "a51effefcc9eaac767ea211c661e5393d38bf3577b5b7e2d54471098b0ac4e35",
         ),
         time: 1501594711,
@@ -440,10 +440,10 @@ pub fn generate_mock_blocks() -> (u32, Vec<BtcHeader>, Vec<BtcHeader>) {
 
     let b2_fork: BtcHeader = BtcHeader {
         version: 0x20000000,
-        previous_header_hash: as_h256(
+        previous_header_hash: h256_rev(
             "0000000000000000011865af4122fe3b144e2cbeea86142e8ff2fb4107352d43",
         ),
-        merkle_root_hash: as_h256(
+        merkle_root_hash: h256_rev(
             "c896c91a0be4d3eed5568bab4c3084945e5e06669be38ec06b1c8ca4d84baaab",
         ),
         time: 1501611161,
@@ -453,10 +453,10 @@ pub fn generate_mock_blocks() -> (u32, Vec<BtcHeader>, Vec<BtcHeader>) {
 
     let b3_fork: BtcHeader = BtcHeader {
         version: 0x20000000,
-        previous_header_hash: as_h256(
+        previous_header_hash: h256_rev(
             "000000000000000000651ef99cb9fcbe0dadde1d424bd9f15ff20136191a5eec",
         ),
-        merkle_root_hash: as_h256(
+        merkle_root_hash: h256_rev(
             "088a7d29c4c6b95a74e362d64a801f492e748369a4fec1ca4e1ab47eefc8af82",
         ),
         time: 1501612386,
@@ -465,10 +465,10 @@ pub fn generate_mock_blocks() -> (u32, Vec<BtcHeader>, Vec<BtcHeader>) {
     }; // 478560
     let b4_fork: BtcHeader = BtcHeader {
         version: 0x20000002,
-        previous_header_hash: as_h256(
+        previous_header_hash: h256_rev(
             "000000000000000000b15ad892af8f6aca4462d46d0b6e5884cadc033c8f257b",
         ),
-        merkle_root_hash: as_h256(
+        merkle_root_hash: h256_rev(
             "f64de8adf8dac328fb8f1dcb4ba19b6e94de7abc8c4eeaae83df8f62504e8758",
         ),
         time: 1501612639,
@@ -477,10 +477,10 @@ pub fn generate_mock_blocks() -> (u32, Vec<BtcHeader>, Vec<BtcHeader>) {
     }; // 478561
     let b5_fork: BtcHeader = BtcHeader {
         version: 0x20000000,
-        previous_header_hash: as_h256(
+        previous_header_hash: h256_rev(
             "00000000000000000013ee8874665f73862a3a0b6a30f895fe34f4c94d3e8a15",
         ),
-        merkle_root_hash: as_h256(
+        merkle_root_hash: h256_rev(
             "a464516af1dab6eadb963b62c5df0e503c8908af503dfff7a169b9d3f9851b11",
         ),
         time: 1501613578,
@@ -489,10 +489,10 @@ pub fn generate_mock_blocks() -> (u32, Vec<BtcHeader>, Vec<BtcHeader>) {
     }; // 478562
     let b6_fork: BtcHeader = BtcHeader {
         version: 0x20000000,
-        previous_header_hash: as_h256(
+        previous_header_hash: h256_rev(
             "0000000000000000005c6e82aa704d326a3a2d6a4aa09f1725f532da8bb8de4d",
         ),
-        merkle_root_hash: as_h256(
+        merkle_root_hash: h256_rev(
             "a27fac4ab26df6e12a33b2bb853140d7e231326ddbc9a1d6611b553b0645a040",
         ),
         time: 1501616264,

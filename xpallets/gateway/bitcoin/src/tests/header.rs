@@ -2,15 +2,15 @@
 
 use super::common::*;
 
-use light_bitcoin::serialization;
+use light_bitcoin::{primitives::h256_rev, serialization};
 
 #[test]
 fn test_genesis() {
     ExtBuilder::default().build_and_execute(|| {
         let (header, num) = XGatewayBitcoin::genesis_info();
         assert_eq!(
-            format!("{:?}", reverse_h256(header.hash())),
-            "0x0000000000000000001721f58deb88b0710295a02551f0dde1e2e231a15f1882"
+            header.hash(),
+            h256_rev("0x0000000000000000001721f58deb88b0710295a02551f0dde1e2e231a15f1882")
         );
         assert_eq!(num, 576576);
 
