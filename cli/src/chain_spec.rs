@@ -680,6 +680,7 @@ pub fn mainnet_config() -> Result<ChainSpec, String> {
             genesis_assets(),
             // FIXME update btc mainnet header
             btc_genesis_params(include_str!("res/btc_genesis_params_mainnet.json")),
+            // FIXME mainnet_trustees()
             staging_testnet_trustees(),
         )
     };
