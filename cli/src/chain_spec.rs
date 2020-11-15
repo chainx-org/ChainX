@@ -549,6 +549,7 @@ pub fn testnet_config() -> Result<ChainSpec, String> {
     ))
 }
 
+#[allow(unused)]
 pub fn mainnet_config() -> Result<ChainSpec, String> {
     let wasm_binary = WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
 
