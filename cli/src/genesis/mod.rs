@@ -1,5 +1,6 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
+pub mod assets;
 pub mod bitcoin;
 
 use xp_genesis_builder::AllParams;
