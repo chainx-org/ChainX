@@ -9,7 +9,7 @@ mod scalar;
 use frame_support::dispatch::DispatchResult;
 use sp_core::ecdsa::Public;
 use sp_io::{crypto::secp256k1_ecdsa_recover_compressed, EcdsaVerifyError};
-use sp_std::{convert::TryFrom, result};
+use sp_std::convert::TryFrom;
 
 use light_bitcoin::{
     chain::Transaction,
@@ -29,7 +29,7 @@ pub struct Signature {
     pub s: Scalar,
 }
 impl Signature {
-    pub fn parse_der_lax(p: &[u8]) -> result::Result<Signature, Secp256k1Error> {
+    pub fn parse_der_lax(p: &[u8]) -> Result<Signature, Secp256k1Error> {
         let mut decoder = der::Decoder::new(p);
 
         decoder.read_constructed_sequence()?;

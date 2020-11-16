@@ -12,7 +12,7 @@ mod tests;
 mod types;
 mod weight_info;
 
-use sp_std::{collections::btree_map::BTreeMap, prelude::*, result};
+use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
@@ -196,7 +196,7 @@ impl<T: Trait> Module<T> {
 
     fn ensure_withdrawal_records_exists(
         id: WithdrawalRecordId,
-    ) -> result::Result<(WithdrawalRecordOf<T>, WithdrawalState), DispatchError> {
+    ) -> Result<(WithdrawalRecordOf<T>, WithdrawalState), DispatchError> {
         let record = Self::pending_withdrawals(id).ok_or(Error::<T>::NotExisted)?;
         let state = Self::state_of(id).ok_or(Error::<T>::NotExisted)?;
         Ok((record, state))

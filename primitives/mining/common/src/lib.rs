@@ -41,7 +41,7 @@
 //!
 
 use sp_arithmetic::traits::{BaseArithmetic, SaturatedConversion};
-use sp_std::result::Result;
+use sp_runtime::RuntimeDebug;
 
 /// Type for calculating the mining weight.
 pub type WeightType = u128;
@@ -67,7 +67,7 @@ pub trait BaseMiningWeight<Balance, BlockNumber> {
 /// `Zero` happens:
 /// 1. stakers performs the `rebond` operation.
 /// 2. claim the reward.
-#[derive(Clone, Copy, sp_runtime::RuntimeDebug)]
+#[derive(Clone, Copy, RuntimeDebug)]
 pub enum Delta<Balance> {
     Add(Balance),
     Sub(Balance),

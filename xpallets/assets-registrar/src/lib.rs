@@ -16,7 +16,7 @@ mod types;
 mod verifier;
 mod weight_info;
 
-use sp_std::{prelude::*, result};
+use sp_std::prelude::*;
 
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
@@ -250,14 +250,14 @@ impl<T: Trait> Module<T> {
     }
 
     /// Returns the chain of given asset `asset_id`.
-    pub fn chain_of(asset_id: &AssetId) -> result::Result<Chain, DispatchError> {
+    pub fn chain_of(asset_id: &AssetId) -> Result<Chain, DispatchError> {
         Self::asset_info_of(asset_id)
             .map(|info| info.chain())
             .ok_or_else(|| Error::<T>::AssetDoesNotExist.into())
     }
 
     /// Returns the asset info of given `id`.
-    pub fn get_asset_info(id: &AssetId) -> result::Result<AssetInfo, DispatchError> {
+    pub fn get_asset_info(id: &AssetId) -> Result<AssetInfo, DispatchError> {
         if let Some(asset) = Self::asset_info_of(id) {
             if Self::is_valid(id) {
                 Ok(asset)

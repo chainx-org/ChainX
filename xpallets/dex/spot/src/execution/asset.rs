@@ -14,7 +14,7 @@ impl<T: Trait> Module<T> {
         price: T::Price,
         maker_order: &mut OrderInfo<T>,
         taker_order: &mut OrderInfo<T>,
-    ) -> result::Result<(BalanceOf<T>, BalanceOf<T>), DispatchError> {
+    ) -> Result<(BalanceOf<T>, BalanceOf<T>), DispatchError> {
         let maker = &maker_order.submitter();
         let taker = &taker_order.submitter();
 

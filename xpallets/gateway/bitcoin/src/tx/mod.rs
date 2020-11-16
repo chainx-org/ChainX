@@ -11,7 +11,7 @@ use frame_support::{
     StorageMap, StorageValue,
 };
 use sp_runtime::{traits::Zero, SaturatedConversion};
-use sp_std::{fmt::Debug, prelude::*, result};
+use sp_std::{fmt::Debug, prelude::*};
 // ChainX
 use chainx_primitives::{AssetId, ReferralId};
 use xp_gateway_common::AccountExtractor;
@@ -46,7 +46,7 @@ use crate::{BalanceOf, Event, Module, PendingDeposits, Trait, WithdrawalProposal
 pub fn process_tx<T: Trait>(
     tx: Transaction,
     prev: Option<Transaction>,
-) -> result::Result<BtcTxState, DispatchError> {
+) -> Result<BtcTxState, DispatchError> {
     let meta_type = detect_transaction_type::<T>(&tx, prev.as_ref())?;
     let state = handle_tx::<T>(tx, meta_type);
     Ok(state)
@@ -55,7 +55,7 @@ pub fn process_tx<T: Trait>(
 pub fn detect_transaction_type<T: Trait>(
     tx: &Transaction,
     prev: Option<&Transaction>,
-) -> result::Result<MetaTxType<T::AccountId>, DispatchError> {
+) -> Result<MetaTxType<T::AccountId>, DispatchError> {
     let addr_pair = get_trustee_address_pair::<T>()?;
     let last_addr_pair = get_last_trustee_address_pair::<T>().ok();
     let network = Module::<T>::network_id();

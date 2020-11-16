@@ -24,7 +24,7 @@ use sp_runtime::traits::{
     Zero,
 };
 use sp_std::prelude::*;
-use sp_std::{cmp, fmt::Debug, result};
+use sp_std::{cmp, fmt::Debug};
 
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
@@ -362,11 +362,11 @@ impl<T: Trait> Module<T> {
     }
 
     #[inline]
-    fn trading_pair(pair_id: TradingPairId) -> result::Result<TradingPairProfile, Error<T>> {
+    fn trading_pair(pair_id: TradingPairId) -> Result<TradingPairProfile, Error<T>> {
         TradingPairOf::get(pair_id).ok_or(Error::<T>::InvalidTradingPair)
     }
 
-    fn get_order(who: &T::AccountId, order_id: OrderId) -> result::Result<OrderInfo<T>, Error<T>> {
+    fn get_order(who: &T::AccountId, order_id: OrderId) -> Result<OrderInfo<T>, Error<T>> {
         Self::order_info_of(who, order_id).ok_or(Error::<T>::InvalidOrderId)
     }
 
@@ -425,7 +425,7 @@ impl<T: Trait> Module<T> {
         amount: BalanceOf<T>,
         price: T::Price,
         reserve_amount: BalanceOf<T>,
-    ) -> result::Result<(), Error<T>> {
+    ) -> Result<(), Error<T>> {
         info!(
             "transactor:{:?}, pair_id:{:}, type:{:?}, side:{:?}, amount:{:?}, price:{:?}",
             who, pair_id, order_type, side, amount, price

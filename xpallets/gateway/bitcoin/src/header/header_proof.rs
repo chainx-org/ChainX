@@ -2,7 +2,7 @@
 
 // Substrate
 use frame_support::{dispatch::DispatchResult, traits::UnixTime};
-use sp_std::{cmp, convert::TryFrom, result};
+use sp_std::{cmp, convert::TryFrom};
 
 // ChainX
 use xp_logging::{debug, error, info, warn};
@@ -25,7 +25,7 @@ pub struct HeaderVerifier<'a> {
 }
 
 impl<'a> HeaderVerifier<'a> {
-    pub fn new<T: Trait>(header_info: &'a BtcHeaderInfo) -> result::Result<Self, ChainErr> {
+    pub fn new<T: Trait>(header_info: &'a BtcHeaderInfo) -> Result<Self, ChainErr> {
         let current = T::UnixTime::now();
         // if convert from u64 to u32 failed, ignore timestamp check
         // timestamp check are not important

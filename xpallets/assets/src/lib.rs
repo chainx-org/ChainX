@@ -25,7 +25,6 @@ use sp_std::{
     collections::btree_map::BTreeMap,
     convert::{TryFrom, TryInto},
     prelude::*,
-    result,
 };
 
 use frame_support::{
@@ -424,7 +423,7 @@ impl<T: Trait> Module<T> {
         to: &T::AccountId,
         to_type: AssetType,
         value: BalanceOf<T>,
-    ) -> result::Result<(), AssetErr> {
+    ) -> Result<(), AssetErr> {
         // check
         Self::ensure_not_native_asset(id).map_err(|_| AssetErr::InvalidAsset)?;
         xpallet_assets_registrar::Module::<T>::ensure_asset_is_valid(id)
@@ -475,7 +474,7 @@ impl<T: Trait> Module<T> {
         from: &T::AccountId,
         to: &T::AccountId,
         value: BalanceOf<T>,
-    ) -> result::Result<(), AssetErr> {
+    ) -> Result<(), AssetErr> {
         Self::move_balance(id, from, AssetType::Usable, to, AssetType::Usable, value)
     }
 
@@ -576,7 +575,7 @@ impl<T: Trait> Module<T> {
         who: &T::AccountId,
         type_: AssetType,
         value: BalanceOf<T>,
-    ) -> result::Result<(), DispatchError> {
+    ) -> Result<(), DispatchError> {
         let current = Self::asset_typed_balance(&who, id, type_);
 
         debug!(
@@ -599,7 +598,7 @@ impl<T: Trait> Module<T> {
         who: &T::AccountId,
         type_: AssetType,
         value: BalanceOf<T>,
-    ) -> result::Result<(), DispatchError> {
+    ) -> Result<(), DispatchError> {
         let current = Self::asset_typed_balance(&who, id, type_);
 
         debug!(
