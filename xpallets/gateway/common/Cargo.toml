@@ -39,6 +39,7 @@ light-bitcoin = { git = "https://github.com/chainx-org/light-bitcoin", branch = 
 lazy_static = "1.4"
 sp-io = "2.0.0"
 pallet-balances = "2.0.0"
+xp-gateway-bitcoin =  { path = "../../../primitives/gateway/bitcoin" }
 xpallet-gateway-bitcoin = { path = "../bitcoin" }
 
 [features]

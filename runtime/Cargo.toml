@@ -68,6 +68,8 @@ orml-currencies = { version = "0.3", default-features = false }
 # ChainX primitives
 chainx-primitives = { path = "../primitives", default-features = false }
 xp-logging = { path = "../primitives/logging", default-features = false }
+# we use feature "ss58check" for using local runtime-interface to check address, if in parachain, do not use this feature
+xp-gateway-bitcoin = { path = "../primitives/gateway/bitcoin", default-features = false,  features = ["ss58check"] }
 xp-mining-staking = { path = "../primitives/mining/staking", default-features = false }
 xp-protocol = { path = "../primitives/protocol", default-features = false }
 xp-runtime = { path = "../primitives/runtime", default-features = false }
@@ -78,8 +80,7 @@ xpallet-assets-registrar = { path = "../xpallets/assets-registrar", default-feat
 xpallet-assets-rpc-runtime-api = { path = "../xpallets/assets/rpc/runtime-api", default-features = false }
 xpallet-dex-spot = { path = "../xpallets/dex/spot", default-features = false }
 xpallet-dex-spot-rpc-runtime-api = { path = "../xpallets/dex/spot/rpc/runtime-api", default-features = false }
-# we use feature "ss48check" for using local runtime-interface to check address, if in parachain, do not use this feature
-xpallet-gateway-bitcoin = { path = "../xpallets/gateway/bitcoin", default-features = false, features = ["ss58check"] }
+xpallet-gateway-bitcoin = { path = "../xpallets/gateway/bitcoin", default-features = false }
 xpallet-gateway-common = { path = "../xpallets/gateway/common", default-features = false }
 xpallet-gateway-common-rpc-runtime-api = { path = "../xpallets/gateway/common/rpc/runtime-api", default-features = false }
 xpallet-gateway-records = { path = "../xpallets/gateway/records", default-features = false }
@@ -151,6 +152,7 @@ std = [
     # ChainX primitives
     "chainx-primitives/std",
     "xp-logging/std",
+    "xp-gateway-bitcoin/std",
     "xp-mining-staking/std",
     "xp-protocol/std",
     "xp-runtime/std",

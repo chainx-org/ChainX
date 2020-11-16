@@ -863,6 +863,7 @@ dependencies = [
  "sp-version",
  "static_assertions",
  "substrate-wasm-builder-runner",
+ "xp-gateway-bitcoin",
  "xp-logging",
  "xp-mining-staking",
  "xp-protocol",
@@ -8794,8 +8795,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "xp-gateway-bitcoin"
+version = "2.0.0-beta.0"
+dependencies = [
+ "chainx-primitives",
+ "frame-support",
+ "hex",
+ "light-bitcoin",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+ "xp-gateway-common",
+ "xp-logging",
+]
+
+[[package]]
 name = "xp-gateway-common"
-version = "2.0.0-alpha.4"
+version = "2.0.0-beta.0"
 dependencies = [
  "bs58",
  "frame-support",
@@ -9026,6 +9044,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "xp-gateway-bitcoin",
  "xp-gateway-common",
  "xp-logging",
  "xp-protocol",
@@ -9054,6 +9073,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "xp-gateway-bitcoin",
  "xp-logging",
  "xp-protocol",
  "xp-rpc",

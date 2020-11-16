@@ -6,7 +6,6 @@
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
 mod benchmarking;
-mod extractor;
 pub mod header;
 mod tests;
 pub mod trustee;
@@ -54,7 +53,6 @@ use light_bitcoin::{
     serialization::{deserialize, Reader},
 };
 
-pub use self::extractor::OpReturnExtractor;
 pub use self::types::{BtcAddress, BtcParams, BtcTxVerifier, BtcWithdrawalProposal};
 use self::types::{
     BtcDepositCache, BtcHeaderIndex, BtcHeaderInfo, BtcRelayedTx, BtcRelayedTxInfo, BtcTxResult,
