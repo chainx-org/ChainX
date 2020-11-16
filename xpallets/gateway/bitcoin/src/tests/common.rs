@@ -20,18 +20,6 @@ pub use for_tests::force_ss58_version;
 #[cfg(test)]
 pub use frame_support::{assert_noop, assert_ok};
 
-#[allow(unused)]
-pub fn reverse_h256(mut hash: H256) -> H256 {
-    let bytes = hash.as_bytes_mut();
-    bytes.reverse();
-    H256::from_slice(bytes)
-}
-
-#[cfg(test)]
-pub fn as_h256(s: &str) -> H256 {
-    h256_rev(s)
-}
-
 #[cfg(test)]
 pub fn generate_blocks() -> BTreeMap<u32, BtcHeader> {
     let bytes = include_bytes!("./res/headers-576576-578692.json");
@@ -46,6 +34,7 @@ pub fn generate_blocks() -> BTreeMap<u32, BtcHeader> {
         })
         .collect()
 }
+
 #[cfg(any(feature = "runtime-benchmarks", test))]
 pub fn generate_blocks_from_raw() -> BTreeMap<u32, BtcHeader> {
     let bytes = include_bytes!("./res/headers-576576-578692.raw");

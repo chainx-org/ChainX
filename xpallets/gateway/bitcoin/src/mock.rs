@@ -32,29 +32,6 @@ use crate::{
     Error, GenesisConfig, Module, Trait,
 };
 
-pub fn trustees() -> Vec<(AccountId32, Vec<u8>, Vec<u8>, Vec<u8>)> {
-    vec![
-        (
-            sr25519::Keyring::Alice.to_account_id(),
-            b"Alice".to_vec(),
-            hex!("02df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6").to_vec(),
-            hex!("0386b58f51da9b37e59c40262153173bdb59d7e4e45b73994b99eec4d964ee7e88").to_vec(),
-        ),
-        (
-            sr25519::Keyring::Bob.to_account_id(),
-            b"Bob".to_vec(),
-            hex!("0244d81efeb4171b1a8a433b87dd202117f94e44c909c49e42e77b69b5a6ce7d0d").to_vec(),
-            hex!("02e4631e46255571122d6e11cda75d5d601d5eb2585e65e4e87fe9f68c7838a278").to_vec(),
-        ),
-        (
-            sr25519::Keyring::Charlie.to_account_id(),
-            b"Charlie".to_vec(),
-            hex!("03a36339f413da869df12b1ab0def91749413a0dee87f0bfa85ba7196e6cdad102").to_vec(),
-            hex!("0263d46c760d3e04883d4b433c9ce2bc32130acd9faad0192a2b375dbba9f865c3").to_vec(),
-        ),
-    ]
-}
-
 /// The AccountId alias in this test module.
 pub(crate) type AccountId = AccountId32;
 pub(crate) type BlockNumber = u64;
@@ -352,6 +329,38 @@ impl ExtBuilder {
         ext.execute_with(|| System::set_block_number(1));
         ext.execute_with(test);
     }
+}
+
+pub fn alice() -> AccountId32 {
+    sr25519::Keyring::Alice.to_account_id()
+}
+pub fn bob() -> AccountId32 {
+    sr25519::Keyring::Bob.to_account_id()
+}
+pub fn charlie() -> AccountId32 {
+    sr25519::Keyring::Charlie.to_account_id()
+}
+pub fn trustees() -> Vec<(AccountId32, Vec<u8>, Vec<u8>, Vec<u8>)> {
+    vec![
+        (
+            alice(),
+            b"Alice".to_vec(),
+            hex!("02df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6").to_vec(),
+            hex!("0386b58f51da9b37e59c40262153173bdb59d7e4e45b73994b99eec4d964ee7e88").to_vec(),
+        ),
+        (
+            bob(),
+            b"Bob".to_vec(),
+            hex!("0244d81efeb4171b1a8a433b87dd202117f94e44c909c49e42e77b69b5a6ce7d0d").to_vec(),
+            hex!("02e4631e46255571122d6e11cda75d5d601d5eb2585e65e4e87fe9f68c7838a278").to_vec(),
+        ),
+        (
+            charlie(),
+            b"Charlie".to_vec(),
+            hex!("03a36339f413da869df12b1ab0def91749413a0dee87f0bfa85ba7196e6cdad102").to_vec(),
+            hex!("0263d46c760d3e04883d4b433c9ce2bc32130acd9faad0192a2b375dbba9f865c3").to_vec(),
+        ),
+    ]
 }
 
 pub fn load_mainnet_btc_genesis_header_info() -> ((BtcHeader, u32), H256, BtcNetwork) {

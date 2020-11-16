@@ -1,19 +1,29 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use super::common::*;
-
+use frame_support::{assert_noop, assert_ok, storage::StorageValue};
 use frame_system::RawOrigin;
 use sp_std::str::FromStr;
 
-use light_bitcoin::crypto::dhash160;
-use light_bitcoin::keys::{Public, Type};
-use light_bitcoin::serialization;
+use light_bitcoin::{
+    chain::Transaction,
+    crypto::dhash160,
+    keys::{Address, Network, Public, Type},
+    script::{Builder, Opcode},
+    serialization::{self, Reader},
+};
 
 use xpallet_gateway_common::traits::TrusteeForChain;
 
-use crate::trustee::create_multi_address;
-use crate::tx::validator::parse_and_check_signed_tx_impl;
-use crate::types::VoteResult;
+use crate::mock::{
+    alice, bob, AccountId, ExtBuilder, Test, XGatewayBitcoin, XGatewayBitcoinErr, XGatewayCommon,
+    XGatewayRecords, X_BTC,
+};
+use crate::{
+    trustee::create_multi_address,
+    tx::validator::parse_and_check_signed_tx_impl,
+    types::{BtcTxVerifier, BtcWithdrawalProposal, VoteResult},
+    Verifier, WithdrawalProposal,
+};
 
 #[test]
 pub fn test_check_trustee_entity() {
@@ -72,7 +82,7 @@ pub fn test_multi_address() {
     //let test = hex_script!("52210311252930af8ba766b9c7a6580d8dc4bbf9b0befd17a8ef7fabac275bba77ae402102e34d10113f2dd162e8d8614a4afbb8e2eb14eddf4036042b35d12cf5529056a221023e505c48a955e759ce61145dc4a9a7447425290b8483f4e36f05169e7967c86d53ae");
     let multisig_address = Address {
         kind: Type::P2SH,
-        network: BtcNetwork::Testnet,
+        network: Network::Testnet,
         hash: dhash160(&script),
     };
     assert_eq!(
@@ -201,9 +211,9 @@ fn force_replace_withdraw() {
             "0100000001059ec66e2a2123364a56bd48f10f57d8a41ecf4082669e6fc85485637043879100000000fdfd00004830450221009fbe7b8f2f4ae771e8773cb5206b9f20286676e2c7cfa98a8e95368acfc3cb3c02203969727a276d7333d5f8815fa364307b8015783cfefbd53def28befdb81855fc0147304402205e5bbe039457d7657bb90dbe63ac30b9547242b44cc03e1f7a690005758e34aa02207208ed76a269d193f1e10583bd902561dbd02826d0486c33a4b1b1839a3d226f014c69522102df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6210244d81efeb4171b1a8a433b87dd202117f94e44c909c49e42e77b69b5a6ce7d0d2103a36339f413da869df12b1ab0def91749413a0dee87f0bfa85ba7196e6cdad10253aeffffffff04288e0300000000001976a914eb016d7998c88a79a50a0408dd7d5839b1ce1a6888aca0bb0d00000000001976a914646fe05e35369248c3f8deea436dc2b92c7dc86888ac50c30000000000001976a914d1a68d6e891a88d53d9bc3b88d172a3ff6b238c388ac20ee03020000000017a914cb94110435d0635223eebe25ed2aaabc03781c458700000000";
         let tmp = ANOTHER_TX.parse::<Transaction>().unwrap();
 
-        let accounts = accounts::<Test>();
-        let alice = accounts[0].clone();
-        let bob = accounts[1].clone();
+        // let accounts = accounts::<Test>();
+        let alice = alice();
+        let bob = bob();
         let withdrawal_fee = XGatewayBitcoin::btc_withdrawal_fee();
 
         let balance1 = (9778400 + withdrawal_fee).into();
