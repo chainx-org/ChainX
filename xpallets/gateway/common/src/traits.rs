@@ -1,7 +1,7 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 use frame_support::dispatch::DispatchError;
-use sp_std::{convert::TryFrom, prelude::Vec, result};
+use sp_std::{convert::TryFrom, prelude::Vec};
 
 use chainx_primitives::{AssetId, ReferralId};
 use xpallet_assets::Chain;
@@ -17,24 +17,23 @@ pub trait ChainProvider {
 }
 
 pub trait TrusteeForChain<AccountId, TrusteeEntity: BytesLike, TrusteeAddress: BytesLike> {
-    fn check_trustee_entity(raw_addr: &[u8]) -> result::Result<TrusteeEntity, DispatchError>;
+    fn check_trustee_entity(raw_addr: &[u8]) -> Result<TrusteeEntity, DispatchError>;
 
     fn generate_trustee_session_info(
         props: Vec<(AccountId, TrusteeIntentionProps<TrusteeEntity>)>,
         config: TrusteeInfoConfig,
-    ) -> result::Result<TrusteeSessionInfo<AccountId, TrusteeAddress>, DispatchError>;
+    ) -> Result<TrusteeSessionInfo<AccountId, TrusteeAddress>, DispatchError>;
 }
 
 pub trait TrusteeSession<AccountId, TrusteeAddress: BytesLike> {
     fn trustee_session(
         number: u32,
-    ) -> result::Result<TrusteeSessionInfo<AccountId, TrusteeAddress>, DispatchError>;
+    ) -> Result<TrusteeSessionInfo<AccountId, TrusteeAddress>, DispatchError>;
 
     fn current_trustee_session(
-    ) -> result::Result<TrusteeSessionInfo<AccountId, TrusteeAddress>, DispatchError>;
+    ) -> Result<TrusteeSessionInfo<AccountId, TrusteeAddress>, DispatchError>;
 
-    fn last_trustee_session(
-    ) -> result::Result<TrusteeSessionInfo<AccountId, TrusteeAddress>, DispatchError>;
+    fn last_trustee_session() -> Result<TrusteeSessionInfo<AccountId, TrusteeAddress>, DispatchError>;
 
     #[cfg(feature = "std")]
     fn genesis_trustee(chain: Chain, init: &[AccountId]);
@@ -43,17 +42,17 @@ pub trait TrusteeSession<AccountId, TrusteeAddress: BytesLike> {
 impl<AccountId, TrusteeAddress: BytesLike> TrusteeSession<AccountId, TrusteeAddress> for () {
     fn trustee_session(
         _: u32,
-    ) -> result::Result<TrusteeSessionInfo<AccountId, TrusteeAddress>, DispatchError> {
+    ) -> Result<TrusteeSessionInfo<AccountId, TrusteeAddress>, DispatchError> {
         Err("NoTrustee".into())
     }
 
     fn current_trustee_session(
-    ) -> result::Result<TrusteeSessionInfo<AccountId, TrusteeAddress>, DispatchError> {
+    ) -> Result<TrusteeSessionInfo<AccountId, TrusteeAddress>, DispatchError> {
         Err("NoTrustee".into())
     }
 
-    fn last_trustee_session(
-    ) -> result::Result<TrusteeSessionInfo<AccountId, TrusteeAddress>, DispatchError> {
+    fn last_trustee_session() -> Result<TrusteeSessionInfo<AccountId, TrusteeAddress>, DispatchError>
+    {
         Err("NoTrustee".into())
     }
 

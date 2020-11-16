@@ -5,7 +5,7 @@ use codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
 use frame_support::dispatch::{DispatchError, DispatchResult};
-use sp_std::{fmt, result};
+use sp_std::fmt;
 
 use chainx_primitives::{Decimals, Desc, Token};
 use xp_assets_registrar::Chain;
@@ -51,7 +51,7 @@ impl AssetInfo {
         chain: Chain,
         decimals: Decimals,
         desc: Desc,
-    ) -> result::Result<Self, DispatchError> {
+    ) -> Result<Self, DispatchError> {
         let asset = AssetInfo {
             token,
             token_name,

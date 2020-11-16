@@ -8854,7 +8854,6 @@ dependencies = [
  "chainx-primitives",
  "sp-arithmetic",
  "sp-runtime",
- "sp-std",
 ]
 
 [[package]]
