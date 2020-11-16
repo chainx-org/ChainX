@@ -936,11 +936,6 @@ construct_runtime!(
         Utility: pallet_utility::{Module, Call, Event},
         Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
 
-        // orml
-        // we retain Currencies Call for this call may be used in future, but we do not need this now,
-        // so that we filter it in BaseFilter.
-        Currencies: orml_currencies::{Module, Call, Event<T>},
-
         // ChainX basics.
         XSystem: xpallet_system::{Module, Call, Storage, Event<T>, Config},
         XAssetsRegistrar: xpallet_assets_registrar::{Module, Call, Storage, Event, Config},
@@ -958,10 +953,18 @@ construct_runtime!(
         // DEX
         XSpot: xpallet_dex_spot::{Module, Call, Storage, Event<T>, Config<T>},
 
-        XTransactionFee: xpallet_transaction_fee::{Module, Event<T>},
-
         XGenesisBuilder: xpallet_genesis_builder::{Module, Config<T>},
 
+        // orml
+        // we retain Currencies Call for this call may be used in future, but we do not need this now,
+        // so that we filter it in BaseFilter.
+        Currencies: orml_currencies::{Module, Call, Event<T>},
+
+        // It might be possible to merge this module into pallet_transaction_payment in future, thus
+        // we put it at the end for keeping the extrinsic ordering.
+        XTransactionFee: xpallet_transaction_fee::{Module, Event<T>},
+
+        // Put Sudo last so that the extrinsic ordering stays the same once it's removed.
         Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
     }
 );
