@@ -35,8 +35,8 @@ use chainx_runtime::{
 
 use crate::genesis::assets::{genesis_assets, init_assets, pcx, AssetParams};
 use crate::genesis::bitcoin::{
-    btc_genesis_params, local_testnet_trustees, staging_testnet_trustees, BtcGenesisParams,
-    BtcTrusteeParams,
+    btc_genesis_params, local_testnet_trustees, mainnet_trustees, staging_testnet_trustees,
+    BtcGenesisParams, BtcTrusteeParams,
 };
 
 // Note this is the URL for the telemetry server
@@ -681,8 +681,7 @@ pub fn mainnet_config() -> Result<ChainSpec, String> {
             genesis_assets(),
             // FIXME update btc mainnet header
             btc_genesis_params(include_str!("res/btc_genesis_params_mainnet.json")),
-            // FIXME mainnet_trustees()
-            staging_testnet_trustees(),
+            mainnet_trustees(),
         )
     };
 
@@ -954,9 +953,7 @@ fn mainnet_genesis(
         pallet_membership_Instance1: Some(Default::default()),
         pallet_democracy: Some(DemocracyConfig::default()),
         pallet_treasury: Some(Default::default()),
-        pallet_elections_phragmen: Some(ElectionsConfig {
-            members: Default::default(),
-        }),
+        pallet_elections_phragmen: Some(ElectionsConfig::default()),
         pallet_im_online: Some(ImOnlineConfig { keys: vec![] }),
         pallet_authority_discovery: Some(AuthorityDiscoveryConfig { keys: vec![] }),
         pallet_session: Some(SessionConfig {
@@ -1002,7 +999,7 @@ fn mainnet_genesis(
         }),
         xpallet_mining_staking: Some(XStakingConfig {
             validators,
-            validator_count: 50,
+            validator_count: initial_authorities_len as u32, // Start mainnet in PoA
             sessions_per_era: 12,
             vesting_account,
             glob_dist_ratio: (12, 88), // (Treasury, X-type Asset and Staking) = (12, 88)
