@@ -4211,11 +4211,10 @@ dependencies = [
 [[package]]
 name = "pallet-identity"
 version = "2.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d45fdc5352cc3d52284e7117c03a48dfd8749e667f92a4b5e749dd963c9f1431"
+source = "git+https://github.com/paritytech/substrate?rev=77007ed87727a761169d4c57cbeae0151d9efb81#77007ed87727a761169d4c57cbeae0151d9efb81"
 dependencies = [
  "enumflags2",
- "frame-benchmarking 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking 2.0.0 (git+https://github.com/paritytech/substrate?rev=77007ed87727a761169d4c57cbeae0151d9efb81)",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -4228,8 +4227,7 @@ dependencies = [
 [[package]]
 name = "pallet-im-online"
 version = "2.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a29b883f805fa2330742b5d99263eab68583e009be1a2420efab1c3237a08e5"
+source = "git+https://github.com/paritytech/substrate?rev=77007ed87727a761169d4c57cbeae0151d9efb81#77007ed87727a761169d4c57cbeae0151d9efb81"
 dependencies = [
  "frame-support",
  "frame-system",
