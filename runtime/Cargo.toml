@@ -96,7 +96,7 @@ xpallet-transaction-fee = { path = "../xpallets/transaction-fee", default-featur
 xpallet-transaction-fee-rpc-runtime-api = { path = "../xpallets/transaction-fee/rpc/runtime-api", default-features = false }
 
 [build-dependencies]
-wasm-builder-runner = { package = "substrate-wasm-builder-runner", version = "1.0.6", default-features = false }
+wasm-builder-runner = { package = "substrate-wasm-builder-runner", version = "2.0.0", default-features = false }
 
 [features]
 default = ["std", "pallet-session/historical"]
