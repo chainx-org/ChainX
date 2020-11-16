@@ -817,6 +817,7 @@ dependencies = [
  "frame-system",
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
+ "hex-literal",
  "orml-currencies",
  "orml-traits",
  "pallet-authority-discovery",
