@@ -80,7 +80,7 @@ fn withdraw_tx() -> (Transaction, BtcRelayedTxInfo, Transaction) {
         145, 166, 110, 249, 201, 229, 58, 196, 126, 153, 124, 161, 34, 204, 139, 250, 216, 234,
         101, 63, 185, 84, 4, 215, 175, 1, 0,
     ];
-    let proof: PartialMerkleTree = serialization::deserialize(Reader::new(&RAW_PROOF)).expect("");
+    let proof: PartialMerkleTree = serialization::deserialize(Reader::new(&RAW_PROOF)).unwrap();
 
     let header = generate_blocks_from_raw()[&577696];
     let block_hash = header.hash();

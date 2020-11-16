@@ -1,6 +1,6 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use std::{cell::RefCell, time::Duration};
+use std::{cell::RefCell, collections::BTreeMap, time::Duration};
 
 use hex_literal::hex;
 
@@ -25,6 +25,7 @@ use light_bitcoin::{
     chain::BlockHeader as BtcHeader,
     keys::Network as BtcNetwork,
     primitives::{h256_rev, Compact},
+    serialization::{self, Reader},
 };
 
 use crate::{
@@ -398,7 +399,20 @@ fn trustees_info() -> Vec<(
     vec![(Chain::Bitcoin, btc_config, btc_trustees)]
 }
 
-pub fn generate_mock_blocks() -> (u32, Vec<BtcHeader>, Vec<BtcHeader>) {
+pub fn generate_blocks_576576_578692() -> BTreeMap<u32, BtcHeader> {
+    let headers = include_str!("./res/headers-576576-578692.json");
+    let headers: Vec<(u32, String)> = serde_json::from_str(headers).unwrap();
+    headers
+        .into_iter()
+        .map(|(height, header_hex)| {
+            let data = hex::decode(header_hex).unwrap();
+            let header = serialization::deserialize(Reader::new(&data)).unwrap();
+            (height, header)
+        })
+        .collect()
+}
+
+pub fn generate_blocks_478557_478563() -> (u32, Vec<BtcHeader>, Vec<BtcHeader>) {
     let b0 = BtcHeader {
         version: 0x20000002,
         previous_header_hash: h256_rev(

@@ -59,7 +59,7 @@ fn test_opreturn() {
         set_default_ss58_version(Ss58AddressFormat::ChainXAccount);
 
         let hot_addr =
-            XGatewayBitcoin::verify_btc_address(b"3LFSUKkP26hun42J1Dy6RATsbgmBJb27NF").expect("");
+            XGatewayBitcoin::verify_btc_address(b"3LFSUKkP26hun42J1Dy6RATsbgmBJb27NF").unwrap();
         println!("{:?}", hot_addr);
 
         fn mock_parse_deposit_outputs(
