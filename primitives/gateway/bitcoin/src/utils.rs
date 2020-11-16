@@ -77,7 +77,7 @@ pub fn extract_opreturn_data(script: &Script) -> Option<Vec<u8>> {
     // subscript = `op_push + data` or `op_push + data.len() + data`
     let subscript = script.subscript(1);
     if subscript.is_empty() {
-        error!("[parse_opreturn] nothing after `OP_RETURN`, valid in rule but invalid for public consensus");
+        error!("[parse_opreturn] Nothing after `OP_RETURN`, valid in rule but invalid for public consensus");
         return None;
     }
 
@@ -88,7 +88,7 @@ pub fn extract_opreturn_data(script: &Script) -> Option<Vec<u8>> {
             // OP_RETURN format: op_return + op_push(<0x4c) + data (op_push == data.len())
             if subscript.len() < 2 {
                 error!(
-                    "[parse_opreturn] nothing after `OP_PUSHDATA1`, invalid opreturn script:{:?}",
+                    "[parse_opreturn] Nothing after `OP_PUSHDATA1`, invalid opreturn script:{:?}",
                     script
                 );
                 return None;
@@ -97,7 +97,7 @@ pub fn extract_opreturn_data(script: &Script) -> Option<Vec<u8>> {
             if op_push as usize == data.len() {
                 Some(data.to_vec())
             } else {
-                error!("[parse_opreturn] unexpected opreturn source error, expected data len:{}, actual data:{:?}", op_push, data);
+                error!("[parse_opreturn] Unexpected opreturn source error, expected data len:{}, actual data:{:?}", op_push, data);
                 None
             }
         }
@@ -108,7 +108,7 @@ pub fn extract_opreturn_data(script: &Script) -> Option<Vec<u8>> {
             // otherwise it's an invalid data.
             if subscript.len() < 3 {
                 error!(
-                    "[parse_opreturn] nothing after `OP_PUSHDATA1`, invalid opreturn script: {:?}",
+                    "[parse_opreturn] Nothing after `OP_PUSHDATA1`, invalid opreturn script: {:?}",
                     script
                 );
                 return None;
@@ -118,13 +118,13 @@ pub fn extract_opreturn_data(script: &Script) -> Option<Vec<u8>> {
             if data_len as usize == data.len() {
                 Some(data.to_vec())
             } else {
-                error!("[parse_opreturn] unexpected opreturn source error, expected data len:{}, actual data:{:?}", data_len, data);
+                error!("[parse_opreturn] Unexpected opreturn source error, expected data len:{}, actual data:{:?}", data_len, data);
                 None
             }
         }
         Ordering::Greater => {
             error!(
-                "[parse_opreturn] unexpected opreturn source error, \
+                "[parse_opreturn] Unexpected opreturn source error, \
                 opreturn format should be `op_return+op_push+data` or `op_return+op_push+data_len+data`, \
                 op_push: {:?}", op_push
             );

@@ -13,7 +13,7 @@ use light_bitcoin::{
 };
 
 use crate::{
-    types::{DepositInfo, MetaTxType},
+    types::{BtcDepositInfo, BtcTxMetaType},
     utils::{
         extract_addr_from_transaction, extract_opreturn_data, extract_output_addr, is_trustee_addr,
     },
@@ -67,7 +67,7 @@ impl BtcTxTypeDetector {
         tx: &Transaction,
         prev_tx: Option<&Transaction>,
         extract_account: Extractor,
-    ) -> MetaTxType<AccountId>
+    ) -> BtcTxMetaType<AccountId>
     where
         AccountId: Debug,
         Extractor: Fn(&[u8]) -> Option<(AccountId, Option<ReferralId>)>,
@@ -88,14 +88,14 @@ impl BtcTxTypeDetector {
 
             if is_trustee_addr(input_addr, self.current_trustee_pair) {
                 return if all_outputs_is_trustee {
-                    MetaTxType::HotAndCold
+                    BtcTxMetaType::HotAndCold
                 } else {
-                    MetaTxType::Withdrawal
+                    BtcTxMetaType::Withdrawal
                 };
             }
             if let Some(previous_trustee_pair) = self.previous_trustee_pair {
                 if is_trustee_addr(input_addr, previous_trustee_pair) && all_outputs_is_trustee {
-                    return MetaTxType::TrusteeTransition;
+                    return BtcTxMetaType::TrusteeTransition;
                 }
             }
         }
@@ -118,7 +118,7 @@ impl BtcTxTypeDetector {
         tx: &Transaction,
         input_addr: Option<Address>,
         extract_account: Extractor,
-    ) -> MetaTxType<AccountId>
+    ) -> BtcTxMetaType<AccountId>
     where
         AccountId: Debug,
         Extractor: Fn(&[u8]) -> Option<(AccountId, Option<ReferralId>)>,
@@ -129,7 +129,7 @@ impl BtcTxTypeDetector {
                 "[detect_deposit_transaction_type] Receive a deposit tx ({:?}), but outputs len ({}) is not 2 or 3, drop it",
                 hash_rev(tx.hash()), tx.outputs.len()
             );
-            return MetaTxType::Irrelevance;
+            return BtcTxMetaType::Irrelevance;
         }
 
         let (op_return, deposit_value) =
@@ -138,7 +138,7 @@ impl BtcTxTypeDetector {
         if deposit_value >= self.min_deposit {
             // if opreturn.is_none() && input_addr.is_none()
             // we still think it's a deposit tx, but won't process it.
-            MetaTxType::Deposit(DepositInfo {
+            BtcTxMetaType::Deposit(BtcDepositInfo {
                 deposit_value,
                 op_return,
                 input_addr,
@@ -148,7 +148,7 @@ impl BtcTxTypeDetector {
                 "[detect_deposit_transaction_type] Receive a deposit tx ({:?}), but deposit value ({:}) is too low, drop it",
                 hash_rev(tx.hash()), deposit_value,
             );
-            MetaTxType::Irrelevance
+            BtcTxMetaType::Irrelevance
         }
     }
 

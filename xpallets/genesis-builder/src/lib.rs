@@ -28,12 +28,13 @@ decl_storage! {
     trait Store for Module<T: Trait> as XGenesisBuilder {}
     add_extra_genesis {
         config(params): AllParams<T::AccountId, T::Balance, AssetBalanceOf<T>, StakingBalanceOf<T>>;
+        config(total_endowed): T::Balance;
         build(|config| {
             use crate::genesis::{xassets, balances, xstaking, xmining_asset};
 
             let now = std::time::Instant::now();
 
-            balances::initialize::<T>(&config.params.balances);
+            balances::initialize::<T>(&config.params.balances, config.total_endowed);
             xassets::initialize::<T>(&config.params.xassets);
             xstaking::initialize::<T>(&config.params.xstaking);
             xmining_asset::initialize::<T>(&config.params.xmining_asset);
@@ -64,7 +65,10 @@ mod genesis {
                 .map(|(_, validator)| validator)
         }
 
-        pub fn initialize<T: Trait>(params: &BalancesParams<T::AccountId, T::Balance>) {
+        pub fn initialize<T: Trait>(
+            params: &BalancesParams<T::AccountId, T::Balance>,
+            total_endowed: T::Balance,
+        ) {
             let BalancesParams {
                 free_balances,
                 wellknown_accounts,
@@ -97,7 +101,8 @@ mod genesis {
                 if *who == *legacy_council {
                     set_free_balance(&treasury_account, free);
                 } else if *who == *legacy_team {
-                    set_free_balance(&vesting_account, free);
+                    let vesting_free = *free - total_endowed;
+                    set_free_balance(&vesting_account, &vesting_free);
                 } else if let Some(validator) = validator_for::<T, _>(who, legacy_pots.iter()) {
                     let new_pot = xpallet_mining_staking::Module::<T>::reward_pot_for(validator);
                     set_free_balance(&new_pot, free);

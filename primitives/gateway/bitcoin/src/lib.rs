@@ -12,5 +12,5 @@ mod utils;
 
 pub use self::detector::BtcTxTypeDetector;
 pub use self::extractor::OpReturnExtractor;
-pub use self::types::{BtcTxType, DepositInfo, MetaTxType};
+pub use self::types::{BtcDepositInfo, BtcTxMetaType, BtcTxType};
 pub use self::utils::*;

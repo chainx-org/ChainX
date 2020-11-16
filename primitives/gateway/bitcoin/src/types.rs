@@ -31,30 +31,30 @@ impl Default for BtcTxType {
 /// The transaction type with deposit info.
 #[doc(hidden)]
 #[derive(PartialEq, Eq, Clone, RuntimeDebug)]
-pub enum MetaTxType<AccountId> {
+pub enum BtcTxMetaType<AccountId> {
     Withdrawal,
-    Deposit(DepositInfo<AccountId>),
+    Deposit(BtcDepositInfo<AccountId>),
     HotAndCold,
     TrusteeTransition,
     Irrelevance,
 }
 
-impl<AccountId> MetaTxType<AccountId> {
+impl<AccountId> BtcTxMetaType<AccountId> {
     /// Convert the MetaTxType as BtcTxType.
     pub fn ref_into(&self) -> BtcTxType {
         match self {
-            MetaTxType::Withdrawal => BtcTxType::Withdrawal,
-            MetaTxType::Deposit(_) => BtcTxType::Deposit,
-            MetaTxType::HotAndCold => BtcTxType::HotAndCold,
-            MetaTxType::TrusteeTransition => BtcTxType::TrusteeTransition,
-            MetaTxType::Irrelevance => BtcTxType::Irrelevance,
+            BtcTxMetaType::Withdrawal => BtcTxType::Withdrawal,
+            BtcTxMetaType::Deposit(_) => BtcTxType::Deposit,
+            BtcTxMetaType::HotAndCold => BtcTxType::HotAndCold,
+            BtcTxMetaType::TrusteeTransition => BtcTxType::TrusteeTransition,
+            BtcTxMetaType::Irrelevance => BtcTxType::Irrelevance,
         }
     }
 }
 
 /// The info of deposit transaction.
 #[derive(PartialEq, Eq, Clone, RuntimeDebug)]
-pub struct DepositInfo<AccountId> {
+pub struct BtcDepositInfo<AccountId> {
     /// The deposit value.
     pub deposit_value: u64,
     /// The parsed op_return data.

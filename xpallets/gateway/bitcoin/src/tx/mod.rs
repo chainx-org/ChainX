@@ -19,7 +19,7 @@ use light_bitcoin::{
 };
 
 use chainx_primitives::AssetId;
-use xp_gateway_bitcoin::{BtcTxTypeDetector, DepositInfo, MetaTxType};
+use xp_gateway_bitcoin::{BtcDepositInfo, BtcTxMetaType, BtcTxTypeDetector};
 use xp_gateway_common::AccountExtractor;
 use xp_logging::{debug, error, info, warn};
 use xpallet_assets::ChainT;
@@ -57,16 +57,16 @@ pub fn process_tx<T: Trait>(
 
     let tx_type = meta_type.ref_into();
     let result = match meta_type {
-        MetaTxType::<_>::Deposit(deposit_info) => deposit::<T>(tx.hash(), deposit_info),
-        MetaTxType::<_>::Withdrawal => withdraw::<T>(tx),
-        MetaTxType::HotAndCold | MetaTxType::TrusteeTransition => BtcTxResult::Success,
+        BtcTxMetaType::<_>::Deposit(deposit_info) => deposit::<T>(tx.hash(), deposit_info),
+        BtcTxMetaType::<_>::Withdrawal => withdraw::<T>(tx),
+        BtcTxMetaType::HotAndCold | BtcTxMetaType::TrusteeTransition => BtcTxResult::Success,
         // mark Irrelevance be Failure so that it could be replayed in the future
-        MetaTxType::<_>::Irrelevance => BtcTxResult::Failure,
+        BtcTxMetaType::<_>::Irrelevance => BtcTxResult::Failure,
     };
     Ok(BtcTxState { tx_type, result })
 }
 
-fn deposit<T: Trait>(txid: H256, deposit_info: DepositInfo<T::AccountId>) -> BtcTxResult {
+fn deposit<T: Trait>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) -> BtcTxResult {
     let account_info = match (deposit_info.op_return, deposit_info.input_addr) {
         (Some((account, referral)), Some(input_addr)) => {
             let input_addr = addr2vecu8(&input_addr);
