@@ -2,7 +2,7 @@
 
 // mod header;
 // mod opreturn;
-// mod others;
+mod others;
 mod trustee;
 // mod tx;
 
