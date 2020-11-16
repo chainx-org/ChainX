@@ -5,7 +5,7 @@ use frame_support::{
     dispatch::{DispatchError, DispatchResult},
     ensure,
 };
-use sp_std::{prelude::Vec, result};
+use sp_std::prelude::Vec;
 
 // light-bitcoin
 use light_bitcoin::{chain::Transaction, primitives::H256, script::Script};
@@ -66,7 +66,7 @@ pub fn validate_transaction<T: Trait>(
 }
 
 /// Check signed transactions
-pub fn parse_and_check_signed_tx<T: Trait>(tx: &Transaction) -> result::Result<u32, DispatchError> {
+pub fn parse_and_check_signed_tx<T: Trait>(tx: &Transaction) -> Result<u32, DispatchError> {
     let redeem_script = get_hot_trustee_redeem_script::<T>()?;
     parse_and_check_signed_tx_impl::<T>(tx, redeem_script)
 }
@@ -76,7 +76,7 @@ pub fn parse_and_check_signed_tx<T: Trait>(tx: &Transaction) -> result::Result<u
 pub fn parse_and_check_signed_tx_impl<T: Trait>(
     tx: &Transaction,
     script: Script,
-) -> result::Result<u32, DispatchError> {
+) -> Result<u32, DispatchError> {
     let (pubkeys, _, _) = script
         .parse_redeem_script()
         .ok_or(Error::<T>::BadRedeemScript)?;

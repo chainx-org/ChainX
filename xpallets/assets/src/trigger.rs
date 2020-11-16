@@ -1,7 +1,6 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 use frame_support::dispatch::DispatchResult;
-use sp_std::result;
 
 use chainx_primitives::AssetId;
 
@@ -32,7 +31,7 @@ impl<T: Trait> AssetChangedTrigger<T> {
         to: &T::AccountId,
         to_type: AssetType,
         value: BalanceOf<T>,
-    ) -> result::Result<(), AssetErr> {
+    ) -> Result<(), AssetErr> {
         Module::<T>::deposit_event(Event::<T>::Moved(
             *id,
             from.clone(),

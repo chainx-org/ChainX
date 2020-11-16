@@ -1,7 +1,5 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use sp_std::result;
-
 use frame_support::dispatch::{DispatchError, DispatchResult};
 
 use chainx_primitives::AssetId;
@@ -20,9 +18,7 @@ pub trait ChainT<Balance: Default> {
     fn check_addr(_addr: &[u8], _ext: &[u8]) -> DispatchResult {
         Ok(())
     }
-    fn withdrawal_limit(
-        _asset_id: &AssetId,
-    ) -> result::Result<WithdrawalLimit<Balance>, DispatchError> {
+    fn withdrawal_limit(_asset_id: &AssetId) -> Result<WithdrawalLimit<Balance>, DispatchError> {
         Ok(WithdrawalLimit::default())
     }
 }
@@ -56,7 +52,7 @@ pub trait OnAssetChanged<AccountId, Balance> {
         _to: &AccountId,
         _to_type: AssetType,
         _value: Balance,
-    ) -> result::Result<(), AssetErr> {
+    ) -> Result<(), AssetErr> {
         Ok(())
     }
 

@@ -14,7 +14,7 @@ impl<T: Trait> Module<T> {
         quote: T::Price,
         lowest_ask: T::Price,
         fluctuation: T::Price,
-    ) -> result::Result<(), Error<T>> {
+    ) -> Result<(), Error<T>> {
         debug!(
             "[check_bid_price] quote: {:?}, lowest_ask: {:?}, fluctuation: {:?}",
             quote, lowest_ask, fluctuation
@@ -36,7 +36,7 @@ impl<T: Trait> Module<T> {
         quote: T::Price,
         highest_bid: T::Price,
         fluctuation: T::Price,
-    ) -> result::Result<(), Error<T>> {
+    ) -> Result<(), Error<T>> {
         debug!(
             "[check_ask_price] Sell: quote: {:?}, highest_bid: {:?}, fluctuation: {:?}",
             quote, highest_bid, fluctuation
@@ -62,7 +62,7 @@ impl<T: Trait> Module<T> {
         quote: T::Price,
         side: Side,
         pair_id: TradingPairId,
-    ) -> result::Result<(), Error<T>> {
+    ) -> Result<(), Error<T>> {
         let handicap = <HandicapOf<T>>::get(pair_id);
         let (lowest_ask, highest_bid) = (handicap.lowest_ask, handicap.highest_bid);
 
@@ -80,7 +80,7 @@ impl<T: Trait> Module<T> {
         pair_id: TradingPairId,
         price: T::Price,
         side: Side,
-    ) -> result::Result<(), Error<T>> {
+    ) -> Result<(), Error<T>> {
         let quotations = <QuotationsOf<T>>::get(pair_id, price);
         if quotations.len() >= MAX_BACKLOG_ORDER {
             let (who, order_id) = &quotations[0];
@@ -113,7 +113,7 @@ impl<T: Trait> Module<T> {
         amount: BalanceOf<T>,
         price: T::Price,
         pair: &TradingPairProfile,
-    ) -> result::Result<BalanceOf<T>, Error<T>> {
+    ) -> Result<BalanceOf<T>, Error<T>> {
         if let (Some(base_p), Some(quote_p)) = (
             Self::currency_decimals_of(pair.base()),
             Self::currency_decimals_of(pair.quote()),
