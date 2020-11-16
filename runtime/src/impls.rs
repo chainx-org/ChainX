@@ -5,7 +5,7 @@
 use codec::{Decode, Encode};
 
 use sp_runtime::{
-    traits::{Convert, DispatchInfoOf, SignedExtension},
+    traits::{DispatchInfoOf, SignedExtension},
     transaction_validity::{
         InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransaction,
     },
@@ -14,7 +14,7 @@ use sp_runtime::{
 
 use frame_support::{
     parameter_types,
-    traits::{Currency, ExistenceRequirement, Imbalance, OnUnbalanced, WithdrawReason},
+    traits::{Currency, ExistenceRequirement, Imbalance, OnUnbalanced, WithdrawReasons},
 };
 
 use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
@@ -60,28 +60,6 @@ impl OnUnbalanced<NegativeImbalance> for DealWithFees {
     }
 }
 
-/// Struct that handles the conversion of Balance -> `u64`. This is used for staking's election
-/// calculation.
-pub struct CurrencyToVoteHandler;
-
-impl CurrencyToVoteHandler {
-    fn factor() -> Balance {
-        (Balances::total_issuance() / u64::max_value() as Balance).max(1)
-    }
-}
-
-impl Convert<Balance, u64> for CurrencyToVoteHandler {
-    fn convert(x: Balance) -> u64 {
-        (x / Self::factor()) as u64
-    }
-}
-
-impl Convert<u128, Balance> for CurrencyToVoteHandler {
-    fn convert(x: u128) -> Balance {
-        x * Self::factor()
-    }
-}
-
 parameter_types! {
     pub const TargetBlockFullness: Perquintill = Perquintill::from_percent(25);
     pub AdjustmentVariable: Multiplier = Multiplier::saturating_from_rational(1, 100_000);
@@ -123,7 +101,7 @@ impl ChargeExtraFee {
         match Balances::withdraw(
             who,
             fee,
-            WithdrawReason::TransactionPayment.into(),
+            WithdrawReasons::TRANSACTION_PAYMENT.into(),
             ExistenceRequirement::KeepAlive,
         ) {
             Ok(fee) => {

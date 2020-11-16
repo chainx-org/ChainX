@@ -99,7 +99,7 @@ pub mod impls;
 mod weights;
 
 use self::constants::{currency::*, fee::WeightToFee, time::*};
-use self::impls::{ChargeExtraFee, CurrencyToVoteHandler, DealWithFees, SlowAdjustingFeeUpdate};
+use self::impls::{ChargeExtraFee, DealWithFees, SlowAdjustingFeeUpdate};
 
 /// This runtime version.
 pub const VERSION: RuntimeVersion = RuntimeVersion {
@@ -240,7 +240,7 @@ impl frame_system::Trait for Runtime {
     /// What to do if an account is fully reaped from the system.
     type OnKilledAccount = ();
     /// Weight information for the extrinsics of this pallet.
-    type SystemWeightInfo = weights::frame_system::WeightInfo;
+    type SystemWeightInfo = ();
 }
 
 parameter_types! {
@@ -396,8 +396,7 @@ parameter_types! {
 }
 
 impl pallet_transaction_payment::Trait for Runtime {
-    type Currency = Balances;
-    type OnTransactionPayment = DealWithFees;
+    type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, DealWithFees>;
     type TransactionByteFee = TransactionByteFee;
     type WeightToFee = WeightToFee;
     type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
@@ -504,7 +503,7 @@ impl pallet_offences::Trait for Runtime {
 impl pallet_utility::Trait for Runtime {
     type Event = Event;
     type Call = Call;
-    type WeightInfo = weights::pallet_utility::WeightInfo;
+    type WeightInfo = ();
 }
 
 parameter_types! {
@@ -541,6 +540,7 @@ parameter_types! {
     // One cent: $10,000 / MB
     pub const PreimageByteDeposit: Balance = 1 * CENTS;
     pub const MaxVotes: u32 = 100;
+    pub const MaxProposals: u32 = 100;
 }
 
 impl pallet_democracy::Trait for Runtime {
@@ -572,6 +572,14 @@ impl pallet_democracy::Trait for Runtime {
     // To cancel a proposal which has been passed, 2/3 of the council must agree to it.
     type CancellationOrigin =
         pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, CouncilCollective>;
+    // To cancel a proposal before it has been passed, the technical committee must be unanimous or
+    // Root must agree.
+    type CancelProposalOrigin = EnsureOneOf<
+        AccountId,
+        pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, TechnicalCollective>,
+        EnsureRoot<AccountId>,
+    >;
+    type BlacklistOrigin = EnsureRoot<AccountId>;
     // Any single technical committee member may veto a coming council proposal, however they can
     // only do it once and it lasts only for the cooloff period.
     type VetoOrigin = pallet_collective::EnsureMember<AccountId, TechnicalCollective>;
@@ -582,7 +590,8 @@ impl pallet_democracy::Trait for Runtime {
     type Scheduler = Scheduler;
     type PalletsOrigin = OriginCaller;
     type MaxVotes = MaxVotes;
-    type WeightInfo = weights::pallet_democracy::WeightInfo;
+    type WeightInfo = ();
+    type MaxProposals = MaxProposals;
 }
 
 parameter_types! {
@@ -623,7 +632,7 @@ impl pallet_elections_phragmen::Trait for Runtime {
     // NOTE: this implies that council's genesis members cannot be set directly and must come from
     // this module.
     type InitializeMembers = Council;
-    type CurrencyToVote = CurrencyToVoteHandler;
+    type CurrencyToVote = frame_support::traits::U128CurrencyToVote;
     type CandidacyBond = CandidacyBond;
     type VotingBond = VotingBond;
     type LoserCandidate = ();
