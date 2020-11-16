@@ -4,13 +4,11 @@ use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
-// Substrate
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 
 use chainx_primitives::ReferralId;
 
-// light-bitcoin
 use light_bitcoin::{
     chain::{BlockHeader as BtcHeader, Transaction as BtcTransaction},
     keys::Address,
