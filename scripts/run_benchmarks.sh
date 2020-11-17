@@ -26,5 +26,6 @@ bench_run() {
   rustfmt "$output"
 }
 
+bench_run xpallet_dex_spot ./xpallets/dex/spot/src/weights.rs
 # bench_run xpallet_mining_asset ./xpallets/mining/asset/src/weights.rs
 bench_run xpallet_mining_staking ./xpallets/mining/staking/src/weights.rs

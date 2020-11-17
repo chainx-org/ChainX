@@ -8,7 +8,7 @@
 mod execution;
 mod rpc;
 mod types;
-mod weight_info;
+pub mod weights;
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
 mod benchmarking;
@@ -39,9 +39,9 @@ use chainx_primitives::AssetId;
 use xp_logging::info;
 use xpallet_assets::AssetErr;
 
-pub use rpc::*;
-pub use types::*;
-pub use weight_info::WeightInfo;
+pub use self::rpc::*;
+pub use self::types::*;
+pub use self::weights::WeightInfo;
 
 /// Maximum of backlog orders.
 const MAX_BACKLOG_ORDER: usize = 1000;

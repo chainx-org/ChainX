@@ -97,7 +97,10 @@ benchmarks! {
         let pair = CurrencyPair::new(EOS, ETH);
     }: _(RawOrigin::Root, pair.clone(), 2, 1, 100.into(), true)
     verify {
+        #[cfg(test)]
         assert_eq!(Module::<T>::trading_pair_count(), 3);
+        #[cfg(feature = "runtime-benchmarks")]
+        assert_eq!(Module::<T>::trading_pair_count(), 2);
         assert_eq!(
             Module::<T>::get_trading_pair_by_currency_pair(&pair)
                 .unwrap()
