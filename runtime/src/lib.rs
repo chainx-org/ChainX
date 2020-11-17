@@ -683,9 +683,9 @@ parameter_types! {
     pub const TipReportDepositBase: Balance = 1 * DOLLARS;
     pub const DataDepositPerByte: Balance = 1 * CENTS;
     pub const BountyDepositBase: Balance = 1 * DOLLARS;
-    pub const BountyDepositPayoutDelay: BlockNumber = 8 * DAYS; // TODO may need to change this
+    pub const BountyDepositPayoutDelay: BlockNumber = 4 * DAYS;
     pub const TreasuryModuleId: ModuleId = ModuleId(*b"pcx/trsy");
-    pub const BountyUpdatePeriod: BlockNumber = 90 * DAYS; // TODO may need to change this
+    pub const BountyUpdatePeriod: BlockNumber = 90 * DAYS;
     pub const MaximumReasonLength: u32 = 16384;
     pub const BountyCuratorDeposit: Permill = Permill::from_percent(50);
     pub const BountyValueMinimum: Balance = 10 * DOLLARS;
