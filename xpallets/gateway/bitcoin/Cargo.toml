@@ -50,6 +50,7 @@ sp-keyring = "2.0.0"
 frame-benchmarking = "2.0.0"
 pallet-balances = "2.0.0"
 pallet-multisig = "2.0.0"
+xp-assets-registrar = { path = "../../../primitives/assets-registrar" }
 xpallet-assets-registrar = { path = "../../assets-registrar" }
 
 [features]

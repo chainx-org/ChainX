@@ -8854,7 +8854,6 @@ dependencies = [
  "chainx-primitives",
  "sp-arithmetic",
  "sp-runtime",
- "sp-std",
 ]
 
 [[package]]
@@ -9046,6 +9045,7 @@ dependencies = [
  "sp-keyring",
  "sp-runtime",
  "sp-std",
+ "xp-assets-registrar",
  "xp-gateway-bitcoin",
  "xp-gateway-common",
  "xp-logging",

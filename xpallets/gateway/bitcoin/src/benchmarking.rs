@@ -20,19 +20,14 @@ use light_bitcoin::{
     serialization::{self, Reader},
 };
 
-use crate::Module as XGatewayBitcoin;
 use crate::{
-    types::{
-        BtcDepositCache, BtcHeaderIndex, BtcRelayedTxInfo, BtcTxResult, BtcTxState, BtcTxVerifier,
-        BtcWithdrawalProposal, VoteResult,
-    },
-    Call, Module, PendingDeposits, Trait, TxState, Verifier, WithdrawalProposal,
+    types::*, Call, Module, PendingDeposits, Trait, TxState, Verifier, WithdrawalProposal,
 };
 
 const ASSET_ID: AssetId = xp_protocol::X_BTC;
 
 pub fn generate_blocks_from_raw() -> BTreeMap<u32, BlockHeader> {
-    let bytes = include_bytes!("./tests/res/headers-576576-578692.raw");
+    let bytes = include_bytes!("./res/headers-576576-578692.raw");
     Decode::decode(&mut &bytes[..]).unwrap()
 }
 
@@ -87,7 +82,7 @@ fn withdraw_tx() -> (Transaction, BtcRelayedTxInfo, Transaction) {
         145, 166, 110, 249, 201, 229, 58, 196, 126, 153, 124, 161, 34, 204, 139, 250, 216, 234,
         101, 63, 185, 84, 4, 215, 175, 1, 0,
     ];
-    let proof: PartialMerkleTree = serialization::deserialize(Reader::new(&RAW_PROOF)).expect("");
+    let proof: PartialMerkleTree = serialization::deserialize(Reader::new(&RAW_PROOF)).unwrap();
 
     let header = generate_blocks_from_raw()[&577696];
     let block_hash = header.hash();
@@ -109,7 +104,7 @@ fn prepare_withdrawal<T: Trait>() -> Transaction {
 
     let alice = alice::<T>();
     let bob = bob::<T>();
-    let withdrawal_fee = XGatewayBitcoin::<T>::btc_withdrawal_fee();
+    let withdrawal_fee = Module::<T>::btc_withdrawal_fee();
 
     let balance1 = (9778400 + withdrawal_fee).saturated_into();
     let balance2 = (9900000 + withdrawal_fee).saturated_into();
@@ -161,7 +156,7 @@ fn prepare_headers<T: Trait>(caller: &T::AccountId) {
             break;
         }
         let v = serialization::serialize(&header).into();
-        XGatewayBitcoin::<T>::push_header(RawOrigin::Signed(caller.clone()).into(), v).unwrap();
+        Module::<T>::push_header(RawOrigin::Signed(caller.clone()).into(), v).unwrap();
     }
 }
 
@@ -177,7 +172,7 @@ benchmarks! {
         let amount: BalanceOf<T> = 1000.into();
     }: _(RawOrigin::Signed(receiver), header_raw)
     verify {
-        assert!(XGatewayBitcoin::<T>::headers(&hash).is_some());
+        assert!(Module::<T>::headers(&hash).is_some());
     }
 
     push_transaction {
@@ -228,7 +223,7 @@ benchmarks! {
         let tx_raw: Vec<u8> = serialization::serialize(&tx).into();
         let prev_tx_raw: Vec<u8> = serialization::serialize(&prev).into();
 
-        let btc_withdrawal_fee = XGatewayBitcoin::<T>::btc_withdrawal_fee();
+        let btc_withdrawal_fee = Module::<T>::btc_withdrawal_fee();
         let first_withdraw = (9778400 + btc_withdrawal_fee).saturated_into();
         let second_withdraw = (9900000 + btc_withdrawal_fee).saturated_into();
         XGatewayRecords::<T>::deposit(&caller, ASSET_ID, first_withdraw).unwrap();
@@ -271,7 +266,7 @@ benchmarks! {
         };
     }: _(RawOrigin::Root, best)
     verify {
-        assert_eq!(XGatewayBitcoin::<T>::best_index(), best);
+        assert_eq!(Module::<T>::best_index(), best);
     }
 
     set_confirmed_index {
@@ -281,7 +276,7 @@ benchmarks! {
         };
     }: _(RawOrigin::Root, confirmed)
     verify {
-        assert_eq!(XGatewayBitcoin::<T>::confirmed_index(), Some(confirmed));
+        assert_eq!(Module::<T>::confirmed_index(), Some(confirmed));
     }
 
     remove_pending {
@@ -304,7 +299,7 @@ benchmarks! {
         let receiver: T::AccountId = whitelisted_caller();
     }: _(RawOrigin::Root, addr.clone(), Some(receiver.clone()))
     verify {
-        assert!(XGatewayBitcoin::<T>::pending_deposits(&addr).is_empty());
+        assert!(Module::<T>::pending_deposits(&addr).is_empty());
         assert_eq!(XAssets::<T>::usable_balance(&receiver, &ASSET_ID), (100000000 + 200000000 + 300000000).into());
     }
 
@@ -334,22 +329,22 @@ benchmarks! {
     }
 
     set_btc_withdrawal_fee {
-        let alice = alice::<T>();
+        let caller = alice::<T>();
     }: _(RawOrigin::Root,  2000000)
     verify {
     }
 
     set_btc_deposit_limit {
-        let alice = bob::<T>();
+        let caller = bob::<T>();
     }: _(RawOrigin::Root,  2000000)
     verify {
     }
 }
-/*
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::mock::{ExtBuilder, Test};
+    use crate::mock::{ExtBuilder, Test};
     use frame_support::assert_ok;
 
     #[test]
@@ -395,4 +390,3 @@ mod tests {
         });
     }
 }
-*/

@@ -1,15 +1,13 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-#![cfg(test)]
+use std::{cell::RefCell, collections::BTreeMap, time::Duration};
 
-use super::common::*;
+use hex_literal::hex;
 
-use std::cell::RefCell;
-use std::time::Duration;
-
-// Substrate
-use frame_support::{impl_outer_origin, parameter_types, sp_io, weights::Weight};
+use frame_support::{impl_outer_origin, parameter_types, sp_io, traits::UnixTime, weights::Weight};
 use frame_system::EnsureSignedBy;
+use sp_core::H256;
+use sp_keyring::sr25519;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
@@ -17,13 +15,23 @@ use sp_runtime::{
 };
 
 use chainx_primitives::AssetId;
+use xp_assets_registrar::Chain;
 pub use xp_protocol::{X_BTC, X_ETH};
 use xpallet_assets::AssetRestrictions;
 use xpallet_assets_registrar::AssetInfo;
 use xpallet_gateway_common::types::TrusteeInfoConfig;
 
-// light-bitcoin
-use light_bitcoin::primitives::{h256_rev, Compact};
+use light_bitcoin::{
+    chain::BlockHeader as BtcHeader,
+    keys::Network as BtcNetwork,
+    primitives::{h256_rev, Compact},
+    serialization::{self, Reader},
+};
+
+use crate::{
+    types::{BtcParams, BtcTxVerifier},
+    Error, GenesisConfig, Module, Trait,
+};
 
 /// The AccountId alias in this test module.
 pub(crate) type AccountId = AccountId32;
@@ -324,6 +332,38 @@ impl ExtBuilder {
     }
 }
 
+pub fn alice() -> AccountId32 {
+    sr25519::Keyring::Alice.to_account_id()
+}
+pub fn bob() -> AccountId32 {
+    sr25519::Keyring::Bob.to_account_id()
+}
+pub fn charlie() -> AccountId32 {
+    sr25519::Keyring::Charlie.to_account_id()
+}
+pub fn trustees() -> Vec<(AccountId32, Vec<u8>, Vec<u8>, Vec<u8>)> {
+    vec![
+        (
+            alice(),
+            b"Alice".to_vec(),
+            hex!("02df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6").to_vec(),
+            hex!("0386b58f51da9b37e59c40262153173bdb59d7e4e45b73994b99eec4d964ee7e88").to_vec(),
+        ),
+        (
+            bob(),
+            b"Bob".to_vec(),
+            hex!("0244d81efeb4171b1a8a433b87dd202117f94e44c909c49e42e77b69b5a6ce7d0d").to_vec(),
+            hex!("02e4631e46255571122d6e11cda75d5d601d5eb2585e65e4e87fe9f68c7838a278").to_vec(),
+        ),
+        (
+            charlie(),
+            b"Charlie".to_vec(),
+            hex!("03a36339f413da869df12b1ab0def91749413a0dee87f0bfa85ba7196e6cdad102").to_vec(),
+            hex!("0263d46c760d3e04883d4b433c9ce2bc32130acd9faad0192a2b375dbba9f865c3").to_vec(),
+        ),
+    ]
+}
+
 pub fn load_mainnet_btc_genesis_header_info() -> ((BtcHeader, u32), H256, BtcNetwork) {
     (
         (
@@ -351,7 +391,7 @@ fn trustees_info() -> Vec<(
     TrusteeInfoConfig,
     Vec<(AccountId, Vec<u8>, Vec<u8>, Vec<u8>)>,
 )> {
-    let btc_trustees = trustees::<Test>();
+    let btc_trustees = trustees();
     let btc_config = TrusteeInfoConfig {
         min_trustee_count: 3,
         max_trustee_count: 15,
@@ -359,7 +399,20 @@ fn trustees_info() -> Vec<(
     vec![(Chain::Bitcoin, btc_config, btc_trustees)]
 }
 
-pub fn generate_mock_blocks() -> (u32, Vec<BtcHeader>, Vec<BtcHeader>) {
+pub fn generate_blocks_576576_578692() -> BTreeMap<u32, BtcHeader> {
+    let headers = include_str!("./res/headers-576576-578692.json");
+    let headers: Vec<(u32, String)> = serde_json::from_str(headers).unwrap();
+    headers
+        .into_iter()
+        .map(|(height, header_hex)| {
+            let data = hex::decode(header_hex).unwrap();
+            let header = serialization::deserialize(Reader::new(&data)).unwrap();
+            (height, header)
+        })
+        .collect()
+}
+
+pub fn generate_blocks_478557_478563() -> (u32, Vec<BtcHeader>, Vec<BtcHeader>) {
     let b0 = BtcHeader {
         version: 0x20000002,
         previous_header_hash: h256_rev(

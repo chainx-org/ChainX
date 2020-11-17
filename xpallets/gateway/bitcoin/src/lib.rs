@@ -4,14 +4,16 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-mod header;
-mod trustee;
-mod tx;
+pub mod header;
+pub mod trustee;
+pub mod tx;
 mod types;
 mod weight_info;
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
 mod benchmarking;
+#[cfg(test)]
+mod mock;
 #[cfg(test)]
 mod tests;
 

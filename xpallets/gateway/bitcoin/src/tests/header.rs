@@ -1,8 +1,14 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use super::common::*;
+use frame_support::{assert_noop, assert_ok};
 
-use light_bitcoin::{primitives::h256_rev, serialization};
+use light_bitcoin::{chain::BlockHeader, keys::Network, primitives::h256_rev, serialization};
+
+use crate::mock::{
+    generate_blocks_478557_478563, generate_blocks_576576_578692, ExtBuilder, XGatewayBitcoin,
+    XGatewayBitcoinErr,
+};
+use crate::types::BtcHeaderIndex;
 
 #[test]
 fn test_genesis() {
@@ -27,12 +33,9 @@ fn test_genesis() {
 
 #[test]
 fn test_insert_headers() {
-    let (base_height, c1, _) = generate_mock_blocks();
+    let (base_height, c1, _) = generate_blocks_478557_478563();
     ExtBuilder::default()
-        .build_mock(
-            (c1.get(0).unwrap().clone(), base_height),
-            BtcNetwork::Mainnet,
-        )
+        .build_mock((c1.get(0).unwrap().clone(), base_height), Network::Mainnet)
         .execute_with(|| {
             assert_noop!(
                 XGatewayBitcoin::apply_push_header(c1.get(0).unwrap().clone()),
@@ -62,7 +65,7 @@ fn test_insert_headers() {
         })
 }
 
-fn should_in_mainchain(headers: &[BtcHeader], expect: bool) {
+fn should_in_mainchain(headers: &[BlockHeader], expect: bool) {
     for header in headers.iter() {
         assert_eq!(XGatewayBitcoin::main_chain(&header.hash()), expect);
     }
@@ -74,11 +77,11 @@ fn test_insert_forked_headers_from_genesis_height() {
     // b1
     // b --- b --- b --- b
     // |---- b --- b
-    let (base_height, c1, forked) = generate_mock_blocks();
+    let (base_height, c1, forked) = generate_blocks_478557_478563();
     ExtBuilder::default()
         .build_mock(
             (c1.get(1).unwrap().clone(), base_height + 1),
-            BtcNetwork::Mainnet,
+            Network::Mainnet,
         )
         .execute_with(|| {
             // note: confirm block is 4
@@ -166,12 +169,9 @@ fn test_insert_forked_headers() {
     // b0
     // b --- b --- b --- b --- b
     //       |---- b --- b
-    let (base_height, c1, forked) = generate_mock_blocks();
+    let (base_height, c1, forked) = generate_blocks_478557_478563();
     ExtBuilder::default()
-        .build_mock(
-            (c1.get(0).unwrap().clone(), base_height),
-            BtcNetwork::Mainnet,
-        )
+        .build_mock((c1.get(0).unwrap().clone(), base_height), Network::Mainnet)
         .execute_with(|| {
             assert_ok!(XGatewayBitcoin::apply_push_header(
                 c1.get(1).unwrap().clone()
@@ -231,7 +231,7 @@ fn test_insert_forked_headers() {
 #[test]
 fn test_change_difficulty() {
     ExtBuilder::default().build_and_execute(|| {
-        let headers = generate_blocks();
+        let headers = generate_blocks_576576_578692();
         let to_height = 576576 + 2016 + 1;
         let current_difficulty = headers[&576577].bits;
         let new_difficulty = headers[&to_height].bits;
@@ -248,7 +248,7 @@ fn test_change_difficulty() {
 #[test]
 fn test_call() {
     ExtBuilder::default().build_and_execute(|| {
-        let headers = generate_blocks();
+        let headers = generate_blocks_576576_578692();
         let origin = frame_system::RawOrigin::Signed(Default::default()).into();
         let v = serialization::serialize(&headers[&(576576 + 1)]);
         let v = v.take();
