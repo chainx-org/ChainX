@@ -4,8 +4,10 @@ use sp_core::crypto::AccountId32;
 use sp_std::prelude::Vec;
 
 use chainx_primitives::ReferralId;
-use xp_gateway_common::{from_ss58_check, AccountExtractor};
+use xp_gateway_common::from_ss58_check;
 use xp_logging::{debug, error};
+
+pub use xp_gateway_common::AccountExtractor;
 
 /// A helper struct that implements the `AccountExtractor` trait for Bitcoin OP_RETURN data.
 ///
