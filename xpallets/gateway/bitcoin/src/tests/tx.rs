@@ -20,7 +20,7 @@ use crate::mock::{
     XGatewayBitcoinErr, XGatewayCommon, X_BTC,
 };
 use crate::{
-    tx::detect_transaction_type_impl,
+    tx::{detect_transaction_type_impl, handle_tx},
     types::{
         BtcDepositCache, BtcRelayedTxInfo, BtcTxResult, BtcTxState, BtcWithdrawalProposal,
         MetaTxType, VoteResult,
@@ -111,7 +111,7 @@ fn mock_detect_transaction_type<T: Trait>(
 pub fn mock_process_tx<T: Trait>(tx: Transaction, prev: Option<Transaction>) -> BtcTxState {
     let meta_type = mock_detect_transaction_type::<T>(&tx, prev.as_ref());
     // process
-    let state = crate::tx::handle_tx::<T>(tx, meta_type);
+    let state = handle_tx::<T>(tx, meta_type);
     state
 }
 
