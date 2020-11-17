@@ -801,7 +801,7 @@ impl xpallet_assets::Trait for Runtime {
 
 impl xpallet_gateway_records::Trait for Runtime {
     type Event = Event;
-    type WeightInfo = ();
+    type WeightInfo = xpallet_gateway_records::weights::SubstrateWeight<Runtime>;
 }
 
 pub struct MultisigProvider;
@@ -817,7 +817,7 @@ impl xpallet_gateway_common::Trait for Runtime {
     type DetermineMultisigAddress = MultisigProvider;
     type Bitcoin = XGatewayBitcoin;
     type BitcoinTrustee = XGatewayBitcoin;
-    type WeightInfo = ();
+    type WeightInfo = xpallet_gateway_common::weights::SubstrateWeight<Runtime>;
 }
 
 impl xpallet_gateway_bitcoin::Trait for Runtime {
