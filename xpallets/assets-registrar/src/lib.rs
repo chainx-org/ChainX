@@ -14,7 +14,7 @@ mod benchmarking;
 mod tests;
 mod types;
 mod verifier;
-mod weight_info;
+pub mod weights;
 
 use sp_std::prelude::*;
 
@@ -31,7 +31,7 @@ use chainx_primitives::{AssetId, Desc, Token};
 use xp_logging::info;
 
 pub use self::types::AssetInfo;
-pub use self::weight_info::WeightInfo;
+pub use self::weights::WeightInfo;
 pub use xp_assets_registrar::{Chain, RegistrarHandler};
 
 /// The module's config trait.

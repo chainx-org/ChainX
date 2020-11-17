@@ -788,7 +788,7 @@ impl xpallet_assets_registrar::Trait for Runtime {
     type Event = Event;
     type NativeAssetId = ChainXAssetId;
     type RegistrarHandler = XMiningAsset;
-    type WeightInfo = weights::xpallet_assets_registrar::WeightInfo;
+    type WeightInfo = xpallet_assets_registrar::weights::SubstrateWeight<Runtime>;
 }
 
 impl xpallet_assets::Trait for Runtime {
