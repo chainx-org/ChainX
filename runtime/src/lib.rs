@@ -95,8 +95,6 @@ pub use xpallet_mining_staking::VoteWeight;
 pub mod constants;
 /// Implementations of some helper traits passed into runtime modules as associated types.
 pub mod impls;
-/// Weights for pallets used in the runtime.
-mod weights;
 
 use self::constants::{currency::*, fee::WeightToFee, time::*};
 use self::impls::{ChargeExtraFee, DealWithFees, SlowAdjustingFeeUpdate};
@@ -883,7 +881,7 @@ impl xpallet_mining_asset::Trait for Runtime {
     type TreasuryAccount = SimpleTreasuryAccount;
     type DetermineRewardPotAccount =
         xpallet_mining_asset::SimpleAssetRewardPotAccountDeterminer<Runtime>;
-    type WeightInfo = weights::xpallet_mining_asset::WeightInfo;
+    type WeightInfo = xpallet_mining_asset::weights::SubstrateWeight<Runtime>;
 }
 
 impl xpallet_genesis_builder::Trait for Runtime {}

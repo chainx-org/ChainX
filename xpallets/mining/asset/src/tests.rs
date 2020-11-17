@@ -83,7 +83,7 @@ fn t_xbtc_set_claim_staking_requirement(new: StakingRequirement) {
 fn assert_xbtc_reward_pot_balance(value: Balance) {
     assert_eq!(
         Balances::free_balance(
-            &DummyAssetRewardPotAccountDeterminer::reward_pot_account_for(&xp_protocol::X_BTC)
+            &DummyAssetRewardPotAccountDeterminer::reward_pot_account_for(&X_BTC)
         ),
         value
     );
@@ -367,11 +367,7 @@ fn total_issuance_should_work() {
 }
 
 fn t_set_xbtc_asset_power(new: FixedAssetPower) {
-    assert_ok!(XMiningAsset::set_asset_power(
-        Origin::root(),
-        xp_protocol::X_BTC,
-        new
-    ));
+    assert_ok!(XMiningAsset::set_asset_power(Origin::root(), X_BTC, new));
 }
 
 #[test]
@@ -437,18 +433,18 @@ fn asset_mining_reward_should_work() {
         // Disable the staking requirement.
         assert_ok!(XMiningAsset::set_claim_staking_requirement(
             Origin::root(),
-            xp_protocol::X_BTC,
+            X_BTC,
             0
         ));
 
         assert_eq!(Balances::free_balance(&t_1), 0);
-        assert_ok!(XMiningAsset::claim(Origin::signed(t_1), xp_protocol::X_BTC));
+        assert_ok!(XMiningAsset::claim(Origin::signed(t_1), X_BTC));
         assert_eq!(
             Balances::free_balance(&t_1),
             xbtc_pot_balance - xbtc_pot_balance / 10
         );
-        let referral = DummyGatewayReferralGetter::referral_of(&t_1, xp_protocol::X_BTC)
-            .unwrap_or(TREASURY_ACCOUNT);
+        let referral =
+            DummyGatewayReferralGetter::referral_of(&t_1, X_BTC).unwrap_or(TREASURY_ACCOUNT);
         assert_eq!(Balances::free_balance(&referral), xbtc_pot_balance / 10);
         assert_eq!(Balances::free_balance(&TREASURY_ACCOUNT), treasury_balance);
     });
