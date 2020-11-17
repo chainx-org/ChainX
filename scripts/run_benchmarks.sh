@@ -22,6 +22,8 @@ bench_run() {
     --heap-pages=4096 \
     --output="$output" \
     --template=./scripts/xpallet-weight-template.hbs
+
+  rustfmt "$output"
 }
 
 # bench_run xpallet_mining_asset ./xpallets/mining/asset/src/weights.rs
