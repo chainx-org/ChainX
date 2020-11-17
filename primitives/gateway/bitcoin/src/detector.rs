@@ -105,18 +105,37 @@ impl BtcTxTypeDetector {
 
     /// Detect X-BTC `Deposit` transaction
     ///
+    /// # Format
+    ///
     /// The outputs of X-BTC `Deposit` transaction must be in the following
     /// format (ignore the outputs order):
+    ///
+    /// - 1 outputs (e.g. txid=987f12d3ebfaf875c19553bf5e1d4277f24d2be64cbdd8942174d1cd232fdaf8):
+    ///   --> X-BTC hot trustee address (deposit value)
+    ///   **Precondition**: sent a correct deposit transaction with the same BTC address before.
+    ///   **Solution**: call `push_transaction` with the previous transaction of the transaction
+    ///   with 1 outputs to get the BTC address.
+    ///
     /// - 2 outputs (e.g. txid=e3639343ca806fe3bf2513971b79130eef88aa05000ce538c6af199dd8ef3ca7):
     ///   --> X-BTC hot trustee address (deposit value)
     ///   --> Null data transaction (opreturn data with valid account info)
+    ///
+    /// - 2 outputs (e.g txid=7cd6d752c51100c7bc51657433b52facd04a0fea203b8e7776e6420c477912c2):
+    ///   --> X-BTC hot trustee address (deposit value)
+    ///   --> Change address (don't care)
+    ///   **Solution**: send a correct deposit transaction with same BTC address.
+    ///
     /// - 3 outputs (e.g. txid=003e7e005b172fe0046fd06a83679fbcdc5e3dd64c8ef9295662a463dea486aa):
     ///   --> X-BTC hot trustee address (deposit value)
     ///   --> Change address (don't care)
     ///   --> Null data transaction (opreturn data with valid account info)
-    /// - 3 outputs (Not recommended):
+    ///
+    /// - 3+ outputs (Not recommended):
     ///   --> X-BTC hot trustee address (deposit value)
     ///   --> Null data transaction (opreturn data with valid account info)
+    ///   --> Null data transaction (useless one for us)
+    ///   --> Null data transaction (useless one for us)
+    ///   --> ...
     ///   --> Null data transaction (useless one for us)
     ///
     /// # NOTE
@@ -134,15 +153,6 @@ impl BtcTxTypeDetector {
         AccountId: Debug,
         Extractor: Fn(&[u8]) -> Option<(AccountId, Option<ReferralId>)>,
     {
-        // The numbers of deposit transaction outputs must be 2 or 3.
-        if tx.outputs.len() != 2 && tx.outputs.len() != 3 {
-            warn!(
-                "[detect_deposit_transaction_type] Receive a deposit tx ({:?}), but outputs len ({}) is not 2 or 3, drop it",
-                hash_rev(tx.hash()), tx.outputs.len()
-            );
-            return BtcTxMetaType::Irrelevance;
-        }
-
         let (op_return, deposit_value) =
             self.parse_deposit_transaction_outputs(tx, extract_account);
         // check if deposit value is greater than minimum deposit value.
