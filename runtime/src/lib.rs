@@ -865,7 +865,7 @@ impl xpallet_mining_staking::Trait for Runtime {
     type AssetMining = XMiningAsset;
     type DetermineRewardPotAccount =
         xpallet_mining_staking::SimpleValidatorRewardPotAccountDeterminer<Runtime>;
-    type WeightInfo = weights::xpallet_mining_staking::WeightInfo;
+    type WeightInfo = xpallet_mining_staking::weights::SubstrateWeight<Runtime>;
 }
 
 pub struct ReferralGetter;

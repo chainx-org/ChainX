@@ -19,7 +19,7 @@ mod reward;
 mod rpc;
 mod slashing;
 mod types;
-mod weight_info;
+pub mod weights;
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
 mod benchmarking;
@@ -53,7 +53,7 @@ use self::constants::*;
 pub use self::impls::{IdentificationTuple, SimpleValidatorRewardPotAccountDeterminer};
 pub use self::rpc::*;
 pub use self::types::*;
-pub use self::weight_info::WeightInfo;
+pub use self::weights::WeightInfo;
 
 pub type BalanceOf<T> =
     <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
