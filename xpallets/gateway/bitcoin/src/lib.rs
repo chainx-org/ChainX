@@ -4,16 +4,19 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#[cfg(any(feature = "runtime-benchmarks", test))]
-mod benchmarking;
 pub mod header;
-mod tests;
 pub mod trustee;
 pub mod tx;
 mod types;
 mod weight_info;
 
-// Substrate
+#[cfg(any(feature = "runtime-benchmarks", test))]
+mod benchmarking;
+#[cfg(test)]
+mod mock;
+#[cfg(test)]
+mod tests;
+
 use sp_runtime::{traits::Zero, SaturatedConversion};
 use sp_std::prelude::*;
 
@@ -25,10 +28,8 @@ use frame_support::{
     weights::Pays,
 };
 use frame_system::{ensure_root, ensure_signed};
-
 use orml_utilities::with_transaction_result;
 
-// ChainX
 use chainx_primitives::{AssetId, ReferralId};
 use xp_gateway_common::AccountExtractor;
 use xp_logging::{debug, error, info};
@@ -39,7 +40,6 @@ use xpallet_gateway_common::{
 };
 use xpallet_support::{str, try_addr};
 
-// light-bitcoin
 #[cfg(feature = "std")]
 pub use light_bitcoin::primitives::h256_rev;
 pub use light_bitcoin::{
@@ -58,9 +58,8 @@ use self::types::{
     BtcDepositCache, BtcHeaderIndex, BtcHeaderInfo, BtcRelayedTx, BtcRelayedTxInfo, BtcTxResult,
     BtcTxState,
 };
-use crate::trustee::get_trustee_address_pair;
-use crate::tx::remove_pending_deposit;
 use crate::weight_info::WeightInfo;
+use crate::{trustee::get_trustee_address_pair, tx::remove_pending_deposit};
 
 // syntactic sugar for native log.
 #[macro_export]

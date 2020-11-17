@@ -1,20 +1,51 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
+use codec::{Decode, Encode};
 use frame_benchmarking::{benchmarks, whitelisted_caller};
+use frame_support::storage::{StorageMap, StorageValue};
 use frame_system::RawOrigin;
+use sp_runtime::{AccountId32, SaturatedConversion};
+use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
-use xpallet_assets::Module as XAssets;
-use xpallet_gateway_records::Module as XGatewayRecords;
-use xpallet_gateway_records::WithdrawalState;
+use chainx_primitives::AssetId;
+use xpallet_assets::{BalanceOf, Module as XAssets};
+use xpallet_gateway_records::{Module as XGatewayRecords, WithdrawalState};
 
-use light_bitcoin::merkle::PartialMerkleTree;
+use light_bitcoin::{
+    chain::{BlockHeader, Transaction},
+    merkle::PartialMerkleTree,
+    primitives::H256,
+    serialization::{self, Reader},
+};
 
-use super::*;
-use crate::tests::common::{self, *};
-use crate::types::*;
-use crate::Module as XGatewayBitcoin;
+use crate::{
+    types::*, Call, Module, PendingDeposits, Trait, TxState, Verifier, WithdrawalProposal,
+};
 
 const ASSET_ID: AssetId = xp_protocol::X_BTC;
+
+pub fn generate_blocks_from_raw() -> BTreeMap<u32, BlockHeader> {
+    let bytes = include_bytes!("./res/headers-576576-578692.raw");
+    Decode::decode(&mut &bytes[..]).unwrap()
+}
+
+fn account<T: Trait>(pubkey: &str) -> T::AccountId {
+    let pubkey = hex::decode(pubkey).unwrap();
+    let mut public = [0u8; 32];
+    public.copy_from_slice(pubkey.as_slice());
+    let account = AccountId32::from(public).encode();
+    Decode::decode(&mut account.as_slice()).unwrap()
+}
+
+fn alice<T: Trait>() -> T::AccountId {
+    // sr25519 Alice
+    account::<T>("d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d")
+}
+
+fn bob<T: Trait>() -> T::AccountId {
+    // sr25519 Bob
+    account::<T>("8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48")
+}
 
 fn withdraw_tx() -> (Transaction, BtcRelayedTxInfo, Transaction) {
     // https://btc.com/62c389f1974b8a44737d76f92da0f5cd7f6f48d065e7af6ba368298361141270.rawhex
@@ -49,7 +80,7 @@ fn withdraw_tx() -> (Transaction, BtcRelayedTxInfo, Transaction) {
         145, 166, 110, 249, 201, 229, 58, 196, 126, 153, 124, 161, 34, 204, 139, 250, 216, 234,
         101, 63, 185, 84, 4, 215, 175, 1, 0,
     ];
-    let proof: PartialMerkleTree = serialization::deserialize(Reader::new(&RAW_PROOF)).expect("");
+    let proof: PartialMerkleTree = serialization::deserialize(Reader::new(&RAW_PROOF)).unwrap();
 
     let header = generate_blocks_from_raw()[&577696];
     let block_hash = header.hash();
@@ -69,10 +100,9 @@ fn prepare_withdrawal<T: Trait>() -> Transaction {
         "0100000001059ec66e2a2123364a56bd48f10f57d8a41ecf4082669e6fc85485637043879100000000fdfd00004830450221009fbe7b8f2f4ae771e8773cb5206b9f20286676e2c7cfa98a8e95368acfc3cb3c02203969727a276d7333d5f8815fa364307b8015783cfefbd53def28befdb81855fc0147304402205e5bbe039457d7657bb90dbe63ac30b9547242b44cc03e1f7a690005758e34aa02207208ed76a269d193f1e10583bd902561dbd02826d0486c33a4b1b1839a3d226f014c69522102df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6210244d81efeb4171b1a8a433b87dd202117f94e44c909c49e42e77b69b5a6ce7d0d2103a36339f413da869df12b1ab0def91749413a0dee87f0bfa85ba7196e6cdad10253aeffffffff04288e0300000000001976a914eb016d7998c88a79a50a0408dd7d5839b1ce1a6888aca0bb0d00000000001976a914646fe05e35369248c3f8deea436dc2b92c7dc86888ac50c30000000000001976a914d1a68d6e891a88d53d9bc3b88d172a3ff6b238c388ac20ee03020000000017a914cb94110435d0635223eebe25ed2aaabc03781c458700000000";
     let tmp = ANOTHER_TX.parse::<Transaction>().unwrap();
 
-    let accounts = accounts::<T>();
-    let alice = accounts[0].clone();
-    let bob = accounts[1].clone();
-    let withdrawal_fee = XGatewayBitcoin::<T>::btc_withdrawal_fee();
+    let alice = alice::<T>();
+    let bob = bob::<T>();
+    let withdrawal_fee = Module::<T>::btc_withdrawal_fee();
 
     let balance1 = (9778400 + withdrawal_fee).saturated_into();
     let balance2 = (9900000 + withdrawal_fee).saturated_into();
@@ -124,7 +154,7 @@ fn prepare_headers<T: Trait>(caller: &T::AccountId) {
             break;
         }
         let v = serialization::serialize(&header).into();
-        XGatewayBitcoin::<T>::push_header(RawOrigin::Signed(caller.clone()).into(), v).unwrap();
+        Module::<T>::push_header(RawOrigin::Signed(caller.clone()).into(), v).unwrap();
     }
 }
 
@@ -140,7 +170,7 @@ benchmarks! {
         let amount: BalanceOf<T> = 1000.into();
     }: _(RawOrigin::Signed(receiver), header_raw)
     verify {
-        assert!(XGatewayBitcoin::<T>::headers(&hash).is_some());
+        assert!(Module::<T>::headers(&hash).is_some());
     }
 
     push_transaction {
@@ -184,14 +214,14 @@ benchmarks! {
         let n in 1 .. 100; // 100 withdrawl count
         let l in 1 .. 1024 * 1024 * 500; // 500KB length
 
-        let caller = common::accounts::<T>()[0].clone();
+        let caller = alice::<T>();
 
         let (tx, info, prev) = withdraw_tx();
         let tx_hash = tx.hash();
         let tx_raw: Vec<u8> = serialization::serialize(&tx).into();
         let prev_tx_raw: Vec<u8> = serialization::serialize(&prev).into();
 
-        let btc_withdrawal_fee = XGatewayBitcoin::<T>::btc_withdrawal_fee();
+        let btc_withdrawal_fee = Module::<T>::btc_withdrawal_fee();
         let first_withdraw = (9778400 + btc_withdrawal_fee).saturated_into();
         let second_withdraw = (9900000 + btc_withdrawal_fee).saturated_into();
         XGatewayRecords::<T>::deposit(&caller, ASSET_ID, first_withdraw).unwrap();
@@ -209,21 +239,21 @@ benchmarks! {
     sign_withdraw_tx {
         let l in 1 .. 1024 * 1024 * 500; // 500KB length
         let tx = create_tx();
-        let callers = common::accounts::<T>();
+        let alice = alice::<T>();
+        let bob = bob::<T>();
 
         let proposal = BtcWithdrawalProposal::<T::AccountId> {
             sig_state: VoteResult::Unfinish,
             withdrawal_id_list: vec![0, 1],
             tx: tx,
-            trustee_list: vec![ (callers[0].clone(), true) ],
+            trustee_list: vec![ (alice, true) ],
         };
         WithdrawalProposal::<T>::put(proposal);
 
         let (signed_tx, _, _) = withdraw_tx();
         let tx_raw: Vec<u8> = serialization::serialize(&signed_tx).into();
 
-        let caller = callers[1].clone();
-    }: _(RawOrigin::Signed(caller), Some(tx_raw))
+    }: _(RawOrigin::Signed(bob), Some(tx_raw))
     verify {
         assert_eq!(WithdrawalProposal::<T>::get().unwrap().sig_state, VoteResult::Finish);
     }
@@ -235,7 +265,7 @@ benchmarks! {
         };
     }: _(RawOrigin::Root, best)
     verify {
-        assert_eq!(XGatewayBitcoin::<T>::best_index(), best);
+        assert_eq!(Module::<T>::best_index(), best);
     }
 
     set_confirmed_index {
@@ -245,7 +275,7 @@ benchmarks! {
         };
     }: _(RawOrigin::Root, confirmed)
     verify {
-        assert_eq!(XGatewayBitcoin::<T>::confirmed_index(), Some(confirmed));
+        assert_eq!(Module::<T>::confirmed_index(), Some(confirmed));
     }
 
     remove_pending {
@@ -268,7 +298,7 @@ benchmarks! {
         let receiver: T::AccountId = whitelisted_caller();
     }: _(RawOrigin::Root, addr.clone(), Some(receiver.clone()))
     verify {
-        assert!(XGatewayBitcoin::<T>::pending_deposits(&addr).is_empty());
+        assert!(Module::<T>::pending_deposits(&addr).is_empty());
         assert_eq!(XAssets::<T>::usable_balance(&receiver, &ASSET_ID), (100000000 + 200000000 + 300000000).into());
     }
 
@@ -298,13 +328,13 @@ benchmarks! {
     }
 
     set_btc_withdrawal_fee {
-        let caller = common::accounts::<T>()[0].clone();
+        let caller = alice::<T>();
     }: _(RawOrigin::Root,  2000000)
     verify {
     }
 
     set_btc_deposit_limit {
-        let caller = common::accounts::<T>()[0].clone();
+        let caller = alice::<T>();
     }: _(RawOrigin::Root,  2000000)
     verify {
     }
@@ -313,7 +343,7 @@ benchmarks! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::mock::{ExtBuilder, Test};
+    use crate::mock::{ExtBuilder, Test};
     use frame_support::assert_ok;
 
     #[test]
