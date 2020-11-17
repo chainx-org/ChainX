@@ -115,10 +115,6 @@ fn mock_detect_transaction_type<T: Trait>(
 
 #[test]
 fn test_detect_tx_type() {
-    println!(
-        "4_0_prev: {:?}",
-        light_bitcoin::primitives::hash_rev(deposit4_0_prev.hash())
-    );
     set_default_ss58_version(Ss58AddressFormat::ChainXAccount);
 
     match mock_detect_transaction_type::<Test>(&deposit1, None) {
