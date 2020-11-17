@@ -2,11 +2,8 @@
 
 #![allow(non_upper_case_globals)]
 
-use codec::{Decode, Encode};
 use frame_support::{assert_noop, assert_ok, storage::StorageValue};
 use sp_core::crypto::{set_default_ss58_version, Ss58AddressFormat};
-
-use xp_gateway_common::AccountExtractor;
 
 use light_bitcoin::{
     chain::Transaction,
@@ -20,10 +17,10 @@ use crate::mock::{
     XGatewayBitcoinErr, XGatewayCommon, X_BTC,
 };
 use crate::{
-    tx::{detect_transaction_type_impl, handle_tx},
+    tx::process_tx,
     types::{
         BtcDepositCache, BtcRelayedTxInfo, BtcTxResult, BtcTxState, BtcWithdrawalProposal,
-        MetaTxType, VoteResult,
+        VoteResult,
     },
     Trait, WithdrawalProposal,
 };
@@ -79,10 +76,11 @@ lazy_static::lazy_static! {
     static ref normal_deposit: Transaction = "0200000003a50c032806a643a0ad85803ff77e0ecb58baf327bcc91e269945402c551fada5000000006a473044022031d06016a6e996a07ca1881c70fc328b4ca075d80f5284378c11c9fc018112c00220480b8371bf9967da2af205dacc7ee4ff880b1bebd6c8a77f3cd24bae425c672f01210223222d4d30dce7a7842b4d38e467eb93680f610a5156d8ef18918682a1010396000000003fd0c0f65304982c8ff0ce9a38bcdffc8afdf8e76f1ff518a0db3fa943992f94590000006a473044022012e3920b2e2a45f6c28667f5854f894077b140a8267c6da0069fcf9c541e4db60220382e1f09267ba2f3d2d2a7bf77daf8b9bdacc6693b760d477657cd0b64bdf7c801210223222d4d30dce7a7842b4d38e467eb93680f610a5156d8ef18918682a1010396000000009d61e22d5434504c247ffb5be5a744a513b1cf274da8be492e401495b2aaafd0180000006b48304502210097491bd7c5aad0fca30b022b3d7bbae50dcd3658dddd4dd9ab6da6217863c7f902205e8ef79cf2f8620398de9812f5d5a5cb04e96f674a9f1af9e872b82623de802d01210223222d4d30dce7a7842b4d38e467eb93680f610a5156d8ef18918682a101039600000000032077fc020000000017a914cb94110435d0635223eebe25ed2aaabc03781c45871a7c0000000000001976a91427f82ed8de307712c1f5fbbb3a52a96163449c3d88ac00000000000000003d6a3b355555716e46544e52596d656b6d5a4e5375335041695050476b737635746169373752625a366173365468773837704a40436861696e5846616e7300000000".parse().unwrap();
 }
 
+/*
 fn mock_detect_transaction_type<T: Trait>(
     tx: &Transaction,
     prev: Option<&Transaction>,
-) -> MetaTxType<T::AccountId> {
+) -> BtcTxMetaType<T::AccountId> {
     let addr_pair = (
         DEPOSIT_HOT_ADDR.parse::<Address>().unwrap(),
         DEPOSIT_COLD_ADDR.parse::<Address>().unwrap(),
@@ -106,15 +104,27 @@ fn mock_detect_transaction_type<T: Trait>(
         },
     )
 }
+*/
 
-// note: this `mock_process_tx` should same as `process_tx` in tx/mod.rs
-pub fn mock_process_tx<T: Trait>(tx: Transaction, prev: Option<Transaction>) -> BtcTxState {
-    let meta_type = mock_detect_transaction_type::<T>(&tx, prev.as_ref());
-    // process
-    let state = handle_tx::<T>(tx, meta_type);
-    state
+pub fn mock_process_tx<T: Trait>(tx: Transaction, prev_tx: Option<Transaction>) -> BtcTxState {
+    let network = Network::Mainnet;
+    let min_deposit = 0;
+    let current_trustee_pair = (
+        DEPOSIT_HOT_ADDR.parse::<Address>().unwrap(),
+        DEPOSIT_COLD_ADDR.parse::<Address>().unwrap(),
+    );
+    let previous_trustee_pair = None;
+    process_tx::<T>(
+        tx,
+        prev_tx,
+        network,
+        min_deposit,
+        current_trustee_pair,
+        previous_trustee_pair,
+    )
 }
 
+/*
 #[test]
 fn test_detect_tx_type() {
     set_default_ss58_version(Ss58AddressFormat::ChainXAccount);
@@ -210,6 +220,7 @@ fn test_detect_tx_type() {
         _ => unreachable!("wrong type"),
     }
 }
+*/
 
 #[test]
 fn test_process_tx() {
@@ -230,7 +241,7 @@ fn test_process_tx() {
 
         // no prev, would judge a failed deposit
         let r = mock_process_tx::<Test>(deposit3_1.clone(), None);
-        assert_eq!(r.result, BtcTxResult::Failed);
+        assert_eq!(r.result, BtcTxResult::Failure);
         // with prev, would deposit use the input_addr, but due to no relationship of addr
         // and accountid before, thus this become a cache deposit
         let r = mock_process_tx::<Test>(deposit3_1.clone(), Some(deposit3_1_prev.clone()));
@@ -245,7 +256,7 @@ fn test_process_tx() {
 
         // 4
         let r = mock_process_tx::<Test>(deposit4_0.clone(), None);
-        assert_eq!(r.result, BtcTxResult::Failed);
+        assert_eq!(r.result, BtcTxResult::Failure);
         let r = mock_process_tx::<Test>(deposit4_0.clone(), Some(deposit4_0_prev.clone()));
         assert_eq!(r.result, BtcTxResult::Success);
         assert_eq!(
@@ -273,17 +284,16 @@ fn test_process_tx() {
 
         // hot and cold
         let r = mock_process_tx::<Test>(hot_to_cold.clone(), None);
-        assert_eq!(r.result, BtcTxResult::Failed);
+        assert_eq!(r.result, BtcTxResult::Failure);
         let r = mock_process_tx::<Test>(hot_to_cold.clone(), Some(hot_to_cold_prev.clone()));
         assert_eq!(r.result, BtcTxResult::Success);
 
         let r = mock_process_tx::<Test>(cold_to_hot.clone(), None);
-        assert_eq!(r.result, BtcTxResult::Failed);
+        assert_eq!(r.result, BtcTxResult::Failure);
         let r = mock_process_tx::<Test>(cold_to_hot.clone(), Some(cold_to_hot_prev.clone()));
         assert_eq!(r.result, BtcTxResult::Success);
 
         // withdraw
-
         WithdrawalProposal::<Test>::put(BtcWithdrawalProposal {
             sig_state: VoteResult::Unfinish,
             withdrawal_id_list: vec![],
@@ -292,7 +302,7 @@ fn test_process_tx() {
         });
 
         let r = mock_process_tx::<Test>(withdraw.clone(), None);
-        assert_eq!(r.result, BtcTxResult::Failed);
+        assert_eq!(r.result, BtcTxResult::Failure);
         let r = mock_process_tx::<Test>(withdraw.clone(), Some(withdraw_prev.clone()));
         assert_eq!(r.result, BtcTxResult::Success);
     })
@@ -307,8 +317,7 @@ fn test_push_tx_call() {
     let block_hash = headers[&577667].hash();
 
     let raw_proof= hex::decode("7a0a00000df93909095e26bc2226c7a308a197623e1338d97205dab31e8bb1938fdd1ffb750120040316fc943d5a2d2a2034a0fe563e0e32298a13a826bfdf9c70779586dba5271dce89f50cee96759a25b44b975c073f3ba6a12a92209494709907cb15922eac15e16ae180f9e63d96e25e1c8056b34f194a8a0d2f14bd935e9c2abc79dd8d0c425975eac4696b4d5bca42d09ecb27b7397e1061d138b69c9283fb47337aa61179b15b17ee942e635d5c9479b337ba1877054708336fca85d3e64fb4519ce5319ea3940b45a0a2be630ffc8091c23199e3468ec08e6e49aa7d2097614c22441325ac3c2ea1846dfe0ae3ef40972efee231058c2be07adb015a041a16a9f1dc9e699c56bbfb3e7dc751ea295188f5af86348789547c58981341ddb1eae528a1566ea4b17b099bb29d27728ccf398669eabd82ee4910eaccba7e5e40be6351d734b422020e5c57910de3a94f1eced6b1151333c425048a93f49c9e7110a77201b34ad3a09a12f3bdb8f1fce78c21ec868a32e36eef263077f047eaaa7c5842feee2b12a1651f1deaf50afcddbca8e2bfb36d707133dfa27235e72cc169fc0704d7ad0a00").unwrap();
-    let proof: PartialMerkleTree =
-        serialization::deserialize(Reader::new(raw_proof.as_slice())).unwrap();
+    let proof: PartialMerkleTree = serialization::deserialize(Reader::new(&raw_proof)).unwrap();
 
     ExtBuilder::default().build_and_execute(|| {
         let confirmed = XGatewayBitcoin::confirmation_number();

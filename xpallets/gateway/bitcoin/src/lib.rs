@@ -59,7 +59,10 @@ use self::types::{
     BtcTxState,
 };
 use crate::weight_info::WeightInfo;
-use crate::{trustee::get_trustee_address_pair, tx::remove_pending_deposit};
+use crate::{
+    trustee::{get_last_trustee_address_pair, get_trustee_address_pair},
+    tx::remove_pending_deposit,
+};
 
 // syntactic sugar for native log.
 #[macro_export]
@@ -596,12 +599,23 @@ impl<T: Trait> Module<T> {
             }
         }
 
-        let state = tx::process_tx::<T>(tx.raw, prev)?;
+        let network = Module::<T>::network_id();
+        let min_deposit = Module::<T>::btc_min_deposit();
+        let current_trustee_pair = get_trustee_address_pair::<T>()?;
+        let previous_trustee_pair = get_last_trustee_address_pair::<T>().ok();
+        let state = tx::process_tx::<T>(
+            tx.raw,
+            prev,
+            network,
+            min_deposit,
+            current_trustee_pair,
+            previous_trustee_pair,
+        );
         TxState::insert(&tx_hash, state);
         Self::deposit_event(Event::<T>::TxProcessed(tx_hash, block_hash, state));
         match state.result {
             BtcTxResult::Success => Ok(()),
-            BtcTxResult::Failed => Err(Error::<T>::ProcessTxFailed.into()),
+            BtcTxResult::Failure => Err(Error::<T>::ProcessTxFailed.into()),
         }
     }
 }
