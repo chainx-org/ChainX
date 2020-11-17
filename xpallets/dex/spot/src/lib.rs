@@ -340,7 +340,6 @@ decl_module! {
             let pair = Self::trading_pair(pair_id)?;
             ensure!(tick_decimals >= pair.tick_decimals, Error::<T>::InvalidTickdecimals);
             Self::apply_update_trading_pair(pair_id, tick_decimals, tradable);
-            Self::deposit_event(Event::<T>::TradingPairUpdated(pair));
         }
     }
 }
@@ -413,6 +412,7 @@ impl<T: Trait> Module<T> {
             if let Some(pair) = pair {
                 pair.tick_decimals = tick_decimals;
                 pair.tradable = tradable;
+                Self::deposit_event(Event::<T>::TradingPairUpdated(pair.clone()));
             }
         });
     }
