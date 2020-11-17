@@ -27,7 +27,8 @@ sp-blockchain = "2.0.0"
 sp-block-builder = "2.0.0"
 sp-consensus = "0.8.0"
 sp-consensus-babe = "0.8.0"
-sp-keystore = { git = "https://github.com/paritytech/substrate.git", rev = "77007ed87727a761169d4c57cbeae0151d9efb81" }
+# sp-keystore = { git = "https://github.com/paritytech/substrate.git", rev = "77007ed87727a761169d4c57cbeae0151d9efb81" }
+sp-keystore = "0.8.0"
 sp-runtime = "2.0.0"
 sp-state-machine = "0.8.0"
 sp-transaction-pool = "2.0.0"

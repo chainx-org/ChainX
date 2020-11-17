@@ -101,7 +101,7 @@ impl ChargeExtraFee {
         match Balances::withdraw(
             who,
             fee,
-            WithdrawReasons::TRANSACTION_PAYMENT.into(),
+            WithdrawReasons::TRANSACTION_PAYMENT,
             ExistenceRequirement::KeepAlive,
         ) {
             Ok(fee) => {
