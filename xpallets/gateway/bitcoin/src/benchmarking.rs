@@ -335,7 +335,7 @@ benchmarks! {
     }
 
     set_btc_deposit_limit {
-        let caller = bob::<T>();
+        let caller = alice::<T>();
     }: _(RawOrigin::Root,  2000000)
     verify {
     }
