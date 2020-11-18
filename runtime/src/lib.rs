@@ -238,7 +238,7 @@ impl frame_system::Trait for Runtime {
     /// What to do if an account is fully reaped from the system.
     type OnKilledAccount = ();
     /// Weight information for the extrinsics of this pallet.
-    type SystemWeightInfo = ();
+    type SystemWeightInfo = frame_system::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {

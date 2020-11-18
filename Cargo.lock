@@ -4237,7 +4237,7 @@ dependencies = [
  "serde",
  "sp-core",
  "sp-io",
- "sp-keyring",
+ "sp-keyring 2.0.0 (git+https://github.com/paritytech/substrate?rev=77007ed87727a761169d4c57cbeae0151d9efb81)",
  "sp-runtime",
  "sp-std",
 ]
@@ -5704,7 +5704,7 @@ dependencies = [
  "serde_json",
  "sp-blockchain",
  "sp-core",
- "sp-keyring",
+ "sp-keyring 2.0.0 (git+https://github.com/paritytech/substrate?rev=77007ed87727a761169d4c57cbeae0151d9efb81)",
  "sp-keystore",
  "sp-panic-handler",
  "sp-runtime",
@@ -5753,7 +5753,7 @@ dependencies = [
  "sp-database",
  "sp-externalities",
  "sp-inherents",
- "sp-keyring",
+ "sp-keyring 2.0.0 (git+https://github.com/paritytech/substrate?rev=77007ed87727a761169d4c57cbeae0151d9efb81)",
  "sp-keystore",
  "sp-runtime",
  "sp-state-machine",
@@ -7186,6 +7186,18 @@ dependencies = [
  "sp-wasm-interface",
  "tracing",
  "tracing-core",
+]
+
+[[package]]
+name = "sp-keyring"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3f76feeb27b218d58523931ea2d708b622c3bd96a3be1c3a5895bba0f7a54c13"
+dependencies = [
+ "lazy_static",
+ "sp-core",
+ "sp-runtime",
+ "strum",
 ]
 
 [[package]]
@@ -9146,7 +9158,7 @@ dependencies = [
  "serde_json",
  "sp-core",
  "sp-io",
- "sp-keyring",
+ "sp-keyring 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-runtime",
  "sp-std",
  "xp-assets-registrar",
