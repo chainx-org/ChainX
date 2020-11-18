@@ -50,7 +50,7 @@ jobs:
       run: cargo clippy
 
     - name: Test
-      run: cargo test --workspace
+      run: cargo test --workspace -- --test-threads 1
 
     - name: Compile
       run: cargo test --no-run

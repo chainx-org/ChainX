@@ -1,298 +1,69 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 mod secp256k1_verifier;
-pub mod utils;
 pub mod validator;
 
-// Substrate
-use frame_support::{
-    debug::native,
-    dispatch::{DispatchError, DispatchResult},
-    StorageMap, StorageValue,
-};
+use frame_support::{debug::native, dispatch::DispatchResult, StorageMap, StorageValue};
 use sp_runtime::{traits::Zero, SaturatedConversion};
-use sp_std::{fmt::Debug, prelude::*};
-// ChainX
-use chainx_primitives::{AssetId, ReferralId};
+use sp_std::prelude::*;
+
+use light_bitcoin::{
+    chain::Transaction,
+    keys::{Address, DisplayLayout, Network},
+    primitives::{hash_rev, H256},
+};
+
+use chainx_primitives::AssetId;
+use xp_gateway_bitcoin::{BtcDepositInfo, BtcTxMetaType, BtcTxTypeDetector};
 use xp_gateway_common::AccountExtractor;
 use xp_logging::{debug, error, info, warn};
 use xpallet_assets::ChainT;
 use xpallet_gateway_common::traits::{AddrBinding, ChannelBinding};
 use xpallet_support::str;
 
-// light-bitcoin
-use light_bitcoin::{
-    chain::Transaction,
-    keys::{Address, Network},
-    primitives::H256,
-    script::Script,
-};
-
-// use crate::traits::RelayTransaction;
-#[cfg(feature = "std")]
-use self::utils::trick_format_opreturn;
-use self::utils::{
-    equal_addr, inspect_address_from_transaction, is_key, parse_opreturn,
-    parse_output_addr_with_networkid,
-};
 pub use self::validator::validate_transaction;
-use crate::trustee::{get_last_trustee_address_pair, get_trustee_address_pair};
-use crate::tx::utils::addr2vecu8;
-use crate::types::{
-    AccountInfo, BtcAddress, BtcDepositCache, BtcTxResult, BtcTxState, DepositInfo, MetaTxType,
+use crate::{
+    native,
+    types::{AccountInfo, BtcAddress, BtcDepositCache, BtcTxResult, BtcTxState},
+    BalanceOf, Error, Event, Module, PendingDeposits, Trait, WithdrawalProposal,
 };
-use crate::{BalanceOf, Event, Module, PendingDeposits, Trait, WithdrawalProposal};
 
 pub fn process_tx<T: Trait>(
     tx: Transaction,
-    prev: Option<Transaction>,
-) -> Result<BtcTxState, DispatchError> {
-    let meta_type = detect_transaction_type::<T>(&tx, prev.as_ref())?;
-    let state = handle_tx::<T>(tx, meta_type);
-    Ok(state)
-}
-
-pub fn detect_transaction_type<T: Trait>(
-    tx: &Transaction,
-    prev: Option<&Transaction>,
-) -> Result<MetaTxType<T::AccountId>, DispatchError> {
-    let addr_pair = get_trustee_address_pair::<T>()?;
-    let last_addr_pair = get_last_trustee_address_pair::<T>().ok();
-    let network = Module::<T>::network_id();
-    let min_deposit = Module::<T>::btc_min_deposit();
-
-    let meta_type = detect_transaction_type_impl::<T::AccountId, _>(
-        tx,
-        prev,
-        network,
-        min_deposit,
-        addr_pair,
-        last_addr_pair,
-        |script| T::AccountExtractor::extract_account(script),
-    );
-    Ok(meta_type)
-}
-
-/// parse tx to detect transaction type.
-/// notice pass `prev` would try to detect Withdrawal|TrusteeTransition|HotAndCold types, then
-/// detect deposit type. Otherwise, would just detect deposit type.
-/// when type is deposit, if parse opreturn success, would use opreturn as account info, or else,
-/// would use input_addr which is parsed from `prev`.
-/// notice we use `AccountId, F` etc... generic type otherwise `<T: Trait>` type, is convenient for
-/// bitcoin transaction relay program to reuse this part that could detect bitcoin transaction and
-/// filter them before relaying to chain.
-///
-/// when meet in `prev`, we would parse tx's inputs/outputs into Option<Address>
-/// e.g
-/// notice the relay tx only has first input
-///        _________
-///  addr |        | Some(addr)
-///       |   tx   | Some(addr)
-///       |________| None (OP_RETURN or something unknown)
-#[inline]
-pub fn detect_transaction_type_impl<AccountId, F>(
-    tx: &Transaction,
-    prev: Option<&Transaction>,
+    prev_tx: Option<Transaction>,
     network: Network,
     min_deposit: u64,
-    trustee_addr_pair: (Address, Address),
-    old_trustee_addr_pair: Option<(Address, Address)>,
-    handle_opreturn: F,
-) -> MetaTxType<AccountId>
-where
-    AccountId: Debug,
-    F: Fn(&[u8]) -> Option<(AccountId, Option<ReferralId>)>,
-{
-    let input_addr = prev.and_then(|prev_tx| {
-        // parse input addr
-        let outpoint = &tx.inputs[0].previous_output;
-        inspect_address_from_transaction(prev_tx, outpoint, network)
-    });
-
-    // Withdrawal|TrusteeTransition|HotAndCold need input_addr to parse prev address
-    if let Some(ref input_addr) = input_addr {
-        // parse output addr
-        let outputs: Vec<(Option<Address>, u64)> = tx
-            .outputs
-            .iter()
-            .map(|out| {
-                (
-                    parse_output_addr_with_networkid(&out.script_pubkey.to_vec().into(), network),
-                    out.value,
-                )
-            })
-            .collect();
-        // ---------- parse finish
-
-        let tx_type = detect_other_type(
-            &outputs,
-            input_addr,
-            trustee_addr_pair,
-            old_trustee_addr_pair,
-        );
-        match tx_type {
-            MetaTxType::Withdrawal | MetaTxType::TrusteeTransition | MetaTxType::HotAndCold => {
-                return tx_type;
-            }
-            _ => {
-                warn!(
-                    "[detect_transaction_type_impl] Irrelevance or Deposit transaction:{:?}",
-                    tx.hash()
-                );
-            }
-        }
-    }
-    // parse deposit
-    let (hot_addr, _) = trustee_addr_pair;
-    detect_deposit_type(
-        &tx,
-        min_deposit,
-        &hot_addr,
-        input_addr.as_ref(),
-        network,
-        handle_opreturn,
-    )
-}
-
-fn detect_deposit_type<AccountId, F>(
-    tx: &Transaction,
-    min_deposit: u64,
-    hot_addr: &Address,
-    input_addr: Option<&Address>,
-    network: Network,
-    handle_opreturn: F,
-) -> MetaTxType<AccountId>
-where
-    AccountId: Debug,
-    F: Fn(&[u8]) -> Option<(AccountId, Option<ReferralId>)>,
-{
-    let (opreturn, deposit_value) =
-        parse_deposit_outputs_impl(tx, hot_addr, network, handle_opreturn);
-    if deposit_value >= min_deposit {
-        // if opreturn.is_none() && input_addr.is_none() == true
-        // we still think it's a deposit tx, but would not process it.
-        let info = DepositInfo {
-            deposit_value,
-            op_return: opreturn,
-            input_addr: input_addr.map(Clone::clone),
-        };
-        MetaTxType::Deposit(info)
-    } else {
-        warn!("[detect_deposit_type] Receive a deposit tx ({:?}) but deposit value is too low, drop it", tx.hash());
-        MetaTxType::Irrelevance
-    }
-}
-
-fn detect_other_type<AccountId>(
-    outputs: &[(Option<Address>, u64)],
-    input_addr: &Address,
-    trustee_addr_pair: (Address, Address),
-    old_trustee_addr_pair: Option<(Address, Address)>,
-) -> MetaTxType<AccountId> {
-    let (hot_addr, cold_addr) = trustee_addr_pair;
-    // judge tx type
-    // with input_addr, allow `Withdrawal`, `Deposit`, `HotAndCold`, `TrusteeTransition`
-    // judge input has trustee addr
-    let input_is_trustee =
-        equal_addr(&input_addr, &hot_addr) || equal_addr(&input_addr, &cold_addr);
-    // judge if all outputs contains hot/cold trustee
-    let all_outputs_trustee = outputs.iter().all(|(item, _)| {
-        if let Some(addr) = item {
-            if equal_addr(addr, &hot_addr) || equal_addr(addr, &cold_addr) {
-                return true;
-            }
-        }
-        false
-    });
-    // judge tx type
-    if input_is_trustee {
-        if all_outputs_trustee {
-            return MetaTxType::HotAndCold;
-        }
-        // outputs contains other addr, it's user addr, thus it's a withdrawal
-        return MetaTxType::Withdrawal;
-    } else if let Some((old_hot_addr, old_cold_addr)) = old_trustee_addr_pair {
-        let input_is_old_trustee =
-            equal_addr(&input_addr, &old_hot_addr) || equal_addr(&input_addr, &old_cold_addr);
-        if input_is_old_trustee && all_outputs_trustee {
-            // input should from old trustee addr, outputs should all be current trustee addrs
-            return MetaTxType::TrusteeTransition;
-        }
-    }
-    MetaTxType::Irrelevance
-}
-
-pub fn parse_deposit_outputs_impl<AccountId, F>(
-    tx: &Transaction,
-    hot_addr: &Address,
-    network: Network,
-    handle_opreturn: F,
-) -> (Option<(AccountId, Option<ReferralId>)>, u64)
-where
-    AccountId: Debug,
-    F: Fn(&[u8]) -> Option<(AccountId, Option<ReferralId>)>,
-{
-    let mut deposit_balance = 0;
-    let mut account_info = None;
-    let mut has_opreturn = false;
-    let mut _original: Vec<u8> = Default::default();
-    // parse
-    for output in tx.outputs.iter() {
-        // out script
-        let script: Script = output.script_pubkey.to_vec().into();
-        // bind address [btc address --> chainx AccountId]
-        // is_null_data_script is not null
-        if script.is_null_data_script() {
-            // only handle first valid account info opreturn, other opreturn would drop
-            if !has_opreturn {
-                if let Some(v) = parse_opreturn(&script) {
-                    let info = handle_opreturn(&v);
-                    if info.is_some() {
-                        // only set first valid account info
-                        _original = script.to_vec();
-                        account_info = info;
-                        has_opreturn = true;
-                    }
-                }
-            }
-            continue;
-        }
-
-        // not a opreturn out, do follow
-        // get deposit money
-        if is_key(&script, hot_addr, network) && output.value > 0 {
-            deposit_balance += output.value;
-        }
-    }
-
-    native::debug!(
-        target: xp_logging::RUNTIME_TARGET,
-        "[parse_deposit_outputs_impl] Parse outputs, account_info:{:?}, balance:{}, opreturn:{}",
-        account_info,
-        deposit_balance,
-        trick_format_opreturn(&_original)
-    );
-    (account_info, deposit_balance)
-}
-
-pub(crate) fn handle_tx<T: Trait>(
-    tx: Transaction,
-    meta_type: MetaTxType<T::AccountId>,
+    current_trustee_pair: (Address, Address),
+    previous_trustee_pair: Option<(Address, Address)>,
 ) -> BtcTxState {
+    let btc_tx_detector = BtcTxTypeDetector::new(
+        network,
+        min_deposit,
+        current_trustee_pair,
+        previous_trustee_pair,
+    );
+    let meta_type = btc_tx_detector.detect_transaction_type::<T::AccountId, _>(
+        &tx,
+        prev_tx.as_ref(),
+        T::AccountExtractor::extract_account,
+    );
+
     let tx_type = meta_type.ref_into();
     let result = match meta_type {
-        MetaTxType::<_>::Deposit(deposit_info) => deposit::<T>(tx.hash(), deposit_info),
-        MetaTxType::<_>::Withdrawal => withdraw::<T>(tx),
-        MetaTxType::<_>::Irrelevance => BtcTxResult::Failed, // mark Irrelevance be Failed, for it may be replayed in future
-        _ => BtcTxResult::Success,
+        BtcTxMetaType::<_>::Deposit(deposit_info) => deposit::<T>(tx.hash(), deposit_info),
+        BtcTxMetaType::<_>::Withdrawal => withdraw::<T>(tx),
+        // mark `Irrelevance` be `Failure` so that it could be replayed in the future
+        BtcTxMetaType::<_>::Irrelevance => BtcTxResult::Failure,
+        BtcTxMetaType::HotAndCold | BtcTxMetaType::TrusteeTransition => BtcTxResult::Success,
     };
-    BtcTxState { result, tx_type }
+
+    BtcTxState { tx_type, result }
 }
 
-fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> BtcTxResult {
+fn deposit<T: Trait>(hash: H256, deposit_info: BtcDepositInfo<T::AccountId>) -> BtcTxResult {
     if deposit_info.op_return.is_none() && deposit_info.input_addr.is_none() {
-        warn!("[deposit] Process a deposit tx ({:?}) but do not have valid opreturn & not have input addr", hash);
-        return BtcTxResult::Failed;
+        warn!("[deposit] Process a deposit tx ({:?}) but do not have valid opreturn & not have input addr", hash_rev(hash));
+        return BtcTxResult::Failure;
     }
 
     let account_info = match deposit_info.op_return {
@@ -324,9 +95,9 @@ fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> Btc
                 // should not meet this branch, due it's handled before, it's unreachable
                 error!(
                     "[deposit] The deposit tx ({:?}) has no input addr and opreturn",
-                    hash
+                    hash_rev(hash)
                 );
-                return BtcTxResult::Failed;
+                return BtcTxResult::Failure;
             }
         }
     };
@@ -340,18 +111,20 @@ fn deposit<T: Trait>(hash: H256, deposit_info: DepositInfo<T::AccountId>) -> Btc
             );
 
             if deposit_token::<T>(hash, &accountid, deposit_info.deposit_value).is_err() {
-                return BtcTxResult::Failed;
+                return BtcTxResult::Failure;
             }
             info!(
                 "[deposit] Deposit tx ({:?}) success, who:{:?}, balance:{}",
-                hash, accountid, deposit_info.deposit_value
+                hash_rev(hash),
+                accountid,
+                deposit_info.deposit_value
             );
         }
         AccountInfo::<_>::Address(addr) => {
-            insert_pending_deposit::<T>(&addr, &hash, deposit_info.deposit_value);
+            insert_pending_deposit::<T>(&addr, hash, deposit_info.deposit_value);
             info!(
                 "[deposit] Deposit tx ({:?}) into pending, addr:{:?}, balance:{}",
-                hash,
+                hash_rev(hash),
                 str!(addr2vecu8(&addr)),
                 deposit_info.deposit_value
             );
@@ -378,64 +151,31 @@ fn deposit_token<T: Trait>(tx_hash: H256, who: &T::AccountId, balance: u64) -> D
         }
     }
 }
-/*
-fn update_binding<T: Trait>(address: &Address, who: &T::AccountId) {
-    if let Some(accountid) = AddressBinding::<T>::get(&address) {
-        if &accountid != who {
-            debug!(
-                "[apply_update_binding]|current binding need change|old:{:?}|new:{:?}",
-                accountid, who
-            );
-            // old accountid is not equal to new accountid, means should change this addr bind to new account
-            // remove this addr for old accounid's CrossChainBindOf
-            BoundAddressOf::<T>::mutate(accountid, |addr_list| {
-                addr_list.retain(|addr| addr != address);
-            });
-        }
-    }
-    // insert or override binding relationship
-    BoundAddressOf::<T>::mutate(who, |addr_list| {
-        let list = addr_list;
-        if !list.contains(address) {
-            list.push(address.clone());
-        }
-    });
 
-    info!(
-        "[apply_update_binding]|update binding|addr:{:?}|who:{:?}",
-        str!(addr2vecu8(address)),
-        who,
-    );
-    AddressBinding::<T>::insert(address, who.clone());
-}
-*/
 pub fn remove_pending_deposit<T: Trait>(input_address: &BtcAddress, who: &T::AccountId) {
     // notice this would delete this cache
     let records = PendingDeposits::take(input_address);
-    for r in records {
+    for record in records {
         // ignore error
-        let _ = deposit_token::<T>(r.txid, who, r.balance);
+        let _ = deposit_token::<T>(record.txid, who, record.balance);
         info!(
             "[remove_pending_deposit] Use pending info to re-deposit, who:{:?}, balance:{}, cached_tx:{:?}",
-            who, r.balance, r.txid,
+            who, record.balance, record.txid,
         );
 
         Module::<T>::deposit_event(Event::<T>::PendingDepositRemoved(
             who.clone(),
-            r.balance.saturated_into(),
-            r.txid,
+            record.balance.saturated_into(),
+            record.txid,
             input_address.clone(),
         ));
     }
 }
 
-fn insert_pending_deposit<T: Trait>(input_address: &Address, txid: &H256, balance: u64) {
+fn insert_pending_deposit<T: Trait>(input_address: &Address, txid: H256, balance: u64) {
     let addr_bytes = addr2vecu8(input_address);
 
-    let cache = BtcDepositCache {
-        txid: *txid,
-        balance,
-    };
+    let cache = BtcDepositCache { txid, balance };
 
     PendingDeposits::mutate(&addr_bytes, |list| {
         if !list.contains(&cache) {
@@ -448,7 +188,7 @@ fn insert_pending_deposit<T: Trait>(input_address: &Address, txid: &H256, balanc
             );
             list.push(cache);
 
-            Module::<T>::deposit_event(Event::<T>::UnclaimedDeposit(*txid, addr_bytes.clone()));
+            Module::<T>::deposit_event(Event::<T>::UnclaimedDeposit(txid, addr_bytes.clone()));
         }
     });
 }
@@ -506,7 +246,7 @@ fn withdraw<T: Trait>(tx: Transaction) -> BtcTxResult {
             WithdrawalProposal::<T>::put(proposal);
 
             Module::<T>::deposit_event(Event::<T>::WithdrawalFatalErr(proposal_hash, tx_hash));
-            BtcTxResult::Failed
+            BtcTxResult::Failure
         }
     } else {
         error!(
@@ -519,6 +259,40 @@ fn withdraw<T: Trait>(tx: Transaction) -> BtcTxResult {
             Default::default(),
         ));
 
-        BtcTxResult::Failed
+        BtcTxResult::Failure
     }
+}
+
+/// Returns Ok if `tx1` and `tx2` are the same transaction.
+pub fn ensure_identical<T: Trait>(tx1: &Transaction, tx2: &Transaction) -> DispatchResult {
+    if tx1.version == tx2.version
+        && tx1.outputs == tx2.outputs
+        && tx1.lock_time == tx2.lock_time
+        && tx1.inputs.len() == tx2.inputs.len()
+    {
+        for i in 0..tx1.inputs.len() {
+            if tx1.inputs[i].previous_output != tx2.inputs[i].previous_output
+                || tx1.inputs[i].sequence != tx2.inputs[i].sequence
+            {
+                native!(
+                    error,
+                    "[ensure_identical] Tx1 is different to Tx2, tx1:{:?}, tx2:{:?}",
+                    tx1,
+                    tx2
+                );
+                return Err(Error::<T>::MismatchedTx.into());
+            }
+        }
+        return Ok(());
+    }
+    native!(
+        error,
+        "The transaction text does not match the original text to be signed",
+    );
+    Err(Error::<T>::MismatchedTx.into())
+}
+
+#[inline]
+pub fn addr2vecu8(addr: &Address) -> Vec<u8> {
+    bs58::encode(&*addr.layout()).into_vec()
 }

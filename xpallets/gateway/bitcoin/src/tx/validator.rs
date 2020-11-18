@@ -1,23 +1,17 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-// Substrate
 use frame_support::{
     dispatch::{DispatchError, DispatchResult},
     ensure,
 };
 use sp_std::prelude::Vec;
 
-// light-bitcoin
 use light_bitcoin::{chain::Transaction, primitives::H256, script::Script};
 
-// ChainX
 use xp_logging::{debug, error};
 use xpallet_support::try_hex;
 
-// use crate::tx::utils::get_hot_trustee_redeem_script;
-use crate::trustee::get_hot_trustee_redeem_script;
-use crate::types::BtcRelayedTx;
-use crate::{Error, Trait};
+use crate::{trustee::get_hot_trustee_redeem_script, types::BtcRelayedTx, Error, Trait};
 
 pub fn validate_transaction<T: Trait>(
     tx: &BtcRelayedTx,
