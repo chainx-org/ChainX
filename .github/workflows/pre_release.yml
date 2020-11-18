@@ -11,7 +11,7 @@ jobs:
     name: Prepare wasm
     runs-on: ubuntu-latest
     container:
-      image: chainxcn/srtools:nightly-2020-09-30
+      image: chainxcn/srtool:nightly-2020-09-30
       volumes:
         - ${{ github.workspace }}:/build
     env:
