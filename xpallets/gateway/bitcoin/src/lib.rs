@@ -30,16 +30,6 @@ use frame_support::{
 use frame_system::{ensure_root, ensure_signed};
 use orml_utilities::with_transaction_result;
 
-use chainx_primitives::{AssetId, ReferralId};
-use xp_gateway_common::AccountExtractor;
-use xp_logging::{debug, error, info};
-use xpallet_assets::{BalanceOf, Chain, ChainT, WithdrawalLimit};
-use xpallet_gateway_common::{
-    traits::{AddrBinding, ChannelBinding, TrusteeSession},
-    trustees::bitcoin::BtcTrusteeAddrInfo,
-};
-use xpallet_support::{str, try_addr};
-
 #[cfg(feature = "std")]
 pub use light_bitcoin::primitives::h256_rev;
 pub use light_bitcoin::{
@@ -53,15 +43,25 @@ use light_bitcoin::{
     serialization::{deserialize, Reader},
 };
 
-pub use self::types::{BtcAddress, BtcParams, BtcTxVerifier, BtcWithdrawalProposal};
-use self::types::{
-    BtcDepositCache, BtcHeaderIndex, BtcHeaderInfo, BtcRelayedTx, BtcRelayedTxInfo, BtcTxResult,
-    BtcTxState,
+use chainx_primitives::{AssetId, ReferralId};
+use xp_gateway_common::AccountExtractor;
+use xp_logging::{debug, error, info};
+use xpallet_assets::{BalanceOf, Chain, ChainT, WithdrawalLimit};
+use xpallet_gateway_common::{
+    traits::{AddrBinding, ChannelBinding, TrusteeSession},
+    trustees::bitcoin::BtcTrusteeAddrInfo,
 };
-use crate::weight_info::WeightInfo;
-use crate::{
+use xpallet_support::{str, try_addr};
+
+pub use self::types::{BtcAddress, BtcParams, BtcTxVerifier, BtcWithdrawalProposal};
+use self::{
     trustee::{get_last_trustee_address_pair, get_trustee_address_pair},
     tx::remove_pending_deposit,
+    types::{
+        BtcDepositCache, BtcHeaderIndex, BtcHeaderInfo, BtcRelayedTx, BtcRelayedTxInfo,
+        BtcTxResult, BtcTxState,
+    },
+    weight_info::WeightInfo,
 };
 
 // syntactic sugar for native log.
