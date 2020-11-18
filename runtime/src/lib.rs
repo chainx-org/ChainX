@@ -122,17 +122,19 @@ pub fn native_version() -> NativeVersion {
 #[derive(Debug, Clone, Eq, PartialEq, codec::Encode, codec::Decode)]
 pub struct BaseFilter;
 impl Filter<Call> for BaseFilter {
-    fn filter(call: &Call) -> bool {
+    fn filter(_call: &Call) -> bool {
+        // At the beginning of mainnet, no call is allowed.
+        false
+        /*
         use frame_support::dispatch::GetCallMetadata;
         match call {
             Call::Currencies(_) => return false, // forbidden Currencies call now
             _ => {
-                // At the beginning of mainnet, no call is allowed.
-                return false;
             }
         }
         let metadata = call.get_call_metadata();
         !XSystem::is_paused(metadata)
+        */
     }
 }
 pub struct IsCallable;

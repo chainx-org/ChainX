@@ -974,7 +974,7 @@ fn mainnet_genesis(
         pallet_indices: Some(IndicesConfig { indices: vec![] }),
         pallet_sudo: Some(SudoConfig { key: root_key }),
         xpallet_system: Some(XSystemConfig {
-            network_props: NetworkType::Mainnet,
+            network_props: NetworkType::Testnet,
         }),
         xpallet_assets_registrar: Some(XAssetsRegistrarConfig { assets }),
         xpallet_assets: Some(XAssetsConfig {
