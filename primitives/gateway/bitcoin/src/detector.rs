@@ -56,12 +56,12 @@ impl BtcTxTypeDetector {
     /// we would use opreturn data as account info, otherwise, we would use input_addr, which is
     /// extracted from `prev_tx`, as the account.
     ///
-    /// If we meet with `prev_tx`, we would parse tx's inputs/outputs into Option<Address>.
-    /// e.g. notice the relay tx only has the first input
-    ///        _________
-    ///  addr |        | Some(addr)
-    ///       |   tx   | Some(addr)
-    ///       |________| None (OP_RETURN or something unknown)
+    // If we meet with `prev_tx`, we would parse tx's inputs/outputs into Option<Address>.
+    // e.g. notice the relay tx only has the first input
+    //        _________
+    //  addr |        | Some(addr)
+    //       |   tx   | Some(addr)
+    //       |________| None (OP_RETURN or something unknown)
     pub fn detect_transaction_type<AccountId, Extractor>(
         &self,
         tx: &Transaction,
@@ -114,32 +114,34 @@ impl BtcTxTypeDetector {
     /// format (ignore the outputs order):
     ///
     /// - 1 outputs (e.g. txid=987f12d3ebfaf875c19553bf5e1d4277f24d2be64cbdd8942174d1cd232fdaf8):
-    ///   --> X-BTC hot trustee address (deposit value)
+    ///   - X-BTC hot trustee address (deposit value)
+    ///
     ///   **Precondition**: sent a correct deposit transaction with the same BTC address before.
     ///   **Solution**: call `push_transaction` with the previous transaction of the transaction
     ///   with 1 outputs to get the BTC address.
     ///
     /// - 2 outputs (e.g. txid=e3639343ca806fe3bf2513971b79130eef88aa05000ce538c6af199dd8ef3ca7):
-    ///   --> X-BTC hot trustee address (deposit value)
-    ///   --> Null data transaction (opreturn data with valid account info)
+    ///   - X-BTC hot trustee address (deposit value)
+    ///   - Null data transaction (opreturn data with valid account info)
     ///
     /// - 2 outputs (e.g txid=7cd6d752c51100c7bc51657433b52facd04a0fea203b8e7776e6420c477912c2):
-    ///   --> X-BTC hot trustee address (deposit value)
-    ///   --> Change address (don't care)
-    ///   **Solution**: send a correct deposit transaction with same BTC address.
+    ///   - X-BTC hot trustee address (deposit value)
+    ///   - Change address (don't care)
+    ///
+    ///   **Solution**: send a correct deposit transaction with the same BTC address.
     ///
     /// - 3 outputs (e.g. txid=003e7e005b172fe0046fd06a83679fbcdc5e3dd64c8ef9295662a463dea486aa):
-    ///   --> X-BTC hot trustee address (deposit value)
-    ///   --> Change address (don't care)
-    ///   --> Null data transaction (opreturn data with valid account info)
+    ///   - X-BTC hot trustee address (deposit value)
+    ///   - Change address (don't care)
+    ///   - Null data transaction (opreturn data with valid account info)
     ///
     /// - 3+ outputs (Not recommended):
-    ///   --> X-BTC hot trustee address (deposit value)
-    ///   --> Null data transaction (opreturn data with valid account info)
-    ///   --> Null data transaction (useless one for us)
-    ///   --> Null data transaction (useless one for us)
-    ///   --> ...
-    ///   --> Null data transaction (useless one for us)
+    ///   - X-BTC hot trustee address (deposit value)
+    ///   - Null data transaction (opreturn data with valid account info)
+    ///   - Null data transaction (useless for us)
+    ///   - Null data transaction (useless for us)
+    ///   - ...
+    ///   - Null data transaction (useless for us)
     ///
     /// # NOTE
     ///
