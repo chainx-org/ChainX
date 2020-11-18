@@ -126,7 +126,10 @@ impl Filter<Call> for BaseFilter {
         use frame_support::dispatch::GetCallMetadata;
         match call {
             Call::Currencies(_) => return false, // forbidden Currencies call now
-            _ => {}
+            _ => {
+                // At the beginning of mainnet, no call is allowed.
+                return false;
+            }
         }
         let metadata = call.get_call_metadata();
         !XSystem::is_paused(metadata)
