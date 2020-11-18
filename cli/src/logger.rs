@@ -27,7 +27,7 @@ pub struct LoggerParams {
 
     /// Print the log message to the console aside from the log file.
     #[structopt(long)]
-    pub log_console: bool,
+    pub enable_console_log: bool,
 
     /// Specify the path of directory which will contain the log files.
     ///
@@ -193,7 +193,7 @@ pub fn init(log_filters: &str, params: &LoggerParams) -> Result<(), String> {
         .build(full_log_filename, Box::new(policy))
         .map_err(|e| format!("{}", e))?;
 
-    let mut config_builder = if params.log_console {
+    let mut config_builder = if params.enable_console_log {
         let console = ConsoleAppender::builder()
             .encoder(Box::new(PatternEncoder::new(console_pattern)))
             .build();
@@ -211,7 +211,7 @@ pub fn init(log_filters: &str, params: &LoggerParams) -> Result<(), String> {
         }
     }
 
-    let root = if params.log_console {
+    let root = if params.enable_console_log {
         config::Root::builder()
             .appender("roll")
             .appender("console")
