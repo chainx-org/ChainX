@@ -124,7 +124,7 @@ impl BtcTxTypeDetector {
     ///   - X-BTC hot trustee address (deposit value)
     ///   - Null data transaction (opreturn data with valid account info)
     ///
-    /// - 2 outputs (e.g txid=7cd6d752c51100c7bc51657433b52facd04a0fea203b8e7776e6420c477912c2):
+    /// - 2 outputs (e.g. txid=7cd6d752c51100c7bc51657433b52facd04a0fea203b8e7776e6420c477912c2):
     ///   - X-BTC hot trustee address (deposit value)
     ///   - Change address (don't care)
     ///
