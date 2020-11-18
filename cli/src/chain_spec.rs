@@ -689,7 +689,11 @@ pub fn mainnet_pre_config() -> Result<ChainSpec, String> {
         "chainx-pre",
         ChainType::Live,
         constructor,
-        bootnodes![], // FIXME Add mainnet bootnodes
+        bootnodes![
+            "/dns/p2p.1.chainx.org/tcp/20222/p2p/12D3KooWMMGD6eyLDgoTPnmGrawn9gkjtsZGLACJXqVCUbe6R6bD",
+            "/dns/p2p.2.chainx.org/tcp/20222/p2p/12D3KooWC1tFLBFVw47S2nfD7Nzhg5hBMUvsnz4nqpr82zfTYWaH",
+            "/dns/p2p.3.chainx.org/tcp/20222/p2p/12D3KooWPthFY8xDDyM5X9PWZwNfioqP5EShiTKyVv5899H22WBT",
+        ],
         Some(
             TelemetryEndpoints::new(vec![
                 (CHAINX_TELEMETRY_URL.to_string(), 0),
@@ -698,7 +702,7 @@ pub fn mainnet_pre_config() -> Result<ChainSpec, String> {
             .expect("ChainX telemetry url is valid; qed"),
         ),
         Some("pcx-pre"),
-        Some(as_properties(NetworkType::Mainnet)),
+        Some(as_properties(NetworkType::Testnet)),
         Default::default(),
     ))
 }
