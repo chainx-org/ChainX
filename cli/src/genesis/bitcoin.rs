@@ -107,6 +107,37 @@ pub fn local_testnet_trustees() -> Vec<(Chain, TrusteeInfoConfig, Vec<BtcTrustee
     vec![(Chain::Bitcoin, btc_config, btc_trustees)]
 }
 
+#[cfg(feature = "runtime-benchmarks")]
+pub fn benchmarks_trustees() -> Vec<(Chain, TrusteeInfoConfig, Vec<BtcTrusteeParams>)> {
+    let btc_config = TrusteeInfoConfig {
+        min_trustee_count: 3,
+        max_trustee_count: 15,
+    };
+
+    let btc_trustees = vec![
+        // 1
+        btc_trustee_gen(
+            "Alice",
+            "02df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6",
+            "0386b58f51da9b37e59c40262153173bdb59d7e4e45b73994b99eec4d964ee7e88",
+        ),
+        // 2
+        btc_trustee_gen(
+            "Bob",
+            "0244d81efeb4171b1a8a433b87dd202117f94e44c909c49e42e77b69b5a6ce7d0d",
+            "02e4631e46255571122d6e11cda75d5d601d5eb2585e65e4e87fe9f68c7838a278",
+        ),
+        // 3
+        btc_trustee_gen(
+            "Charlie",
+            "03a36339f413da869df12b1ab0def91749413a0dee87f0bfa85ba7196e6cdad102",
+            "0263d46c760d3e04883d4b433c9ce2bc32130acd9faad0192a2b375dbba9f865c3",
+        ),
+    ];
+
+    vec![(Chain::Bitcoin, btc_config, btc_trustees)]
+}
+
 pub fn staging_testnet_trustees() -> Vec<(Chain, TrusteeInfoConfig, Vec<BtcTrusteeParams>)> {
     let btc_config = TrusteeInfoConfig {
         min_trustee_count: 3,
@@ -134,37 +165,6 @@ pub fn staging_testnet_trustees() -> Vec<(Chain, TrusteeInfoConfig, Vec<BtcTrust
             b"Validator3".to_vec(),
             btc_trustee_key!("036e1b175cc285b62a8b86e4ea94f32d627b36d60673b37eb3dd07d7b8c9ae6ddb"),
             btc_trustee_key!("02b3cc747f572d33f12870fa6866aebbfd2b992ba606b8dc89b676b3697590ad63"),
-        ),
-    ];
-
-    vec![(Chain::Bitcoin, btc_config, btc_trustees)]
-}
-
-#[cfg(feature = "runtime-benchmarks")]
-pub fn benchmarks_trustees() -> Vec<(Chain, TrusteeInfoConfig, Vec<BtcTrusteeParams>)> {
-    let btc_config = TrusteeInfoConfig {
-        min_trustee_count: 3,
-        max_trustee_count: 15,
-    };
-
-    let btc_trustees = vec![
-        // 1
-        btc_trustee_gen(
-            "Alice",
-            "02df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6",
-            "0386b58f51da9b37e59c40262153173bdb59d7e4e45b73994b99eec4d964ee7e88",
-        ),
-        // 2
-        btc_trustee_gen(
-            "Bob",
-            "0244d81efeb4171b1a8a433b87dd202117f94e44c909c49e42e77b69b5a6ce7d0d",
-            "02e4631e46255571122d6e11cda75d5d601d5eb2585e65e4e87fe9f68c7838a278",
-        ),
-        // 3
-        btc_trustee_gen(
-            "Charlie",
-            "03a36339f413da869df12b1ab0def91749413a0dee87f0bfa85ba7196e6cdad102",
-            "0263d46c760d3e04883d4b433c9ce2bc32130acd9faad0192a2b375dbba9f865c3",
         ),
     ];
 

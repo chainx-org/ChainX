@@ -25,7 +25,7 @@ use crate::{
 
 const ASSET_ID: AssetId = xp_protocol::X_BTC;
 
-pub fn generate_blocks_from_raw() -> BTreeMap<u32, BlockHeader> {
+fn generate_blocks_576576_578692() -> BTreeMap<u32, BlockHeader> {
     let bytes = include_bytes!("./res/headers-576576-578692.raw");
     Decode::decode(&mut &bytes[..]).unwrap()
 }
@@ -49,56 +49,34 @@ fn bob<T: Trait>() -> T::AccountId {
 }
 
 fn withdraw_tx() -> (Transaction, BtcRelayedTxInfo, Transaction) {
-    // https://btc.com/62c389f1974b8a44737d76f92da0f5cd7f6f48d065e7af6ba368298361141270.rawhex
-    const RAW_TX: &'static str = "0100000001052ceda6cf9c93012a994f4ffa2a29c9e31ecf96f472b175eb8e602bfa2b2c5100000000fdfd000047304402200e4d732c456f4722d376252be16554edb27fc93c55db97859e16682bc62b014502202b9c4b01ad55daa1f76e6a564b7762cd0a81240c947806ab3f3b056f2e77c1da01483045022100c7cd680992de60da8c33fc3ef7f5ead85b204660822d9fbda2d85f9fadba732a022021fdc49b20a6007ea971a385732a4065d1d7c792ac9dc391034fb78aa9f5034b014c69522102df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6210244d81efeb4171b1a8a433b87dd202117f94e44c909c49e42e77b69b5a6ce7d0d2103a36339f413da869df12b1ab0def91749413a0dee87f0bfa85ba7196e6cdad10253aeffffffff03e0349500000000001976a91413256ff2dee6e80c275ddb877abc1ffe453a731488ace00f9700000000001976a914ea6e8dd56703ace584eb9dff0224629f8486672988acc88a02000000000017a914cb94110435d0635223eebe25ed2aaabc03781c458700000000";
+    // block height: 577696
+    // https://blockchain.info/rawtx/62c389f1974b8a44737d76f92da0f5cd7f6f48d065e7af6ba368298361141270?format=hex
+    const RAW_TX: &str = "0100000001052ceda6cf9c93012a994f4ffa2a29c9e31ecf96f472b175eb8e602bfa2b2c5100000000fdfd000047304402200e4d732c456f4722d376252be16554edb27fc93c55db97859e16682bc62b014502202b9c4b01ad55daa1f76e6a564b7762cd0a81240c947806ab3f3b056f2e77c1da01483045022100c7cd680992de60da8c33fc3ef7f5ead85b204660822d9fbda2d85f9fadba732a022021fdc49b20a6007ea971a385732a4065d1d7c792ac9dc391034fb78aa9f5034b014c69522102df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6210244d81efeb4171b1a8a433b87dd202117f94e44c909c49e42e77b69b5a6ce7d0d2103a36339f413da869df12b1ab0def91749413a0dee87f0bfa85ba7196e6cdad10253aeffffffff03e0349500000000001976a91413256ff2dee6e80c275ddb877abc1ffe453a731488ace00f9700000000001976a914ea6e8dd56703ace584eb9dff0224629f8486672988acc88a02000000000017a914cb94110435d0635223eebe25ed2aaabc03781c458700000000";
+    let tx = RAW_TX.parse::<Transaction>().unwrap();
 
-    let withdraw = RAW_TX.parse::<Transaction>().unwrap();
-    // https://btc.com/512c2bfa2b608eeb75b172f496cf1ee3c9292afa4f4f992a01939ccfa6ed2c05.rawhex
-    const RAW_TX_PREV: &'static str = "02000000018554af3a19f2475bb293e81fe123b588a50d7c86ce97ed4f015853b427e45f12040000006a473044022037957f493964792e6bedd37aa5193892bd9fdb5d974d87f5334f36b0d544c7f202203d7bb2ac644204437b77e9c34ea5bf875da41d728ef7352c9d74ff507da64502012102bd47917d4cf403ca8e9cb71c84a127e0451686877fe186614385025ccd1ed9cc000000000260a62f010000000017a914cb94110435d0635223eebe25ed2aaabc03781c45870000000000000000366a343552547a425a4d3274346537414d547442534e3853424c3878316b716e39713769355a75566e3569537876526341326b40484c5400000000";
-    let prev = RAW_TX_PREV.parse::<Transaction>().unwrap();
+    // https://blockchain.info/rawtx/512c2bfa2b608eeb75b172f496cf1ee3c9292afa4f4f992a01939ccfa6ed2c05?format=hex
+    const RAW_TX_PREV: &str = "02000000018554af3a19f2475bb293e81fe123b588a50d7c86ce97ed4f015853b427e45f12040000006a473044022037957f493964792e6bedd37aa5193892bd9fdb5d974d87f5334f36b0d544c7f202203d7bb2ac644204437b77e9c34ea5bf875da41d728ef7352c9d74ff507da64502012102bd47917d4cf403ca8e9cb71c84a127e0451686877fe186614385025ccd1ed9cc000000000260a62f010000000017a914cb94110435d0635223eebe25ed2aaabc03781c45870000000000000000366a343552547a425a4d3274346537414d547442534e3853424c3878316b716e39713769355a75566e3569537876526341326b40484c5400000000";
+    let prev_tx = RAW_TX_PREV.parse::<Transaction>().unwrap();
 
-    const RAW_PROOF: &[u8] = &[
-        85, 11, 0, 0, 13, 229, 254, 147, 38, 113, 0, 9, 36, 21, 188, 66, 3, 234, 200, 35, 25, 231,
-        86, 15, 28, 141, 31, 19, 255, 18, 127, 107, 223, 237, 164, 192, 213, 93, 217, 162, 12, 24,
-        191, 48, 143, 176, 158, 229, 202, 3, 214, 233, 135, 14, 222, 69, 151, 133, 161, 87, 201,
-        240, 106, 209, 117, 68, 179, 143, 189, 80, 126, 205, 108, 53, 29, 136, 3, 91, 242, 158, 47,
-        87, 88, 68, 155, 43, 165, 130, 18, 10, 118, 48, 97, 19, 169, 150, 230, 126, 27, 93, 219, 0,
-        221, 185, 159, 211, 7, 82, 29, 62, 43, 99, 209, 69, 191, 158, 38, 218, 158, 148, 78, 78,
-        34, 24, 128, 194, 42, 8, 254, 109, 69, 169, 201, 112, 18, 20, 97, 131, 41, 104, 163, 107,
-        175, 231, 101, 208, 72, 111, 127, 205, 245, 160, 45, 249, 118, 125, 115, 68, 138, 75, 151,
-        241, 137, 195, 98, 69, 157, 176, 202, 22, 245, 246, 166, 179, 105, 171, 18, 231, 122, 125,
-        169, 62, 175, 221, 167, 198, 234, 129, 108, 101, 39, 12, 139, 105, 140, 240, 235, 227, 69,
-        25, 69, 43, 40, 113, 177, 25, 234, 198, 30, 85, 213, 53, 70, 108, 125, 36, 142, 126, 61,
-        73, 81, 138, 162, 166, 22, 172, 106, 191, 55, 30, 91, 22, 56, 56, 177, 140, 36, 106, 144,
-        201, 47, 3, 119, 18, 82, 153, 31, 241, 58, 239, 112, 155, 205, 252, 176, 47, 68, 10, 176,
-        122, 110, 240, 79, 143, 59, 70, 68, 180, 122, 38, 135, 161, 125, 74, 241, 226, 144, 25, 35,
-        253, 97, 30, 152, 71, 44, 217, 131, 234, 31, 53, 16, 53, 81, 67, 169, 24, 113, 85, 19, 112,
-        102, 16, 181, 56, 41, 60, 116, 221, 115, 162, 174, 248, 174, 210, 87, 84, 34, 83, 16, 64,
-        59, 50, 217, 230, 3, 196, 124, 111, 101, 242, 235, 102, 148, 179, 71, 179, 7, 28, 153, 167,
-        92, 242, 75, 77, 29, 252, 172, 163, 7, 246, 103, 6, 230, 186, 201, 185, 33, 142, 0, 247,
-        134, 5, 22, 48, 241, 180, 131, 87, 91, 29, 17, 232, 17, 100, 180, 217, 137, 181, 53, 21,
-        247, 243, 235, 134, 236, 12, 13, 41, 56, 149, 189, 251, 209, 60, 237, 235, 92, 91, 163,
-        145, 166, 110, 249, 201, 229, 58, 196, 126, 153, 124, 161, 34, 204, 139, 250, 216, 234,
-        101, 63, 185, 84, 4, 215, 175, 1, 0,
-    ];
-    let proof: PartialMerkleTree = serialization::deserialize(Reader::new(&RAW_PROOF)).unwrap();
+    const RAW_PROOF: &str = "550b00000de5fe93267100092415bc4203eac82319e7560f1c8d1f13ff127f6bdfeda4c0d55dd9a20c18bf308fb09ee5ca03d6e9870ede459785a157c9f06ad17544b38fbd507ecd6c351d88035bf29e2f5758449b2ba582120a76306113a996e67e1b5ddb00ddb99fd307521d3e2b63d145bf9e26da9e944e4e221880c22a08fe6d45a9c970121461832968a36bafe765d0486f7fcdf5a02df9767d73448a4b97f189c362459db0ca16f5f6a6b369ab12e77a7da93eafdda7c6ea816c65270c8b698cf0ebe34519452b2871b119eac61e55d535466c7d248e7e3d49518aa2a616ac6abf371e5b163838b18c246a90c92f03771252991ff13aef709bcdfcb02f440ab07a6ef04f8f3b4644b47a2687a17d4af1e2901923fd611e98472cd983ea1f3510355143a918715513706610b538293c74dd73a2aef8aed25754225310403b32d9e603c47c6f65f2eb6694b347b3071c99a75cf24b4d1dfcaca307f66706e6bac9b9218e00f786051630f1b483575b1d11e81164b4d989b53515f7f3eb86ec0c0d293895bdfbd13cedeb5c5ba391a66ef9c9e53ac47e997ca122cc8bfad8ea653fb95404d7af0100";
+    let proof = hex::decode(RAW_PROOF).unwrap();
+    let merkle_proof: PartialMerkleTree = serialization::deserialize(Reader::new(&proof)).unwrap();
 
-    let header = generate_blocks_from_raw()[&577696];
-    let block_hash = header.hash();
+    let header = generate_blocks_576576_578692()[&577696];
     let info = BtcRelayedTxInfo {
-        block_hash,
-        merkle_proof: proof,
+        block_hash: header.hash(),
+        merkle_proof,
     };
-    (withdraw, info, prev)
+    (tx, info, prev_tx)
 }
 
 fn prepare_withdrawal<T: Trait>() -> Transaction {
-    // https://btc.com/62c389f1974b8a44737d76f92da0f5cd7f6f48d065e7af6ba368298361141270.rawhex
-    const RAW_TX: &'static str = "0100000001052ceda6cf9c93012a994f4ffa2a29c9e31ecf96f472b175eb8e602bfa2b2c5100000000fdfd000047304402200e4d732c456f4722d376252be16554edb27fc93c55db97859e16682bc62b014502202b9c4b01ad55daa1f76e6a564b7762cd0a81240c947806ab3f3b056f2e77c1da01483045022100c7cd680992de60da8c33fc3ef7f5ead85b204660822d9fbda2d85f9fadba732a022021fdc49b20a6007ea971a385732a4065d1d7c792ac9dc391034fb78aa9f5034b014c69522102df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6210244d81efeb4171b1a8a433b87dd202117f94e44c909c49e42e77b69b5a6ce7d0d2103a36339f413da869df12b1ab0def91749413a0dee87f0bfa85ba7196e6cdad10253aeffffffff03e0349500000000001976a91413256ff2dee6e80c275ddb877abc1ffe453a731488ace00f9700000000001976a914ea6e8dd56703ace584eb9dff0224629f8486672988acc88a02000000000017a914cb94110435d0635223eebe25ed2aaabc03781c458700000000";
+    // https://blockchain.info/rawtx/62c389f1974b8a44737d76f92da0f5cd7f6f48d065e7af6ba368298361141270?format=hex
+    const RAW_TX: &str = "0100000001052ceda6cf9c93012a994f4ffa2a29c9e31ecf96f472b175eb8e602bfa2b2c5100000000fdfd000047304402200e4d732c456f4722d376252be16554edb27fc93c55db97859e16682bc62b014502202b9c4b01ad55daa1f76e6a564b7762cd0a81240c947806ab3f3b056f2e77c1da01483045022100c7cd680992de60da8c33fc3ef7f5ead85b204660822d9fbda2d85f9fadba732a022021fdc49b20a6007ea971a385732a4065d1d7c792ac9dc391034fb78aa9f5034b014c69522102df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6210244d81efeb4171b1a8a433b87dd202117f94e44c909c49e42e77b69b5a6ce7d0d2103a36339f413da869df12b1ab0def91749413a0dee87f0bfa85ba7196e6cdad10253aeffffffff03e0349500000000001976a91413256ff2dee6e80c275ddb877abc1ffe453a731488ace00f9700000000001976a914ea6e8dd56703ace584eb9dff0224629f8486672988acc88a02000000000017a914cb94110435d0635223eebe25ed2aaabc03781c458700000000";
     let old_withdraw = RAW_TX.parse::<Transaction>().unwrap();
-    // https://btc.com/092684402f9b21abdb1d2d76511d5983bd1250d173ced171a3f76d03fcc43e97.rawhex
-    const ANOTHER_TX: &'static str =
-        "0100000001059ec66e2a2123364a56bd48f10f57d8a41ecf4082669e6fc85485637043879100000000fdfd00004830450221009fbe7b8f2f4ae771e8773cb5206b9f20286676e2c7cfa98a8e95368acfc3cb3c02203969727a276d7333d5f8815fa364307b8015783cfefbd53def28befdb81855fc0147304402205e5bbe039457d7657bb90dbe63ac30b9547242b44cc03e1f7a690005758e34aa02207208ed76a269d193f1e10583bd902561dbd02826d0486c33a4b1b1839a3d226f014c69522102df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6210244d81efeb4171b1a8a433b87dd202117f94e44c909c49e42e77b69b5a6ce7d0d2103a36339f413da869df12b1ab0def91749413a0dee87f0bfa85ba7196e6cdad10253aeffffffff04288e0300000000001976a914eb016d7998c88a79a50a0408dd7d5839b1ce1a6888aca0bb0d00000000001976a914646fe05e35369248c3f8deea436dc2b92c7dc86888ac50c30000000000001976a914d1a68d6e891a88d53d9bc3b88d172a3ff6b238c388ac20ee03020000000017a914cb94110435d0635223eebe25ed2aaabc03781c458700000000";
+
+    // https://blockchain.info/rawtx/092684402f9b21abdb1d2d76511d5983bd1250d173ced171a3f76d03fcc43e97?format=hex
+    const ANOTHER_TX: &str = "0100000001059ec66e2a2123364a56bd48f10f57d8a41ecf4082669e6fc85485637043879100000000fdfd00004830450221009fbe7b8f2f4ae771e8773cb5206b9f20286676e2c7cfa98a8e95368acfc3cb3c02203969727a276d7333d5f8815fa364307b8015783cfefbd53def28befdb81855fc0147304402205e5bbe039457d7657bb90dbe63ac30b9547242b44cc03e1f7a690005758e34aa02207208ed76a269d193f1e10583bd902561dbd02826d0486c33a4b1b1839a3d226f014c69522102df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6210244d81efeb4171b1a8a433b87dd202117f94e44c909c49e42e77b69b5a6ce7d0d2103a36339f413da869df12b1ab0def91749413a0dee87f0bfa85ba7196e6cdad10253aeffffffff04288e0300000000001976a914eb016d7998c88a79a50a0408dd7d5839b1ce1a6888aca0bb0d00000000001976a914646fe05e35369248c3f8deea436dc2b92c7dc86888ac50c30000000000001976a914d1a68d6e891a88d53d9bc3b88d172a3ff6b238c388ac20ee03020000000017a914cb94110435d0635223eebe25ed2aaabc03781c458700000000";
     let tmp = ANOTHER_TX.parse::<Transaction>().unwrap();
 
     let alice = alice::<T>();
@@ -141,21 +119,24 @@ fn prepare_withdrawal<T: Trait>() -> Transaction {
     new_withdraw
 }
 
+// block height: 577696
+// https://blockchain.info/rawtx/62c389f1974b8a44737d76f92da0f5cd7f6f48d065e7af6ba368298361141270?format=hex
 fn create_tx() -> Transaction {
     "0100000001052ceda6cf9c93012a994f4ffa2a29c9e31ecf96f472b175eb8e602bfa2b2c5100000000b40047304402200e4d732c456f4722d376252be16554edb27fc93c55db97859e16682bc62b014502202b9c4b01ad55daa1f76e6a564b7762cd0a81240c947806ab3f3b056f2e77c1da014c69522102df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6210244d81efeb4171b1a8a433b87dd202117f94e44c909c49e42e77b69b5a6ce7d0d2103a36339f413da869df12b1ab0def91749413a0dee87f0bfa85ba7196e6cdad10253aeffffffff03e0349500000000001976a91413256ff2dee6e80c275ddb877abc1ffe453a731488ace00f9700000000001976a914ea6e8dd56703ace584eb9dff0224629f8486672988acc88a02000000000017a914cb94110435d0635223eebe25ed2aaabc03781c458700000000".parse::<Transaction>().unwrap()
 }
 
+// push header 576577 - 577702 (current confirm height is 577696)
 fn prepare_headers<T: Trait>(caller: &T::AccountId) {
-    for (height, header) in generate_blocks_from_raw() {
+    for (height, header) in generate_blocks_576576_578692() {
         if height == 576576 {
             continue;
         }
-        if height == 577700 {
-            // confirm for 577696
+        if height == 577702 {
+            // confirm for 577696, confirmation number is 6
             break;
         }
-        let v = serialization::serialize(&header).into();
-        Module::<T>::push_header(RawOrigin::Signed(caller.clone()).into(), v).unwrap();
+        let header = serialization::serialize(&header).into();
+        Module::<T>::push_header(RawOrigin::Signed(caller.clone()).into(), header).unwrap();
     }
 }
 
@@ -165,7 +146,7 @@ benchmarks! {
     push_header {
         let receiver: T::AccountId = whitelisted_caller();
         let insert_height = 576576 + 1;
-        let header = generate_blocks_from_raw()[&insert_height];
+        let header = generate_blocks_576576_578692()[&insert_height];
         let hash = header.hash();
         let header_raw = serialization::serialize(&header).into();
         let amount: BalanceOf<T> = 1000.into();
@@ -175,17 +156,16 @@ benchmarks! {
     }
 
     push_transaction {
-        let n in 1 .. 1024 * 1024 * 500; // 500KB length
-        let l in 1 .. 1024 * 1024 * 500; // 500KB length
+        let n = 1024 * 1024 * 500; // 500KB length
+        let l = 1024 * 1024 * 500; // 500KB length
 
         let caller: T::AccountId = whitelisted_caller();
 
-        // set_trustee::<T>();
         prepare_headers::<T>(&caller);
-        let (tx, info, prev) = withdraw_tx();
+        let (tx, info, prev_tx) = withdraw_tx();
         let tx_hash = tx.hash();
         let tx_raw = serialization::serialize(&tx).into();
-        let prev_tx_raw = serialization::serialize(&prev).into();
+        let prev_tx_raw = serialization::serialize(&prev_tx).into();
 
         XGatewayRecords::<T>::deposit(&caller, ASSET_ID, 9778400.into()).unwrap();
         XGatewayRecords::<T>::deposit(&caller, ASSET_ID, 9900000.into()).unwrap();
@@ -205,22 +185,25 @@ benchmarks! {
     }: _(RawOrigin::Signed(caller), tx_raw, info, Some(prev_tx_raw))
     verify {
         assert!(WithdrawalProposal::<T>::get().is_none());
-        assert_eq!(TxState::get(tx_hash), Some(BtcTxState {
-            result: BtcTxResult::Success,
-            tx_type: BtcTxType::Withdrawal,
-        }));
+        assert_eq!(
+            TxState::get(tx_hash),
+            Some(BtcTxState {
+                tx_type: BtcTxType::Withdrawal,
+                result: BtcTxResult::Success,
+            })
+        );
     }
 
     create_withdraw_tx {
-        let n in 1 .. 100; // 100 withdrawl count
-        let l in 1 .. 1024 * 1024 * 500; // 500KB length
+        let n = 100;                // 100 withdrawal count
+        let l = 1024 * 1024 * 500;  // 500KB length
 
         let caller = alice::<T>();
 
-        let (tx, info, prev) = withdraw_tx();
+        let (tx, info, prev_tx) = withdraw_tx();
         let tx_hash = tx.hash();
         let tx_raw: Vec<u8> = serialization::serialize(&tx).into();
-        let prev_tx_raw: Vec<u8> = serialization::serialize(&prev).into();
+        let prev_tx_raw: Vec<u8> = serialization::serialize(&prev_tx).into();
 
         let btc_withdrawal_fee = Module::<T>::btc_withdrawal_fee();
         let first_withdraw = (9778400 + btc_withdrawal_fee).saturated_into();
@@ -238,7 +221,7 @@ benchmarks! {
     }
 
     sign_withdraw_tx {
-        let l in 1 .. 1024 * 1024 * 500; // 500KB length
+        let l = 1024 * 1024 * 500; // 500KB length
         let tx = create_tx();
         let alice = alice::<T>();
         let bob = bob::<T>();
@@ -317,7 +300,7 @@ benchmarks! {
     }
 
     force_replace_proposal_tx {
-        let l in 1 .. 1024 * 1024 * 500; // 500KB length
+        let l = 1024 * 1024 * 500; // 500KB length
 
         Verifier::put(BtcTxVerifier::Test);
         let tx = prepare_withdrawal::<T>();
