@@ -140,12 +140,12 @@
     "BtcTxResult": {
         "_enum": [
             "Success",
-            "Failed"
+            "Failure"
         ]
     },
     "BtcTxState": {
-        "result": "BtcTxResult",
-        "tx_type": "BtcTxType"
+        "tx_type": "BtcTxType",
+        "result": "BtcTxResult"
     },
     "BtcTxType": {
         "_enum": [
