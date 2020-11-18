@@ -90,15 +90,18 @@ impl BtcTxTypeDetector {
                 return if all_outputs_is_trustee {
                     BtcTxMetaType::HotAndCold
                 } else {
+                    // outputs contains other address, it's a user address, thus it's a withdrawal
                     BtcTxMetaType::Withdrawal
                 };
             }
             if let Some(previous_trustee_pair) = self.previous_trustee_pair {
                 if is_trustee_addr(input_addr, previous_trustee_pair) && all_outputs_is_trustee {
+                    // inputs should from previous trustee address, outputs should all be current trustee addresses
                     return BtcTxMetaType::TrusteeTransition;
                 }
             }
         }
+
         // detect X-BTC `Deposit` transaction
         self.detect_deposit_transaction_type(tx, input_addr, extract_account)
     }
