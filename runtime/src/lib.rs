@@ -348,9 +348,10 @@ impl_opaque_keys! {
     }
 }
 
-/// Substrate has the controller/stash concept, the according `Convert` implementation
-/// is used to find the stash of the given controller account.
-/// There is no such concepts in the context of ChainX, the stash account is also the controller account.
+/// Substrate has the controller/stash concept, the according `Convert`
+/// implementation is used to find the stash of the given controller
+/// account. There is no such concept in the context of ChainX, the
+/// _stash_ account is also the _controller_ account.
 pub struct SimpleValidatorIdConverter;
 
 impl Convert<AccountId, Option<AccountId>> for SimpleValidatorIdConverter {
@@ -374,7 +375,7 @@ impl pallet_session::Trait for Runtime {
 }
 
 parameter_types! {
-    // There is no dusty accounts in ChainX.
+    /// No dusty accounts in ChainX.
     pub const ExistentialDeposit: Balance = 0;
     // For weight estimation, we assume that the most locks on an individual account will be 50.
     // This number may need to be adjusted in the future if this assumption no longer holds true.
@@ -531,13 +532,14 @@ impl pallet_sudo::Trait for Runtime {
 }
 
 parameter_types! {
-    pub const LaunchPeriod: BlockNumber = 28 * 24 * 60 * MINUTES;
-    pub const VotingPeriod: BlockNumber = 28 * 24 * 60 * MINUTES;
-    pub const FastTrackVotingPeriod: BlockNumber = 3 * 24 * 60 * MINUTES;
+    pub const LaunchPeriod: BlockNumber = 7 * DAYS;
+    pub const VotingPeriod: BlockNumber = 7 * DAYS;
+    pub const FastTrackVotingPeriod: BlockNumber = 3 * HOURS;
     pub const InstantAllowed: bool = true;
-    pub const MinimumDeposit: Balance = 100 * DOLLARS;
-    pub const EnactmentPeriod: BlockNumber = 30 * 24 * 60 * MINUTES;
-    pub const CooloffPeriod: BlockNumber = 28 * 24 * 60 * MINUTES;
+    // 10 PCX
+    pub const MinimumDeposit: Balance = 1000 * DOLLARS;
+    pub const EnactmentPeriod: BlockNumber = 8 * DAYS;
+    pub const CooloffPeriod: BlockNumber = 7 * DAYS;
     // One cent: $10,000 / MB
     pub const PreimageByteDeposit: Balance = 1 * CENTS;
     pub const MaxVotes: u32 = 100;
@@ -586,7 +588,7 @@ impl pallet_democracy::Trait for Runtime {
 }
 
 parameter_types! {
-    pub const CouncilMotionDuration: BlockNumber = 5 * DAYS;
+    pub const CouncilMotionDuration: BlockNumber = 7 * DAYS;
     pub const CouncilMaxProposals: u32 = 100;
     pub const CouncilMaxMembers: u32 = 100;
 }
@@ -604,12 +606,13 @@ impl pallet_collective::Trait<CouncilCollective> for Runtime {
 }
 
 parameter_types! {
-    pub const CandidacyBond: Balance = 10 * DOLLARS;
+    // 10 PCX
+    pub const CandidacyBond: Balance = 1000 * DOLLARS;
     pub const VotingBond: Balance = 1 * DOLLARS;
-    pub const TermDuration: BlockNumber = 7 * DAYS;
-    pub const DesiredMembers: u32 = 13;
+    pub const TermDuration: BlockNumber = 1 * DAYS;
+    pub const DesiredMembers: u32 = 11;
     pub const DesiredRunnersUp: u32 = 7;
-    pub const ElectionsPhragmenModuleId: LockIdentifier = *b"phrelect";
+    pub const ElectionsPhragmenModuleId: LockIdentifier = *b"pcx/phre";
 }
 
 // Make sure that there are no more than `MaxMembers` members elected via elections-phragmen.
@@ -626,9 +629,9 @@ impl pallet_elections_phragmen::Trait for Runtime {
     type CurrencyToVote = CurrencyToVoteHandler;
     type CandidacyBond = CandidacyBond;
     type VotingBond = VotingBond;
-    type LoserCandidate = ();
-    type BadReport = ();
-    type KickedMember = ();
+    type LoserCandidate = Treasury;
+    type BadReport = Treasury;
+    type KickedMember = Treasury;
     type DesiredMembers = DesiredMembers;
     type DesiredRunnersUp = DesiredRunnersUp;
     type TermDuration = TermDuration;
@@ -671,17 +674,18 @@ impl pallet_membership::Trait<pallet_membership::Instance1> for Runtime {
 
 parameter_types! {
     pub const ProposalBond: Permill = Permill::from_percent(5);
-    pub const ProposalBondMinimum: Balance = 1 * DOLLARS;
-    pub const SpendPeriod: BlockNumber = 1 * DAYS;
+    // 10 PCX
+    pub const ProposalBondMinimum: Balance = 1000 * DOLLARS;
+    pub const SpendPeriod: BlockNumber = 6 * DAYS;
     pub const NoBurn: Permill = Permill::from_percent(0);
     pub const TipCountdown: BlockNumber = 1 * DAYS;
     pub const TipFindersFee: Percent = Percent::from_percent(20);
     pub const TipReportDepositBase: Balance = 1 * DOLLARS;
     pub const DataDepositPerByte: Balance = 1 * CENTS;
     pub const BountyDepositBase: Balance = 1 * DOLLARS;
-    pub const BountyDepositPayoutDelay: BlockNumber = 8 * DAYS; // TODO may need to change this
-    pub const TreasuryModuleId: ModuleId = ModuleId(*b"py/trsry");
-    pub const BountyUpdatePeriod: BlockNumber = 90 * DAYS; // TODO may need to change this
+    pub const BountyDepositPayoutDelay: BlockNumber = 4 * DAYS;
+    pub const TreasuryModuleId: ModuleId = ModuleId(*b"pcx/trsy");
+    pub const BountyUpdatePeriod: BlockNumber = 90 * DAYS;
     pub const MaximumReasonLength: u32 = 16384;
     pub const BountyCuratorDeposit: Permill = Permill::from_percent(50);
     pub const BountyValueMinimum: Balance = 10 * DOLLARS;
@@ -931,12 +935,6 @@ construct_runtime!(
 
         Utility: pallet_utility::{Module, Call, Event},
         Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
-        Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
-
-        // orml
-        // we retain Currencies Call for this call may be used in future, but we do not need this now,
-        // so that we filter it in BaseFilter.
-        Currencies: orml_currencies::{Module, Call, Event<T>},
 
         // ChainX basics.
         XSystem: xpallet_system::{Module, Call, Storage, Event<T>, Config},
@@ -955,9 +953,19 @@ construct_runtime!(
         // DEX
         XSpot: xpallet_dex_spot::{Module, Call, Storage, Event<T>, Config<T>},
 
+        XGenesisBuilder: xpallet_genesis_builder::{Module, Config<T>},
+
+        // orml
+        // we retain Currencies Call for this call may be used in future, but we do not need this now,
+        // so that we filter it in BaseFilter.
+        Currencies: orml_currencies::{Module, Call, Event<T>},
+
+        // It might be possible to merge this module into pallet_transaction_payment in future, thus
+        // we put it at the end for keeping the extrinsic ordering.
         XTransactionFee: xpallet_transaction_fee::{Module, Event<T>},
 
-        XGenesisBuilder: xpallet_genesis_builder::{Module, Config<T>},
+        // Put Sudo last so that the extrinsic ordering stays the same once it's removed.
+        Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
     }
 );
 
@@ -1087,8 +1095,6 @@ impl_runtime_apis! {
             _slot_number: sp_consensus_babe::SlotNumber,
             authority_id: sp_consensus_babe::AuthorityId,
         ) -> Option<sp_consensus_babe::OpaqueKeyOwnershipProof> {
-            use codec::Encode;
-
             Historical::prove((sp_consensus_babe::KEY_TYPE, authority_id))
                 .map(|p| p.encode())
                 .map(sp_consensus_babe::OpaqueKeyOwnershipProof::new)

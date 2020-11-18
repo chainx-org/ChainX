@@ -11,9 +11,7 @@ use light_bitcoin::{chain::Transaction, primitives::H256, script::Script};
 use xp_logging::{debug, error};
 use xpallet_support::try_hex;
 
-use crate::trustee::get_hot_trustee_redeem_script;
-use crate::types::BtcRelayedTx;
-use crate::{Error, Trait};
+use crate::{trustee::get_hot_trustee_redeem_script, types::BtcRelayedTx, Error, Trait};
 
 pub fn validate_transaction<T: Trait>(
     tx: &BtcRelayedTx,

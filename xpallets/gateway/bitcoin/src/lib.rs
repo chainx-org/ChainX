@@ -55,7 +55,7 @@ use xpallet_support::{str, try_addr};
 
 pub use self::types::{BtcAddress, BtcParams, BtcTxVerifier, BtcWithdrawalProposal};
 use self::{
-    trustee::get_trustee_address_pair,
+    trustee::{get_last_trustee_address_pair, get_trustee_address_pair},
     tx::remove_pending_deposit,
     types::{
         BtcDepositCache, BtcHeaderIndex, BtcHeaderInfo, BtcRelayedTx, BtcRelayedTxInfo,
@@ -598,7 +598,18 @@ impl<T: Trait> Module<T> {
             }
         }
 
-        let state = tx::process_tx::<T>(tx.raw, prev)?;
+        let network = Module::<T>::network_id();
+        let min_deposit = Module::<T>::btc_min_deposit();
+        let current_trustee_pair = get_trustee_address_pair::<T>()?;
+        let previous_trustee_pair = get_last_trustee_address_pair::<T>().ok();
+        let state = tx::process_tx::<T>(
+            tx.raw,
+            prev,
+            network,
+            min_deposit,
+            current_trustee_pair,
+            previous_trustee_pair,
+        );
         TxState::insert(&tx_hash, state);
         Self::deposit_event(Event::<T>::TxProcessed(tx_hash, block_hash, state));
         match state.result {

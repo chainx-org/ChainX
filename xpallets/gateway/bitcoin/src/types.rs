@@ -165,6 +165,7 @@ impl BtcParams {
     pub fn retargeting_interval(&self) -> u32 {
         self.retargeting_interval
     }
+
     pub fn min_timespan(&self) -> u32 {
         self.min_timespan
     }

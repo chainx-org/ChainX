@@ -1,20 +1,15 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 mod secp256k1_verifier;
-// pub mod utils;
 pub mod validator;
 
-use frame_support::{
-    debug::native,
-    dispatch::{DispatchError, DispatchResult},
-    StorageMap, StorageValue,
-};
+use frame_support::{debug::native, dispatch::DispatchResult, StorageMap, StorageValue};
 use sp_runtime::{traits::Zero, SaturatedConversion};
 use sp_std::prelude::*;
 
 use light_bitcoin::{
     chain::Transaction,
-    keys::{Address, DisplayLayout},
+    keys::{Address, DisplayLayout, Network},
     primitives::{hash_rev, H256},
 };
 
@@ -29,7 +24,6 @@ use xpallet_support::str;
 pub use self::validator::validate_transaction;
 use crate::{
     native,
-    trustee::{get_last_trustee_address_pair, get_trustee_address_pair},
     types::{AccountInfo, BtcAddress, BtcDepositCache, BtcTxResult, BtcTxState},
     BalanceOf, Error, Event, Module, PendingDeposits, Trait, WithdrawalProposal,
 };
@@ -37,12 +31,11 @@ use crate::{
 pub fn process_tx<T: Trait>(
     tx: Transaction,
     prev_tx: Option<Transaction>,
-) -> Result<BtcTxState, DispatchError> {
-    let network = Module::<T>::network_id();
-    let min_deposit = Module::<T>::btc_min_deposit();
-    let current_trustee_pair = get_trustee_address_pair::<T>()?;
-    let previous_trustee_pair = get_last_trustee_address_pair::<T>().ok();
-
+    network: Network,
+    min_deposit: u64,
+    current_trustee_pair: (Address, Address),
+    previous_trustee_pair: Option<(Address, Address)>,
+) -> BtcTxState {
     let btc_tx_detector = BtcTxTypeDetector::new(
         network,
         min_deposit,
@@ -63,7 +56,8 @@ pub fn process_tx<T: Trait>(
         // mark Irrelevance be Failure so that it could be replayed in the future
         BtcTxMetaType::<_>::Irrelevance => BtcTxResult::Failure,
     };
-    Ok(BtcTxState { tx_type, result })
+
+    BtcTxState { tx_type, result }
 }
 
 fn deposit<T: Trait>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) -> BtcTxResult {

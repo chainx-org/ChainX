@@ -9,7 +9,6 @@ use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
 use chainx_primitives::AssetId;
 use xp_gateway_bitcoin::BtcTxType;
-
 use xpallet_assets::{BalanceOf, Module as XAssets};
 use xpallet_gateway_records::{Module as XGatewayRecords, WithdrawalState};
 
