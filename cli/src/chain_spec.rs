@@ -685,7 +685,7 @@ pub fn mainnet_pre_config() -> Result<ChainSpec, String> {
 
     Ok(ChainSpec::from_genesis(
         "ChainX 2.0 Pre",
-        "chainx-2.0-pre",
+        "chainx_2.0_pre",
         ChainType::Live,
         constructor,
         bootnodes![
