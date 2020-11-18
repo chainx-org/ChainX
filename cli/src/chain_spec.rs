@@ -549,8 +549,7 @@ pub fn testnet_config() -> Result<ChainSpec, String> {
     ))
 }
 
-#[allow(unused)]
-pub fn mainnet_config() -> Result<ChainSpec, String> {
+pub fn mainnet_pre_config() -> Result<ChainSpec, String> {
     let wasm_binary = WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
 
     // 5HNeqQYeyqcaBTHHjSbFnEvhCeg6jKcRrV2zeHgXQhvjK8XY
@@ -686,8 +685,8 @@ pub fn mainnet_config() -> Result<ChainSpec, String> {
     };
 
     Ok(ChainSpec::from_genesis(
-        "ChainX",
-        "chainx",
+        "ChainX 2.0 Pre",
+        "chainx-pre",
         ChainType::Live,
         constructor,
         bootnodes![], // FIXME Add mainnet bootnodes
@@ -698,7 +697,7 @@ pub fn mainnet_config() -> Result<ChainSpec, String> {
             ])
             .expect("ChainX telemetry url is valid; qed"),
         ),
-        Some("pcx"),
+        Some("pcx-pre"),
         Some(as_properties(NetworkType::Mainnet)),
         Default::default(),
     ))
