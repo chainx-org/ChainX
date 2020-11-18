@@ -550,6 +550,11 @@ pub fn testnet_config() -> Result<ChainSpec, String> {
 }
 
 pub fn mainnet_pre_config() -> Result<ChainSpec, String> {
+    ChainSpec::from_json_bytes(&include_bytes!("./res/mainnet-pre-dist.json")[..])
+}
+
+#[allow(unused)]
+pub fn mainnet_pre_config_raw() -> Result<ChainSpec, String> {
     let wasm_binary = WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
 
     // 5HNeqQYeyqcaBTHHjSbFnEvhCeg6jKcRrV2zeHgXQhvjK8XY
