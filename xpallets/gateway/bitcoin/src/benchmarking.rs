@@ -253,7 +253,6 @@ benchmarks! {
 
         let (signed_tx, _, _) = withdraw_tx();
         let tx_raw: Vec<u8> = serialization::serialize(&signed_tx).into();
-
     }: _(RawOrigin::Signed(bob), Some(tx_raw))
     verify {
         assert_eq!(WithdrawalProposal::<T>::get().unwrap().sig_state, VoteResult::Finish);
