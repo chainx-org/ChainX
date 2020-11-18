@@ -549,8 +549,7 @@ pub fn testnet_config() -> Result<ChainSpec, String> {
     ))
 }
 
-#[allow(unused)]
-pub fn mainnet_config() -> Result<ChainSpec, String> {
+pub fn mainnet_pre_config() -> Result<ChainSpec, String> {
     let wasm_binary = WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
 
     // 5HNeqQYeyqcaBTHHjSbFnEvhCeg6jKcRrV2zeHgXQhvjK8XY
@@ -679,18 +678,21 @@ pub fn mainnet_config() -> Result<ChainSpec, String> {
             root_key.clone(),
             vesting_key.clone(),
             genesis_assets(),
-            // FIXME update btc mainnet header
             btc_genesis_params(include_str!("res/btc_genesis_params_mainnet.json")),
             mainnet_trustees(),
         )
     };
 
     Ok(ChainSpec::from_genesis(
-        "ChainX",
-        "chainx",
+        "ChainX 2.0 Pre",
+        "chainx_2.0_pre",
         ChainType::Live,
         constructor,
-        bootnodes![], // FIXME Add mainnet bootnodes
+        bootnodes![
+            "/ip4/47.99.179.60/tcp/20222/p2p/12D3KooWMMGD6eyLDgoTPnmGrawn9gkjtsZGLACJXqVCUbe6R6bD",
+            "/ip4/116.62.46.8/tcp/20222/p2p/12D3KooWC1tFLBFVw47S2nfD7Nzhg5hBMUvsnz4nqpr82zfTYWaH",
+            "/ip4/47.110.34.31/tcp/20222/p2p/12D3KooWPthFY8xDDyM5X9PWZwNfioqP5EShiTKyVv5899H22WBT",
+        ],
         Some(
             TelemetryEndpoints::new(vec![
                 (CHAINX_TELEMETRY_URL.to_string(), 0),
@@ -698,8 +700,8 @@ pub fn mainnet_config() -> Result<ChainSpec, String> {
             ])
             .expect("ChainX telemetry url is valid; qed"),
         ),
-        Some("pcx"),
-        Some(as_properties(NetworkType::Mainnet)),
+        Some("pcx-pre"),
+        Some(as_properties(NetworkType::Testnet)),
         Default::default(),
     ))
 }
