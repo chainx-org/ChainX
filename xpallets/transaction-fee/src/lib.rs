@@ -17,7 +17,7 @@ use sp_std::prelude::*;
 
 use frame_support::{
     decl_event, decl_module,
-    traits::{Currency, Get},
+    traits::Get,
     weights::{
         DispatchInfo, GetDispatchInfo, Pays, PostDispatchInfo, Weight, WeightToFeePolynomial,
     },
@@ -29,9 +29,7 @@ use sp_runtime::{
 
 pub use self::types::{FeeDetails, InclusionFee};
 
-type BalanceOf<T> = <<T as pallet_transaction_payment::Trait>::Currency as Currency<
-    <T as frame_system::Trait>::AccountId,
->>::Balance;
+type BalanceOf<T> = <<T as pallet_transaction_payment::Trait>::OnChargeTransaction as pallet_transaction_payment::OnChargeTransaction<T>>::Balance;
 
 pub trait Trait: pallet_transaction_payment::Trait {}
 

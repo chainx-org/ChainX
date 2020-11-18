@@ -11,8 +11,9 @@ use frame_support::{decl_module, decl_storage};
 
 #[cfg(feature = "std")]
 use xp_genesis_builder::AllParams;
-use xp_logging::info;
+#[cfg(feature = "std")]
 use xpallet_assets::BalanceOf as AssetBalanceOf;
+#[cfg(feature = "std")]
 use xpallet_mining_staking::BalanceOf as StakingBalanceOf;
 
 pub trait Trait:
@@ -39,7 +40,7 @@ decl_storage! {
             xstaking::initialize::<T>(&config.params.xstaking);
             xmining_asset::initialize::<T>(&config.params.xmining_asset);
 
-            info!(
+            xp_logging::info!(
                 "Took {:?}ms to orchestrate the exported state from ChainX 1.0",
                 now.elapsed().as_millis()
             );

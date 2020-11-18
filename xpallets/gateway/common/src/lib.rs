@@ -14,7 +14,7 @@ pub mod traits;
 pub mod trustees;
 pub mod types;
 pub mod utils;
-mod weight_info;
+pub mod weights;
 
 use sp_runtime::traits::StaticLookup;
 use sp_std::{collections::btree_map::BTreeMap, convert::TryFrom, prelude::*};
@@ -38,7 +38,7 @@ use crate::types::{
     GenericTrusteeIntentionProps, GenericTrusteeSessionInfo, TrusteeInfoConfig,
     TrusteeIntentionProps,
 };
-use crate::weight_info::WeightInfo;
+pub use crate::weights::WeightInfo;
 
 pub trait Trait: xpallet_gateway_records::Trait {
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
