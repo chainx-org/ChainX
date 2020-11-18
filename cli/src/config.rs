@@ -18,10 +18,9 @@ fn read_config_file(path: &Path) -> Result<HashMap<String, Value>, Box<dyn std::
     }))
 }
 
-const SUB_COMMANDS: [&str; 14] = [
+const SUB_COMMANDS: [&str; 13] = [
     "benchmark",
     "build-spec",
-    "build-sync-spec",
     "check-block",
     "export-blocks",
     "export-state",

@@ -53,7 +53,7 @@ pub fn process_tx<T: Trait>(
         BtcTxMetaType::<_>::Deposit(deposit_info) => deposit::<T>(tx.hash(), deposit_info),
         BtcTxMetaType::<_>::Withdrawal => withdraw::<T>(tx),
         BtcTxMetaType::HotAndCold | BtcTxMetaType::TrusteeTransition => BtcTxResult::Success,
-        // mark Irrelevance be Failure so that it could be replayed in the future
+        // mark `Irrelevance` be `Failure` so that it could be replayed in the future
         BtcTxMetaType::<_>::Irrelevance => BtcTxResult::Failure,
     };
 

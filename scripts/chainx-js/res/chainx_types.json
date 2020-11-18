@@ -161,8 +161,8 @@
         "finalFee": "Balance"
     },
     "UnbondedIndex": "u32",
-    "Desc": "Text",
     "Token": "Text",
+    "Desc": "Text",
     "AddrStr": "Text",
     "HandicapInfo": "Handicap",
     "Price": "u128",
@@ -304,12 +304,12 @@
     "BtcTxResult": {
         "_enum": [
             "Success",
-            "Failed"
+            "Failure"
         ]
     },
     "BtcTxState": {
-        "result": "BtcTxResult",
-        "txType": "BtcTxType"
+        "txType": "BtcTxType",
+        "result": "BtcTxResult"
     },
     "BtcTxType": {
         "_enum": [

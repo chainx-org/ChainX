@@ -8,7 +8,7 @@
 mod impls;
 mod rpc;
 mod types;
-mod weight_info;
+pub mod weights;
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
 mod benchmarking;
@@ -41,7 +41,7 @@ use xpallet_support::traits::TreasuryAccount;
 pub use self::impls::SimpleAssetRewardPotAccountDeterminer;
 pub use self::rpc::*;
 pub use self::types::*;
-pub use self::weight_info::WeightInfo;
+pub use self::weights::WeightInfo;
 
 pub trait Trait: xpallet_assets::Trait {
     /// The overarching event type.

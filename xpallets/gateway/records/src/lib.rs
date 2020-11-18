@@ -10,7 +10,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 mod types;
-mod weight_info;
+pub mod weights;
 
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
@@ -31,7 +31,7 @@ use xpallet_assets::{AssetType, BalanceOf, Chain};
 use xpallet_support::try_addr;
 
 pub use self::types::{Withdrawal, WithdrawalRecord, WithdrawalRecordId, WithdrawalState};
-use crate::weight_info::WeightInfo;
+pub use self::weights::WeightInfo;
 
 pub type WithdrawalRecordOf<T> = WithdrawalRecord<
     <T as frame_system::Trait>::AccountId,

@@ -43,7 +43,7 @@ pub struct BabeDeps {
     /// BABE pending epoch changes.
     pub shared_epoch_changes: sc_consensus_epochs::SharedEpochChanges<Block, Epoch>,
     /// The keystore that manages the keys of the node.
-    pub keystore: sc_keystore::KeyStorePtr,
+    pub keystore: sp_keystore::SyncCryptoStorePtr,
 }
 
 /// Extra dependencies for GRANDPA
