@@ -16,6 +16,7 @@ use light_bitcoin::{
     script::{Builder, Opcode, Script},
 };
 
+use xp_gateway_bitcoin::extract_output_addr;
 use xp_logging::{debug, error, info};
 use xpallet_assets::Chain;
 use xpallet_gateway_common::{
@@ -25,10 +26,11 @@ use xpallet_gateway_common::{
     utils::two_thirds_unsafe,
 };
 
-use crate::tx::utils::{addr2vecu8, ensure_identical, parse_output_addr};
-use crate::tx::validator::parse_and_check_signed_tx;
-use crate::types::{BtcWithdrawalProposal, VoteResult};
-use crate::{Error, Event, Module, Trait, WithdrawalProposal};
+use crate::{
+    tx::{addr2vecu8, ensure_identical, validator::parse_and_check_signed_tx},
+    types::{BtcWithdrawalProposal, VoteResult},
+    Error, Event, Module, Trait, WithdrawalProposal,
+};
 
 pub fn trustee_session<T: Trait>(
 ) -> Result<TrusteeSessionInfo<T::AccountId, BtcTrusteeAddrInfo>, DispatchError> {
@@ -544,10 +546,10 @@ fn check_withdraw_tx_impl<T: Trait>(
     let hot_trustee_address: Address = get_hot_trustee_address::<T>()?;
     // withdrawal addr list for tx outputs
     let btc_withdrawal_fee = Module::<T>::btc_withdrawal_fee();
+    let btc_network = Module::<T>::network_id();
     let mut tx_withdraw_list = Vec::new();
-    for output in tx.outputs.iter() {
-        let script: Script = output.script_pubkey.clone().into();
-        let addr = parse_output_addr::<T>(&script).ok_or("not found addr in this out")?;
+    for output in &tx.outputs {
+        let addr = extract_output_addr(&output, btc_network).ok_or("not found addr in this out")?;
         if addr.hash != hot_trustee_address.hash {
             // expect change to trustee_addr output
             tx_withdraw_list.push((addr, output.value + btc_withdrawal_fee));

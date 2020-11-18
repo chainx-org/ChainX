@@ -74,7 +74,7 @@ pub struct RunCmd {
 
 impl Cli {
     pub fn try_init_logger(&self) -> sc_cli::Result<()> {
-        if self.run.logger.log4rs {
+        if !self.run.logger.no_log_rotation {
             crate::logger::init(&self.run.base.log_filters()?, &self.run.logger)?;
         }
         Ok(())

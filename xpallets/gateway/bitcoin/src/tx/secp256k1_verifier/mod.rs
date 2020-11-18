@@ -8,7 +8,6 @@ use crate::types::BtcTxVerifier;
 use crate::{Error, Module, Trait};
 
 mod recover_verifier;
-
 mod runtime_interface {
     use super::*;
     pub fn verify_sig_impl<T: Trait>(
