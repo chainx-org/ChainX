@@ -678,7 +678,6 @@ pub fn mainnet_pre_config() -> Result<ChainSpec, String> {
             root_key.clone(),
             vesting_key.clone(),
             genesis_assets(),
-            // FIXME update btc mainnet header
             btc_genesis_params(include_str!("res/btc_genesis_params_mainnet.json")),
             mainnet_trustees(),
         )
