@@ -331,9 +331,11 @@ decl_module! {
         /// Remove this once `Immortals` is initialized.
         fn on_initialize(_block_number: T::BlockNumber) -> frame_support::weights::Weight {
             if Self::immortals().is_none() {
+                // The `validator` call is still disallowed when initializing so
+                // immortals are just the genesis validators.
                 Immortals::<T>::put(Self::active_validator_set().collect::<Vec<_>>());
                 return 2;
-            }
+            // }
             1
         }
 
