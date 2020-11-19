@@ -58,7 +58,7 @@ fn t_start_session(session_index: SessionIndex) {
         System::set_block_number((i + 1).into());
         Timestamp::set_timestamp(System::block_number() * 1000 + INIT_TIMESTAMP);
         Session::on_initialize(System::block_number());
-        XStaking::on_initialize(System::block_number());
+        // XStaking::on_initialize(System::block_number());
     }
 
     assert_eq!(Session::current_index(), session_index);
