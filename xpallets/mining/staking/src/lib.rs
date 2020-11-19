@@ -332,6 +332,7 @@ decl_module! {
         fn on_initialize(_block_number: T::BlockNumber) -> frame_support::weights::Weight {
             if Self::immortals().is_none() {
                 Immortals::<T>::put(Self::active_validator_set().collect::<Vec<_>>());
+                return 2;
             }
             1
         }
