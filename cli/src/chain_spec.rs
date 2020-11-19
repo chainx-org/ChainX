@@ -78,7 +78,6 @@ where
 
 type AuthorityKeysTuple = (
     (AccountId, ReferralId), // (Staking ValidatorId, ReferralId)
-    AccountId,               // (SessionKey)
     BabeId,
     GrandpaId,
     ImOnlineId,
@@ -92,7 +91,6 @@ pub fn authority_keys_from_seed(seed: &str) -> AuthorityKeysTuple {
             get_account_id_from_seed::<sr25519::Public>(seed),
             seed.as_bytes().to_vec(),
         ),
-        get_account_id_from_seed::<sr25519::Public>(&format!("{}//blockauthor", seed)),
         get_from_seed::<BabeId>(seed),
         get_from_seed::<GrandpaId>(seed),
         get_from_seed::<ImOnlineId>(seed),
@@ -270,25 +268,16 @@ pub fn staging_testnet_config() -> Result<ChainSpec, String> {
     // for i in 1 2 3; do for j in im_online; do subkey inspect-key --scheme sr25519 --uri "$SECRET//$i//$j"; done; done
     // for i in 1 2 3; do for j in authority_discovery; do subkey inspect-key --scheme sr25519 --uri "$SECRET//$i//$j"; done; done
 
-    // validator & blockauthor
-    let (validator1, blockauthor1): (AccountId, AccountId) = (
-        // 5Ca46gRUa2oS6GukzKph8qFfn4WdhP5yhuRaTuzaXsKjfGgM
-        hex!["16624186f2ea93a21f34e00ae622959e40d841231b26e625be93f75137b2a10d"].into(),
-        // 5Ca1ayQB2GfVb6tPjB849aViHF4vVgBs6USiNVqGeKorPwMw
-        hex!["1659cc960f00d5c82662bd97b516330caf9759d7fa7b98fee45005765a19287c"].into(),
-    );
-    let (validator2, blockauthor2): (AccountId, AccountId) = (
-        // 5DV17DNeRCidmacaP1MdhD8YV8A94PmVyr4eRcKq8tG6Q17C
-        hex!["3ec431c8b3ae28095ad652f5531a770ef21e59779d4a3a46e0217baa4c614624"].into(),
-        // 5FWYBfwLKQhGVqbUZevjkXpM9EqS79tYRkRAwUvnDT2QdJa8
-        hex!["9868855492e0bbf55034b9eb52f0200ede9a0e47b5388074163c0fdc7251cd43"].into(),
-    );
-    let (validator3, blockauthor3): (AccountId, AccountId) = (
-        // 5ERY5k4cDMhhE7B8PRA26fCs1VbHNZJAhHoiuZhzP18cxq8T
-        hex!["685bb75b531394c4d522003784cc62fa15fcab8fe16c19c3f4a1eeae308afa4f"].into(),
-        // 5FCPo3uswynCs1rPvCpnjFykhN3jmeUH51ocMqfpzPq9jVwc
-        hex!["8a91dc3768bdba8bba11da5c3b2ae954eede9591a6b7a2d156637d84aee5623c"].into(),
-    );
+    // validator
+    // 5Ca46gRUa2oS6GukzKph8qFfn4WdhP5yhuRaTuzaXsKjfGgM
+    let validator1: AccountId =
+        hex!["16624186f2ea93a21f34e00ae622959e40d841231b26e625be93f75137b2a10d"].into();
+    // 5DV17DNeRCidmacaP1MdhD8YV8A94PmVyr4eRcKq8tG6Q17C
+    let validator2: AccountId =
+        hex!["3ec431c8b3ae28095ad652f5531a770ef21e59779d4a3a46e0217baa4c614624"].into();
+    // 5ERY5k4cDMhhE7B8PRA26fCs1VbHNZJAhHoiuZhzP18cxq8T
+    let validator3: AccountId =
+        hex!["685bb75b531394c4d522003784cc62fa15fcab8fe16c19c3f4a1eeae308afa4f"].into();
 
     // babe
     // 5EZ47mio3fjhb1iwGSLKZGmgYvhZRJakfGmPfAemMAMBAA7e
@@ -337,7 +326,6 @@ pub fn staging_testnet_config() -> Result<ChainSpec, String> {
     let initial_authorities: Vec<AuthorityKeysTuple> = vec![
         (
             (validator1, b"Validator1".to_vec()),
-            blockauthor1,
             babe1,
             grandpa1,
             im_online1,
@@ -345,7 +333,6 @@ pub fn staging_testnet_config() -> Result<ChainSpec, String> {
         ),
         (
             (validator2, b"Validator2".to_vec()),
-            blockauthor2,
             babe2,
             grandpa2,
             im_online2,
@@ -353,7 +340,6 @@ pub fn staging_testnet_config() -> Result<ChainSpec, String> {
         ),
         (
             (validator3, b"Validator3".to_vec()),
-            blockauthor3,
             babe3,
             grandpa3,
             im_online3,
@@ -413,25 +399,16 @@ pub fn testnet_config() -> Result<ChainSpec, String> {
     // for i in 1 2 3; do for j in im_online; do subkey inspect-key --scheme sr25519 --uri "$SECRET//$i//$j"; done; done
     // for i in 1 2 3; do for j in authority_discovery; do subkey inspect-key --scheme sr25519 --uri "$SECRET//$i//$j"; done; done
 
-    // validator & blockauthor
-    let (validator1, blockauthor1): (AccountId, AccountId) = (
-        // 5Ca46gRUa2oS6GukzKph8qFfn4WdhP5yhuRaTuzaXsKjfGgM
-        hex!["16624186f2ea93a21f34e00ae622959e40d841231b26e625be93f75137b2a10d"].into(),
-        // 5Ca1ayQB2GfVb6tPjB849aViHF4vVgBs6USiNVqGeKorPwMw
-        hex!["1659cc960f00d5c82662bd97b516330caf9759d7fa7b98fee45005765a19287c"].into(),
-    );
-    let (validator2, blockauthor2): (AccountId, AccountId) = (
-        // 5DV17DNeRCidmacaP1MdhD8YV8A94PmVyr4eRcKq8tG6Q17C
-        hex!["3ec431c8b3ae28095ad652f5531a770ef21e59779d4a3a46e0217baa4c614624"].into(),
-        // 5FWYBfwLKQhGVqbUZevjkXpM9EqS79tYRkRAwUvnDT2QdJa8
-        hex!["9868855492e0bbf55034b9eb52f0200ede9a0e47b5388074163c0fdc7251cd43"].into(),
-    );
-    let (validator3, blockauthor3): (AccountId, AccountId) = (
-        // 5ERY5k4cDMhhE7B8PRA26fCs1VbHNZJAhHoiuZhzP18cxq8T
-        hex!["685bb75b531394c4d522003784cc62fa15fcab8fe16c19c3f4a1eeae308afa4f"].into(),
-        // 5FCPo3uswynCs1rPvCpnjFykhN3jmeUH51ocMqfpzPq9jVwc
-        hex!["8a91dc3768bdba8bba11da5c3b2ae954eede9591a6b7a2d156637d84aee5623c"].into(),
-    );
+    // validator
+    // 5Ca46gRUa2oS6GukzKph8qFfn4WdhP5yhuRaTuzaXsKjfGgM
+    let validator1: AccountId =
+        hex!["16624186f2ea93a21f34e00ae622959e40d841231b26e625be93f75137b2a10d"].into();
+    // 5DV17DNeRCidmacaP1MdhD8YV8A94PmVyr4eRcKq8tG6Q17C
+    let validator2: AccountId =
+        hex!["3ec431c8b3ae28095ad652f5531a770ef21e59779d4a3a46e0217baa4c614624"].into();
+    // 5ERY5k4cDMhhE7B8PRA26fCs1VbHNZJAhHoiuZhzP18cxq8T
+    let validator3: AccountId =
+        hex!["685bb75b531394c4d522003784cc62fa15fcab8fe16c19c3f4a1eeae308afa4f"].into();
 
     // babe
     // 5EZ47mio3fjhb1iwGSLKZGmgYvhZRJakfGmPfAemMAMBAA7e
@@ -480,7 +457,6 @@ pub fn testnet_config() -> Result<ChainSpec, String> {
     let initial_authorities: Vec<AuthorityKeysTuple> = vec![
         (
             (validator1, b"Validator1".to_vec()),
-            blockauthor1,
             babe1,
             grandpa1,
             im_online1,
@@ -488,7 +464,6 @@ pub fn testnet_config() -> Result<ChainSpec, String> {
         ),
         (
             (validator2, b"Validator2".to_vec()),
-            blockauthor2,
             babe2,
             grandpa2,
             im_online2,
@@ -496,7 +471,6 @@ pub fn testnet_config() -> Result<ChainSpec, String> {
         ),
         (
             (validator3, b"Validator3".to_vec()),
-            blockauthor3,
             babe3,
             grandpa3,
             im_online3,
@@ -571,8 +545,6 @@ pub fn mainnet_config() -> Result<ChainSpec, String> {
                 hex!["3ab47230dff92003f6f4f79cf7930cfe3f3fd77eedfea55acfde77223ac1a47a"].into(),
                 b"Validator1".to_vec(),
             ),
-            // 5GgaYZcQyHMk75VxvYQVQR3b2gxsPawsgGXjx8vhCiiTabLR
-            hex!["cc4d27469504538539515615deb495c2901a774abd1a13655336b615d4014a3c"].into(),
             // 5EPgwcbLknydnWGmHem3rmwhdjk55e9HfoqjF5A5zRQDkWxj
             hex!["66f30ce2de3f23c2383c0ecea1e2a2e0520c18931d3a9bca64be78e3f9f7b62f"]
                 .unchecked_into(),
@@ -592,8 +564,6 @@ pub fn mainnet_config() -> Result<ChainSpec, String> {
                 hex!["fc3b583310fe9f091e35a8be64ac9508b9d3c088fdcef51b747113fa8fe87f44"].into(),
                 b"Validator2".to_vec(),
             ),
-            // 5E4ayu9boQK88fkBRCb5D2KeFHzqko3xeBsjidgnVBZrEKvM
-            hex!["5861528f602af4e6237e8c0724885db5aa2a8c2faa44ba539d2436021537be04"].into(),
             // 5FLeZHeNy7UPyNusqLRT4EUqxBxUVEpSbma6u9By6DzC3o13
             hex!["90dd84e695fd85888d9060ded9a79a7b6bca69206cf10d5366f10c12822c9424"]
                 .unchecked_into(),
@@ -613,8 +583,6 @@ pub fn mainnet_config() -> Result<ChainSpec, String> {
                 hex!["8c114008f432dd0f10dc74a78d1f6cdef6778bb30c3d5abfcf60f5f1570a6b43"].into(),
                 b"Validator3".to_vec(),
             ),
-            // 5FeZHG9fpPKxzjMikjX39FXvUdG4JJ2yhHpA2YBGywtWzCcK
-            hex!["9e862cbf1bb26bed7660f725317f53a5c40dd50aa4e36d81263681651a6f2931"].into(),
             // 5Grs98EMvxsCrmKMKGCx3xemYcMhAPNF8aa6uRYttWVKJLBg
             hex!["d4257968d6f6775c356c9bac1fcce8d420cd1e03e704dc5c4c5c33b0182c471a"]
                 .unchecked_into(),
@@ -634,8 +602,6 @@ pub fn mainnet_config() -> Result<ChainSpec, String> {
                 hex!["74a18faa6693cf68b988c479799b9e5fff4c131beb055acdab30c11570df0978"].into(),
                 b"Validator4".to_vec(),
             ),
-            // 5ERRsAvNXWhZmqG4tdjcGEgJHCkqYSDSdsdqAq3GGoRGpu9m
-            hex!["6846c9ee8d47c20bda6d4458bef2677e75a2dc2df93a506e36c03cb6d53e801f"].into(),
             // 5CJPSYjvaCi2M7izUXwg5pqkQqhaJiHgDX9gz1JoKQrY18jo
             hex!["0a6f713ac4f6773b688be912174a67b6e708386dc2466391c5ba23037ce69951"]
                 .unchecked_into(),
@@ -655,8 +621,6 @@ pub fn mainnet_config() -> Result<ChainSpec, String> {
                 hex!["7e7927d030d89585cd66f0d44313de41f4c697da387159786f8b3ed5cd081d4f"].into(),
                 b"Validator5".to_vec(),
             ),
-            // 5FyRpivr8qN9sK1PU9Qhutv4QwVnHomFGgMn93khwCbDCBXq
-            hex!["aceabbac700af582fe4ff6084ba1c778339fbadccb1c182d82817aacdfcb5345"].into(),
             // 5D83WrH4h4rPFxe4m4xGMuC8XuR9jqWHggHBriZQELJ3JneN
             hex!["2ec8253a23695069619df42213106402cffb217bb02c653c11e3435eb047e60d"]
                 .unchecked_into(),
@@ -777,7 +741,7 @@ fn build_genesis(
     let validators = initial_authorities
         .clone()
         .into_iter()
-        .map(|((validator, referral), _, _, _, _, _)| (validator, referral, STAKING_LOCKED))
+        .map(|((validator, referral), _, _, _, _)| (validator, referral, STAKING_LOCKED))
         .collect::<Vec<_>>();
     let btc_genesis_trustees = trustees
         .iter()
@@ -824,7 +788,7 @@ fn build_genesis(
                     (
                         (x.0).0.clone(),
                         (x.0).0.clone(),
-                        session_keys(x.2.clone(), x.3.clone(), x.4.clone(), x.5.clone()),
+                        session_keys(x.1.clone(), x.2.clone(), x.3.clone(), x.4.clone()),
                     )
                 })
                 .collect::<Vec<_>>(),
@@ -903,14 +867,14 @@ fn mainnet_genesis(
 
     let tech_comm_members = initial_authorities
         .iter()
-        .map(|((validator, _), _, _, _, _, _)| validator)
+        .map(|((validator, _), _, _, _, _)| validator)
         .take((initial_authorities_len + 1) / 2)
         .cloned()
         .collect::<Vec<_>>();
 
     let mut balances = initial_authorities
         .iter()
-        .map(|((validator, _), _, _, _, _, _)| validator)
+        .map(|((validator, _), _, _, _, _)| validator)
         .cloned()
         .map(|validator| (validator, STAKING_LOCKED))
         .collect::<Vec<_>>();
@@ -923,7 +887,7 @@ fn mainnet_genesis(
     let validators = initial_authorities
         .clone()
         .into_iter()
-        .map(|((validator, referral_id), _, _, _, _, _)| (validator, referral_id, STAKING_LOCKED))
+        .map(|((validator, referral_id), _, _, _, _)| (validator, referral_id, STAKING_LOCKED))
         .collect::<Vec<_>>();
 
     let btc_genesis_trustees = trustees
@@ -969,7 +933,7 @@ fn mainnet_genesis(
                     (
                         (x.0).0.clone(),
                         (x.0).0.clone(),
-                        session_keys(x.2.clone(), x.3.clone(), x.4.clone(), x.5.clone()),
+                        session_keys(x.1.clone(), x.2.clone(), x.3.clone(), x.4.clone()),
                     )
                 })
                 .collect::<Vec<_>>(),
