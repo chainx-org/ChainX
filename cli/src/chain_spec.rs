@@ -877,7 +877,8 @@ fn build_genesis(
         }),
         xpallet_genesis_builder: Some(XGenesisBuilderConfig {
             params: crate::genesis::genesis_builder_params(),
-            total_endowed,
+            initial_authorities_endowed: total_endowed,
+            root_endowed: 0,
         }),
     }
 }
@@ -893,6 +894,8 @@ fn mainnet_genesis(
 ) -> GenesisConfig {
     // 1000 PCX
     const STAKING_LOCKED: Balance = 100_000 * DOLLARS;
+    // 100 PCX
+    const ROOT_ENDOWED: Balance = 10_000 * DOLLARS;
 
     let (assets, assets_restrictions) = init_assets(assets);
 
@@ -905,14 +908,17 @@ fn mainnet_genesis(
         .cloned()
         .collect::<Vec<_>>();
 
-    let balances = initial_authorities
+    let mut balances = initial_authorities
         .iter()
         .map(|((validator, _), _, _, _, _, _)| validator)
         .cloned()
         .map(|validator| (validator, STAKING_LOCKED))
         .collect::<Vec<_>>();
 
-    let total_endowed = initial_authorities_len as Balance * STAKING_LOCKED;
+    // 100 PCX to root account for paying the transaction fee.
+    balances.push((root_key.clone(), ROOT_ENDOWED));
+
+    let initial_authorities_endowed = initial_authorities_len as Balance * STAKING_LOCKED;
 
     let validators = initial_authorities
         .clone()
@@ -1016,7 +1022,8 @@ fn mainnet_genesis(
         }),
         xpallet_genesis_builder: Some(XGenesisBuilderConfig {
             params: crate::genesis::genesis_builder_params(),
-            total_endowed,
+            root_endowed: ROOT_ENDOWED,
+            initial_authorities_endowed,
         }),
     }
 }
