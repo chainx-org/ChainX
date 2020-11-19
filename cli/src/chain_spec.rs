@@ -1,7 +1,6 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 use std::collections::BTreeMap;
-use std::convert::TryInto;
 
 use hex_literal::hex;
 use serde::{Deserialize, Serialize};
@@ -35,8 +34,8 @@ use chainx_runtime::{
 
 use crate::genesis::assets::{genesis_assets, init_assets, pcx, AssetParams};
 use crate::genesis::bitcoin::{
-    btc_genesis_params, local_testnet_trustees, mainnet_trustees, staging_testnet_trustees,
-    BtcGenesisParams, BtcTrusteeParams,
+    btc_genesis_params, local_testnet_trustees, mainnet_trustees, BtcGenesisParams,
+    BtcTrusteeParams,
 };
 
 // Note this is the URL for the telemetry server
