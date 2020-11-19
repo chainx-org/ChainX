@@ -131,9 +131,7 @@ decl_event!(
         /// Some balances of an asset were destoryed. [asset_id, who, amount]
         Destroyed(AssetId, AccountId, Balance),
         /// Set asset balance of an account by root. [asset_id, who, asset_type, amount]
-        SetBalance(AssetId, AccountId, AssetType, Balance),
-        /// Set restrictions for an asset by root. [asset_id, assets_restrictions]
-        SetRestrictions(AssetId, AssetRestrictions),
+        BalanceSet(AssetId, AccountId, AssetType, Balance),
     }
 );
 
