@@ -7,7 +7,12 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::new_without_default, clippy::type_complexity)]
 
-mod benchmarks;
+#[cfg(any(feature = "runtime-benchmarks", test))]
+mod benchmarking;
+#[cfg(test)]
+mod mock;
+#[cfg(test)]
+mod tests;
 
 mod binding;
 pub mod traits;
