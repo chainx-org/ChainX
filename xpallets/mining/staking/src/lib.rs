@@ -199,6 +199,11 @@ decl_storage! {
 
         /// Minimum penalty for each slash.
         pub MinimumPenalty get(fn minimum_penalty) config(): BalanceOf<T>;
+
+        /// Immortal validators will always be elected if any.
+        ///
+        /// Immortals will be intialized from the genesis validators.
+        Immortals get(fn immortals): Option<Vec<T::AccountId>>;
     }
 
     add_extra_genesis {
@@ -322,6 +327,14 @@ decl_module! {
         type Error = Error<T>;
 
         fn deposit_event() = default;
+
+        /// Remove this once `Immortals` is initialized.
+        fn on_initialize(_block_number: T::BlockNumber) -> frame_support::weights::Weight {
+            if Self::immortals().is_none() {
+                Immortals::<T>::put(Self::active_validator_set().collect::<Vec<_>>());
+            }
+            1
+        }
 
         /// Nominate the `target` with `value` of the origin account's balance locked.
         #[weight = T::WeightInfo::bond()]
