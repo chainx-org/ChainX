@@ -20,6 +20,7 @@ use crate::{
 };
 
 /// A helper struct for detecting the bitcoin transaction type.
+#[derive(Clone, Debug)]
 pub struct BtcTxTypeDetector {
     // The bitcoin network type (mainnet/testnet)
     network: Network,

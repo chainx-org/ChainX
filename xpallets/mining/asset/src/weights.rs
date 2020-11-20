@@ -40,43 +40,43 @@ pub trait WeightInfo {
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Trait> WeightInfo for SubstrateWeight<T> {
     fn claim() -> Weight {
-        (240_014_000 as Weight)
+        (231_026_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(12 as Weight))
             .saturating_add(T::DbWeight::get().writes(5 as Weight))
     }
     fn set_claim_staking_requirement() -> Weight {
-        (11_923_000 as Weight)
+        (11_222_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(1 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     fn set_claim_frequency_limit() -> Weight {
-        (11_649_000 as Weight)
+        (11_103_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(1 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     fn set_asset_power() -> Weight {
-        (5_977_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
+        (5_538_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
     fn claim() -> Weight {
-        (240_014_000 as Weight)
+        (231_026_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(12 as Weight))
             .saturating_add(RocksDbWeight::get().writes(5 as Weight))
     }
     fn set_claim_staking_requirement() -> Weight {
-        (11_923_000 as Weight)
+        (11_222_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(1 as Weight))
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
     fn set_claim_frequency_limit() -> Weight {
-        (11_649_000 as Weight)
+        (11_103_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(1 as Weight))
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
     fn set_asset_power() -> Weight {
-        (5_977_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
+        (5_538_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
 }
