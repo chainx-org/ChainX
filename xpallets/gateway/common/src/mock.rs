@@ -1,12 +1,8 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use std::cell::RefCell;
-use std::str::FromStr;
-use std::time::Duration;
+use std::{cell::RefCell, convert::TryFrom, time::Duration};
 
 use codec::{Decode, Encode};
-
-// Substrate
 use frame_support::traits::UnixTime;
 use frame_support::{impl_outer_origin, parameter_types, sp_io, weights::Weight};
 use frame_system::EnsureSignedBy;
@@ -15,22 +11,22 @@ use sp_io::hashing::blake2_256;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
-    AccountId32, Perbill,
+    AccountId32, DispatchError, DispatchResult, Perbill,
 };
 
 use chainx_primitives::AssetId;
 pub use xp_protocol::{X_BTC, X_ETH};
-use xpallet_assets::AssetRestrictions;
+use xpallet_assets::{AssetRestrictions, BalanceOf, ChainT, WithdrawalLimit};
 use xpallet_assets_registrar::{AssetInfo, Chain};
-use xpallet_gateway_bitcoin::{BtcHeader, BtcNetwork, BtcParams, BtcTxVerifier, Compact};
-use xpallet_gateway_common::trustees;
-use xpallet_gateway_common::types::TrusteeInfoConfig;
-use xpallet_support::traits::MultisigAddressFor;
+use xpallet_support::traits::{MultisigAddressFor, Validator};
+
+use crate::{
+    traits::TrusteeForChain,
+    trustees::bitcoin::{BtcTrusteeAddrInfo, BtcTrusteeMultisig, BtcTrusteeType},
+    types::*,
+};
 
 pub(crate) type AccountId = AccountId32;
-// pub type Signature = MultiSignature;
-// pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
-// pub type AccountId = u64;
 pub(crate) type BlockNumber = u64;
 pub(crate) type Balance = u128;
 pub(crate) type Amount = i128;
@@ -43,12 +39,6 @@ impl_outer_origin! {
 pub struct Test;
 pub type System = frame_system::Module<Test>;
 pub type Balances = pallet_balances::Module<Test>;
-pub type XAssets = xpallet_assets::Module<Test>;
-pub type XGatewayRecords = xpallet_gateway_records::Module<Test>;
-pub type XGatewayBitcoin = xpallet_gateway_bitcoin::Module<Test>;
-pub type XGatewayCommon = xpallet_gateway_common::Module<Test>;
-// pub type XGatewayBitcoinErr = xpallet_gateway_bitcoin::Error<Test>;
-pub type XGatewayCommonErr = xpallet_gateway_common::Error<Test>;
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
@@ -56,7 +46,6 @@ parameter_types! {
     pub const MaximumBlockLength: u32 = 2 * 1024;
     pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
 }
-
 impl frame_system::Trait for Test {
     type BaseCallFilter = ();
     type Origin = Origin;
@@ -98,18 +87,15 @@ impl pallet_balances::Trait for Test {
     type WeightInfo = ();
 }
 
-// assets
 parameter_types! {
     pub const ChainXAssetId: AssetId = 0;
 }
-
 impl xpallet_assets_registrar::Trait for Test {
     type Event = ();
     type NativeAssetId = ChainXAssetId;
     type RegistrarHandler = ();
     type WeightInfo = ();
 }
-
 impl xpallet_assets::Trait for Test {
     type Event = ();
     type Currency = Balances;
@@ -125,27 +111,9 @@ impl xpallet_gateway_records::Trait for Test {
     type WeightInfo = ();
 }
 
-pub struct MultisigAddr;
-impl MultisigAddressFor<AccountId> for MultisigAddr {
-    fn calc_multisig(who: &[AccountId], threshold: u16) -> AccountId {
-        let entropy = (b"modlpy/utilisuba", who, threshold).using_encoded(blake2_256);
-        AccountId::decode(&mut &entropy[..]).unwrap_or_default()
-    }
-}
-
-impl xpallet_gateway_common::Trait for Test {
-    type Event = ();
-    type Validator = ();
-    type DetermineMultisigAddress = MultisigAddr;
-    type Bitcoin = XGatewayBitcoin;
-    type BitcoinTrustee = XGatewayBitcoin;
-    type WeightInfo = ();
-}
-
 thread_local! {
     pub static NOW: RefCell<Option<Duration>> = RefCell::new(None);
 }
-
 pub struct Timestamp;
 impl UnixTime for Timestamp {
     fn now() -> Duration {
@@ -161,39 +129,85 @@ impl UnixTime for Timestamp {
         })
     }
 }
-
 impl xpallet_gateway_bitcoin::Trait for Test {
     type Event = ();
     type UnixTime = Timestamp;
-    type AccountExtractor = xp_gateway_bitcoin::OpReturnExtractor;
-    type TrusteeSessionProvider =
-        xpallet_gateway_common::trustees::bitcoin::BtcTrusteeSessionManager<Test>;
-    type TrusteeOrigin = EnsureSignedBy<trustees::bitcoin::BtcTrusteeMultisig<Test>, AccountId>;
-    type Channel = XGatewayCommon;
-    type AddrBinding = XGatewayCommon;
+    type AccountExtractor = ();
+    type TrusteeSessionProvider = ();
+    type TrusteeOrigin = EnsureSignedBy<BtcTrusteeMultisig<Test>, AccountId>;
+    type Channel = ();
+    type AddrBinding = ();
     type WeightInfo = ();
 }
 
-pub(crate) fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {
-    (
-        X_BTC,
-        AssetInfo::new::<Test>(
-            b"X-BTC".to_vec(),
-            b"X-BTC".to_vec(),
-            Chain::Bitcoin,
-            8,
-            b"ChainX's cross-chain Bitcoin".to_vec(),
-        )
-        .unwrap(),
-        AssetRestrictions::DESTROY_USABLE,
-    )
+pub struct MultisigAddr;
+impl MultisigAddressFor<AccountId> for MultisigAddr {
+    fn calc_multisig(who: &[AccountId], threshold: u16) -> AccountId {
+        let entropy = (b"modlpy/utilisuba", who, threshold).using_encoded(blake2_256);
+        AccountId::decode(&mut &entropy[..]).unwrap_or_default()
+    }
 }
+pub struct AlwaysValidator;
+impl Validator<AccountId> for AlwaysValidator {
+    fn is_validator(_who: &AccountId) -> bool {
+        true
+    }
 
-lazy_static::lazy_static! {
-    pub static ref ALICE: AccountId = H256::repeat_byte(1).unchecked_into();
-    pub static ref BOB: AccountId = H256::repeat_byte(2).unchecked_into();
-    pub static ref CHARLIE: AccountId = H256::repeat_byte(3).unchecked_into();
-    pub static ref DAVE: AccountId = H256::repeat_byte(4).unchecked_into();
+    fn validator_for(_: &[u8]) -> Option<AccountId> {
+        None
+    }
+}
+pub struct MockBitcoin<T: xpallet_gateway_bitcoin::Trait>(sp_std::marker::PhantomData<T>);
+impl<T: xpallet_gateway_bitcoin::Trait> ChainT<BalanceOf<T>> for MockBitcoin<T> {
+    const ASSET_ID: u32 = X_BTC;
+
+    fn chain() -> Chain {
+        Chain::Bitcoin
+    }
+
+    fn check_addr(_: &[u8], _: &[u8]) -> DispatchResult {
+        Ok(())
+    }
+
+    fn withdrawal_limit(asset_id: &u32) -> Result<WithdrawalLimit<BalanceOf<T>>, DispatchError> {
+        xpallet_gateway_bitcoin::Module::<T>::withdrawal_limit(asset_id)
+    }
+}
+impl<T: xpallet_gateway_bitcoin::Trait>
+    TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo> for MockBitcoin<T>
+{
+    fn check_trustee_entity(raw_addr: &[u8]) -> Result<BtcTrusteeType, DispatchError> {
+        let trustee_type =
+            BtcTrusteeType::try_from(raw_addr.to_vec()).map_err(|_| "InvalidPublicKey")?;
+        Ok(trustee_type)
+    }
+
+    fn generate_trustee_session_info(
+        props: Vec<(T::AccountId, TrusteeIntentionProps<BtcTrusteeType>)>,
+        _: TrusteeInfoConfig,
+    ) -> Result<TrusteeSessionInfo<T::AccountId, BtcTrusteeAddrInfo>, DispatchError> {
+        let len = props.len();
+        Ok(TrusteeSessionInfo {
+            trustee_list: props.into_iter().map(|(a, _)| a).collect::<_>(),
+            threshold: len as u16,
+            hot_address: BtcTrusteeAddrInfo {
+                addr: vec![],
+                redeem_script: vec![],
+            },
+            cold_address: BtcTrusteeAddrInfo {
+                addr: vec![],
+                redeem_script: vec![],
+            },
+        })
+    }
+}
+impl crate::Trait for Test {
+    type Event = ();
+    type Validator = AlwaysValidator;
+    type DetermineMultisigAddress = MultisigAddr;
+    type Bitcoin = MockBitcoin<Test>;
+    type BitcoinTrustee = MockBitcoin<Test>;
+    type WeightInfo = ();
 }
 
 pub struct ExtBuilder;
@@ -210,10 +224,6 @@ impl ExtBuilder {
 
         let btc_assets = btc();
         let assets = vec![(btc_assets.0, btc_assets.1, btc_assets.2, true, true)];
-        // let mut endowed = BTreeMap::new();
-        // let endowed_info = vec![(ALICE, 100), (BOB, 200), (CHARLIE, 300), (DAVE, 400)];
-        // endowed.insert(btc_assets.0, endowed_info.clone());
-        // endowed.insert(eth_assets.0, endowed_info);
 
         let mut init_assets = vec![];
         let mut assets_restrictions = vec![];
@@ -233,28 +243,7 @@ impl ExtBuilder {
         }
         .assimilate_storage(&mut storage);
 
-        let (genesis_info, genesis_hash, network_id) = load_mainnet_btc_genesis_header_info();
-
-        let _ = xpallet_gateway_bitcoin::GenesisConfig::<Test> {
-            genesis_trustees: vec![],
-            genesis_info,
-            genesis_hash,
-            network_id,
-            params_info: BtcParams::new(
-                486604799,            // max_bits
-                2 * 60 * 60,          // block_max_future
-                2 * 7 * 24 * 60 * 60, // target_timespan_seconds
-                10 * 60,              // target_spacing_seconds
-                4,                    // retargeting_factor
-            ), // retargeting_factor
-            verifier: BtcTxVerifier::Recover,
-            confirmation_number: 4,
-            btc_withdrawal_fee: 500000,
-            max_withdrawal_count: 100,
-        }
-        .assimilate_storage(&mut storage);
-
-        let _ = xpallet_gateway_common::GenesisConfig::<Test> {
+        let _ = crate::GenesisConfig::<Test> {
             trustees: trustees(),
         }
         .assimilate_storage(&mut storage);
@@ -262,42 +251,20 @@ impl ExtBuilder {
         let ext = sp_io::TestExternalities::new(storage);
         ext
     }
-    pub fn build_and_execute(self, test: impl FnOnce() -> ()) {
-        let mut ext = self.build();
-        ext.execute_with(|| System::set_block_number(1));
-        ext.execute_with(test);
-    }
 }
 
-fn as_h256(s: &str) -> H256 {
-    let h = H256::from_str(s).unwrap();
-    fn reverse_h256(mut hash: H256) -> H256 {
-        let bytes = hash.as_bytes_mut();
-        bytes.reverse();
-        H256::from_slice(bytes)
-    }
-    reverse_h256(h)
-}
-
-pub fn load_mainnet_btc_genesis_header_info() -> ((BtcHeader, u32), H256, BtcNetwork) {
+fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {
     (
-        (
-            BtcHeader {
-                version: 536870912,
-                previous_header_hash: as_h256(
-                    "0000000000000000000a4adf6c5192128535d4dcb56cfb5753755f8d392b26bf",
-                ),
-                merkle_root_hash: as_h256(
-                    "1d21e60acb0b12e5cfd3f775edb647f982a2d666f9886b2f61ea5e72577b0f5e",
-                ),
-                time: 1558168296,
-                bits: Compact::new(388627269),
-                nonce: 1439505020,
-            },
-            576576,
-        ),
-        as_h256("0000000000000000001721f58deb88b0710295a02551f0dde1e2e231a15f1882"),
-        BtcNetwork::Mainnet,
+        X_BTC,
+        AssetInfo::new::<Test>(
+            b"X-BTC".to_vec(),
+            b"X-BTC".to_vec(),
+            Chain::Bitcoin,
+            8,
+            b"ChainX's cross-chain Bitcoin".to_vec(),
+        )
+        .unwrap(),
+        AssetRestrictions::DESTROY_USABLE,
     )
 }
 
@@ -308,7 +275,7 @@ fn trustees() -> Vec<(
 )> {
     let btc_trustees = vec![
         (
-            ALICE.clone(),
+            H256::repeat_byte(1).unchecked_into(),
             b"".to_vec(),
             hex::decode("02df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6")
                 .expect("hex decode failed")
@@ -318,7 +285,7 @@ fn trustees() -> Vec<(
                 .into(),
         ),
         (
-            BOB.clone(),
+            H256::repeat_byte(2).unchecked_into(),
             b"".to_vec(),
             hex::decode("0244d81efeb4171b1a8a433b87dd202117f94e44c909c49e42e77b69b5a6ce7d0d")
                 .expect("hex decode failed")
@@ -328,7 +295,7 @@ fn trustees() -> Vec<(
                 .into(),
         ),
         (
-            CHARLIE.clone(),
+            H256::repeat_byte(3).unchecked_into(),
             b"".to_vec(),
             hex::decode("03a36339f413da869df12b1ab0def91749413a0dee87f0bfa85ba7196e6cdad102")
                 .expect("hex decode failed")
