@@ -66,34 +66,34 @@ orml-traits = { version = "0.3", default-features = false }
 orml-currencies = { version = "0.3", default-features = false }
 
 # ChainX primitives
-chainx-primitives = { path = "../primitives", default-features = false }
+chainx-primitives = { path = "../../primitives", default-features = false }
 # we use feature "ss58check" for using local runtime-interface to check address, if in parachain, do not use this feature
-xp-gateway-bitcoin = { path = "../primitives/gateway/bitcoin", default-features = false,  features = ["ss58check"] }
-xp-logging = { path = "../primitives/logging", default-features = false }
-xp-mining-staking = { path = "../primitives/mining/staking", default-features = false }
-xp-protocol = { path = "../primitives/protocol", default-features = false }
-xp-runtime = { path = "../primitives/runtime", default-features = false }
+xp-gateway-bitcoin = { path = "../../primitives/gateway/bitcoin", default-features = false,  features = ["ss58check"] }
+xp-logging = { path = "../../primitives/logging", default-features = false }
+xp-mining-staking = { path = "../../primitives/mining/staking", default-features = false }
+xp-protocol = { path = "../../primitives/protocol", default-features = false }
+xp-runtime = { path = "../../primitives/runtime", default-features = false }
 
 # ChainX pallets
-xpallet-assets = { path = "../xpallets/assets", default-features = false }
-xpallet-assets-registrar = { path = "../xpallets/assets-registrar", default-features = false }
-xpallet-assets-rpc-runtime-api = { path = "../xpallets/assets/rpc/runtime-api", default-features = false }
-xpallet-dex-spot = { path = "../xpallets/dex/spot", default-features = false }
-xpallet-dex-spot-rpc-runtime-api = { path = "../xpallets/dex/spot/rpc/runtime-api", default-features = false }
-xpallet-gateway-bitcoin = { path = "../xpallets/gateway/bitcoin", default-features = false }
-xpallet-gateway-common = { path = "../xpallets/gateway/common", default-features = false }
-xpallet-gateway-common-rpc-runtime-api = { path = "../xpallets/gateway/common/rpc/runtime-api", default-features = false }
-xpallet-gateway-records = { path = "../xpallets/gateway/records", default-features = false }
-xpallet-gateway-records-rpc-runtime-api = { path = "../xpallets/gateway/records/rpc/runtime-api", default-features = false }
-xpallet-genesis-builder = { path = "../xpallets/genesis-builder", default-features = false }
-xpallet-mining-asset = { path  = "../xpallets/mining/asset", default-features = false }
-xpallet-mining-asset-rpc-runtime-api = { path  = "../xpallets/mining/asset/rpc/runtime-api", default-features = false }
-xpallet-mining-staking = { path  = "../xpallets/mining/staking", default-features = false }
-xpallet-mining-staking-rpc-runtime-api = { path  = "../xpallets/mining/staking/rpc/runtime-api", default-features = false }
-xpallet-system = { path = "../xpallets/system", default-features = false }
-xpallet-support = { path = "../xpallets/support", default-features = false }
-xpallet-transaction-fee = { path = "../xpallets/transaction-fee", default-features = false }
-xpallet-transaction-fee-rpc-runtime-api = { path = "../xpallets/transaction-fee/rpc/runtime-api", default-features = false }
+xpallet-assets = { path = "../../xpallets/assets", default-features = false }
+xpallet-assets-registrar = { path = "../../xpallets/assets-registrar", default-features = false }
+xpallet-assets-rpc-runtime-api = { path = "../../xpallets/assets/rpc/runtime-api", default-features = false }
+xpallet-dex-spot = { path = "../../xpallets/dex/spot", default-features = false }
+xpallet-dex-spot-rpc-runtime-api = { path = "../../xpallets/dex/spot/rpc/runtime-api", default-features = false }
+xpallet-gateway-bitcoin = { path = "../../xpallets/gateway/bitcoin", default-features = false }
+xpallet-gateway-common = { path = "../../xpallets/gateway/common", default-features = false }
+xpallet-gateway-common-rpc-runtime-api = { path = "../../xpallets/gateway/common/rpc/runtime-api", default-features = false }
+xpallet-gateway-records = { path = "../../xpallets/gateway/records", default-features = false }
+xpallet-gateway-records-rpc-runtime-api = { path = "../../xpallets/gateway/records/rpc/runtime-api", default-features = false }
+xpallet-genesis-builder = { path = "../../xpallets/genesis-builder", default-features = false }
+xpallet-mining-asset = { path  = "../../xpallets/mining/asset", default-features = false }
+xpallet-mining-asset-rpc-runtime-api = { path  = "../../xpallets/mining/asset/rpc/runtime-api", default-features = false }
+xpallet-mining-staking = { path  = "../../xpallets/mining/staking", default-features = false }
+xpallet-mining-staking-rpc-runtime-api = { path  = "../../xpallets/mining/staking/rpc/runtime-api", default-features = false }
+xpallet-system = { path = "../../xpallets/system", default-features = false }
+xpallet-support = { path = "../../xpallets/support", default-features = false }
+xpallet-transaction-fee = { path = "../../xpallets/transaction-fee", default-features = false }
+xpallet-transaction-fee-rpc-runtime-api = { path = "../../xpallets/transaction-fee/rpc/runtime-api", default-features = false }
 
 [build-dependencies]
 wasm-builder-runner = { package = "substrate-wasm-builder-runner", version = "2.0.0", default-features = false }

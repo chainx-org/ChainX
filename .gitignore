@@ -18,6 +18,7 @@ node_modules
 .vs/
 .idea/
 chainx/
+!runtime/chainx
 !rpc/src/chainx
 bak/
 .chainx/

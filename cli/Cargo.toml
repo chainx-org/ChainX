@@ -51,7 +51,7 @@ pallet-im-online = "2.0.0"
 chainx-executor = { path = "../executor" }
 chainx-primitives = { path = "../primitives" }
 chainx-rpc = { path = "../rpc" }
-chainx-runtime = { path = "../runtime" }
+chainx-runtime = { path = "../runtime/chainx" }
 xp-genesis-builder  = { path  = "../primitives/genesis-builder" }
 xp-protocol = { path = "../primitives/protocol" }
 
