@@ -10,7 +10,7 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-use codec::Encode;
+use codec::{Decode, Encode};
 use static_assertions::const_assert;
 
 use sp_api::impl_runtime_apis;
@@ -119,11 +119,21 @@ pub fn native_version() -> NativeVersion {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, codec::Encode, codec::Decode)]
+#[derive(Debug, Clone, Eq, PartialEq, Encode, Decode)]
 pub struct BaseFilter;
 impl Filter<Call> for BaseFilter {
     fn filter(call: &Call) -> bool {
         use frame_support::dispatch::GetCallMetadata;
+        use xpallet_mining_staking::Call as XStakingCall;
+
+        // The validators are allowed to register and validate now.
+        if let Call::XStaking(xstaking) = call {
+            match xstaking {
+                XStakingCall::validate(..) | XStakingCall::register(..) => return true,
+                _ => {}
+            }
+        }
+
         // At the beginning of mainnet, no call is allowed.
         match call {
             Call::Currencies(_) => return false, // forbidden Currencies call now
@@ -133,7 +143,6 @@ impl Filter<Call> for BaseFilter {
             | Call::TechnicalMembership(_)
             | Call::Treasury(_)
             | Call::Indices(_)
-            | Call::Balances(_)
             | Call::Utility(_)
             | Call::Identity(_)
             | Call::Multisig(_) => return false,
@@ -146,6 +155,7 @@ impl Filter<Call> for BaseFilter {
             | Call::XGatewayRecords(_) => return false,
             _ => {}
         }
+
         let metadata = call.get_call_metadata();
         !XSystem::is_paused(metadata)
     }
