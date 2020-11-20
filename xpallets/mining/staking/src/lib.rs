@@ -300,8 +300,6 @@ decl_error! {
         OccupiedReferralIdentity,
         /// Failed to pass the xss check.
         XssCheckFailed,
-        /// Offence severity is too weak to kick out an offender.
-        WeakOffenceSeverity,
     }
 }
 
