@@ -40,22 +40,22 @@ pub trait WeightInfo {
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Trait> WeightInfo for SubstrateWeight<T> {
     fn register() -> Weight {
-        (76_323_000 as Weight)
+        (84_459_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(3 as Weight))
             .saturating_add(T::DbWeight::get().writes(6 as Weight))
     }
     fn deregister() -> Weight {
-        (50_906_000 as Weight)
+        (51_265_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
             .saturating_add(T::DbWeight::get().writes(2 as Weight))
     }
     fn recover() -> Weight {
-        (68_937_000 as Weight)
+        (71_669_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(3 as Weight))
             .saturating_add(T::DbWeight::get().writes(3 as Weight))
     }
     fn update_asset_info() -> Weight {
-        (23_283_000 as Weight)
+        (23_040_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(1 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
@@ -64,22 +64,22 @@ impl<T: frame_system::Trait> WeightInfo for SubstrateWeight<T> {
 // For backwards compatibility and tests
 impl WeightInfo for () {
     fn register() -> Weight {
-        (76_323_000 as Weight)
+        (84_459_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(3 as Weight))
             .saturating_add(RocksDbWeight::get().writes(6 as Weight))
     }
     fn deregister() -> Weight {
-        (50_906_000 as Weight)
+        (51_265_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(2 as Weight))
             .saturating_add(RocksDbWeight::get().writes(2 as Weight))
     }
     fn recover() -> Weight {
-        (68_937_000 as Weight)
+        (71_669_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(3 as Weight))
             .saturating_add(RocksDbWeight::get().writes(3 as Weight))
     }
     fn update_asset_info() -> Weight {
-        (23_283_000 as Weight)
+        (23_040_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(1 as Weight))
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }

@@ -169,15 +169,10 @@ mod tests {
     fn test_benchmarks() {
         ExtBuilder::default().build().execute_with(|| {
             assert_ok!(test_benchmark_withdraw::<Test>());
-
             assert_ok!(test_benchmark_setup_trustee::<Test>());
-
             assert_ok!(test_benchmark_transition_trustee_session::<Test>());
-
             assert_ok!(test_benchmark_set_withdrawal_state::<Test>());
-
             assert_ok!(test_benchmark_set_trustee_info_config::<Test>());
-
             assert_ok!(test_benchmark_force_set_binding::<Test>());
         });
     }

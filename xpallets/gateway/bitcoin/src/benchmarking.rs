@@ -333,23 +333,14 @@ mod tests {
     fn test_benchmarks() {
         ExtBuilder::default().build().execute_with(|| {
             assert_ok!(test_benchmark_push_header::<Test>());
-
             assert_ok!(test_benchmark_push_transaction::<Test>());
-
             assert_ok!(test_benchmark_create_withdraw_tx::<Test>());
-
             assert_ok!(test_benchmark_sign_withdraw_tx::<Test>());
-
             assert_ok!(test_benchmark_set_best_index::<Test>());
-
             assert_ok!(test_benchmark_set_confirmed_index::<Test>());
-
             assert_ok!(test_benchmark_remove_pending::<Test>());
-
             assert_ok!(test_benchmark_force_replace_proposal_tx::<Test>());
-
             assert_ok!(test_benchmark_set_btc_withdrawal_fee::<Test>());
-
             assert_ok!(test_benchmark_set_btc_deposit_limit::<Test>());
         });
     }

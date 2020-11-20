@@ -101,13 +101,7 @@ mod tests {
     fn test_benchmarks() {
         ExtBuilder::default().build().execute_with(|| {
             assert_ok!(test_benchmark_root_deposit::<Test>());
-        });
-
-        ExtBuilder::default().build().execute_with(|| {
             assert_ok!(test_benchmark_root_withdraw::<Test>());
-        });
-
-        ExtBuilder::default().build().execute_with(|| {
             assert_ok!(test_benchmark_set_withdrawal_state::<Test>());
         });
     }

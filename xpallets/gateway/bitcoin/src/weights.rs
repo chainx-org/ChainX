@@ -47,97 +47,97 @@ pub trait WeightInfo {
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Trait> WeightInfo for SubstrateWeight<T> {
     fn push_header() -> Weight {
-        (243_466_000 as Weight)
+        (178_891_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(10 as Weight))
             .saturating_add(T::DbWeight::get().writes(5 as Weight))
     }
     fn push_transaction() -> Weight {
-        (829_054_000 as Weight)
+        (847_220_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(21 as Weight))
             .saturating_add(T::DbWeight::get().writes(10 as Weight))
     }
     fn create_withdraw_tx() -> Weight {
-        (1_056_721_000 as Weight)
+        (1_060_429_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(12 as Weight))
             .saturating_add(T::DbWeight::get().writes(3 as Weight))
     }
     fn sign_withdraw_tx() -> Weight {
-        (2_141_482_000 as Weight)
+        (2_216_065_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(4 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     fn set_best_index() -> Weight {
-        (5_571_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
+        (5_818_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     fn set_confirmed_index() -> Weight {
-        (5_641_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
+        (5_862_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     fn remove_pending() -> Weight {
-        (543_820_000 as Weight)
+        (541_048_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(9 as Weight))
             .saturating_add(T::DbWeight::get().writes(5 as Weight))
     }
     fn remove_proposal() -> Weight {
-        (4_930_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
+        (5_249_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     fn force_replace_proposal_tx() -> Weight {
-        (149_391_000 as Weight)
+        (156_035_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(8 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     fn set_btc_withdrawal_fee() -> Weight {
-        (4_669_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
+        (4_904_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     fn set_btc_deposit_limit() -> Weight {
-        (4_634_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
+        (4_767_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
     fn push_header() -> Weight {
-        (243_466_000 as Weight)
+        (178_891_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(10 as Weight))
             .saturating_add(RocksDbWeight::get().writes(5 as Weight))
     }
     fn push_transaction() -> Weight {
-        (829_054_000 as Weight)
+        (847_220_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(21 as Weight))
             .saturating_add(RocksDbWeight::get().writes(10 as Weight))
     }
     fn create_withdraw_tx() -> Weight {
-        (1_056_721_000 as Weight)
+        (1_060_429_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(12 as Weight))
             .saturating_add(RocksDbWeight::get().writes(3 as Weight))
     }
     fn sign_withdraw_tx() -> Weight {
-        (2_141_482_000 as Weight)
+        (2_216_065_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(4 as Weight))
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
     fn set_best_index() -> Weight {
-        (5_571_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
+        (5_818_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
     fn set_confirmed_index() -> Weight {
-        (5_641_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
+        (5_862_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
     fn remove_pending() -> Weight {
-        (543_820_000 as Weight)
+        (541_048_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(9 as Weight))
             .saturating_add(RocksDbWeight::get().writes(5 as Weight))
     }
     fn remove_proposal() -> Weight {
-        (4_930_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
+        (5_249_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
     fn force_replace_proposal_tx() -> Weight {
-        (149_391_000 as Weight)
+        (156_035_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(8 as Weight))
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
     fn set_btc_withdrawal_fee() -> Weight {
-        (4_669_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
+        (4_904_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
     fn set_btc_deposit_limit() -> Weight {
-        (4_634_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
+        (4_767_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
 }
