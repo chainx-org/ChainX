@@ -40,22 +40,22 @@ pub trait WeightInfo {
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Trait> WeightInfo for SubstrateWeight<T> {
     fn root_deposit() -> Weight {
-        (210_074_000 as Weight)
+        (205_074_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(8 as Weight))
             .saturating_add(T::DbWeight::get().writes(4 as Weight))
     }
     fn root_withdraw() -> Weight {
-        (138_660_000 as Weight)
+        (155_561_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(5 as Weight))
             .saturating_add(T::DbWeight::get().writes(5 as Weight))
     }
     fn set_withdrawal_state() -> Weight {
-        (199_476_000 as Weight)
+        (207_421_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(8 as Weight))
             .saturating_add(T::DbWeight::get().writes(6 as Weight))
     }
     fn set_withdrawal_state_list(_u: u32) -> Weight {
-        (217_988_000 as Weight)
+        (206_958_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(8 as Weight))
             .saturating_add(T::DbWeight::get().writes(6 as Weight))
     }
@@ -64,22 +64,22 @@ impl<T: frame_system::Trait> WeightInfo for SubstrateWeight<T> {
 // For backwards compatibility and tests
 impl WeightInfo for () {
     fn root_deposit() -> Weight {
-        (210_074_000 as Weight)
+        (205_074_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(8 as Weight))
             .saturating_add(RocksDbWeight::get().writes(4 as Weight))
     }
     fn root_withdraw() -> Weight {
-        (138_660_000 as Weight)
+        (155_561_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(5 as Weight))
             .saturating_add(RocksDbWeight::get().writes(5 as Weight))
     }
     fn set_withdrawal_state() -> Weight {
-        (199_476_000 as Weight)
+        (207_421_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(8 as Weight))
             .saturating_add(RocksDbWeight::get().writes(6 as Weight))
     }
     fn set_withdrawal_state_list(_u: u32) -> Weight {
-        (217_988_000 as Weight)
+        (206_958_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(8 as Weight))
             .saturating_add(RocksDbWeight::get().writes(6 as Weight))
     }
