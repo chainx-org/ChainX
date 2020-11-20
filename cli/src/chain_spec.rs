@@ -74,7 +74,6 @@ where
 
 type AuthorityKeysTuple = (
     (AccountId, ReferralId), // (Staking ValidatorId, ReferralId)
-    AccountId,               // (SessionKey)
     BabeId,
     GrandpaId,
     ImOnlineId,
@@ -88,7 +87,6 @@ pub fn authority_keys_from_seed(seed: &str) -> AuthorityKeysTuple {
             get_account_id_from_seed::<sr25519::Public>(seed),
             seed.as_bytes().to_vec(),
         ),
-        get_account_id_from_seed::<sr25519::Public>(&format!("{}//blockauthor", seed)),
         get_from_seed::<BabeId>(seed),
         get_from_seed::<GrandpaId>(seed),
         get_from_seed::<ImOnlineId>(seed),
@@ -274,8 +272,6 @@ pub fn mainnet_config() -> Result<ChainSpec, String> {
                 hex!["3ab47230dff92003f6f4f79cf7930cfe3f3fd77eedfea55acfde77223ac1a47a"].into(),
                 b"Validator1".to_vec(),
             ),
-            // 5GgaYZcQyHMk75VxvYQVQR3b2gxsPawsgGXjx8vhCiiTabLR
-            hex!["cc4d27469504538539515615deb495c2901a774abd1a13655336b615d4014a3c"].into(),
             // 5EPgwcbLknydnWGmHem3rmwhdjk55e9HfoqjF5A5zRQDkWxj
             hex!["66f30ce2de3f23c2383c0ecea1e2a2e0520c18931d3a9bca64be78e3f9f7b62f"]
                 .unchecked_into(),
@@ -295,8 +291,6 @@ pub fn mainnet_config() -> Result<ChainSpec, String> {
                 hex!["fc3b583310fe9f091e35a8be64ac9508b9d3c088fdcef51b747113fa8fe87f44"].into(),
                 b"Validator2".to_vec(),
             ),
-            // 5E4ayu9boQK88fkBRCb5D2KeFHzqko3xeBsjidgnVBZrEKvM
-            hex!["5861528f602af4e6237e8c0724885db5aa2a8c2faa44ba539d2436021537be04"].into(),
             // 5FLeZHeNy7UPyNusqLRT4EUqxBxUVEpSbma6u9By6DzC3o13
             hex!["90dd84e695fd85888d9060ded9a79a7b6bca69206cf10d5366f10c12822c9424"]
                 .unchecked_into(),
@@ -316,8 +310,6 @@ pub fn mainnet_config() -> Result<ChainSpec, String> {
                 hex!["8c114008f432dd0f10dc74a78d1f6cdef6778bb30c3d5abfcf60f5f1570a6b43"].into(),
                 b"Validator3".to_vec(),
             ),
-            // 5FeZHG9fpPKxzjMikjX39FXvUdG4JJ2yhHpA2YBGywtWzCcK
-            hex!["9e862cbf1bb26bed7660f725317f53a5c40dd50aa4e36d81263681651a6f2931"].into(),
             // 5Grs98EMvxsCrmKMKGCx3xemYcMhAPNF8aa6uRYttWVKJLBg
             hex!["d4257968d6f6775c356c9bac1fcce8d420cd1e03e704dc5c4c5c33b0182c471a"]
                 .unchecked_into(),
@@ -337,8 +329,6 @@ pub fn mainnet_config() -> Result<ChainSpec, String> {
                 hex!["74a18faa6693cf68b988c479799b9e5fff4c131beb055acdab30c11570df0978"].into(),
                 b"Validator4".to_vec(),
             ),
-            // 5ERRsAvNXWhZmqG4tdjcGEgJHCkqYSDSdsdqAq3GGoRGpu9m
-            hex!["6846c9ee8d47c20bda6d4458bef2677e75a2dc2df93a506e36c03cb6d53e801f"].into(),
             // 5CJPSYjvaCi2M7izUXwg5pqkQqhaJiHgDX9gz1JoKQrY18jo
             hex!["0a6f713ac4f6773b688be912174a67b6e708386dc2466391c5ba23037ce69951"]
                 .unchecked_into(),
@@ -358,8 +348,6 @@ pub fn mainnet_config() -> Result<ChainSpec, String> {
                 hex!["7e7927d030d89585cd66f0d44313de41f4c697da387159786f8b3ed5cd081d4f"].into(),
                 b"Validator5".to_vec(),
             ),
-            // 5FyRpivr8qN9sK1PU9Qhutv4QwVnHomFGgMn93khwCbDCBXq
-            hex!["aceabbac700af582fe4ff6084ba1c778339fbadccb1c182d82817aacdfcb5345"].into(),
             // 5D83WrH4h4rPFxe4m4xGMuC8XuR9jqWHggHBriZQELJ3JneN
             hex!["2ec8253a23695069619df42213106402cffb217bb02c653c11e3435eb047e60d"]
                 .unchecked_into(),
@@ -480,7 +468,7 @@ fn build_genesis(
     let validators = initial_authorities
         .clone()
         .into_iter()
-        .map(|((validator, referral), _, _, _, _, _)| (validator, referral, STAKING_LOCKED))
+        .map(|((validator, referral), _, _, _, _)| (validator, referral, STAKING_LOCKED))
         .collect::<Vec<_>>();
     let btc_genesis_trustees = trustees
         .iter()
@@ -527,7 +515,7 @@ fn build_genesis(
                     (
                         (x.0).0.clone(),
                         (x.0).0.clone(),
-                        session_keys(x.2.clone(), x.3.clone(), x.4.clone(), x.5.clone()),
+                        session_keys(x.1.clone(), x.2.clone(), x.3.clone(), x.4.clone()),
                     )
                 })
                 .collect::<Vec<_>>(),
@@ -603,14 +591,14 @@ fn mainnet_genesis(
 
     let tech_comm_members = initial_authorities
         .iter()
-        .map(|((validator, _), _, _, _, _, _)| validator)
+        .map(|((validator, _), _, _, _, _)| validator)
         .take((initial_authorities_len + 1) / 2)
         .cloned()
         .collect::<Vec<_>>();
 
     let balances = initial_authorities
         .iter()
-        .map(|((validator, _), _, _, _, _, _)| validator)
+        .map(|((validator, _), _, _, _, _)| validator)
         .cloned()
         .map(|validator| (validator, STAKING_LOCKED))
         .collect::<Vec<_>>();
@@ -620,7 +608,7 @@ fn mainnet_genesis(
     let validators = initial_authorities
         .clone()
         .into_iter()
-        .map(|((validator, referral_id), _, _, _, _, _)| (validator, referral_id, STAKING_LOCKED))
+        .map(|((validator, referral_id), _, _, _, _)| (validator, referral_id, STAKING_LOCKED))
         .collect::<Vec<_>>();
 
     let btc_genesis_trustees = trustees
@@ -666,7 +654,7 @@ fn mainnet_genesis(
                     (
                         (x.0).0.clone(),
                         (x.0).0.clone(),
-                        session_keys(x.2.clone(), x.3.clone(), x.4.clone(), x.5.clone()),
+                        session_keys(x.1.clone(), x.2.clone(), x.3.clone(), x.4.clone()),
                     )
                 })
                 .collect::<Vec<_>>(),
