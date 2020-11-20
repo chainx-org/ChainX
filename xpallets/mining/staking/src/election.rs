@@ -100,13 +100,14 @@ impl<T: Trait> Module<T> {
 
                 for _ in unwanted_losers {
                     if !validators_without_immortals.is_empty() {
+                        // Pop out the validator with fewest votes.
                         validators_without_immortals.pop();
                     }
                 }
 
-                let mut validators = Vec::new();
+                let mut validators =
+                    Vec::with_capacity(validators_without_immortals.len() + immortals.len());
                 validators.extend_from_slice(&validators_without_immortals);
-
                 validators.extend_from_slice(&immortals);
 
                 return Some(validators);
