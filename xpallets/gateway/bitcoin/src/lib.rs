@@ -8,7 +8,7 @@ pub mod header;
 pub mod trustee;
 pub mod tx;
 mod types;
-mod weight_info;
+pub mod weights;
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
 mod benchmarking;
@@ -54,6 +54,7 @@ use xpallet_gateway_common::{
 use xpallet_support::{str, try_addr};
 
 pub use self::types::{BtcAddress, BtcParams, BtcTxVerifier, BtcWithdrawalProposal};
+pub use self::weights::WeightInfo;
 use self::{
     trustee::{get_last_trustee_address_pair, get_trustee_address_pair},
     tx::remove_pending_deposit,
@@ -61,7 +62,6 @@ use self::{
         BtcDepositCache, BtcHeaderIndex, BtcHeaderInfo, BtcRelayedTx, BtcRelayedTxInfo,
         BtcTxResult, BtcTxState,
     },
-    weight_info::WeightInfo,
 };
 
 // syntactic sugar for native log.

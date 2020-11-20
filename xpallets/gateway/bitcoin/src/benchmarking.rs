@@ -333,41 +333,23 @@ mod tests {
     fn test_benchmarks() {
         ExtBuilder::default().build().execute_with(|| {
             assert_ok!(test_benchmark_push_header::<Test>());
-        });
 
-        ExtBuilder::default().build().execute_with(|| {
             assert_ok!(test_benchmark_push_transaction::<Test>());
-        });
 
-        ExtBuilder::default().build().execute_with(|| {
             assert_ok!(test_benchmark_create_withdraw_tx::<Test>());
-        });
 
-        ExtBuilder::default().build().execute_with(|| {
             assert_ok!(test_benchmark_sign_withdraw_tx::<Test>());
-        });
 
-        ExtBuilder::default().build().execute_with(|| {
             assert_ok!(test_benchmark_set_best_index::<Test>());
-        });
 
-        ExtBuilder::default().build().execute_with(|| {
             assert_ok!(test_benchmark_set_confirmed_index::<Test>());
-        });
 
-        ExtBuilder::default().build().execute_with(|| {
             assert_ok!(test_benchmark_remove_pending::<Test>());
-        });
 
-        ExtBuilder::default().build().execute_with(|| {
             assert_ok!(test_benchmark_force_replace_proposal_tx::<Test>());
-        });
 
-        ExtBuilder::default().build().execute_with(|| {
             assert_ok!(test_benchmark_set_btc_withdrawal_fee::<Test>());
-        });
 
-        ExtBuilder::default().build().execute_with(|| {
             assert_ok!(test_benchmark_set_btc_deposit_limit::<Test>());
         });
     }
