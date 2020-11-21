@@ -202,8 +202,6 @@ decl_storage! {
     }
 
     add_extra_genesis {
-        // Staking validators are used for initializing the genesis easier in tests.
-        // For the mainnet genesis, use `Module::<T>::initialize_validators()`.
         config(validators): Vec<(T::AccountId, ReferralId, BalanceOf<T>)>;
         config(glob_dist_ratio): (u32, u32);
         config(mining_ratio): (u32, u32);
@@ -549,8 +547,9 @@ impl<T: Trait> xpallet_support::traits::Validator<T::AccountId> for Module<T> {
 }
 
 impl<T: Trait> Module<T> {
+    /// Initializes the validators exported from ChainX 1.0.
     #[cfg(feature = "std")]
-    pub fn initialize_validators(
+    pub fn initialize_legacy_validators(
         validators: &[xp_genesis_builder::ValidatorInfo<T::AccountId, BalanceOf<T>>],
     ) -> DispatchResult {
         for xp_genesis_builder::ValidatorInfo {

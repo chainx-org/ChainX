@@ -147,7 +147,7 @@ mod genesis {
             let genesis_validators = validators.iter().map(|v| v.who.clone()).collect::<Vec<_>>();
 
             // Firstly register the genesis validators.
-            xpallet_mining_staking::Module::<T>::initialize_validators(validators)
+            xpallet_mining_staking::Module::<T>::initialize_legacy_validators(validators)
                 .expect("Failed to initialize genesis staking validators");
 
             // Then mock the validator bond themselves and set the vote weights.
@@ -169,7 +169,7 @@ mod genesis {
                             nominator, nominee, *weight,
                         );
                         // Skip the validator self-bonding as it has already been processed
-                        // in initialize_validators()
+                        // in initialize_legacy_validators()
                         if *nominee == *nominator {
                             continue;
                         }
