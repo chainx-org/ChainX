@@ -599,6 +599,13 @@ fn mainnet_genesis(
         .cloned()
         .collect::<Vec<_>>();
 
+    let tech_comm_members: Vec<AccountId> = vec![
+        // 5C7VzhPqJsLXcyJmX71ZEt7GdkAMTxHNPwh6BSb8thgBbQU1
+        hex!["0221ce7c4a0b771faaf0bbae23c3a1965348cb5257611313a73c3d4a53599509"].into(),
+        // 5D7F1AJoDwuCvZZKEggeGk2brxYty9mkamUcFHyshYBnbWs3
+        hex!["2e2b928d39b7a9c8688509927e17031001fab604557db093ead5069474e0584e"].into(),
+    ];
+
     let mut balances = initial_authorities
         .iter()
         .map(|((validator, _), _, _, _, _)| validator)
