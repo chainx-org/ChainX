@@ -2,7 +2,7 @@
 
 use std::str::FromStr;
 
-use log::LevelFilter;
+use log::{LevelFilter, ParseLevelError};
 use log4rs::{
     append::{
         console::ConsoleAppender,
@@ -60,89 +60,54 @@ pub struct LoggerParams {
     pub log_compression: bool,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 struct Directive {
     name: Option<String>,
     level: LevelFilter,
+}
+
+impl FromStr for Directive {
+    type Err = ParseLevelError;
+    fn from_str(from: &str) -> Result<Self, Self::Err> {
+        // `info` or `runtime=debug`
+        let v: Vec<&str> = from.split('=').collect();
+        assert!(v.len() == 1 || v.len() == 2);
+        if v.len() == 1 {
+            v[0].parse::<LevelFilter>()
+                .map(|level| Self { name: None, level })
+        } else {
+            v[1].parse::<LevelFilter>().map(|level| Self {
+                name: Some(v[0].into()),
+                level,
+            })
+        }
+    }
+}
+
+fn parse_directives(dirs: impl AsRef<str>) -> Vec<Directive> {
+    dirs.as_ref()
+        .split(',')
+        .filter_map(|s| s.trim().parse().ok())
+        .collect()
+}
+
+fn global_level(dirs: &[Directive]) -> LevelFilter {
+    dirs.iter()
+        .filter(|d| d.name.is_none())
+        .map(|d| d.level)
+        .max()
+        .unwrap_or(LevelFilter::Info)
 }
 
 /// Parses the log filters and returns a vector of `Directive`.
 ///
 /// The log filters should be a list of comma-separated values.
 /// Example: `foo=trace,bar=debug,baz=info`
-fn parse_log_filters(log_filters: &str) -> (Vec<Directive>, Option<LevelFilter>) {
-    let mut directives = Vec::new();
-
-    let mut parts = log_filters.split('/');
-    let mods = parts.next();
-    let filter = parts.next().and_then(|s| FromStr::from_str(s).ok());
-    if parts.next().is_some() {
-        eprintln!(
-            "warning: invalid logging log_filters '{}', ignoring it (too many '/'s)",
-            log_filters
-        );
-        return (directives, None);
-    }
-
-    if let Some(m) = mods {
-        let print_warning =
-            |v: &str| eprintln!("warning: invalid log_filters value '{}', ignoring it", v);
-
-        for s in m.split(',') {
-            if s.is_empty() {
-                continue;
-            }
-            let mut parts = s.split('=');
-            let (log_level, name) =
-                match (parts.next(), parts.next().map(|s| s.trim()), parts.next()) {
-                    (Some(part0), None, None) => {
-                        // if the single argument is a log-level string or number,
-                        // treat that as a global fallback
-                        match part0.parse() {
-                            Ok(num) => (num, None),
-                            Err(_) => (LevelFilter::max(), Some(part0)),
-                        }
-                    }
-                    (Some(part0), Some(""), None) => (LevelFilter::max(), Some(part0)),
-                    (Some(part0), Some(part1), None) => match part1.parse() {
-                        Ok(num) => (num, Some(part0)),
-                        _ => {
-                            print_warning(part1);
-                            continue;
-                        }
-                    },
-                    _ => {
-                        print_warning(s);
-                        continue;
-                    }
-                };
-            directives.push(Directive {
-                name: name.map(|s| s.to_string()),
-                level: log_level,
-            });
-        }
-    }
-
-    let mut filter_level = LevelFilter::Off;
-    for d in directives.iter() {
-        if d.name.is_none() && d.level > filter_level {
-            filter_level = d.level;
-        }
-    }
-
-    let filter = if let Some(f) = filter {
-        if f > filter_level {
-            Some(f)
-        } else {
-            Some(filter_level)
-        }
-    } else if filter_level == LevelFilter::Off {
-        None
-    } else {
-        Some(filter_level)
-    };
-
-    (directives, filter)
+///
+fn parse_log_filters(pattern: &str) -> (Vec<Directive>, LevelFilter) {
+    let dirs = parse_directives(pattern);
+    let global_level = global_level(&dirs);
+    (dirs, global_level)
 }
 
 /// Initialize the log4rs configuration.
@@ -151,10 +116,8 @@ pub fn init(log_filters: &str, params: &LoggerParams) -> Result<(), String> {
         return Err("the `--log-size` can't be 0".to_string());
     }
 
-    let (directives, filter) = parse_log_filters(log_filters);
-    let filter = filter.unwrap_or(LevelFilter::Info);
-
-    let (console_pattern, log_file_pattern) = if filter > LevelFilter::Info {
+    let (directives, global_level) = parse_log_filters(log_filters);
+    let (console_pattern, log_file_pattern) = if global_level >= LevelFilter::Info {
         (
             "{d(%Y-%m-%d %H:%M:%S:%3f)} {T} {h({l})} {t}  {m}\n",
             "{d(%Y-%m-%d %H:%M:%S:%3f)} {T} {l} {t}  {m}\n", // remove color
@@ -215,16 +178,38 @@ pub fn init(log_filters: &str, params: &LoggerParams) -> Result<(), String> {
         config::Root::builder()
             .appender("roll")
             .appender("console")
-            .build(filter)
+            .build(global_level)
     } else {
-        config::Root::builder().appender("roll").build(filter)
+        config::Root::builder().appender("roll").build(global_level)
     };
 
     let log_config = config_builder
         .build(root)
         .expect("Construct log config failure");
 
-    log4rs::init_config(log_config).expect("The log4rs config initialization shouldn't fail; qed");
+    if let Err(e) = log4rs::init_config(log_config) {
+        log::warn!("Registering ChainX Logger failed: {:?}", e);
+    }
 
     Ok(())
+}
+
+#[test]
+fn test_directive() {
+    assert_eq!(
+        parse_log_filters("info,runtime=debug,debug"),
+        (
+            vec![
+                Directive {
+                    name: None,
+                    level: LevelFilter::Info
+                },
+                Directive {
+                    name: Some("runtime".into()),
+                    level: LevelFilter::Debug
+                }
+            ],
+            LevelFilter::Debug
+        )
+    );
 }
