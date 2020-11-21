@@ -800,7 +800,7 @@ impl xpallet_assets::Trait for Runtime {
     type TreasuryAccount = SimpleTreasuryAccount;
     type OnCreatedAccount = frame_system::CallOnCreatedAccount<Runtime>;
     type OnAssetChanged = XMiningAsset;
-    type WeightInfo = ();
+    type WeightInfo = xpallet_assets::weights::SubstrateWeight<Runtime>;
 }
 
 impl xpallet_gateway_records::Trait for Runtime {
@@ -832,7 +832,7 @@ impl xpallet_gateway_bitcoin::Trait for Runtime {
     type TrusteeOrigin = EnsureSignedBy<trustees::bitcoin::BtcTrusteeMultisig<Runtime>, AccountId>;
     type Channel = XGatewayCommon;
     type AddrBinding = XGatewayCommon;
-    type WeightInfo = ();
+    type WeightInfo = xpallet_gateway_bitcoin::weights::SubstrateWeight<Runtime>;
 }
 
 impl xpallet_dex_spot::Trait for Runtime {

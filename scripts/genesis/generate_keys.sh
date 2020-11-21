@@ -59,7 +59,7 @@ main() {
   # Generate 5 pairs of genesis keys given the root secret
   for id in 1 2 3 4 5; do
     echo "SECRET//validator//$id:"
-    echo "SECRET//blockauthor/$id, SECRET//babe//$id, SECRET//grandpa//$id, SECRET//im_online//$id, SECRET//authority_discovery//$id"
+    echo "SECRET//babe//$id, SECRET//grandpa//$id, SECRET//im_online//$id, SECRET//authority_discovery//$id"
     echo
 
     echo "            ("

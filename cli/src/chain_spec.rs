@@ -33,10 +33,7 @@ use chainx_runtime::{
 };
 
 use crate::genesis::assets::{genesis_assets, init_assets, pcx, AssetParams};
-use crate::genesis::bitcoin::{
-    btc_genesis_params, local_testnet_trustees, mainnet_trustees, BtcGenesisParams,
-    BtcTrusteeParams,
-};
+use crate::genesis::bitcoin::{btc_genesis_params, BtcGenesisParams, BtcTrusteeParams};
 
 // Note this is the URL for the telemetry server
 const POLKADOT_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -156,7 +153,7 @@ pub fn development_config() -> Result<ChainSpec, String> {
                 ("Bob//stash", endowed_balance),
             ],
             btc_genesis_params(include_str!("res/btc_genesis_params_testnet.json")),
-            local_testnet_trustees(),
+            crate::genesis::bitcoin::local_testnet_trustees(),
         )
     };
     Ok(ChainSpec::from_genesis(
@@ -190,7 +187,7 @@ pub fn benchmarks_config() -> Result<ChainSpec, String> {
                 ("Alice//stash", endowed_balance),
                 ("Bob//stash", endowed_balance),
             ],
-            btc_genesis_params(include_str!("res/btc_genesis_params_mainnet.json")),
+            btc_genesis_params(include_str!("res/btc_genesis_params_benchmarks.json")),
             crate::genesis::bitcoin::benchmarks_trustees(),
         )
     };
@@ -237,7 +234,7 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
                 ("Ferdie//stash", endowed_balance),
             ],
             btc_genesis_params(include_str!("res/btc_genesis_params_testnet.json")),
-            local_testnet_trustees(),
+            crate::genesis::bitcoin::local_testnet_trustees(),
         )
     };
     Ok(ChainSpec::from_genesis(
@@ -375,7 +372,7 @@ pub fn mainnet_config() -> Result<ChainSpec, String> {
             genesis_assets(),
             // FIXME update btc mainnet header
             btc_genesis_params(include_str!("res/btc_genesis_params_mainnet.json")),
-            mainnet_trustees(),
+            crate::genesis::bitcoin::mainnet_trustees(),
         )
     };
 
