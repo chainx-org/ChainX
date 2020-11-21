@@ -26,7 +26,16 @@ impl<T: Trait> Module<T> {
             .into_iter()
             .flat_map(|(offender, slash_fraction)| {
                 let pot = Self::reward_pot_for(&offender);
-                let base_slash = slash_fraction.mul(Self::free_balance(&pot));
+
+                // https://github.com/paritytech/substrate/blob/c60f00840034017d4b7e6d20bd4fcf9a3f5b529a/frame/im-online/src/lib.rs#L773
+                // slash_fraction is zero when <10% offline, in which case we still apply a
+                // minimum_penalty.
+                let base_slash = if slash_fraction.is_zero() {
+                    minimum_penalty
+                } else {
+                    slash_fraction.mul(Self::free_balance(&pot))
+                };
+
                 let penalty = validator_rewards
                     .get(&offender)
                     .copied()
