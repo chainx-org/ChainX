@@ -74,7 +74,7 @@ impl<T: Trait> AssetChangedTrigger<T> {
         type_: AssetType,
         value: BalanceOf<T>,
     ) -> DispatchResult {
-        Module::<T>::deposit_event(Event::<T>::SetBalance(*id, who.clone(), type_, value));
+        Module::<T>::deposit_event(Event::<T>::BalanceSet(*id, who.clone(), type_, value));
         T::OnAssetChanged::on_set_balance(id, who, type_, value)?;
         Ok(())
     }
