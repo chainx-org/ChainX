@@ -35,7 +35,7 @@ impl<T: Trait> Module<T> {
     ///
     /// Otherwise the candidate will be **forced to be chilled**.
     fn meet_candidate_threshold(who: &T::AccountId) -> bool {
-        let BondRequirement { self_bonded, total } = Self::validator_bond_requirement();
+        let BondRequirement { self_bonded, total } = Self::validator_candidate_requirement();
         let threshold_satisfied =
             Self::validator_self_bonded(who) >= self_bonded && Self::total_votes_of(who) >= total;
 

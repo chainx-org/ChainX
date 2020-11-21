@@ -116,7 +116,7 @@ decl_storage! {
             u32 = DEFAULT_MAXIMUM_VALIDATOR_COUNT;
 
         /// Minimum value (self_bonded, total_bonded) to be a candidate of validator election.
-        pub ValidatorCandidateRequirement get(fn validator_bond_requirement):
+        pub ValidatorCandidateRequirement get(fn validator_candidate_requirement):
             BondRequirement<BalanceOf<T>>;
 
         /// The length of a staking era in sessions.
@@ -205,6 +205,7 @@ decl_storage! {
         config(validators): Vec<(T::AccountId, ReferralId, BalanceOf<T>)>;
         config(glob_dist_ratio): (u32, u32);
         config(mining_ratio): (u32, u32);
+        config(candidate_requirement): (BalanceOf<T>, BalanceOf<T>);
         build(|config: &GenesisConfig<T>| {
             assert!(config.glob_dist_ratio.0 + config.glob_dist_ratio.1 > 0);
             assert!(config.mining_ratio.0 + config.mining_ratio.1 > 0);
@@ -215,6 +216,10 @@ decl_storage! {
             MiningDistributionRatio::put(MiningDistribution {
                 asset: config.mining_ratio.0,
                 staking: config.mining_ratio.1,
+            });
+            ValidatorCandidateRequirement::<T>::put(BondRequirement {
+                self_bonded: config.candidate_requirement.0,
+                total: config.candidate_requirement.1,
             });
 
             for (validator, referral_id, balance) in &config.validators {

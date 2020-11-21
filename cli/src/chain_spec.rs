@@ -701,7 +701,8 @@ fn mainnet_genesis(
             vesting_account,
             glob_dist_ratio: (12, 88), // (Treasury, X-type Asset and Staking) = (12, 88)
             mining_ratio: (10, 90),    // (Asset Mining, Staking) = (10, 90)
-            minimum_penalty: 2 * DOLLARS,
+            minimum_penalty: 100 * DOLLARS,
+            candidate_requirement: (100 * DOLLARS, 1_000 * DOLLARS), // Minimum value (self_bonded, total_bonded) to be a validator candidate
             ..Default::default()
         }),
         xpallet_mining_asset: Some(XMiningAssetConfig {
