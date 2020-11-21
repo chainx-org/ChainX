@@ -43,7 +43,7 @@ use sp_runtime::{
 use sp_std::collections::btree_map::BTreeMap;
 
 use chainx_primitives::ReferralId;
-use xp_logging::debug;
+use xp_logging::{debug, warn};
 pub use xp_mining_common::RewardPotAccountFor;
 use xp_mining_common::{Claim, ComputeMiningWeight, Delta, ZeroMiningWeightError};
 use xp_mining_staking::{AssetMining, SessionIndex, UnbondedIndex};
@@ -721,7 +721,12 @@ impl<T: Trait> Module<T> {
 
     #[inline]
     fn transfer(from: &T::AccountId, to: &T::AccountId, value: BalanceOf<T>) {
-        let _ = T::Currency::transfer(from, to, value, ExistenceRequirement::KeepAlive);
+        if let Err(e) = T::Currency::transfer(from, to, value, ExistenceRequirement::KeepAlive) {
+            warn!(
+                "transfer {:?} => {:?}({:?}) failed: {:?}",
+                from, to, value, e
+            );
+        }
     }
 
     /// Create/Update a new balance lock on account `who`.
