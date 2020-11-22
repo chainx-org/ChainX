@@ -208,6 +208,10 @@ fn test_directive() {
                     name: Some("runtime".into()),
                     level: LevelFilter::Debug
                 }
+                Directive {
+                    name: None,
+                    level: LevelFilter::Debug
+                },
             ],
             LevelFilter::Debug
         )
