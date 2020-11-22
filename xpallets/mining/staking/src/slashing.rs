@@ -18,24 +18,36 @@ impl<T: Trait> Module<T> {
         let slasher = Slasher::<T>::new(treasury_account);
 
         let minimum_penalty = Self::minimum_penalty();
-        let minimum_validator_count = Self::reasonable_minimum_validator_count() as usize;
+        let calc_base_slash = |offender: &T::AccountId, slash_fraction: Perbill| {
+            let pot = Self::reward_pot_for(&offender);
 
+            // https://github.com/paritytech/substrate/blob/c60f00840034017d4b7e6d20bd4fcf9a3f5b529a/frame/im-online/src/lib.rs#L773
+            // slash_fraction is zero when <10% offline, in which case we still apply a minimum_penalty.
+            if slash_fraction.is_zero() {
+                minimum_penalty
+            } else {
+                slash_fraction.mul(Self::free_balance(&pot))
+            }
+        };
+
+        let minimum_validator_count = Self::reasonable_minimum_validator_count() as usize;
         let mut active_count = Self::active_validator_set().count();
+        let mut chill_offender_safe = |offender: T::AccountId| {
+            // The offender does not have enough balance for the slashing and has to be chilled,
+            // but we must avoid the over-slashing, ensure have the minimum active validators.
+            if active_count > minimum_validator_count {
+                Self::apply_force_chilled(&offender);
+                active_count -= 1;
+                Some(offender)
+            } else {
+                None
+            }
+        };
 
         offenders
             .into_iter()
             .flat_map(|(offender, slash_fraction)| {
-                let pot = Self::reward_pot_for(&offender);
-
-                // https://github.com/paritytech/substrate/blob/c60f00840034017d4b7e6d20bd4fcf9a3f5b529a/frame/im-online/src/lib.rs#L773
-                // slash_fraction is zero when <10% offline, in which case we still apply a
-                // minimum_penalty.
-                let base_slash = if slash_fraction.is_zero() {
-                    minimum_penalty
-                } else {
-                    slash_fraction.mul(Self::free_balance(&pot))
-                };
-
+                let base_slash = calc_base_slash(&offender, slash_fraction);
                 let penalty = validator_rewards
                     .get(&offender)
                     .copied()
@@ -55,19 +67,16 @@ impl<T: Trait> Module<T> {
                             "Insufficient reward pot balance of {:?}, actual slashed:{:?}",
                             offender, actual_slashed
                         );
-                        // The offender does not have enough balance for the slashing and has to be chilled,
-                        // but we must avoid the over-slashing, ensure have the minimum active validators.
-                        if active_count > minimum_validator_count {
-                            Self::apply_force_chilled(&offender);
-                            active_count -= 1;
-                            Some(offender)
-                        } else {
-                            None
-                        }
+                        chill_offender_safe(offender)
                     }
                     SlashOutcome::SlashFailed(e) => {
-                        debug!("Slash the offender {:?} somehow failed: {:?}", offender, e);
-                        None
+                        debug!("Slash the offender {:?} for {:?} somehow failed: {:?}", offender, penalty, e);
+                        // we still chill the offender even the slashing failed as currently
+                        // the offender is only the authorties without running a node.
+                        //
+                        // TODO: Reconsider this once https://github.com/paritytech/substrate/pull/7127
+                        // is merged.
+                        chill_offender_safe(offender)
                     }
                 }
             })

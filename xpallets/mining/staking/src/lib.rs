@@ -43,7 +43,7 @@ use sp_runtime::{
 use sp_std::collections::btree_map::BTreeMap;
 
 use chainx_primitives::ReferralId;
-use xp_logging::{debug, warn};
+use xp_logging::debug;
 pub use xp_mining_common::RewardPotAccountFor;
 use xp_mining_common::{Claim, ComputeMiningWeight, Delta, ZeroMiningWeightError};
 use xp_mining_staking::{AssetMining, SessionIndex, UnbondedIndex};
