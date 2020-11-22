@@ -103,14 +103,15 @@ fn global_level(dirs: &[Directive]) -> LevelFilter {
 ///
 /// The log filters should be a list of comma-separated values.
 /// Example: `foo=trace,bar=debug,baz=info`
-///
 fn parse_log_filters(pattern: &str) -> (Vec<Directive>, LevelFilter) {
     let dirs = parse_directives(pattern);
     let global_level = global_level(&dirs);
     (dirs, global_level)
 }
 
-/// Initialize the log4rs configuration.
+/// Initialize the global logger using log4rs.
+///
+/// The Substrate Logger will not registered if this one succeeds.
 pub fn init(log_filters: &str, params: &LoggerParams) -> Result<(), String> {
     if params.log_size == 0 {
         return Err("the `--log-size` can't be 0".to_string());
