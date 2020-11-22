@@ -120,7 +120,7 @@ pub fn init(log_filters: &str, params: &LoggerParams) -> Result<(), String> {
     let (directives, global_level) = parse_log_filters(log_filters);
     let (console_pattern, log_file_pattern) = if global_level >= LevelFilter::Info {
         (
-            "{d(%Y-%m-%d %H:%M:%S:%3f)} {T} {h({l})} {t}  {m}\n",
+            "{d(%Y-%m-%d %H:%M:%S:%3f)} {h({T} {l})} {t}  {m}\n",
             "{d(%Y-%m-%d %H:%M:%S:%3f)} {T} {l} {t}  {m}\n", // remove color
         )
     } else {
