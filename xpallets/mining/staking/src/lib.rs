@@ -518,6 +518,16 @@ decl_module! {
             ensure_root(origin)?;
             SessionsPerEra::put(new);
         }
+
+        #[weight = 10_000_000]
+        fn set_immortals(origin, new: Vec<T::AccountId>) {
+            ensure_root(origin)?;
+            if new.is_empty() {
+                Immortals::<T>::kill()
+            } else {
+                Immortals::<T>::put(new);
+            }
+        }
     }
 }
 
