@@ -104,7 +104,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("chainx"),
     impl_name: create_runtime_str!("chainx-net"),
     authoring_version: 1,
-    spec_version: 2,
+    spec_version: 3,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -124,35 +124,10 @@ pub struct BaseFilter;
 impl Filter<Call> for BaseFilter {
     fn filter(call: &Call) -> bool {
         use frame_support::dispatch::GetCallMetadata;
-        use xpallet_mining_staking::Call as XStakingCall;
-
-        // The validators are allowed to register and validate now.
-        if let Call::XStaking(xstaking) = call {
-            match xstaking {
-                XStakingCall::validate(..) | XStakingCall::register(..) => return true,
-                _ => {}
-            }
-        }
 
         // At the beginning of mainnet, no call is allowed.
         match call {
             Call::Currencies(_) => return false, // forbidden Currencies call now
-            Call::Democracy(_)
-            | Call::Council(_)
-            | Call::TechnicalCommittee(_)
-            | Call::TechnicalMembership(_)
-            | Call::Treasury(_)
-            | Call::Indices(_)
-            | Call::Utility(_)
-            | Call::Identity(_)
-            | Call::Multisig(_) => return false,
-            Call::XStaking(_)
-            | Call::XAssets(_)
-            | Call::XAssetsRegistrar(_)
-            | Call::XMiningAsset(_)
-            | Call::XGatewayBitcoin(_)
-            | Call::XGatewayCommon(_)
-            | Call::XGatewayRecords(_) => return false,
             _ => {}
         }
 
