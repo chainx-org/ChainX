@@ -592,18 +592,13 @@ fn mainnet_genesis(
 
     let initial_authorities_len = initial_authorities.len();
 
-    let tech_comm_members = initial_authorities
-        .iter()
-        .map(|((validator, _), _, _, _, _)| validator)
-        .take((initial_authorities_len + 1) / 2)
-        .cloned()
-        .collect::<Vec<_>>();
-
     let tech_comm_members: Vec<AccountId> = vec![
         // 5C7VzhPqJsLXcyJmX71ZEt7GdkAMTxHNPwh6BSb8thgBbQU1
         hex!["0221ce7c4a0b771faaf0bbae23c3a1965348cb5257611313a73c3d4a53599509"].into(),
         // 5D7F1AJoDwuCvZZKEggeGk2brxYty9mkamUcFHyshYBnbWs3
         hex!["2e2b928d39b7a9c8688509927e17031001fab604557db093ead5069474e0584e"].into(),
+        // 5HG5CswZ6X39BYqt8Dc8e4Cn2HieGnnUiG39ddGn2oq5G36W
+        hex!["e5d8bb656b124beb40990ef9346c441f888981ec7e0d4c55c9c72c176aec5290"].into(),
     ];
 
     let mut balances = initial_authorities
