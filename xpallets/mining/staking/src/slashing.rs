@@ -43,14 +43,14 @@ impl<T: Trait> Module<T> {
                     .unwrap_or(base_slash)
                     .max(minimum_penalty);
                 match slasher.try_slash(&offender, penalty) {
-                    Ok(_) => {
+                    SlashOutcome::Slashed(_) => {
                         debug!(
                             "Slash the offender:{:?} for penalty {:?} by the given slash_fraction:{:?} successfully",
                             offender, penalty, slash_fraction
                         );
                         None
                     }
-                    Err(actual_slashed) => {
+                    SlashOutcome::InsufficientSlash(actual_slashed) => {
                         debug!(
                             "Insufficient reward pot balance of {:?}, actual slashed:{:?}",
                             offender, actual_slashed
@@ -64,6 +64,10 @@ impl<T: Trait> Module<T> {
                         } else {
                             None
                         }
+                    }
+                    SlashOutcome::SlashFailed(e) => {
+                        debug!("Slash the offender {:?} somehow failed: {:?}", offender, e);
+                        None
                     }
                 }
             })

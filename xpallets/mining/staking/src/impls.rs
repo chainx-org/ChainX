@@ -143,8 +143,8 @@ impl<T: Trait> Module<T> {
         pot_account: &T::AccountId,
         dividend: BalanceOf<T>,
     ) -> Result<(), Error<T>> {
-        Self::transfer(pot_account, claimer, dividend);
-        Ok(())
+        Self::transfer(pot_account, claimer, dividend)
+            .map_err(|_| Error::<T>::AllocateDividendFailed)
     }
 
     /// Actually update the nominator vote weight given the new vote weight, block number and amount delta.
