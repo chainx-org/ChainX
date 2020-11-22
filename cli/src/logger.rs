@@ -91,21 +91,18 @@ fn parse_directives(dirs: impl AsRef<str>) -> Vec<Directive> {
         .collect()
 }
 
-fn global_level(dirs: &[Directive]) -> LevelFilter {
-    dirs.iter()
-        .filter(|d| d.name.is_none())
-        .map(|d| d.level)
-        .max()
-        .unwrap_or(LevelFilter::Info)
-}
-
 /// Parses the log filters and returns a vector of `Directive`.
 ///
 /// The log filters should be a list of comma-separated values.
 /// Example: `foo=trace,bar=debug,baz=info`
 fn parse_log_filters(pattern: &str) -> (Vec<Directive>, LevelFilter) {
     let dirs = parse_directives(pattern);
-    let global_level = global_level(&dirs);
+    let global_level = dirs
+        .iter()
+        .filter(|d| d.name.is_none())
+        .map(|d| d.level)
+        .max()
+        .unwrap_or(LevelFilter::Info);
     (dirs, global_level)
 }
 
