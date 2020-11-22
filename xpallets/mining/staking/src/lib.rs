@@ -199,6 +199,11 @@ decl_storage! {
 
         /// Minimum penalty for each slash.
         pub MinimumPenalty get(fn minimum_penalty) config(): BalanceOf<T>;
+
+        /// Immortal validators will always be elected if any.
+        ///
+        /// Immortals will be intialized from the genesis validators.
+        Immortals get(fn immortals): Option<Vec<T::AccountId>>;
     }
 
     add_extra_genesis {
@@ -221,6 +226,13 @@ decl_storage! {
                 self_bonded: config.candidate_requirement.0,
                 total: config.candidate_requirement.1,
             });
+            Immortals::<T>::put(
+                config
+                    .validators
+                    .iter()
+                    .map(|(validator, _, _)| validator.clone())
+                    .collect::<Vec<_>>(),
+            );
 
             for (validator, referral_id, balance) in &config.validators {
                 assert!(
