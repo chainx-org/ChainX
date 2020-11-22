@@ -19,13 +19,12 @@ impl<T: Trait> Module<T> {
 
         let minimum_penalty = Self::minimum_penalty();
         let calc_base_slash = |offender: &T::AccountId, slash_fraction: Perbill| {
-            let pot = Self::reward_pot_for(&offender);
-
             // https://github.com/paritytech/substrate/blob/c60f00840034017d4b7e6d20bd4fcf9a3f5b529a/frame/im-online/src/lib.rs#L773
             // slash_fraction is zero when <10% offline, in which case we still apply a minimum_penalty.
             if slash_fraction.is_zero() {
                 minimum_penalty
             } else {
+                let pot = Self::reward_pot_for(&offender);
                 slash_fraction.mul(Self::free_balance(&pot))
             }
         };
