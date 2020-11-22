@@ -1,6 +1,7 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 use std::collections::BTreeMap;
+use std::convert::TryInto;
 
 use hex_literal::hex;
 use serde::{Deserialize, Serialize};
@@ -381,7 +382,11 @@ pub fn mainnet_config() -> Result<ChainSpec, String> {
         "chainx",
         ChainType::Live,
         constructor,
-        bootnodes![], // FIXME Add mainnet bootnodes
+        bootnodes![
+            "/dns/p2p.1.chainx.org/tcp/20222/p2p/12D3KooWMMGD6eyLDgoTPnmGrawn9gkjtsZGLACJXqVCUbe6R6bD",
+            "/dns/p2p.2.chainx.org/tcp/20222/p2p/12D3KooWC1tFLBFVw47S2nfD7Nzhg5hBMUvsnz4nqpr82zfTYWaH",
+            "/dns/p2p.3.chainx.org/tcp/20222/p2p/12D3KooWPthFY8xDDyM5X9PWZwNfioqP5EShiTKyVv5899H22WBT",
+        ],
         Some(
             TelemetryEndpoints::new(vec![
                 (CHAINX_TELEMETRY_URL.to_string(), 0),
