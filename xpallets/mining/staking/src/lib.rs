@@ -522,6 +522,10 @@ decl_module! {
         #[weight = 10_000_000]
         fn set_immortals(origin, new: Vec<T::AccountId>) {
             ensure_root(origin)?;
+            ensure!(
+                new.iter().find(|&v| !Self::is_validator(v)).is_none(),
+                Error::<T>::NotValidator
+            );
             if new.is_empty() {
                 Immortals::<T>::kill()
             } else {
