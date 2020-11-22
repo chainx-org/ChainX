@@ -303,6 +303,8 @@ decl_error! {
         OccupiedReferralIdentity,
         /// Failed to pass the xss check.
         XssCheckFailed,
+        /// Failed to allocate the dividend.
+        AllocateDividendFailed,
     }
 }
 
@@ -724,8 +726,8 @@ impl<T: Trait> Module<T> {
     }
 
     #[inline]
-    fn transfer(from: &T::AccountId, to: &T::AccountId, value: BalanceOf<T>) {
-        let _ = T::Currency::transfer(from, to, value, ExistenceRequirement::KeepAlive);
+    fn transfer(from: &T::AccountId, to: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
+        T::Currency::transfer(from, to, value, ExistenceRequirement::KeepAlive)
     }
 
     /// Create/Update a new balance lock on account `who`.

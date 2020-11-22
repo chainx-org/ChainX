@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use sp_runtime::{
     traits::{SaturatedConversion, Saturating},
-    RuntimeDebug,
+    DispatchError, DispatchResult, RuntimeDebug,
 };
 
 use chainx_primitives::{AssetId, ReferralId};
@@ -222,6 +222,18 @@ impl MiningDistribution {
     }
 }
 
+/// Result of performing a slash operation.
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+pub enum SlashOutcome<Balance> {
+    /// Succeeded in slashing the reward pot given the slash value.
+    Slashed(Balance),
+    /// The reward pot does not have enough balances to pay the slash,
+    /// the whole reward pot will just be slashed.
+    InsufficientSlash(Balance),
+    /// Somehow can not transfer from the reward pot to the treasury account.
+    SlashFailed(DispatchError),
+}
+
 /// Struct for performing the slash.
 ///
 /// Abstracted for caching the treasury account.
@@ -234,33 +246,43 @@ impl<T: Trait> Slasher<T> {
         Self(treasury_account)
     }
 
-    /// Returns Ok(_) if the reward pot of offender has enough balance to cover the slashing,
+    /// Try to slash the reward pot of the offender.
+    ///
+    /// If the reward pot of offender has enough balance to cover the slashing,
     /// otherwise slash the reward pot as much as possible and returns the value actually slashed.
     pub fn try_slash(
         &self,
         offender: &T::AccountId,
         expected_slash: BalanceOf<T>,
-    ) -> Result<(), BalanceOf<T>> {
+    ) -> SlashOutcome<BalanceOf<T>> {
         let reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(offender);
         let reward_pot_balance = Module::<T>::free_balance(&reward_pot);
 
         debug!(
-            "[try_slash]reward_pot_balance:{:?}, expected_slash:{:?}",
+            "[try_slash] reward_pot_balance:{:?}, expected_slash:{:?}",
             reward_pot_balance, expected_slash
         );
-        if expected_slash <= reward_pot_balance {
-            self.apply_slash(&reward_pot, expected_slash);
-            Module::<T>::deposit_event(Event::<T>::Slashed(offender.clone(), expected_slash));
-            Ok(())
+
+        let (actual_slash, is_insufficient_slash) = if expected_slash <= reward_pot_balance {
+            (expected_slash, false)
         } else {
-            self.apply_slash(&reward_pot, reward_pot_balance);
-            Module::<T>::deposit_event(Event::<T>::Slashed(offender.clone(), reward_pot_balance));
-            Err(reward_pot_balance)
+            (reward_pot_balance, true)
+        };
+
+        if let Err(e) = self.do_slash(&reward_pot, actual_slash) {
+            SlashOutcome::SlashFailed(e)
+        } else {
+            Module::<T>::deposit_event(Event::<T>::Slashed(offender.clone(), actual_slash));
+            if is_insufficient_slash {
+                SlashOutcome::InsufficientSlash(actual_slash)
+            } else {
+                SlashOutcome::Slashed(actual_slash)
+            }
         }
     }
 
     /// Actually slash the account being punished, all slashed balance will go to the treasury.
-    fn apply_slash(&self, reward_pot: &T::AccountId, value: BalanceOf<T>) {
-        Module::<T>::transfer(reward_pot, &self.0, value);
+    fn do_slash(&self, reward_pot: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
+        Module::<T>::transfer(reward_pot, &self.0, value)
     }
 }
