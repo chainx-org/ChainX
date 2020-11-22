@@ -506,14 +506,13 @@ decl_module! {
             ValidatorBondingDuration::<T>::put(new);
         }
 
-        // FIXME: add to WeightInfo once it's stable.
-        #[weight = 10_000_000]
+        #[weight = T::WeightInfo::set_minimum_penalty()]
         fn set_minimum_penalty(origin, #[compact] new: BalanceOf<T>) {
             ensure_root(origin)?;
             MinimumPenalty::<T>::put(new);
         }
 
-        #[weight = 10_000_000]
+        #[weight = T::WeightInfo::set_sessions_per_era()]
         fn set_sessions_per_era(origin, #[compact] new: SessionIndex) {
             ensure_root(origin)?;
             SessionsPerEra::put(new);
