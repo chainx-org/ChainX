@@ -53,7 +53,6 @@ chainx-dev-runtime = { path = "../runtime/dev" }
 chainx-primitives = { path = "../primitives" }
 chainx-rpc = { path = "../rpc" }
 chainx-runtime = { path = "../runtime/chainx" }
-chainx-runtime-common = { path = "../runtime/common" }
 
 xp-assets-registrar = { path  = "../primitives/assets-registrar" }
 xp-genesis-builder = { path  = "../primitives/genesis-builder" }
