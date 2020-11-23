@@ -309,6 +309,8 @@ impl ExtBuilder {
         ext.execute_with(|| {
             System::set_block_number(1);
             Timestamp::set_timestamp(INIT_TIMESTAMP);
+            // Just ignore the immortals for tests.
+            XStaking::set_immortals(Origin::root(), vec![]).unwrap();
         });
 
         ext

@@ -170,6 +170,20 @@ benchmarks! {
     verify {
         assert_eq!(ValidatorBondingDuration::<T>::get(), c.into());
     }
+
+    set_minimum_penalty {
+        let c = 1000u32;
+    }: _(RawOrigin::Root, c.into())
+    verify {
+        assert_eq!(MinimumPenalty::<T>::get(), c.into());
+    }
+
+    set_sessions_per_era {
+        let c = 1000u32;
+    }: _(RawOrigin::Root, c)
+    verify {
+        assert_eq!(SessionsPerEra::get(), c);
+    }
 }
 
 #[cfg(test)]

@@ -1,6 +1,7 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 use std::collections::BTreeMap;
+use std::convert::TryInto;
 
 use hex_literal::hex;
 use serde::{Deserialize, Serialize};
@@ -381,7 +382,11 @@ pub fn mainnet_config() -> Result<ChainSpec, String> {
         "chainx",
         ChainType::Live,
         constructor,
-        bootnodes![], // FIXME Add mainnet bootnodes
+        bootnodes![
+            "/dns/p2p.1.chainx.org/tcp/20222/p2p/12D3KooWMMGD6eyLDgoTPnmGrawn9gkjtsZGLACJXqVCUbe6R6bD",
+            "/dns/p2p.2.chainx.org/tcp/20222/p2p/12D3KooWC1tFLBFVw47S2nfD7Nzhg5hBMUvsnz4nqpr82zfTYWaH",
+            "/dns/p2p.3.chainx.org/tcp/20222/p2p/12D3KooWPthFY8xDDyM5X9PWZwNfioqP5EShiTKyVv5899H22WBT",
+        ],
         Some(
             TelemetryEndpoints::new(vec![
                 (CHAINX_TELEMETRY_URL.to_string(), 0),
@@ -568,7 +573,8 @@ fn build_genesis(
         }),
         xpallet_genesis_builder: Some(XGenesisBuilderConfig {
             params: crate::genesis::genesis_builder_params(),
-            total_endowed,
+            initial_authorities_endowed: total_endowed,
+            root_endowed: 0,
         }),
     }
 }
@@ -584,26 +590,33 @@ fn mainnet_genesis(
 ) -> GenesisConfig {
     // 1000 PCX
     const STAKING_LOCKED: Balance = 100_000 * DOLLARS;
+    // 100 PCX
+    const ROOT_ENDOWED: Balance = 10_000 * DOLLARS;
 
     let (assets, assets_restrictions) = init_assets(assets);
 
     let initial_authorities_len = initial_authorities.len();
 
-    let tech_comm_members = initial_authorities
-        .iter()
-        .map(|((validator, _), _, _, _, _)| validator)
-        .take((initial_authorities_len + 1) / 2)
-        .cloned()
-        .collect::<Vec<_>>();
+    let tech_comm_members: Vec<AccountId> = vec![
+        // 5C7VzhPqJsLXcyJmX71ZEt7GdkAMTxHNPwh6BSb8thgBbQU1
+        hex!["0221ce7c4a0b771faaf0bbae23c3a1965348cb5257611313a73c3d4a53599509"].into(),
+        // 5D7F1AJoDwuCvZZKEggeGk2brxYty9mkamUcFHyshYBnbWs3
+        hex!["2e2b928d39b7a9c8688509927e17031001fab604557db093ead5069474e0584e"].into(),
+        // 5HG5CswZ6X39BYqt8Dc8e4Cn2HieGnnUiG39ddGn2oq5G36W
+        hex!["e5d8bb656b124beb40990ef9346c441f888981ec7e0d4c55c9c72c176aec5290"].into(),
+    ];
 
-    let balances = initial_authorities
+    let mut balances = initial_authorities
         .iter()
         .map(|((validator, _), _, _, _, _)| validator)
         .cloned()
         .map(|validator| (validator, STAKING_LOCKED))
         .collect::<Vec<_>>();
 
-    let total_endowed = initial_authorities_len as Balance * STAKING_LOCKED;
+    // 100 PCX to root account for paying the transaction fee.
+    balances.push((root_key.clone(), ROOT_ENDOWED));
+
+    let initial_authorities_endowed = initial_authorities_len as Balance * STAKING_LOCKED;
 
     let validators = initial_authorities
         .clone()
@@ -695,7 +708,8 @@ fn mainnet_genesis(
             vesting_account,
             glob_dist_ratio: (12, 88), // (Treasury, X-type Asset and Staking) = (12, 88)
             mining_ratio: (10, 90),    // (Asset Mining, Staking) = (10, 90)
-            minimum_penalty: 2 * DOLLARS,
+            minimum_penalty: 100 * DOLLARS,
+            candidate_requirement: (100 * DOLLARS, 1_000 * DOLLARS), // Minimum value (self_bonded, total_bonded) to be a validator candidate
             ..Default::default()
         }),
         xpallet_mining_asset: Some(XMiningAssetConfig {
@@ -707,7 +721,8 @@ fn mainnet_genesis(
         }),
         xpallet_genesis_builder: Some(XGenesisBuilderConfig {
             params: crate::genesis::genesis_builder_params(),
-            total_endowed,
+            root_endowed: ROOT_ENDOWED,
+            initial_authorities_endowed,
         }),
     }
 }

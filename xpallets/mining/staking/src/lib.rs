@@ -116,7 +116,7 @@ decl_storage! {
             u32 = DEFAULT_MAXIMUM_VALIDATOR_COUNT;
 
         /// Minimum value (self_bonded, total_bonded) to be a candidate of validator election.
-        pub ValidatorCandidateRequirement get(fn validator_bond_requirement):
+        pub ValidatorCandidateRequirement get(fn validator_candidate_requirement):
             BondRequirement<BalanceOf<T>>;
 
         /// The length of a staking era in sessions.
@@ -199,14 +199,18 @@ decl_storage! {
 
         /// Minimum penalty for each slash.
         pub MinimumPenalty get(fn minimum_penalty) config(): BalanceOf<T>;
+
+        /// Immortal validators will always be elected if any.
+        ///
+        /// Immortals will be intialized from the genesis validators.
+        Immortals get(fn immortals): Option<Vec<T::AccountId>>;
     }
 
     add_extra_genesis {
-        // Staking validators are used for initializing the genesis easier in tests.
-        // For the mainnet genesis, use `Module::<T>::initialize_validators()`.
         config(validators): Vec<(T::AccountId, ReferralId, BalanceOf<T>)>;
         config(glob_dist_ratio): (u32, u32);
         config(mining_ratio): (u32, u32);
+        config(candidate_requirement): (BalanceOf<T>, BalanceOf<T>);
         build(|config: &GenesisConfig<T>| {
             assert!(config.glob_dist_ratio.0 + config.glob_dist_ratio.1 > 0);
             assert!(config.mining_ratio.0 + config.mining_ratio.1 > 0);
@@ -218,6 +222,17 @@ decl_storage! {
                 asset: config.mining_ratio.0,
                 staking: config.mining_ratio.1,
             });
+            ValidatorCandidateRequirement::<T>::put(BondRequirement {
+                self_bonded: config.candidate_requirement.0,
+                total: config.candidate_requirement.1,
+            });
+            Immortals::<T>::put(
+                config
+                    .validators
+                    .iter()
+                    .map(|(validator, _, _)| validator.clone())
+                    .collect::<Vec<_>>(),
+            );
 
             for (validator, referral_id, balance) in &config.validators {
                 assert!(
@@ -491,17 +506,30 @@ decl_module! {
             ValidatorBondingDuration::<T>::put(new);
         }
 
-        // FIXME: add to WeightInfo once it's stable.
-        #[weight = 10_000_000]
+        #[weight = T::WeightInfo::set_minimum_penalty()]
         fn set_minimum_penalty(origin, #[compact] new: BalanceOf<T>) {
             ensure_root(origin)?;
             MinimumPenalty::<T>::put(new);
         }
 
-        #[weight = 10_000_000]
+        #[weight = T::WeightInfo::set_sessions_per_era()]
         fn set_sessions_per_era(origin, #[compact] new: SessionIndex) {
             ensure_root(origin)?;
             SessionsPerEra::put(new);
+        }
+
+        #[weight = 10_000_000]
+        fn set_immortals(origin, new: Vec<T::AccountId>) {
+            ensure_root(origin)?;
+            ensure!(
+                new.iter().find(|&v| !Self::is_validator(v)).is_none(),
+                Error::<T>::NotValidator
+            );
+            if new.is_empty() {
+                Immortals::<T>::kill()
+            } else {
+                Immortals::<T>::put(new);
+            }
         }
     }
 }
@@ -551,8 +579,9 @@ impl<T: Trait> xpallet_support::traits::Validator<T::AccountId> for Module<T> {
 }
 
 impl<T: Trait> Module<T> {
+    /// Initializes the validators exported from ChainX 1.0.
     #[cfg(feature = "std")]
-    pub fn initialize_validators(
+    pub fn initialize_legacy_validators(
         validators: &[xp_genesis_builder::ValidatorInfo<T::AccountId, BalanceOf<T>>],
     ) -> DispatchResult {
         for xp_genesis_builder::ValidatorInfo {

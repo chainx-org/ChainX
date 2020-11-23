@@ -35,7 +35,7 @@ impl<T: Trait> Module<T> {
     ///
     /// Otherwise the candidate will be **forced to be chilled**.
     fn meet_candidate_threshold(who: &T::AccountId) -> bool {
-        let BondRequirement { self_bonded, total } = Self::validator_bond_requirement();
+        let BondRequirement { self_bonded, total } = Self::validator_candidate_requirement();
         let threshold_satisfied =
             Self::validator_self_bonded(who) >= self_bonded && Self::total_votes_of(who) >= total;
 
@@ -81,6 +81,37 @@ impl<T: Trait> Module<T> {
             .take(desired_validator_count)
             .map(|(_, v)| v)
             .collect::<Vec<_>>();
+
+        // Remove the immortals once Sudo is removed.
+        if let Some(immortals) = Self::immortals() {
+            // since the genesis validators have the same votes, it's ok to not sort them.
+            let unwanted_losers = immortals
+                .iter()
+                .filter(|i| !validators.contains(i))
+                .collect::<Vec<_>>();
+
+            // If we are here, the returned validators are not ensured to be sorted.
+            if !unwanted_losers.is_empty() {
+                let mut validators_without_immortals = validators
+                    .into_iter()
+                    .filter(|v| !immortals.contains(v))
+                    .collect::<Vec<_>>();
+
+                for _ in unwanted_losers {
+                    if !validators_without_immortals.is_empty() {
+                        // Pop out the validator with fewest votes.
+                        validators_without_immortals.pop();
+                    }
+                }
+
+                let mut validators =
+                    Vec::with_capacity(validators_without_immortals.len() + immortals.len());
+                validators.extend_from_slice(&validators_without_immortals);
+                validators.extend_from_slice(&immortals);
+
+                return Some(validators);
+            }
+        }
 
         // Always return Some(new_validators).
         Some(validators)
