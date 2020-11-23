@@ -126,6 +126,25 @@ impl Filter<Call> for BaseFilter {
         use frame_support::dispatch::GetCallMetadata;
         match call {
             Call::Currencies(_) => return false, // forbidden Currencies call now
+            Call::Democracy(_)
+            | Call::Council(_)
+            | Call::TechnicalCommittee(_)
+            | Call::Elections(_)
+            | Call::TechnicalMembership(_)
+            | Call::Treasury(_)
+            | Call::Identity(_)
+            | Call::Indices(_)
+            | Call::Balances(_)
+            | Call::Utility(_)
+            | Call::Multisig(_) => return false,
+            Call::XAssetsRegistrar(_)
+            | Call::XAssets(_)
+            | Call::XStaking(_)
+            | Call::XMiningAsset(_)
+            | Call::XGatewayBitcoin(_)
+            | Call::XGatewayCommon(_)
+            | Call::XGatewayRecords(_)
+            | Call::XSpot(_) => return false,
             _ => {}
         }
         let metadata = call.get_call_metadata();

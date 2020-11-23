@@ -698,7 +698,6 @@ dependencies = [
  "chainx-primitives",
  "chainx-rpc",
  "chainx-runtime",
- "chainx-runtime-common",
  "frame-benchmarking-cli",
  "futures 0.3.8",
  "hex",
@@ -971,32 +970,6 @@ dependencies = [
  "xpallet-system",
  "xpallet-transaction-fee",
  "xpallet-transaction-fee-rpc-runtime-api",
-]
-
-[[package]]
-name = "chainx-runtime-common"
-version = "2.0.0-beta.0"
-dependencies = [
- "chainx-primitives",
- "frame-support",
- "pallet-balances",
- "parity-scale-codec",
- "smallvec 1.4.2",
- "sp-api",
- "sp-authority-discovery",
- "sp-block-builder",
- "sp-consensus-babe",
- "sp-core",
- "sp-inherents",
- "sp-io",
- "sp-offchain",
- "sp-runtime",
- "sp-std",
- "sp-transaction-pool",
- "sp-version",
- "xpallet-gateway-common",
- "xpallet-mining-staking",
- "xpallet-transaction-fee",
 ]
 
 [[package]]
