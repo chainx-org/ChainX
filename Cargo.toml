@@ -113,7 +113,7 @@ members = [
     "primitives/rpc",
     "primitives/runtime",
     "rpc",
-    "runtime",
+    "runtime/chainx",
 
     "xpallets/assets",
     "xpallets/assets/rpc",
