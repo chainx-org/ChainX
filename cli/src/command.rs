@@ -72,7 +72,7 @@ fn load_spec(id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
                 // TODO more better hint
                 return Err("not a valid path or just allow [\"dev\", \"local\", \"staging\", \"benchmarks\"]".into());
             }
-            Box::new(chain_spec::ChainSpec::from_json_file(p)?)
+            Box::new(chain_spec::ChainXChainSpec::from_json_file(p)?)
         }
     })
 }
