@@ -80,7 +80,7 @@ impl<T: Trait> Module<T> {
                             ..
                         } = ClaimRestrictionOf::<T>::get(&asset_id);
                         let insufficient_stake =
-                            Self::need_more_staking(&who, dividend, staking_requirement)
+                            Self::need_more_stake(&who, dividend, staking_requirement)
                                 .unwrap_or_default();
                         let other = dividend / 10u32.saturated_into::<BalanceOf<T>>();
                         let own = dividend - other;

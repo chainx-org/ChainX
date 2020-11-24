@@ -260,7 +260,7 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    fn need_more_staking(
+    fn need_more_stake(
         who: &T::AccountId,
         total_dividend: BalanceOf<T>,
         staking_requirement: StakingRequirement,
@@ -292,7 +292,7 @@ impl<T: Trait> Module<T> {
         total_dividend: BalanceOf<T>,
         staking_requirement: StakingRequirement,
     ) -> Result<(), Error<T>> {
-        match Self::need_more_staking(who, total_dividend, staking_requirement) {
+        match Self::need_more_stake(who, total_dividend, staking_requirement) {
             Some(_) => Err(Error::<T>::InsufficientStaking),
             None => Ok(()),
         }
