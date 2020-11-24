@@ -9,7 +9,7 @@ frame-benchmarking = "2.0.0"
 sc-executor = "0.8.0"
 
 # ChainX runtime
-chainx-runtime = { path = "../runtime" }
+chainx-runtime = { path = "../runtime/chainx" }
 
 # ChainX primitives
 xp-io = { path = "../primitives/io" }
