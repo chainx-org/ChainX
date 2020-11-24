@@ -48,9 +48,7 @@ impl SubstrateCli for Cli {
 
 fn load_spec(id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
     Ok(match id {
-        "" | "mainnet" => {
-            return Err("mainnet is not ready, please use --chain=testnet".into());
-        }
+        "" | "mainnet" => Box::new(chain_spec::mainnet_config()?),
         "dev" => Box::new(chain_spec::development_config()?),
         "local" => Box::new(chain_spec::local_testnet_config()?),
         "benchmarks" => {

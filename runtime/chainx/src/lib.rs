@@ -124,6 +124,17 @@ pub struct BaseFilter;
 impl Filter<Call> for BaseFilter {
     fn filter(call: &Call) -> bool {
         use frame_support::dispatch::GetCallMetadata;
+
+        // Enable force_transfer so that we can transfer some balances to the tech committee members.
+        match call {
+            Call::Balances(balances_call) => {
+                if let pallet_balances::Call::force_transfer(..) = balances_call {
+                    return true;
+                }
+            }
+            _ => {}
+        }
+
         match call {
             Call::Currencies(_) => return false, // forbidden Currencies call now
             Call::Democracy(_)
@@ -141,12 +152,14 @@ impl Filter<Call> for BaseFilter {
             | Call::XAssets(_)
             | Call::XStaking(_)
             | Call::XMiningAsset(_)
+            // NOTE: Bitcoin and Spot will be enabled after the above X Modules.
             | Call::XGatewayBitcoin(_)
             | Call::XGatewayCommon(_)
             | Call::XGatewayRecords(_)
             | Call::XSpot(_) => return false,
             _ => {}
         }
+
         let metadata = call.get_call_metadata();
         !XSystem::is_paused(metadata)
     }
@@ -868,8 +881,9 @@ impl xpallet_support::traits::TreasuryAccount<AccountId> for SimpleTreasuryAccou
 }
 
 parameter_types! {
-    /// FIXME: replace this when the migration offset is determinated.
-    pub const MigrationSessionOffset: SessionIndex = 500;
+    // Total issuance is 7723350PCX by the end of ChainX 1.0.
+    // 210000 - (7723350 / 50) = 55533
+    pub const MigrationSessionOffset: SessionIndex = 55533;
     pub const MinimumReferralId: u32 = 2;
     pub const MaximumReferralId: u32 = 12;
 }
