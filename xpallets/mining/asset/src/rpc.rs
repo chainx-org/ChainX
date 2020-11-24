@@ -7,14 +7,14 @@ use codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
 use frame_support::storage::{IterableStorageDoubleMap, StorageMap, StorageValue};
-use sp_runtime::RuntimeDebug;
+use sp_runtime::{RuntimeDebug, SaturatedConversion};
 
 use chainx_primitives::AssetId;
 use xp_mining_common::RewardPotAccountFor;
 
 use crate::{
-    types::*, AssetLedgers, BalanceOf, FixedAssetPowerOf, MinerLedgers, MiningPrevilegedAssets,
-    Module, Trait,
+    types::*, AssetLedgers, BalanceOf, ClaimRestrictionOf, FixedAssetPowerOf, MinerLedgers,
+    MiningPrevilegedAssets, Module, Trait,
 };
 
 /// Mining asset info.
@@ -28,6 +28,19 @@ pub struct MiningAssetInfo<AccountId, Balance, MiningWeight, BlockNumber> {
     pub reward_pot_balance: Balance,
     #[cfg_attr(feature = "std", serde(flatten))]
     pub ledger_info: AssetLedger<MiningWeight, BlockNumber>,
+}
+
+/// Detailed dividend info of asset miner.
+#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
+pub struct MiningDividendInfo<Balance> {
+    /// Actual dividend balance that belongs to the claimer.
+    pub own: Balance,
+    /// Dividend cut(10% of total) for the referral of claimer or treasury.
+    pub other: Balance,
+    /// Required more stake to claim the mining dividend.
+    pub insufficient_stake: Balance,
 }
 
 impl<T: Trait> Module<T> {
@@ -53,13 +66,33 @@ impl<T: Trait> Module<T> {
             .collect()
     }
 
-    /// Get the asset mining dividends info given the staker AccountId.
-    pub fn mining_dividend(who: T::AccountId) -> BTreeMap<AssetId, BalanceOf<T>> {
+    /// Get the asset mining dividends info given the miner AccountId.
+    pub fn mining_dividend(
+        who: T::AccountId,
+    ) -> BTreeMap<AssetId, MiningDividendInfo<BalanceOf<T>>> {
         let current_block = <frame_system::Module<T>>::block_number();
         MinerLedgers::<T>::iter_prefix(&who)
             .filter_map(|(asset_id, _)| {
                 match Self::compute_dividend_at(&who, &asset_id, current_block) {
-                    Ok(dividend) => Some((asset_id, dividend)),
+                    Ok(dividend) => {
+                        let ClaimRestriction {
+                            staking_requirement,
+                            ..
+                        } = ClaimRestrictionOf::<T>::get(&asset_id);
+                        let insufficient_stake =
+                            Self::need_more_stake(&who, dividend, staking_requirement)
+                                .unwrap_or_default();
+                        let other = dividend / 10u32.saturated_into::<BalanceOf<T>>();
+                        let own = dividend - other;
+                        Some((
+                            asset_id,
+                            MiningDividendInfo {
+                                own,
+                                other,
+                                insufficient_stake,
+                            },
+                        ))
+                    }
                     Err(_) => None,
                 }
             })

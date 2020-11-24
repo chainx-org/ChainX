@@ -209,6 +209,11 @@
         "height": "BlockNumber",
         "state": "WithdrawalState"
     },
+    "RpcMiningDividendInfo": {
+        "own": "RpcBalance",
+        "other": "RpcBalance",
+        "insufficient_stake": "RpcBalance"
+    },
     "RpcInclusionFee": {
         "base_fee": "RpcBalance",
         "len_fee": "RpcBalance",
