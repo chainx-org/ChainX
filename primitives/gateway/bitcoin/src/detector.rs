@@ -121,17 +121,17 @@ impl BtcTxTypeDetector {
     ///   **Solution**: call `push_transaction` with the previous transaction of the transaction
     ///   with 1 outputs to get the BTC address.
     ///
-    /// - 2 outputs (e.g. txid=e3639343ca806fe3bf2513971b79130eef88aa05000ce538c6af199dd8ef3ca7):
-    ///   - X-BTC hot trustee address (deposit value)
-    ///   - Null data transaction (opreturn data with valid account info)
-    ///
     /// - 2 outputs (e.g. txid=7cd6d752c51100c7bc51657433b52facd04a0fea203b8e7776e6420c477912c2):
     ///   - X-BTC hot trustee address (deposit value)
     ///   - Change address (don't care)
     ///
     ///   **Solution**: send a correct deposit transaction with the same BTC address.
     ///
-    /// - 3 outputs (e.g. txid=003e7e005b172fe0046fd06a83679fbcdc5e3dd64c8ef9295662a463dea486aa):
+    /// - 2 outputs (e.g. txid=e3639343ca806fe3bf2513971b79130eef88aa05000ce538c6af199dd8ef3ca7) (Recommended):
+    ///   - X-BTC hot trustee address (deposit value)
+    ///   - Null data transaction (opreturn data with valid account info)
+    ///
+    /// - 3 outputs (e.g. txid=003e7e005b172fe0046fd06a83679fbcdc5e3dd64c8ef9295662a463dea486aa) (Recommended):
     ///   - X-BTC hot trustee address (deposit value)
     ///   - Change address (don't care)
     ///   - Null data transaction (opreturn data with valid account info)

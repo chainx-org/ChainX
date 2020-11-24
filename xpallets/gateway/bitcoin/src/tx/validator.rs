@@ -9,7 +9,6 @@ use sp_std::prelude::Vec;
 use light_bitcoin::{chain::Transaction, primitives::H256, script::Script};
 
 use xp_logging::{debug, error};
-use xpallet_support::try_hex;
 
 use crate::{trustee::get_hot_trustee_redeem_script, types::BtcRelayedTx, Error, Trait};
 
@@ -97,7 +96,7 @@ pub fn parse_and_check_signed_tx_impl<T: Trait>(
             if !verify {
                 error!(
                     "[parse_and_check_signed_tx] Verify sig failed, tx:{:?}, input:{:?}, bytes_redeem_script:{:?}",
-                    tx, i, try_hex!(&bytes_redeem_script)
+                    tx, i, bytes_redeem_script
                 );
                 return Err(Error::<T>::VerifySignFailed.into());
             }

@@ -6,7 +6,7 @@ use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 use chainx_primitives::{AssetId, ChainAddress, ReferralId};
 use xp_logging::{debug, error, info, warn};
 use xpallet_assets::Chain;
-use xpallet_support::{str, traits::Validator, try_addr};
+use xpallet_support::{traits::Validator, try_addr, try_str};
 
 use crate::traits::{AddrBinding, ChannelBinding};
 use crate::{AddressBinding, BoundAddressOf, Module, Trait};
@@ -41,7 +41,7 @@ impl<T: Trait> ChannelBinding<T::AccountId> for Module<T> {
             } else {
                 warn!(
                     "[update_channel_binding] {:?} has no channel, cannot update binding",
-                    str!(&name)
+                    try_str(name)
                 );
             };
         };
@@ -79,7 +79,7 @@ impl<T: Trait, Addr: Into<Vec<u8>>> AddrBinding<T::AccountId, Addr> for Module<T
         info!(
             "[update_addr_binding] Update address binding:[chain:{:?}, addr:{:?}, who:{:?}]",
             chain,
-            try_addr!(address),
+            try_addr(&address),
             who,
         );
         AddressBinding::<T>::insert(chain, address, who);

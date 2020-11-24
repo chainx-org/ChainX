@@ -9356,7 +9356,6 @@ dependencies = [
  "sp-runtime",
  "xp-rpc",
  "xpallet-gateway-records-rpc-runtime-api",
- "xpallet-support",
 ]
 
 [[package]]
