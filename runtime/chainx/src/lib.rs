@@ -46,7 +46,7 @@ use pallet_session::historical as pallet_session_historical;
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 
 use xpallet_dex_spot::{Depth, FullPairInfo, RpcOrder, TradingPairId};
-use xpallet_mining_asset::{MinerLedger, MiningAssetInfo};
+use xpallet_mining_asset::{MinerLedger, MiningAssetInfo, MiningDividendInfo};
 use xpallet_mining_staking::{NominatorInfo, NominatorLedger, ValidatorInfo};
 use xpallet_support::traits::MultisigAddressFor;
 
@@ -1264,7 +1264,7 @@ impl_runtime_apis! {
             XMiningAsset::mining_assets()
         }
 
-        fn mining_dividend(who: AccountId) -> BTreeMap<AssetId, Balance> {
+        fn mining_dividend(who: AccountId) -> BTreeMap<AssetId, MiningDividendInfo<Balance>> {
             XMiningAsset::mining_dividend(who)
         }
 

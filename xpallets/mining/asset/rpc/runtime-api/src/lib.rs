@@ -10,7 +10,9 @@ use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 use codec::Codec;
 
 pub use chainx_primitives::AssetId;
-pub use xpallet_mining_asset::{AssetLedger, MinerLedger, MiningAssetInfo, MiningWeight};
+pub use xpallet_mining_asset::{
+    AssetLedger, MinerLedger, MiningAssetInfo, MiningDividendInfo, MiningWeight,
+};
 
 sp_api::decl_runtime_apis! {
     /// The API to query mining asset info.
@@ -25,7 +27,7 @@ sp_api::decl_runtime_apis! {
         fn mining_assets() -> Vec<MiningAssetInfo<AccountId, Balance, MiningWeight, BlockNumber>>;
 
         /// Get the asset mining dividends info given the asset miner AccountId.
-        fn mining_dividend(who: AccountId) -> BTreeMap<AssetId, Balance>;
+        fn mining_dividend(who: AccountId) -> BTreeMap<AssetId, MiningDividendInfo<Balance>>;
 
         /// Get the mining ledger details given the asset miner AccountId.
         fn miner_ledger(who: AccountId) -> BTreeMap<AssetId, MinerLedger<MiningWeight, BlockNumber>>;

@@ -260,6 +260,30 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
+    fn need_more_staking(
+        who: &T::AccountId,
+        total_dividend: BalanceOf<T>,
+        staking_requirement: StakingRequirement,
+    ) -> Option<BalanceOf<T>> {
+        if !staking_requirement.is_zero() {
+            let staking_locked =
+                T::StakingInterface::staked_of(who).saturated_into::<BalanceOf<T>>();
+            let required_stake =
+                staking_requirement.saturated_into::<BalanceOf<T>>() * total_dividend;
+            if staking_locked < required_stake {
+                warn!(
+                    "{:?}'s staked balance is not insufficient, total dividend: {:?}, staked: {:?}, required: {:?}",
+                    who,
+                    total_dividend,
+                    staking_locked,
+                    required_stake
+                );
+                return Some(required_stake - staking_locked);
+            }
+        }
+        None
+    }
+
     /// Returns Ok(_) if the claimer has enough staking locked balance regarding the `total_dividend`.
     ///
     /// This rule doesn't take effect if the staking requirement is zero.
@@ -268,22 +292,10 @@ impl<T: Trait> Module<T> {
         total_dividend: BalanceOf<T>,
         staking_requirement: StakingRequirement,
     ) -> Result<(), Error<T>> {
-        if !staking_requirement.is_zero() {
-            let staking_locked = T::StakingInterface::staked_of(who);
-            if staking_locked.saturated_into::<BalanceOf<T>>()
-                < staking_requirement.saturated_into::<BalanceOf<T>>() * total_dividend
-            {
-                warn!(
-                    "{:?}'s staked balance is not insufficient, total dividend: {:?}, staked: {:?}, required: {:?}",
-                    who,
-                    total_dividend,
-                    staking_locked,
-                    staking_requirement.saturated_into::<BalanceOf<T>>() * total_dividend
-                );
-                return Err(Error::<T>::InsufficientStaking);
-            }
+        match Self::need_more_staking(who, total_dividend, staking_requirement) {
+            Some(_) => Err(Error::<T>::InsufficientStaking),
+            None => Ok(()),
         }
-        Ok(())
     }
 
     fn init_receiver_mining_ledger(
