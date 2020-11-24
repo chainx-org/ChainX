@@ -51,7 +51,7 @@ use xpallet_gateway_common::{
     traits::{AddrBinding, ChannelBinding, TrusteeSession},
     trustees::bitcoin::BtcTrusteeAddrInfo,
 };
-use xpallet_support::{str, try_addr};
+use xpallet_support::try_addr;
 
 pub use self::types::{BtcAddress, BtcParams, BtcTxVerifier, BtcWithdrawalProposal};
 pub use self::weights::WeightInfo;
@@ -370,7 +370,7 @@ decl_module! {
             if let Some(w) = who {
                 remove_pending_deposit::<T>(&addr, &w);
             } else {
-                info!("[remove_pending] Release pending deposit directly, not deposit to someone, addr:{:?}", str!(&addr));
+                info!("[remove_pending] Release pending deposit directly, not deposit to someone, addr:{:?}", try_addr(&addr));
                 PendingDeposits::remove(&addr);
             }
             Ok(())
@@ -430,7 +430,7 @@ impl<T: Trait> ChainT<BalanceOf<T>> for Module<T> {
             error!(
                 "[verify_btc_address] Verify failed, error:{:?}, source addr:{:?}",
                 err,
-                try_addr!(addr)
+                try_addr(addr)
             );
             err
         })?;

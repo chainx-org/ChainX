@@ -242,7 +242,7 @@ impl<T: Trait> Module<T> {
             who,
             asset_id,
             balance,
-            try_addr!(&addr),
+            try_addr(&addr),
             ext
         );
         let height = frame_system::Module::<T>::block_number();

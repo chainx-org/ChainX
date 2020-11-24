@@ -19,7 +19,7 @@ use xp_gateway_common::AccountExtractor;
 use xp_logging::{debug, error, info, warn};
 use xpallet_assets::ChainT;
 use xpallet_gateway_common::traits::{AddrBinding, ChannelBinding};
-use xpallet_support::str;
+use xpallet_support::try_str;
 
 pub use self::validator::validate_transaction;
 use crate::{
@@ -117,7 +117,7 @@ fn deposit<T: Trait>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) -> 
             info!(
                 "[deposit] Deposit tx ({:?}) into pending, addr:{:?}, balance:{}",
                 hash_rev(txid),
-                str!(addr2vecu8(&input_addr)),
+                try_str(addr2vecu8(&input_addr)),
                 deposit_info.deposit_value
             );
             BtcTxResult::Success
@@ -174,7 +174,7 @@ fn insert_pending_deposit<T: Trait>(input_address: &Address, txid: H256, balance
             native::debug!(
                 target: xp_logging::RUNTIME_TARGET,
                 "[insert_pending_deposit] Add pending deposit, address:{:?}, txhash:{:?}, balance:{}",
-                str!(addr_bytes),
+                try_str(&addr_bytes),
                 txid,
                 balance
             );

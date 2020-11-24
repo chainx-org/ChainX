@@ -19,7 +19,6 @@ use xpallet_gateway_records_rpc_runtime_api::{
     AssetId, Chain, Withdrawal, WithdrawalRecordId, WithdrawalState,
     XGatewayRecordsApi as GatewayRecordsRuntimeApi,
 };
-use xpallet_support::try_addr;
 
 pub struct XGatewayRecords<C, B> {
     client: Arc<C>,
@@ -152,7 +151,7 @@ impl<AccountId, Balance: Display + FromStr, BlockNumber>
             asset_id: record.asset_id,
             applicant: record.applicant,
             balance: record.balance,
-            addr: format!("{:?}", try_addr!(record.addr)),
+            addr: String::from_utf8_lossy(record.addr.as_ref()).into_owned(),
             ext: String::from_utf8_lossy(record.ext.as_ref()).into_owned(),
             height: record.height,
             state: record.state,
