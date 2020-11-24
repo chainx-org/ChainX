@@ -486,10 +486,14 @@ fn build_genesis(
     let mut assets_endowed = endowed;
     assets_endowed.remove(&PCX);
 
+    let mut initial_authorities_endowed = Balance::default();
     let validators = initial_authorities
         .clone()
         .into_iter()
-        .map(|((validator, referral), _, _, _, _)| (validator, referral, STAKING_LOCKED))
+        .map(|((validator, referral), _, _, _, _)| {
+            initial_authorities_endowed += STAKING_LOCKED;
+            (validator, referral, STAKING_LOCKED)
+        })
         .collect::<Vec<_>>();
     let btc_genesis_trustees = trustees
         .iter()
@@ -589,7 +593,7 @@ fn build_genesis(
         }),
         xpallet_genesis_builder: Some(chainx_dev::XGenesisBuilderConfig {
             params: crate::genesis::genesis_builder_params(),
-            initial_authorities_endowed: total_endowed,
+            initial_authorities_endowed,
             root_endowed: 0,
         }),
     }
