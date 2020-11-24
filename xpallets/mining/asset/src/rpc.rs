@@ -40,7 +40,7 @@ pub struct MiningDividendInfo<Balance> {
     /// Dividend cut(10% of total) for the referral of claimer or treasury.
     pub other: Balance,
     /// Required more stake to claim the mining dividend.
-    pub required_stake: Balance,
+    pub insufficient_stake: Balance,
 }
 
 impl<T: Trait> Module<T> {
@@ -79,7 +79,7 @@ impl<T: Trait> Module<T> {
                             staking_requirement,
                             ..
                         } = ClaimRestrictionOf::<T>::get(&asset_id);
-                        let required_stake =
+                        let insufficient_stake =
                             Self::need_more_staking(&who, dividend, staking_requirement)
                                 .unwrap_or_default();
                         let other = dividend / 10u32.saturated_into::<BalanceOf<T>>();
@@ -89,7 +89,7 @@ impl<T: Trait> Module<T> {
                             MiningDividendInfo {
                                 own,
                                 other,
-                                required_stake,
+                                insufficient_stake,
                             },
                         ))
                     }

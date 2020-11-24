@@ -212,7 +212,7 @@
     "RpcMiningDividendInfo": {
         "own": "RpcBalance",
         "other": "RpcBalance",
-        "required_stake": "RpcBalance"
+        "insufficient_stake": "RpcBalance"
     },
     "RpcInclusionFee": {
         "base_fee": "RpcBalance",
