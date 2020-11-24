@@ -147,7 +147,7 @@ where
                             MiningDividendInfo {
                                 own: info.own.into(),
                                 other: info.other.into(),
-                                required_stake: info.required_stake.into(),
+                                insufficient_stake: info.insufficient_stake.into(),
                             },
                         )
                     })
