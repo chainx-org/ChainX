@@ -56,7 +56,7 @@ fn look_back_confirmed_header<T: Trait>(
     let len = chain.len();
     if len == confirmations as usize {
         // confirmations must more than 0, thus, chain.last() must be some
-        (chain.last().map(Clone::clone), chain)
+        (chain.last().cloned(), chain)
     } else {
         (None, chain)
     }
