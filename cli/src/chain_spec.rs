@@ -252,7 +252,6 @@ pub fn local_testnet_config() -> Result<ChainXDevChainSpec, String> {
     ))
 }
 
-#[allow(unused)]
 pub fn mainnet_config() -> Result<ChainXChainSpec, String> {
     let wasm_binary =
         chainx::WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
@@ -373,14 +372,13 @@ pub fn mainnet_config() -> Result<ChainXChainSpec, String> {
             root_key.clone(),
             vesting_key.clone(),
             genesis_assets(),
-            // FIXME update btc mainnet header
             btc_genesis_params(include_str!("res/btc_genesis_params_mainnet.json")),
             crate::genesis::bitcoin::mainnet_trustees(),
         )
     };
 
     Ok(ChainXChainSpec::from_genesis(
-        "ChainX",
+        "ChainX CC1",
         "chainx",
         ChainType::Live,
         constructor,
