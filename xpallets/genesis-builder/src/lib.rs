@@ -56,6 +56,7 @@ mod genesis {
         use frame_support::{sp_runtime::traits::Saturating, traits::StoredMap, StorageValue};
         use pallet_balances::AccountData;
         use xp_genesis_builder::{BalancesParams, FreeBalanceInfo, WellknownAccounts};
+        use xp_protocol::X_BTC;
         use xpallet_support::traits::TreasuryAccount;
 
         /// Returns the validator account by the given reward pot account.
@@ -81,6 +82,7 @@ mod genesis {
                 legacy_council,
                 legacy_team,
                 legacy_pots,
+                legacy_xbtc_pot,
             } = wellknown_accounts;
 
             let set_free_balance = |who: &T::AccountId, free: &T::Balance| {
@@ -107,6 +109,9 @@ mod genesis {
                 } else if *who == *legacy_team {
                     let vesting_free = *free - initial_authorities_endowed;
                     set_free_balance(&vesting_account, &vesting_free);
+                } else if *who == *legacy_xbtc_pot {
+                    let new_xbtc_pot = xpallet_mining_asset::Module::<T>::reward_pot_for(&X_BTC);
+                    set_free_balance(&new_xbtc_pot, free);
                 } else if let Some(validator) = validator_for::<T, _>(who, legacy_pots.iter()) {
                     let new_pot = xpallet_mining_staking::Module::<T>::reward_pot_for(validator);
                     set_free_balance(&new_pot, free);

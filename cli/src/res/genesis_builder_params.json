@@ -1202,10 +1202,6 @@
         "free": 12016
       },
       {
-        "who": "5Pr1XZ817z5S8p1dsSQZXQgMqQAobwKM4bWQpczEyj9BzfJA",
-        "free": 4200524339732
-      },
-      {
         "who": "5Pr3ohCgKmT7gTzrs8F7RwsVU7EPQAnAZhFvdiR2Nb3cAv7c",
         "free": 74900
       },
@@ -12750,10 +12746,6 @@
         "free": 91774490999
       },
       {
-        "who": "5RzDbX1ZiQZuAuxMGBn6WzvZiJnGEoainSWj9VWe27K6EcLz",
-        "free": 43497602615876
-      },
-      {
         "who": "5RzDvg7wahbfiTeC94rmm9E6y1s2cttH6UWxZMtRPpWuA2oD",
         "free": 68911802
       },
@@ -18628,10 +18620,6 @@
       {
         "who": "5T5n9ezTwp4mehaWSGKm7jkz1d4EzMXYsQy9vKtaVVa8VFKT",
         "free": 4592509
-      },
-      {
-        "who": "5T5oFEBXxgjkjtUKM926ZPJzNVf4w8baTgEa1JKLA1bD9J6D",
-        "free": 5802423884122
       },
       {
         "who": "5T5pkxpN88G7BNF1egN3GyhDCKH3fsbC2jgwR5Q9cUTWKNyK",
@@ -31164,6 +31152,10 @@
       {
         "who": "5VRXG3mLqdnbChxSYNKVbka8XiPNuHrGrjq6rrbQBm6vHhtw",
         "free": 162542391
+      },
+      {
+        "who": "5RzDbX1ZiQZuAuxMGBn6WzvZiJnGEoainSWj9VWe27K6EcLz",
+        "free": 53500550839730
       }
     ],
     "wellknown_accounts": {
@@ -32054,7 +32046,8 @@
           "5TwmkEqbNbYP3o6sA3syQMTD8sYMQtcGnBkBiLRhAiRo6mFF",
           "5VP6gBdDcaB1MPXqmk6xNF7YxUne714fmwR5kLSc75BhDfGa"
         ]
-      ]
+      ],
+      "legacy_xbtc_pot": "5S92a9mNMMaRN9KDp582p54DYNqBADVUUv6jxmt3AC2tat4g"
     }
   },
   "xassets": [
