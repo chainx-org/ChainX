@@ -7,7 +7,7 @@
 
 ## Documentation
 
-Please refer to [http://doc.chainx.org/](http://doc.chainx.org/) for building and developing on ChainX platform.
+Please refer to the [docs](https://chainx-org.github.io/documentation) for building and developing on ChainX platform.
 
 ## Contribution
 
