@@ -100,6 +100,11 @@
         "lastTotalMiningWeight": "RpcMiningWeight",
         "lastTotalMiningWeightUpdate": "BlockNumber"
     },
+    "MiningDividendInfo": {
+        "own": "Balance",
+        "other": "Balance",
+        "requiredStake": "Balance"
+    },
     "AssetLedger": {
         "lastTotalMiningWeight": "MiningWeight",
         "lastTotalMiningWeightUpdate": "BlockNumber"
@@ -372,6 +377,11 @@
         "ext": "String",
         "height": "BlockNumber",
         "state": "WithdrawalState"
+    },
+    "RpcMiningDividendInfo": {
+        "own": "RpcBalance",
+        "other": "RpcBalance",
+        "requiredStake": "RpcBalance"
     },
     "RpcInclusionFee": {
         "baseFee": "RpcBalance",

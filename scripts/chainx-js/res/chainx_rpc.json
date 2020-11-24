@@ -260,7 +260,7 @@
                     "isOptional": true
                 }
             ],
-            "type": "BTreeMap<AssetId, RpcBalance<Balance>>"
+            "type": "BTreeMap<AssetId, RpcMiningDividendInfo>"
         },
         "getMinerLedgerByAccount": {
             "description": "Get the mining ledger details given the asset miner AccountId.",
