@@ -53,7 +53,7 @@ NEW_TYPES = [
     "Token", "TradingHistoryIndex", "TradingPairId", "TradingPairInfo",
     "TradingPairProfile", "UnbondedIndex", "ValidatorLedger",
     "ValidatorProfile", "MiningAssetInfo", "LockedType", "NominatorInfo",
-    "Unbonded", "FeeDetails", "InclusionFee"
+    "Unbonded", "FeeDetails", "InclusionFee", "MiningDividendInfo"
 ]
 
 # Change the working directory to project root directory.

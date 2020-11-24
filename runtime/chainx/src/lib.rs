@@ -46,7 +46,7 @@ use pallet_session::historical as pallet_session_historical;
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 
 use xpallet_dex_spot::{Depth, FullPairInfo, RpcOrder, TradingPairId};
-use xpallet_mining_asset::{MinerLedger, MiningAssetInfo};
+use xpallet_mining_asset::{MinerLedger, MiningAssetInfo, MiningDividendInfo};
 use xpallet_mining_staking::{NominatorInfo, NominatorLedger, ValidatorInfo};
 use xpallet_support::traits::MultisigAddressFor;
 
@@ -126,6 +126,25 @@ impl Filter<Call> for BaseFilter {
         use frame_support::dispatch::GetCallMetadata;
         match call {
             Call::Currencies(_) => return false, // forbidden Currencies call now
+            Call::Democracy(_)
+            | Call::Council(_)
+            | Call::TechnicalCommittee(_)
+            | Call::Elections(_)
+            | Call::TechnicalMembership(_)
+            | Call::Treasury(_)
+            | Call::Identity(_)
+            | Call::Indices(_)
+            | Call::Balances(_)
+            | Call::Utility(_)
+            | Call::Multisig(_) => return false,
+            Call::XAssetsRegistrar(_)
+            | Call::XAssets(_)
+            | Call::XStaking(_)
+            | Call::XMiningAsset(_)
+            | Call::XGatewayBitcoin(_)
+            | Call::XGatewayCommon(_)
+            | Call::XGatewayRecords(_)
+            | Call::XSpot(_) => return false,
             _ => {}
         }
         let metadata = call.get_call_metadata();
@@ -800,7 +819,7 @@ impl xpallet_assets::Trait for Runtime {
     type TreasuryAccount = SimpleTreasuryAccount;
     type OnCreatedAccount = frame_system::CallOnCreatedAccount<Runtime>;
     type OnAssetChanged = XMiningAsset;
-    type WeightInfo = ();
+    type WeightInfo = xpallet_assets::weights::SubstrateWeight<Runtime>;
 }
 
 impl xpallet_gateway_records::Trait for Runtime {
@@ -832,7 +851,7 @@ impl xpallet_gateway_bitcoin::Trait for Runtime {
     type TrusteeOrigin = EnsureSignedBy<trustees::bitcoin::BtcTrusteeMultisig<Runtime>, AccountId>;
     type Channel = XGatewayCommon;
     type AddrBinding = XGatewayCommon;
-    type WeightInfo = ();
+    type WeightInfo = xpallet_gateway_bitcoin::weights::SubstrateWeight<Runtime>;
 }
 
 impl xpallet_dex_spot::Trait for Runtime {
@@ -1245,7 +1264,7 @@ impl_runtime_apis! {
             XMiningAsset::mining_assets()
         }
 
-        fn mining_dividend(who: AccountId) -> BTreeMap<AssetId, Balance> {
+        fn mining_dividend(who: AccountId) -> BTreeMap<AssetId, MiningDividendInfo<Balance>> {
             XMiningAsset::mining_dividend(who)
         }
 

@@ -49,11 +49,17 @@ sp-authority-discovery = "2.0.0"
 pallet-im-online = "2.0.0"
 
 chainx-executor = { path = "../executor" }
+chainx-dev-runtime = { path = "../runtime/dev" }
 chainx-primitives = { path = "../primitives" }
 chainx-rpc = { path = "../rpc" }
-chainx-runtime = { path = "../runtime" }
-xp-genesis-builder  = { path  = "../primitives/genesis-builder" }
+chainx-runtime = { path = "../runtime/chainx" }
+
+xp-assets-registrar = { path  = "../primitives/assets-registrar" }
+xp-genesis-builder = { path  = "../primitives/genesis-builder" }
 xp-protocol = { path = "../primitives/protocol" }
+
+xpallet-gateway-bitcoin = { path  = "../xpallets/gateway/bitcoin" }
+xpallet-gateway-common = { path  = "../xpallets/gateway/common" }
 
 [build-dependencies]
 substrate-build-script-utils = "2.0.0"
@@ -73,4 +79,5 @@ wasmtime = [
 ]
 runtime-benchmarks = [
     "chainx-runtime/runtime-benchmarks",
+    "chainx-dev-runtime/runtime-benchmarks",
 ]

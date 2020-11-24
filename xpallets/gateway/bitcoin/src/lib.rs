@@ -8,7 +8,7 @@ pub mod header;
 pub mod trustee;
 pub mod tx;
 mod types;
-mod weight_info;
+pub mod weights;
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
 mod benchmarking;
@@ -51,9 +51,10 @@ use xpallet_gateway_common::{
     traits::{AddrBinding, ChannelBinding, TrusteeSession},
     trustees::bitcoin::BtcTrusteeAddrInfo,
 };
-use xpallet_support::{str, try_addr};
+use xpallet_support::try_addr;
 
 pub use self::types::{BtcAddress, BtcParams, BtcTxVerifier, BtcWithdrawalProposal};
+pub use self::weights::WeightInfo;
 use self::{
     trustee::{get_last_trustee_address_pair, get_trustee_address_pair},
     tx::remove_pending_deposit,
@@ -61,7 +62,6 @@ use self::{
         BtcDepositCache, BtcHeaderIndex, BtcHeaderInfo, BtcRelayedTx, BtcRelayedTxInfo,
         BtcTxResult, BtcTxState,
     },
-    weight_info::WeightInfo,
 };
 
 // syntactic sugar for native log.
@@ -370,7 +370,7 @@ decl_module! {
             if let Some(w) = who {
                 remove_pending_deposit::<T>(&addr, &w);
             } else {
-                info!("[remove_pending] Release pending deposit directly, not deposit to someone, addr:{:?}", str!(&addr));
+                info!("[remove_pending] Release pending deposit directly, not deposit to someone, addr:{:?}", try_addr(&addr));
                 PendingDeposits::remove(&addr);
             }
             Ok(())
@@ -430,7 +430,7 @@ impl<T: Trait> ChainT<BalanceOf<T>> for Module<T> {
             error!(
                 "[verify_btc_address] Verify failed, error:{:?}, source addr:{:?}",
                 err,
-                try_addr!(addr)
+                try_addr(addr)
             );
             err
         })?;

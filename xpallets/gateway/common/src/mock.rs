@@ -1,11 +1,8 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use std::cell::RefCell;
-use std::time::Duration;
+use std::{cell::RefCell, convert::TryFrom, time::Duration};
 
 use codec::{Decode, Encode};
-
-// Substrate
 use frame_support::traits::UnixTime;
 use frame_support::{impl_outer_origin, parameter_types, sp_io, weights::Weight};
 use frame_system::EnsureSignedBy;
@@ -14,18 +11,20 @@ use sp_io::hashing::blake2_256;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
-    AccountId32, Perbill,
+    AccountId32, DispatchError, DispatchResult, Perbill,
 };
 
 use chainx_primitives::AssetId;
 pub use xp_protocol::{X_BTC, X_ETH};
-use xpallet_assets::AssetRestrictions;
+use xpallet_assets::{AssetRestrictions, BalanceOf, ChainT, WithdrawalLimit};
 use xpallet_assets_registrar::{AssetInfo, Chain};
 use xpallet_support::traits::{MultisigAddressFor, Validator};
 
-use super::mock_impls;
-use crate::trustees;
-use crate::types::TrusteeInfoConfig;
+use crate::{
+    traits::TrusteeForChain,
+    trustees::bitcoin::{BtcTrusteeAddrInfo, BtcTrusteeMultisig, BtcTrusteeType},
+    types::*,
+};
 
 pub(crate) type AccountId = AccountId32;
 pub(crate) type BlockNumber = u64;
@@ -47,7 +46,6 @@ parameter_types! {
     pub const MaximumBlockLength: u32 = 2 * 1024;
     pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
 }
-
 impl frame_system::Trait for Test {
     type BaseCallFilter = ();
     type Origin = Origin;
@@ -89,18 +87,15 @@ impl pallet_balances::Trait for Test {
     type WeightInfo = ();
 }
 
-// assets
 parameter_types! {
     pub const ChainXAssetId: AssetId = 0;
 }
-
 impl xpallet_assets_registrar::Trait for Test {
     type Event = ();
     type NativeAssetId = ChainXAssetId;
     type RegistrarHandler = ();
     type WeightInfo = ();
 }
-
 impl xpallet_assets::Trait for Test {
     type Event = ();
     type Currency = Balances;
@@ -116,38 +111,9 @@ impl xpallet_gateway_records::Trait for Test {
     type WeightInfo = ();
 }
 
-pub struct MultisigAddr;
-impl MultisigAddressFor<AccountId> for MultisigAddr {
-    fn calc_multisig(who: &[AccountId], threshold: u16) -> AccountId {
-        let entropy = (b"modlpy/utilisuba", who, threshold).using_encoded(blake2_256);
-        AccountId::decode(&mut &entropy[..]).unwrap_or_default()
-    }
-}
-
-pub struct AlwaysValidator;
-impl Validator<AccountId> for AlwaysValidator {
-    fn is_validator(_who: &AccountId) -> bool {
-        true
-    }
-
-    fn validator_for(_: &[u8]) -> Option<AccountId> {
-        None
-    }
-}
-
-impl crate::Trait for Test {
-    type Event = ();
-    type Validator = AlwaysValidator;
-    type DetermineMultisigAddress = MultisigAddr;
-    type Bitcoin = mock_impls::MockBitcoin<Test>;
-    type BitcoinTrustee = mock_impls::MockBitcoin<Test>;
-    type WeightInfo = ();
-}
-
 thread_local! {
     pub static NOW: RefCell<Option<Duration>> = RefCell::new(None);
 }
-
 pub struct Timestamp;
 impl UnixTime for Timestamp {
     fn now() -> Duration {
@@ -163,31 +129,85 @@ impl UnixTime for Timestamp {
         })
     }
 }
-
 impl xpallet_gateway_bitcoin::Trait for Test {
     type Event = ();
     type UnixTime = Timestamp;
     type AccountExtractor = ();
     type TrusteeSessionProvider = ();
-    type TrusteeOrigin = EnsureSignedBy<trustees::bitcoin::BtcTrusteeMultisig<Test>, AccountId>;
-    type Channel = (); // mock_impls::MockCommon<Test>;
-    type AddrBinding = (); //mock_impls::MockCommon<Test>;
+    type TrusteeOrigin = EnsureSignedBy<BtcTrusteeMultisig<Test>, AccountId>;
+    type Channel = ();
+    type AddrBinding = ();
     type WeightInfo = ();
 }
 
-pub(crate) fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {
-    (
-        X_BTC,
-        AssetInfo::new::<Test>(
-            b"X-BTC".to_vec(),
-            b"X-BTC".to_vec(),
-            Chain::Bitcoin,
-            8,
-            b"ChainX's cross-chain Bitcoin".to_vec(),
-        )
-        .unwrap(),
-        AssetRestrictions::DESTROY_USABLE,
-    )
+pub struct MultisigAddr;
+impl MultisigAddressFor<AccountId> for MultisigAddr {
+    fn calc_multisig(who: &[AccountId], threshold: u16) -> AccountId {
+        let entropy = (b"modlpy/utilisuba", who, threshold).using_encoded(blake2_256);
+        AccountId::decode(&mut &entropy[..]).unwrap_or_default()
+    }
+}
+pub struct AlwaysValidator;
+impl Validator<AccountId> for AlwaysValidator {
+    fn is_validator(_who: &AccountId) -> bool {
+        true
+    }
+
+    fn validator_for(_: &[u8]) -> Option<AccountId> {
+        None
+    }
+}
+pub struct MockBitcoin<T: xpallet_gateway_bitcoin::Trait>(sp_std::marker::PhantomData<T>);
+impl<T: xpallet_gateway_bitcoin::Trait> ChainT<BalanceOf<T>> for MockBitcoin<T> {
+    const ASSET_ID: u32 = X_BTC;
+
+    fn chain() -> Chain {
+        Chain::Bitcoin
+    }
+
+    fn check_addr(_: &[u8], _: &[u8]) -> DispatchResult {
+        Ok(())
+    }
+
+    fn withdrawal_limit(asset_id: &u32) -> Result<WithdrawalLimit<BalanceOf<T>>, DispatchError> {
+        xpallet_gateway_bitcoin::Module::<T>::withdrawal_limit(asset_id)
+    }
+}
+impl<T: xpallet_gateway_bitcoin::Trait>
+    TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo> for MockBitcoin<T>
+{
+    fn check_trustee_entity(raw_addr: &[u8]) -> Result<BtcTrusteeType, DispatchError> {
+        let trustee_type =
+            BtcTrusteeType::try_from(raw_addr.to_vec()).map_err(|_| "InvalidPublicKey")?;
+        Ok(trustee_type)
+    }
+
+    fn generate_trustee_session_info(
+        props: Vec<(T::AccountId, TrusteeIntentionProps<BtcTrusteeType>)>,
+        _: TrusteeInfoConfig,
+    ) -> Result<TrusteeSessionInfo<T::AccountId, BtcTrusteeAddrInfo>, DispatchError> {
+        let len = props.len();
+        Ok(TrusteeSessionInfo {
+            trustee_list: props.into_iter().map(|(a, _)| a).collect::<_>(),
+            threshold: len as u16,
+            hot_address: BtcTrusteeAddrInfo {
+                addr: vec![],
+                redeem_script: vec![],
+            },
+            cold_address: BtcTrusteeAddrInfo {
+                addr: vec![],
+                redeem_script: vec![],
+            },
+        })
+    }
+}
+impl crate::Trait for Test {
+    type Event = ();
+    type Validator = AlwaysValidator;
+    type DetermineMultisigAddress = MultisigAddr;
+    type Bitcoin = MockBitcoin<Test>;
+    type BitcoinTrustee = MockBitcoin<Test>;
+    type WeightInfo = ();
 }
 
 pub struct ExtBuilder;
@@ -231,6 +251,21 @@ impl ExtBuilder {
         let ext = sp_io::TestExternalities::new(storage);
         ext
     }
+}
+
+fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {
+    (
+        X_BTC,
+        AssetInfo::new::<Test>(
+            b"X-BTC".to_vec(),
+            b"X-BTC".to_vec(),
+            Chain::Bitcoin,
+            8,
+            b"ChainX's cross-chain Bitcoin".to_vec(),
+        )
+        .unwrap(),
+        AssetRestrictions::DESTROY_USABLE,
+    )
 }
 
 fn trustees() -> Vec<(

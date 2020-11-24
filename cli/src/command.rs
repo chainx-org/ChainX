@@ -53,8 +53,6 @@ fn load_spec(id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
         }
         "dev" => Box::new(chain_spec::development_config()?),
         "local" => Box::new(chain_spec::local_testnet_config()?),
-        "staging" => Box::new(chain_spec::staging_testnet_config()?),
-        "testnet" => Box::new(chain_spec::testnet_config()?),
         "benchmarks" => {
             #[cfg(feature = "runtime-benchmarks")]
             {
@@ -72,9 +70,9 @@ fn load_spec(id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
             let p = std::path::PathBuf::from(path);
             if !p.exists() {
                 // TODO more better hint
-                return Err("not a valid path or just allow [\"dev\", \"local\", \"staging\", \"benchmarks\"]".into());
+                return Err("not a valid path or just allow [\"dev\", \"local\", \"mainnet\", \"benchmarks\"]".into());
             }
-            Box::new(chain_spec::ChainSpec::from_json_file(p)?)
+            Box::new(chain_spec::ChainXChainSpec::from_json_file(p)?)
         }
     })
 }

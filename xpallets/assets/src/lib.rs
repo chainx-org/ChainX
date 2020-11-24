@@ -15,11 +15,11 @@ mod tests;
 #[cfg(test)]
 mod tests_multicurrency;
 
-mod default_weight;
 mod multicurrency;
 pub mod traits;
 mod trigger;
 pub mod types;
+pub mod weights;
 
 use sp_std::{
     collections::btree_map::BTreeMap,
@@ -32,7 +32,6 @@ use frame_support::{
     dispatch::{DispatchError, DispatchResult},
     ensure,
     traits::{Currency, Get, Happened, IsDeadAccount, LockableCurrency, ReservableCurrency},
-    weights::Weight,
     Parameter, StorageDoubleMap,
 };
 use frame_system::{ensure_root, ensure_signed};
@@ -51,17 +50,10 @@ use self::trigger::AssetChangedTrigger;
 pub use self::types::{
     AssetErr, AssetRestrictions, AssetType, BalanceLock, TotalAssetInfo, WithdrawalLimit,
 };
+pub use self::weights::WeightInfo;
 
 pub type BalanceOf<T> =
     <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
-
-/// Weight information for extrinsics in this pallet.
-pub trait WeightInfo {
-    fn transfer() -> Weight;
-    fn force_transfer() -> Weight;
-    fn set_balance(n: u32) -> Weight;
-    fn set_asset_limit() -> Weight;
-}
 
 /// The module's config trait.
 ///
@@ -131,9 +123,7 @@ decl_event!(
         /// Some balances of an asset were destoryed. [asset_id, who, amount]
         Destroyed(AssetId, AccountId, Balance),
         /// Set asset balance of an account by root. [asset_id, who, asset_type, amount]
-        SetBalance(AssetId, AccountId, AssetType, Balance),
-        /// Set restrictions for an asset by root. [asset_id, assets_restrictions]
-        SetRestrictions(AssetId, AssetRestrictions),
+        BalanceSet(AssetId, AccountId, AssetType, Balance),
     }
 );
 

@@ -59,7 +59,7 @@ main() {
   # Generate 5 pairs of genesis keys given the root secret
   for id in 1 2 3 4 5; do
     echo "SECRET//validator//$id:"
-    echo "SECRET//blockauthor/$id, SECRET//babe//$id, SECRET//grandpa//$id, SECRET//im_online//$id, SECRET//authority_discovery//$id"
+    echo "SECRET//babe//$id, SECRET//grandpa//$id, SECRET//im_online//$id, SECRET//authority_discovery//$id"
     echo
 
     echo "            ("
@@ -69,9 +69,6 @@ main() {
     referral_id="Validator$id"
     echo "                b\""$referral_id"\".to_vec(),"
     echo "            ),"
-
-    print_address      sr25519 "$SECRET//blockauthor//$id"
-    print_account_key          "$SECRET//blockauthor//$id"
 
     generate_aux_key babe sr25519 "$DIR/$id" "$SECRET//babe//$id"
     # Grandpa must use ed25519.

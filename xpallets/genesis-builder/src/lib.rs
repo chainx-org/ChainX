@@ -29,13 +29,14 @@ decl_storage! {
     trait Store for Module<T: Trait> as XGenesisBuilder {}
     add_extra_genesis {
         config(params): AllParams<T::AccountId, T::Balance, AssetBalanceOf<T>, StakingBalanceOf<T>>;
-        config(total_endowed): T::Balance;
+        config(root_endowed): T::Balance;
+        config(initial_authorities_endowed): T::Balance;
         build(|config| {
             use crate::genesis::{xassets, balances, xstaking, xmining_asset};
 
             let now = std::time::Instant::now();
 
-            balances::initialize::<T>(&config.params.balances, config.total_endowed);
+            balances::initialize::<T>(&config.params.balances, config.root_endowed, config.initial_authorities_endowed);
             xassets::initialize::<T>(&config.params.xassets);
             xstaking::initialize::<T>(&config.params.xstaking);
             xmining_asset::initialize::<T>(&config.params.xmining_asset);
@@ -55,6 +56,7 @@ mod genesis {
         use frame_support::{sp_runtime::traits::Saturating, traits::StoredMap, StorageValue};
         use pallet_balances::AccountData;
         use xp_genesis_builder::{BalancesParams, FreeBalanceInfo, WellknownAccounts};
+        use xp_protocol::X_BTC;
         use xpallet_support::traits::TreasuryAccount;
 
         /// Returns the validator account by the given reward pot account.
@@ -68,7 +70,8 @@ mod genesis {
 
         pub fn initialize<T: Trait>(
             params: &BalancesParams<T::AccountId, T::Balance>,
-            total_endowed: T::Balance,
+            root_endowed: T::Balance,
+            initial_authorities_endowed: T::Balance,
         ) {
             let BalancesParams {
                 free_balances,
@@ -79,6 +82,7 @@ mod genesis {
                 legacy_council,
                 legacy_team,
                 legacy_pots,
+                legacy_xbtc_pot,
             } = wellknown_accounts;
 
             let set_free_balance = |who: &T::AccountId, free: &T::Balance| {
@@ -100,10 +104,14 @@ mod genesis {
 
             for FreeBalanceInfo { who, free } in free_balances {
                 if *who == *legacy_council {
-                    set_free_balance(&treasury_account, free);
+                    let treasury_free = *free - root_endowed;
+                    set_free_balance(&treasury_account, &treasury_free);
                 } else if *who == *legacy_team {
-                    let vesting_free = *free - total_endowed;
+                    let vesting_free = *free - initial_authorities_endowed;
                     set_free_balance(&vesting_account, &vesting_free);
+                } else if *who == *legacy_xbtc_pot {
+                    let new_xbtc_pot = xpallet_mining_asset::Module::<T>::reward_pot_for(&X_BTC);
+                    set_free_balance(&new_xbtc_pot, free);
                 } else if let Some(validator) = validator_for::<T, _>(who, legacy_pots.iter()) {
                     let new_pot = xpallet_mining_staking::Module::<T>::reward_pot_for(validator);
                     set_free_balance(&new_pot, free);
@@ -144,7 +152,7 @@ mod genesis {
             let genesis_validators = validators.iter().map(|v| v.who.clone()).collect::<Vec<_>>();
 
             // Firstly register the genesis validators.
-            xpallet_mining_staking::Module::<T>::initialize_validators(validators)
+            xpallet_mining_staking::Module::<T>::initialize_legacy_validators(validators)
                 .expect("Failed to initialize genesis staking validators");
 
             // Then mock the validator bond themselves and set the vote weights.
@@ -166,7 +174,7 @@ mod genesis {
                             nominator, nominee, *weight,
                         );
                         // Skip the validator self-bonding as it has already been processed
-                        // in initialize_validators()
+                        // in initialize_legacy_validators()
                         if *nominee == *nominator {
                             continue;
                         }

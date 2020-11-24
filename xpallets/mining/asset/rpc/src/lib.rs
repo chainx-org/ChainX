@@ -17,7 +17,8 @@ use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 use xp_rpc::{runtime_error_into_rpc_err, Result, RpcBalance, RpcMiningWeight};
 
 use xpallet_mining_asset_rpc_runtime_api::{
-    AssetId, AssetLedger, MinerLedger, MiningAssetInfo, XMiningAssetApi as XMiningAssetRuntimeApi,
+    AssetId, AssetLedger, MinerLedger, MiningAssetInfo, MiningDividendInfo,
+    XMiningAssetApi as XMiningAssetRuntimeApi,
 };
 
 /// XMiningAsset RPC methods.
@@ -49,7 +50,7 @@ where
         &self,
         who: AccountId,
         at: Option<BlockHash>,
-    ) -> Result<BTreeMap<AssetId, RpcBalance<Balance>>>;
+    ) -> Result<BTreeMap<AssetId, MiningDividendInfo<RpcBalance<Balance>>>>;
 
     /// Get the mining ledger details given the asset miner AccountId.
     #[rpc(name = "xminingasset_getMinerLedgerByAccount")]
@@ -132,7 +133,7 @@ where
         &self,
         who: AccountId,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<BTreeMap<AssetId, RpcBalance<Balance>>> {
+    ) -> Result<BTreeMap<AssetId, MiningDividendInfo<RpcBalance<Balance>>>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
         Ok(api
@@ -140,7 +141,16 @@ where
             .map(|mining_dividend| {
                 mining_dividend
                     .into_iter()
-                    .map(|(id, balance)| (id, balance.into()))
+                    .map(|(id, info)| {
+                        (
+                            id,
+                            MiningDividendInfo {
+                                own: info.own.into(),
+                                other: info.other.into(),
+                                insufficient_stake: info.insufficient_stake.into(),
+                            },
+                        )
+                    })
                     .collect()
             })
             .map_err(runtime_error_into_rpc_err)?)

@@ -12,6 +12,23 @@
             "type": "BTreeMap<AssetId, RpcTotalAssetInfo>"
         }
     },
+    "xminingasset": {
+        "getDividendByAccount": {
+            "description": "Get the asset mining dividends info given the asset miner AccountId.",
+            "params": [
+                {
+                    "name": "who",
+                    "type": "AccountId"
+                },
+                {
+                    "name": "at",
+                    "type": "Hash",
+                    "isOptional": true
+                }
+            ],
+            "type": "BTreeMap<AssetId, RpcMiningDividendInfo>"
+        }
+    },
     "xfee": {
         "queryDetails": {
             "description": "get the fee details of extrinsic",

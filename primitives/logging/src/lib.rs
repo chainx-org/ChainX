@@ -13,7 +13,7 @@ macro_rules! error {
     );
     ($($arg:tt)+) => (
         #[cfg(feature = "std")]
-        frame_support::debug::error!(target: &format!("runtime::{}:{}", module_path!(), line!()), $($arg)+);
+        frame_support::debug::error!(target: &format!("runtime::{}", module_path!()), $($arg)+);
         #[cfg(not(feature = "std"))]
         frame_support::debug::error!(target: "runtime", $($arg)+);
     )
@@ -26,7 +26,7 @@ macro_rules! warn {
      );
      ($($arg:tt)+) => (
         #[cfg(feature = "std")]
-        frame_support::debug::warn!(target: &format!("runtime::{}:{}", module_path!(), line!()), $($arg)+);
+        frame_support::debug::warn!(target: &format!("runtime::{}", module_path!()), $($arg)+);
         #[cfg(not(feature = "std"))]
         frame_support::debug::warn!(target: "runtime", $($arg)+);
      )
@@ -39,7 +39,7 @@ macro_rules! info {
     );
     ($($arg:tt)+) => (
         #[cfg(feature = "std")]
-        frame_support::debug::info!(target: &format!("runtime::{}:{}", module_path!(), line!()), $($arg)+);
+        frame_support::debug::info!(target: &format!("runtime::{}", module_path!()), $($arg)+);
         #[cfg(not(feature = "std"))]
         frame_support::debug::info!(target: "runtime", $($arg)+);
     )
@@ -52,7 +52,7 @@ macro_rules! debug {
     );
     ($($arg:tt)+) => (
         #[cfg(feature = "std")]
-        frame_support::debug::debug!(target: &format!("runtime::{}:{}", module_path!(), line!()), $($arg)+);
+        frame_support::debug::debug!(target: &format!("runtime::{}", module_path!()), $($arg)+);
         #[cfg(not(feature = "std"))]
         frame_support::debug::debug!(target: "runtime", $($arg)+);
     )
@@ -65,7 +65,7 @@ macro_rules! trace {
     );
     ($($arg:tt)+) => (
         #[cfg(feature = "std")]
-        frame_support::debug::trace!(target: &format!("runtime::{}:{}", module_path!(), line!()), $($arg)+);
+        frame_support::debug::trace!(target: &format!("runtime::{}", module_path!()), $($arg)+);
         #[cfg(not(feature = "std"))]
         frame_support::debug::trace!(target: "runtime", $($arg)+);
     )
