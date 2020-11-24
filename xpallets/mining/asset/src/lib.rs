@@ -238,6 +238,12 @@ impl<T: Trait> Module<T> {
         )
     }
 
+    /// Returns the associated reward pot account for the given validator.
+    #[inline]
+    pub fn reward_pot_for(asset_id: &AssetId) -> T::AccountId {
+        T::DetermineRewardPotAccount::reward_pot_account_for(asset_id)
+    }
+
     /// This rule doesn't take effect if the interval is zero.
     fn passed_enough_interval(
         who: &T::AccountId,
