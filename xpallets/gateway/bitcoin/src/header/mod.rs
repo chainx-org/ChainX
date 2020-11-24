@@ -71,21 +71,6 @@ pub fn update_confirmed_header<T: Trait>(header_info: &BtcHeaderInfo) -> Option<
         ConfirmedIndex::put(index);
         index
     })
-
-    // if let Some(index) = confirmed {
-    //     // update confirmed index
-
-    // } else {
-    //     info!(
-    //         "[update_confirmed_header]|not find prev header, use genesis instead|prev:{:?}",
-    //         should_confirmed_hash
-    //     );
-    //     let info = Module::<T>::genesis_info();
-    //     BtcHeaderIndex {
-    //         hash: info.0.hash(),
-    //         height: info.1,
-    //     }
-    // }
 }
 
 pub fn check_confirmed_header<T: Trait>(header_info: &BtcHeaderInfo) -> DispatchResult {
@@ -99,7 +84,7 @@ pub fn check_confirmed_header<T: Trait>(header_info: &BtcHeaderInfo) -> Dispatch
                     // b  ---------------- b  ------ b --- b --- b(best)
                     // |(now_confirmed)--- b  ------ b --- b(now)
                     // 99              100       101  102    103
-                    // current_confirmed > now_ocnfirmed
+                    // current_confirmed > now_confirmed
                     Ok(())
                 }
                 Ordering::Equal => {
