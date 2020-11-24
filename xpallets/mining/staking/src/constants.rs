@@ -27,12 +27,14 @@ pub const DEFAULT_MAXIMUM_UNBONDED_CHUNK_SIZE: u32 = 10;
 /// ChainX 2.0's block time is targeted at 6s, i.e., 5 minutes per session.
 ///
 /// ChainX 1.0 is 2s/block, 150 blocks/session, the duration of each session is also
-/// 5 minutes, therefore the issuance rate stays the same in terms of the time dimension, the daily Staking earnings does not change.
+/// 5 minutes, therefore the issuance rate stays the same in terms of the time dimension,
+/// the daily Staking earnings does not change.
 pub const DEFAULT_BLOCKS_PER_SESSION: u64 = 50;
 
 /// The default bonding duration for regular staker is 3 days.
 ///
-/// The staker can unbond the staked balances, but these balances will be free immediately, they have to wait for 3 days to withdraw them into the free balances.
+/// The staker can unbond the staked balances, but these balances will be free immediately,
+/// they have to wait for 3 days to withdraw them into the free balances.
 pub const DEFAULT_BONDING_DURATION: u64 = DEFAULT_BLOCKS_PER_SESSION * 12 * 24 * 3;
 
 /// The default bonding duration for validator is 3 * 10 days.
