@@ -106,19 +106,23 @@ mod genesis {
                 if *who == *legacy_council {
                     let treasury_free = *free - root_endowed;
                     set_free_balance(&treasury_account, &treasury_free);
+                    issuance += treasury_free;
                 } else if *who == *legacy_team {
                     let vesting_free = *free - initial_authorities_endowed;
                     set_free_balance(&vesting_account, &vesting_free);
+                    issuance += vesting_free;
                 } else if *who == *legacy_xbtc_pot {
                     let new_xbtc_pot = xpallet_mining_asset::Module::<T>::reward_pot_for(&X_BTC);
                     set_free_balance(&new_xbtc_pot, free);
+                    issuance += *free;
                 } else if let Some(validator) = validator_for::<T, _>(who, legacy_pots.iter()) {
                     let new_pot = xpallet_mining_staking::Module::<T>::reward_pot_for(validator);
                     set_free_balance(&new_pot, free);
+                    issuance += *free;
                 } else {
                     set_free_balance(who, free);
+                    issuance += *free;
                 }
-                issuance += *free;
             }
 
             pallet_balances::TotalIssuance::<T>::mutate(|v| *v = v.saturating_add(issuance));
