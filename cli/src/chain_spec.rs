@@ -253,6 +253,11 @@ pub fn local_testnet_config() -> Result<ChainXDevChainSpec, String> {
 }
 
 pub fn mainnet_config() -> Result<ChainXChainSpec, String> {
+    ChainXChainSpec::from_json_bytes(&include_bytes!("./res/chainx.json")[..])
+}
+
+#[allow(unused)]
+pub fn mainnet_config_raw() -> Result<ChainXChainSpec, String> {
     let wasm_binary =
         chainx::WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
 
