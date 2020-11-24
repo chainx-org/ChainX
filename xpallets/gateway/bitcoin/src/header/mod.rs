@@ -2,44 +2,18 @@
 
 mod header_proof;
 
-// Substrate
 use frame_support::{StorageMap, StorageValue};
 use sp_runtime::DispatchResult;
 use sp_std::{cmp::Ordering, prelude::*};
 
-// ChainX
-use xp_logging::{error, info};
-
-// light-bitcoin
 use light_bitcoin::primitives::H256;
+
+use xp_logging::{error, info};
 
 use crate::types::{BtcHeaderIndex, BtcHeaderInfo};
 use crate::{ConfirmedIndex, Error, MainChain, Module, Trait};
 
 pub use self::header_proof::HeaderVerifier;
-
-#[derive(PartialEq, Eq, Copy, Clone)]
-pub enum ChainErr {
-    /// Not Found
-    NotFound,
-    /// Ancient fork
-    AncientFork,
-}
-
-impl ChainErr {
-    pub fn to_err<T: Trait>(self) -> Error<T> {
-        self.into()
-    }
-}
-
-impl<T: Trait> From<ChainErr> for Error<T> {
-    fn from(err: ChainErr) -> Self {
-        match err {
-            ChainErr::NotFound => Error::<T>::HeaderNotFound,
-            ChainErr::AncientFork => Error::<T>::HeaderAncientFork,
-        }
-    }
-}
 
 /// todo move this issue to ChainX-org/ChainX repo
 /// #issue 501 https://github.com/chainpool/ChainX/issues/501 would explain how to define

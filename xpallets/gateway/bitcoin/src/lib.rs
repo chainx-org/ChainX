@@ -504,10 +504,9 @@ impl<T: Trait> Module<T> {
             header,
             height: prev_info.height + 1,
         };
-        // check
-        let c =
-            header::HeaderVerifier::new::<T>(&header_info).map_err::<Error<T>, _>(Into::into)?;
-        c.check::<T>()?;
+        // verify header
+        let header_verifier = header::HeaderVerifier::new::<T>(&header_info);
+        header_verifier.check::<T>()?;
 
         with_transaction_result(|| {
             // insert into storage
