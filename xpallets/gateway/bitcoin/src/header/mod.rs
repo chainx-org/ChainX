@@ -6,7 +6,7 @@ use frame_support::{StorageMap, StorageValue};
 use sp_runtime::DispatchResult;
 use sp_std::{cmp::Ordering, prelude::*};
 
-use light_bitcoin::primitives::H256;
+use light_bitcoin::primitives::{hash_rev, H256};
 
 use xp_logging::{error, info};
 
@@ -15,15 +15,16 @@ use crate::{ConfirmedIndex, Error, MainChain, Module, Trait};
 
 pub use self::header_proof::HeaderVerifier;
 
-/// todo move this issue to ChainX-org/ChainX repo
-/// #issue 501 https://github.com/chainpool/ChainX/issues/501 would explain how to define
-/// confirmation count
-///      confirmed_height = now_height - (confirmations - 1)
+/// Look back the headers to pick the confirmed index,
+/// return the header indexes on the look back path.
+///
+/// The definition of block confirmation count:
+/// confirmed_height = now_height - (confirmations - 1)
 ///           |--- confirmations = 4 ---|
 /// b(prev) - b(confirm)  -  b  -  b  - b
-///           4              3     2    1 (confirmations)
-///           97             98    99   100(height)
-/// this function would pick the confirmed Index, and return the Index on the look back path
+///           4              3     2    1       (confirmations)
+///           97             98    99   100     (height)
+///
 fn look_back_confirmed_header<T: Trait>(
     header_info: &BtcHeaderInfo,
 ) -> (Option<BtcHeaderIndex>, Vec<BtcHeaderIndex>) {
@@ -37,7 +38,7 @@ fn look_back_confirmed_header<T: Trait>(
         height: header_info.height,
     });
     // e.g. when confirmations is 4, loop 3 times max
-    for i in 1..confirmations {
+    for cnt in 1..confirmations {
         if let Some(current_info) = Module::<T>::headers(&prev_hash) {
             chain.push(BtcHeaderIndex {
                 hash: prev_hash,
@@ -45,10 +46,13 @@ fn look_back_confirmed_header<T: Trait>(
             });
             prev_hash = current_info.header.previous_header_hash;
         } else {
-            // if not find current header info, should be exceed genesis height, jump out of loop
+            // if cannot find current header info, should be exceed genesis height, jump out of loop
+            // e.g. want to get the previous header of #98, but genesis height is 98,
+            // obviously, we cannot find the header of #97.
             info!(
                 "[update_confirmed_header] Can not find header ({:?}), current reverse count:{}",
-                prev_hash, i
+                hash_rev(prev_hash),
+                cnt
             );
             break;
         }
