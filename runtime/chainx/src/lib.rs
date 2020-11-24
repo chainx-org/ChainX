@@ -881,8 +881,9 @@ impl xpallet_support::traits::TreasuryAccount<AccountId> for SimpleTreasuryAccou
 }
 
 parameter_types! {
-    /// FIXME: replace this when the migration offset is determinated.
-    pub const MigrationSessionOffset: SessionIndex = 500;
+    // Total issuance is 7723350PCX by the end of ChainX 1.0.
+    // 210000 - (7723350 / 50) = 55533
+    pub const MigrationSessionOffset: SessionIndex = 55533;
     pub const MinimumReferralId: u32 = 2;
     pub const MaximumReferralId: u32 = 12;
 }
