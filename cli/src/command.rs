@@ -209,7 +209,7 @@ fn set_default_ss58_version(spec: &Box<dyn sc_service::ChainSpec>) {
     use sp_core::crypto::Ss58AddressFormat;
     // this `id()` is from `ChainSpec::from_genesis()` second parameter
     // todo may use a better way
-    let version: Ss58AddressFormat = if spec.id().contains("mainnet") {
+    let version: Ss58AddressFormat = if spec.id() == "chainx" {
         Ss58AddressFormat::ChainXAccount
     } else {
         Ss58AddressFormat::SubstrateAccount
