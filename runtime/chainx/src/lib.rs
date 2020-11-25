@@ -104,7 +104,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("chainx"),
     impl_name: create_runtime_str!("chainx-net"),
     authoring_version: 1,
-    spec_version: 1,
+    spec_version: 2,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -124,14 +124,21 @@ pub struct BaseFilter;
 impl Filter<Call> for BaseFilter {
     fn filter(call: &Call) -> bool {
         use frame_support::dispatch::GetCallMetadata;
+        use pallet_balances::Call as BalancesCall;
+        use xpallet_mining_staking::Call as XStakingCall;
 
-        // Enable force_transfer so that we can transfer some balances to the tech committee members.
         match call {
             Call::Balances(balances_call) => {
-                if let pallet_balances::Call::force_transfer(..) = balances_call {
+                // Enable force_transfer so that we can transfer some balances to the tech committee members.
+                if let BalancesCall::force_transfer(..) = balances_call {
                     return true;
                 }
             }
+            Call::XStaking(xstaking_call) => match xstaking_call {
+                // Enable validate and register for validators to join the network.
+                XStakingCall::validate(..) | XStakingCall::register(..) => return true,
+                _ => {}
+            },
             _ => {}
         }
 
