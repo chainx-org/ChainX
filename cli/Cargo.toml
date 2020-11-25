@@ -1,6 +1,6 @@
 [package]
 name = "chainx-cli"
-version = "2.0.0"
+version = "2.0.1"
 authors = ["The ChainX Authors"]
 description = "Implementation of protocol https://chainx.org in Rust based on the Substrate framework."
 edition = "2018"
