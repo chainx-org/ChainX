@@ -57,8 +57,7 @@ fn look_back_confirmed_header<T: Trait>(
             break;
         }
     }
-    let len = chain.len();
-    if len == confirmations as usize {
+    if chain.len() == confirmations as usize {
         // confirmations must more than 0, thus, chain.last() must be some
         (chain.last().cloned(), chain)
     } else {
@@ -69,12 +68,27 @@ fn look_back_confirmed_header<T: Trait>(
 pub fn update_confirmed_header<T: Trait>(header_info: &BtcHeaderInfo) -> Option<BtcHeaderIndex> {
     let (confirmed, chain) = look_back_confirmed_header::<T>(header_info);
     for index in chain {
-        set_main_chain::<T>(index.height, &index.hash);
+        set_main_chain::<T>(index.height, index.hash);
     }
     confirmed.map(|index| {
         ConfirmedIndex::put(index);
         index
     })
+}
+
+fn set_main_chain<T: Trait>(height: u32, main_hash: H256) {
+    let hashes = Module::<T>::block_hash_for(&height);
+    if hashes.len() == 1 {
+        MainChain::insert(&hashes[0], true);
+        return;
+    }
+    for hash in hashes {
+        if hash == main_hash {
+            MainChain::insert(&hash, true);
+        } else {
+            MainChain::remove(&hash);
+        }
+    }
 }
 
 pub fn check_confirmed_header<T: Trait>(header_info: &BtcHeaderInfo) -> DispatchResult {
@@ -124,19 +138,4 @@ pub fn check_confirmed_header<T: Trait>(header_info: &BtcHeaderInfo) -> Dispatch
     }
     // do not have confirmed yet.
     Ok(())
-}
-
-pub fn set_main_chain<T: Trait>(height: u32, main_hash: &H256) {
-    let hashes = Module::<T>::block_hash_for(&height);
-    if hashes.len() == 1 {
-        MainChain::insert(&hashes[0], true);
-        return;
-    }
-    for hash in hashes {
-        if hash == *main_hash {
-            MainChain::insert(&hash, true);
-        } else {
-            MainChain::remove(&hash);
-        }
-    }
 }

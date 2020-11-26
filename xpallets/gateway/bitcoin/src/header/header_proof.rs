@@ -22,10 +22,10 @@ pub struct HeaderVerifier<'a> {
 
 impl<'a> HeaderVerifier<'a> {
     pub fn new<T: Trait>(header_info: &'a BtcHeaderInfo) -> Self {
-        let current = T::UnixTime::now();
-        // if convert from u64 to u32 failed, ignore timestamp check
-        // timestamp check are not important
-        let current_time = u32::try_from(current.as_secs()).ok();
+        let now = T::UnixTime::now();
+        // if convert from u64 to u32 failed (unix timestamp should not be greater than u32::MAX),
+        // ignore timestamp check, timestamp check are not important
+        let current_time = u32::try_from(now.as_secs()).ok();
 
         Self {
             work: HeaderWork::new(header_info),
@@ -58,9 +58,9 @@ impl<'a> HeaderWork<'a> {
         HeaderWork { info }
     }
 
-    fn check<T: Trait>(&self, p: &BtcParams) -> DispatchResult {
+    fn check<T: Trait>(&self, params: &BtcParams) -> DispatchResult {
         let previous_header_hash = self.info.header.previous_header_hash;
-        let work = work_required::<T>(previous_header_hash, self.info.height, p);
+        let work = work_required::<T>(previous_header_hash, self.info.height, params);
         if work != self.info.header.bits {
             error!(
                 "[check_header_work] nBits do not match difficulty rules, work:{:?}, header bits:{:?}, height:{}",
@@ -97,8 +97,8 @@ pub fn work_required<T: Trait>(parent_hash: H256, height: u32, params: &BtcParam
     parent_header.bits
 }
 
-fn is_retarget_height(height: u32, p: &BtcParams) -> bool {
-    height % p.retargeting_interval() == 0
+fn is_retarget_height(height: u32, params: &BtcParams) -> bool {
+    height % params.retargeting_interval() == 0
 }
 
 /// Algorithm used for retargeting work every 2 weeks
@@ -156,15 +156,15 @@ fn work_required_retarget<T: Trait>(
 }
 
 /// Returns constrained number of seconds since last retarget
-fn retarget_timespan(retarget_timestamp: u32, last_timestamp: u32, p: &BtcParams) -> u32 {
+fn retarget_timespan(retarget_timestamp: u32, last_timestamp: u32, params: &BtcParams) -> u32 {
     // TODO i64??
     // subtract unsigned 32 bit numbers in signed 64 bit space in
     // order to prevent underflow before applying the range constraint.
     let timespan = last_timestamp as i64 - i64::from(retarget_timestamp);
     range_constrain(
         timespan,
-        i64::from(p.min_timespan()),
-        i64::from(p.max_timespan()),
+        i64::from(params.min_timespan()),
+        i64::from(params.max_timespan()),
     ) as u32
 }
 
@@ -181,8 +181,8 @@ impl<'a> HeaderProofOfWork<'a> {
         Self { header }
     }
 
-    fn check<T: Trait>(&self, p: &BtcParams) -> DispatchResult {
-        if is_valid_proof_of_work(p.max_bits(), self.header.bits, self.header.hash()) {
+    fn check<T: Trait>(&self, params: &BtcParams) -> DispatchResult {
+        if is_valid_proof_of_work(params.max_bits(), self.header.bits, self.header.hash()) {
             Ok(())
         } else {
             Err(Error::<T>::InvalidPoW.into())
@@ -214,14 +214,14 @@ impl<'a> HeaderTimestamp<'a> {
     }
 
     #[allow(unused)]
-    fn check<T: Trait>(&self, p: &BtcParams) -> DispatchResult {
+    fn check<T: Trait>(&self, params: &BtcParams) -> DispatchResult {
         if let Some(current_time) = self.current_time {
-            if self.header.time > current_time + p.block_max_future() {
+            if self.header.time > current_time + params.block_max_future() {
                 error!(
                     "[check_header_timestamp] Header time:{}, current time:{}, max_future{:?}",
                     self.header.time,
                     current_time,
-                    p.block_max_future()
+                    params.block_max_future()
                 );
                 Err(Error::<T>::HeaderFuturisticTimestamp.into())
             } else {
