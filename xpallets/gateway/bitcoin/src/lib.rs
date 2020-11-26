@@ -4,9 +4,9 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub mod header;
+mod header;
 pub mod trustee;
-pub mod tx;
+mod tx;
 mod types;
 pub mod weights;
 
@@ -292,15 +292,15 @@ decl_module! {
         ) -> DispatchResultWithPostInfo {
             let _from = ensure_signed(origin)?;
             let raw_tx = Self::deserialize_tx(raw_tx.as_slice())?;
-            let prev = if let Some(prev) = prev_tx {
-                Some(Self::deserialize_tx(prev.as_slice())?)
+            let prev_tx = if let Some(prev_tx) = prev_tx {
+                Some(Self::deserialize_tx(prev_tx.as_slice())?)
             } else {
                 None
             };
             let relay_tx = relayed_info.into_relayed_tx(raw_tx);
-            native!(debug, "[push_transaction] from:{:?}, relay_tx:{:?}, prev:{:?}", _from, relay_tx, prev);
+            native!(debug, "[push_transaction] from:{:?}, relay_tx:{:?}, prev_tx:{:?}", _from, relay_tx, prev_tx);
 
-            Self::apply_push_transaction(relay_tx, prev)?;
+            Self::apply_push_transaction(relay_tx, prev_tx)?;
 
             let post_info = PostDispatchInfo {
                 actual_weight: Some(Zero::zero()),
@@ -315,7 +315,7 @@ decl_module! {
         #[weight = <T as Trait>::WeightInfo::create_withdraw_tx()]
         pub fn create_withdraw_tx(origin, withdrawal_id_list: Vec<u32>, tx: Vec<u8>) -> DispatchResult {
             let from = ensure_signed(origin)?;
-            // commiter must in trustee list
+            // committer must be in the trustee list
             Self::ensure_trustee(&from)?;
 
             let tx = Self::deserialize_tx(tx.as_slice())?;
@@ -556,7 +556,7 @@ impl<T: Trait> Module<T> {
         })
     }
 
-    fn apply_push_transaction(tx: BtcRelayedTx, prev: Option<Transaction>) -> DispatchResult {
+    fn apply_push_transaction(tx: BtcRelayedTx, prev_tx: Option<Transaction>) -> DispatchResult {
         let tx_hash = tx.raw.hash();
         let block_hash = tx.block_hash;
         let header_info = Module::<T>::headers(&tx.block_hash).ok_or_else(|| {
@@ -568,9 +568,9 @@ impl<T: Trait> Module<T> {
         })?;
         let merkle_root = header_info.header.merkle_root_hash;
         // verify, check merkle proof
-        tx::validate_transaction::<T>(&tx, merkle_root, prev.as_ref())?;
+        tx::validate_transaction::<T>(&tx, merkle_root, prev_tx.as_ref())?;
 
-        // ensure the tx should belong to the main chain, means should submit mainchain tx,
+        // ensure the tx should belong to the main chain, means should submit main chain tx,
         // e.g. a tx may be packed in main chain block, and forked chain block, only submit main chain tx
         // could pass the verify.
         ensure!(Self::main_chain(&tx.block_hash), Error::<T>::UnconfirmedTx);
@@ -604,7 +604,7 @@ impl<T: Trait> Module<T> {
         let previous_trustee_pair = get_last_trustee_address_pair::<T>().ok();
         let state = tx::process_tx::<T>(
             tx.raw,
-            prev,
+            prev_tx,
             network,
             min_deposit,
             current_trustee_pair,
