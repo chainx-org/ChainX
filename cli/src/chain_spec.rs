@@ -248,6 +248,82 @@ pub fn mainnet_config() -> Result<ChainXChainSpec, String> {
     ChainXChainSpec::from_json_bytes(&include_bytes!("./res/chainx.json")[..])
 }
 
+pub fn testnet_config() -> Result<ChainXChainSpec, String> {
+    let wasm_binary =
+        chainx::WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
+
+    // 5EWtScne4zWsGaP4gVo8DmLpChVx3MzoQTpKJCEdBTYDA1Dy
+    let root_key: AccountId =
+        hex!["6c707b1690a6b0e01b5dea252fe1887930a5afc0ec203f96705331749c37ae4a"].into();
+
+    // 5HGZzRCfvLM7LSdkPZF5SzD4tj9BKvCTQuGkJd1jedrcCKFc
+    let vesting_key: AccountId =
+        hex!["e639a1a8ff3bd1fe15faa922ef2b772b9ee1c8d9cdc63ad36af12ab5ca155d4a"].into();
+
+    let initial_authorities: Vec<AuthorityKeysTuple> = vec![(
+        (
+            // 5EvXt55kDmAXbBPqrzvNZcbE6bvZ8eWBThxJptoDkwAAyEkw
+            hex!["7e7927d030d89585cd66f0d44313de41f4c697da387159786f8b3ed5cd081d4f"].into(),
+            b"Validator5".to_vec(),
+        ),
+        // 5D83WrH4h4rPFxe4m4xGMuC8XuR9jqWHggHBriZQELJ3JneN
+        hex!["2ec8253a23695069619df42213106402cffb217bb02c653c11e3435eb047e60d"].unchecked_into(),
+        // 5GpHoku58fumTfn9pQZxKFxASvMw6JNTqmFDQw92g7LV1gwj
+        hex!["d22ec57d5cdb6f80f0df82590f9999b88e936e9f8c93d9c05cd87dba1b4567ae"].unchecked_into(),
+        // 5HCBmPYr7AsXDp4VLu7qh6HRExjy2Nx33YLHqLeQ6i7yFjHt
+        hex!["e2e1d5c8eb42aa6b37f71cbdc8e73b67b385e7841d98bbaef3492252a4f3e605"].unchecked_into(),
+        // 5HQYBwyf2787MCMhZNBEpswHJcJnXVVNxjrdTa6cVjUf29jy
+        hex!["ec4d8806b85969a29214c00ae70b5d239dc65daebf2ea4a43fd47a77e16d9c7c"].unchecked_into(),
+    )];
+
+    let constructor = move || {
+        // TODO: use mainnet_genesis() or create a new testnet_genesis()?
+        mainnet_genesis(
+            &wasm_binary[..],
+            initial_authorities.clone(),
+            root_key.clone(),
+            vesting_key.clone(),
+            genesis_assets(),
+            btc_genesis_params(include_str!("res/btc_genesis_params_testnet.json")),
+            crate::genesis::bitcoin::mainnet_trustees(),
+        )
+    };
+
+    Ok(ChainXChainSpec::from_genesis(
+        "ChainX TC0",
+        "chainx_tc0",
+        ChainType::Live,
+        constructor,
+        bootnodes![
+            "/dns/p2p.3.chainx.org/tcp/20223/p2p/12D3KooWRcmKCa1Uo54UNV6umzvVnWAx7TZNFibbZfP87zqPs1DP",
+        ],
+        Some(
+            TelemetryEndpoints::new(vec![
+                (CHAINX_TELEMETRY_URL.to_string(), 0),
+                (POLKADOT_TELEMETRY_URL.to_string(), 0),
+            ])
+            .expect("ChainX telemetry url is valid; qed"),
+        ),
+        Some("pcx-tc0"),
+        Some(as_properties(NetworkType::Testnet)),
+        Default::default(),
+    ))
+}
+
+fn chainx_session_keys(
+    babe: BabeId,
+    grandpa: GrandpaId,
+    im_online: ImOnlineId,
+    authority_discovery: AuthorityDiscoveryId,
+) -> chainx::SessionKeys {
+    chainx::SessionKeys {
+        grandpa,
+        babe,
+        im_online,
+        authority_discovery,
+    }
+}
+
 fn chainx_dev_session_keys(
     babe: BabeId,
     grandpa: GrandpaId,
