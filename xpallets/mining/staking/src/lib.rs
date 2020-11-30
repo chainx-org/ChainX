@@ -338,6 +338,10 @@ decl_module! {
 
         fn deposit_event() = default;
 
+        fn on_runtime_upgrade() -> frame_support::weights::Weight {
+            todo!("Impl unbonded_withdrawal leak migration");
+        }
+
         /// Nominate the `target` with `value` of the origin account's balance locked.
         #[weight = T::WeightInfo::bond()]
         pub fn bond(origin, target: <T::Lookup as StaticLookup>::Source, #[compact] value: BalanceOf<T>) {
@@ -876,8 +880,11 @@ impl<T: Trait> Module<T> {
             Error::<T>::InsufficientBalance
         );
 
-        Self::set_lock(who, new_bonded);
         new_locks.insert(LockedType::Bonded, new_bonded);
+        let staking_locked = new_locks
+            .values()
+            .fold(Zero::zero(), |acc: BalanceOf<T>, x| acc + *x);
+        Self::set_lock(who, staking_locked);
         Locks::<T>::insert(who, new_locks);
 
         Ok(())
