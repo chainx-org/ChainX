@@ -271,6 +271,8 @@ decl_event!(
         Withdrawn(AccountId, Balance),
         /// Offenders were forcibly to be chilled due to insufficient reward pot balance. [session_index, chilled_validators]
         ForceChilled(SessionIndex, Vec<AccountId>),
+        /// Unlock the unbonded withdrawal by force. [account]
+        ForceWithdrawn(AccountId),
     }
 );
 
@@ -337,10 +339,6 @@ decl_module! {
         type Error = Error<T>;
 
         fn deposit_event() = default;
-
-        fn on_runtime_upgrade() -> frame_support::weights::Weight {
-            todo!("Impl unbonded_withdrawal leak migration");
-        }
 
         /// Nominate the `target` with `value` of the origin account's balance locked.
         #[weight = T::WeightInfo::bond()]
@@ -412,7 +410,6 @@ decl_module! {
 
             let Unbonded { value, locked_until } = unbonded_chunks[unbonded_index as usize];
             let current_block = <frame_system::Module<T>>::block_number();
-
             ensure!(current_block > locked_until, Error::<T>::UnbondedWithdrawalNotYetDue);
 
             Self::apply_unlock_unbonded_withdrawal(&sender, value);
@@ -534,6 +531,20 @@ decl_module! {
             } else {
                 Immortals::<T>::put(new);
             }
+        }
+
+        #[weight = T::WeightInfo::unlock_unbonded_withdrawal()]
+        fn force_unlock_unbonded_withdrawal(origin, who: T::AccountId) {
+            ensure_root(origin)?;
+            Locks::<T>::mutate(&who, |locks| {
+                locks.remove(&LockedType::BondedWithdrawal);
+            });
+            for (target, _) in Nominations::<T>::iter_prefix(&who) {
+                Nominations::<T>::mutate(&who, &target, |nominator| {
+                    nominator.unbonded_chunks.clear();
+                });
+            }
+            Self::deposit_event(Event::<T>::ForceWithdrawn(who));
         }
     }
 }
