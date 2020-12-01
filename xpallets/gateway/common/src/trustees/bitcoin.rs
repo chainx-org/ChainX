@@ -96,27 +96,6 @@ mod serde_impl {
             Ok(BtcTrusteeType(pubkey))
         }
     }
-
-    // pub mod btc_addr {
-    //     use super::*;
-    //     use sp_std::str::FromStr;
-    //
-    //     pub fn serialize<S>(value: &Address, serializer: S) -> Result<S::Ok, S::Error>
-    //     where
-    //         S: Serializer,
-    //     {
-    //         let output = value.to_string();
-    //         serializer.serialize_str(&output)
-    //     }
-    //
-    //     pub fn deserialize<'de, D>(deserializer: D) -> Result<Address, D::Error>
-    //     where
-    //         D: Deserializer<'de>,
-    //     {
-    //         let s: String = Deserialize::deserialize(deserializer)?;
-    //         Address::from_str(&s).map_err(|e| Error::custom(format!("{:?}", e)))
-    //     }
-    // }
 }
 
 impl TryFrom<Vec<u8>> for BtcTrusteeType {

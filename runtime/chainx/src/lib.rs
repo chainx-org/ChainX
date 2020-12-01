@@ -836,8 +836,8 @@ impl xpallet_gateway_bitcoin::Trait for Runtime {
     type AccountExtractor = xp_gateway_bitcoin::OpReturnExtractor;
     type TrusteeSessionProvider = trustees::bitcoin::BtcTrusteeSessionManager<Runtime>;
     type TrusteeOrigin = EnsureSignedBy<trustees::bitcoin::BtcTrusteeMultisig<Runtime>, AccountId>;
-    type Channel = XGatewayCommon;
-    type AddrBinding = XGatewayCommon;
+    type ReferralBinding = XGatewayCommon;
+    type AddressBinding = XGatewayCommon;
     type WeightInfo = xpallet_gateway_bitcoin::weights::SubstrateWeight<Runtime>;
 }
 
@@ -880,8 +880,8 @@ impl xpallet_mining_staking::Trait for Runtime {
 pub struct ReferralGetter;
 impl xpallet_mining_asset::GatewayInterface<AccountId> for ReferralGetter {
     fn referral_of(who: &AccountId, asset_id: AssetId) -> Option<AccountId> {
-        use xpallet_gateway_common::traits::ChannelBinding;
-        XGatewayCommon::get_binding_info(&asset_id, who)
+        use xpallet_gateway_common::traits::ReferralBinding;
+        XGatewayCommon::referral(&asset_id, who)
     }
 }
 
@@ -1293,10 +1293,10 @@ impl_runtime_apis! {
         }
 
         fn trustee_session_info(chain: Chain) -> Option<GenericTrusteeSessionInfo<AccountId>> {
-            let number = XGatewayCommon::trustee_session_info_len(chain)
+            let curr_session_number = XGatewayCommon::next_trustee_session_info_number_of(chain)
                 .checked_sub(1)
                 .unwrap_or_else(u32::max_value);
-            XGatewayCommon::trustee_session_info_of(chain, number)
+            XGatewayCommon::trustee_session_info_of(chain, curr_session_number)
         }
 
         fn generate_trustee_session_info(chain: Chain, candidates: Vec<AccountId>) -> Result<GenericTrusteeSessionInfo<AccountId>, DispatchError> {

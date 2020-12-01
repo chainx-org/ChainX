@@ -46,23 +46,25 @@ impl<T: Trait, TrusteeAddress: BytesLike + ChainProvider>
     fn current_trustee_session(
     ) -> Result<TrusteeSessionInfo<T::AccountId, TrusteeAddress>, DispatchError> {
         let chain = TrusteeAddress::chain();
-        let number = match Module::<T>::trustee_session_info_len(chain).checked_sub(1) {
-            Some(r) => r,
-            None => u32::max_value(),
-        };
-        Self::trustee_session(number)
+        let curr_session_number =
+            match Module::<T>::next_trustee_session_info_number_of(chain).checked_sub(1) {
+                Some(r) => r,
+                None => u32::max_value(),
+            };
+        Self::trustee_session(curr_session_number)
     }
 
-    fn last_trustee_session(
+    fn previous_trustee_session(
     ) -> Result<TrusteeSessionInfo<T::AccountId, TrusteeAddress>, DispatchError> {
         let chain = TrusteeAddress::chain();
-        let number = match Module::<T>::trustee_session_info_len(chain).checked_sub(2) {
-            Some(r) => r,
-            None => u32::max_value(),
-        };
-        Self::trustee_session(number).map_err(|err| {
+        let prev_session_number =
+            match Module::<T>::next_trustee_session_info_number_of(chain).checked_sub(2) {
+                Some(r) => r,
+                None => u32::max_value(),
+            };
+        Self::trustee_session(prev_session_number).map_err(|err| {
             warn!(
-                "[last_trustee_session] Last trustee session not exist yet for chain:{:?}",
+                "[previous_trustee_session] Previous trustee session not exist yet for chain:{:?}",
                 chain
             );
             err

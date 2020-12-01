@@ -33,7 +33,8 @@ pub trait TrusteeSession<AccountId, TrusteeAddress: BytesLike> {
     fn current_trustee_session(
     ) -> Result<TrusteeSessionInfo<AccountId, TrusteeAddress>, DispatchError>;
 
-    fn last_trustee_session() -> Result<TrusteeSessionInfo<AccountId, TrusteeAddress>, DispatchError>;
+    fn previous_trustee_session(
+    ) -> Result<TrusteeSessionInfo<AccountId, TrusteeAddress>, DispatchError>;
 
     #[cfg(feature = "std")]
     fn genesis_trustee(chain: Chain, init: &[AccountId]);
@@ -51,8 +52,8 @@ impl<AccountId, TrusteeAddress: BytesLike> TrusteeSession<AccountId, TrusteeAddr
         Err("NoTrustee".into())
     }
 
-    fn last_trustee_session() -> Result<TrusteeSessionInfo<AccountId, TrusteeAddress>, DispatchError>
-    {
+    fn previous_trustee_session(
+    ) -> Result<TrusteeSessionInfo<AccountId, TrusteeAddress>, DispatchError> {
         Err("NoTrustee".into())
     }
 
@@ -60,26 +61,26 @@ impl<AccountId, TrusteeAddress: BytesLike> TrusteeSession<AccountId, TrusteeAddr
     fn genesis_trustee(_: Chain, _: &[AccountId]) {}
 }
 
-pub trait ChannelBinding<AccountId> {
-    fn update_binding(asset_id: &AssetId, who: &AccountId, channel_name: Option<ReferralId>);
-    fn get_binding_info(asset_id: &AssetId, who: &AccountId) -> Option<AccountId>;
+pub trait ReferralBinding<AccountId> {
+    fn update_binding(asset_id: &AssetId, who: &AccountId, referral: Option<ReferralId>);
+    fn referral(asset_id: &AssetId, who: &AccountId) -> Option<AccountId>;
 }
 
-impl<AccountId> ChannelBinding<AccountId> for () {
+impl<AccountId> ReferralBinding<AccountId> for () {
     fn update_binding(_: &AssetId, _: &AccountId, _: Option<ReferralId>) {}
-    fn get_binding_info(_: &AssetId, _: &AccountId) -> Option<AccountId> {
+    fn referral(_: &AssetId, _: &AccountId) -> Option<AccountId> {
         None
     }
 }
 
-pub trait AddrBinding<AccountId, Addr: Into<Vec<u8>>> {
-    fn update_binding(chain: Chain, addr: Addr, who: AccountId);
-    fn get_binding(chain: Chain, addr: Addr) -> Option<AccountId>;
+pub trait AddressBinding<AccountId, Address: Into<Vec<u8>>> {
+    fn update_binding(chain: Chain, address: Address, who: AccountId);
+    fn address(chain: Chain, address: Address) -> Option<AccountId>;
 }
 
-impl<AccountId, Addr: Into<Vec<u8>>> AddrBinding<AccountId, Addr> for () {
+impl<AccountId, Addr: Into<Vec<u8>>> AddressBinding<AccountId, Addr> for () {
     fn update_binding(_: Chain, _: Addr, _: AccountId) {}
-    fn get_binding(_: Chain, _: Addr) -> Option<AccountId> {
+    fn address(_: Chain, _: Addr) -> Option<AccountId> {
         None
     }
 }

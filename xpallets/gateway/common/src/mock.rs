@@ -135,8 +135,8 @@ impl xpallet_gateway_bitcoin::Trait for Test {
     type AccountExtractor = ();
     type TrusteeSessionProvider = ();
     type TrusteeOrigin = EnsureSignedBy<BtcTrusteeMultisig<Test>, AccountId>;
-    type Channel = ();
-    type AddrBinding = ();
+    type ReferralBinding = ();
+    type AddressBinding = ();
     type WeightInfo = ();
 }
 

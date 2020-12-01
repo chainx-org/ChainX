@@ -8,16 +8,16 @@ use xp_logging::{debug, error, info, warn};
 use xpallet_assets::Chain;
 use xpallet_support::{traits::Validator, try_addr, try_str};
 
-use crate::traits::{AddrBinding, ChannelBinding};
-use crate::{AddressBinding, BoundAddressOf, Module, Trait};
+use crate::traits::{AddressBinding, ReferralBinding};
+use crate::{AddressBindingOf, BoundAddressOf, Module, Trait};
 
-impl<T: Trait> ChannelBinding<T::AccountId> for Module<T> {
+impl<T: Trait> ReferralBinding<T::AccountId> for Module<T> {
     fn update_binding(assert_id: &AssetId, who: &T::AccountId, channel_name: Option<ReferralId>) {
         let chain = match xpallet_assets_registrar::Module::<T>::chain_of(assert_id) {
             Ok(chain) => chain,
             Err(err) => {
                 error!(
-                    "[update_channel_binding] Unexpected asset_id:{:?}, error:{:?}",
+                    "[update_referral_binding] Unexpected asset_id:{:?}, error:{:?}",
                     assert_id, err
                 );
                 return;
@@ -26,40 +26,40 @@ impl<T: Trait> ChannelBinding<T::AccountId> for Module<T> {
 
         if let Some(name) = channel_name {
             if let Some(channel) = T::Validator::validator_for(&name) {
-                match Self::channel_binding_of(who, chain) {
+                match Self::referral_binding_of(who, chain) {
                     None => {
                         // set to storage
                         Self::set_referral_binding(chain, who.clone(), channel);
                     }
                     Some(channel) => {
                         debug!(
-                            "[update_channel_binding] Already has channel binding:[assert id:{}, chain:{:?}, who:{:?}, channel:{:?}]",
+                            "[update_referral_binding] Already has referral binding:[assert id:{}, chain:{:?}, who:{:?}, referral:{:?}]",
                             assert_id, chain, who, channel
                         );
                     }
                 }
             } else {
                 warn!(
-                    "[update_channel_binding] {:?} has no channel, cannot update binding",
+                    "[update_referrak_binding] {:?} has no referral, cannot update binding",
                     try_str(name)
                 );
             };
         };
     }
 
-    fn get_binding_info(assert_id: &AssetId, who: &T::AccountId) -> Option<T::AccountId> {
+    fn referral(assert_id: &AssetId, who: &T::AccountId) -> Option<T::AccountId> {
         let chain = xpallet_assets_registrar::Module::<T>::chain_of(assert_id).ok()?;
-        Self::channel_binding_of(who, chain)
+        Self::referral_binding_of(who, chain)
     }
 }
 
-impl<T: Trait, Addr: Into<Vec<u8>>> AddrBinding<T::AccountId, Addr> for Module<T> {
+impl<T: Trait, Addr: Into<Vec<u8>>> AddressBinding<T::AccountId, Addr> for Module<T> {
     fn update_binding(chain: Chain, addr: Addr, who: T::AccountId) {
         let address = addr.into();
-        if let Some(accountid) = AddressBinding::<T>::get(chain, &address) {
+        if let Some(accountid) = AddressBindingOf::<T>::get(chain, &address) {
             if accountid != who {
                 debug!(
-                    "[update_addr_binding] Current address binding need to changed (old:{:?} => new:{:?})",
+                    "[update_address_binding] Current address binding need to changed (old:{:?} => new:{:?})",
                     accountid, who
                 );
                 // old accountid is not equal to new accountid, means should change this addr bind to new account
@@ -77,17 +77,17 @@ impl<T: Trait, Addr: Into<Vec<u8>>> AddrBinding<T::AccountId, Addr> for Module<T
         });
 
         info!(
-            "[update_addr_binding] Update address binding:[chain:{:?}, addr:{:?}, who:{:?}]",
+            "[update_address_binding] Update address binding:[chain:{:?}, addr:{:?}, who:{:?}]",
             chain,
             try_addr(&address),
             who,
         );
-        AddressBinding::<T>::insert(chain, address, who);
+        AddressBindingOf::<T>::insert(chain, address, who);
     }
 
-    fn get_binding(chain: Chain, addr: Addr) -> Option<T::AccountId> {
+    fn address(chain: Chain, addr: Addr) -> Option<T::AccountId> {
         let addr_bytes: ChainAddress = addr.into();
-        AddressBinding::<T>::get(chain, &addr_bytes)
+        AddressBindingOf::<T>::get(chain, &addr_bytes)
     }
 }
 

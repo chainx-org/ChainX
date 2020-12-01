@@ -48,7 +48,7 @@ use xp_gateway_common::AccountExtractor;
 use xp_logging::{debug, error, info};
 use xpallet_assets::{BalanceOf, Chain, ChainT, WithdrawalLimit};
 use xpallet_gateway_common::{
-    traits::{AddrBinding, ChannelBinding, TrusteeSession},
+    traits::{AddressBinding, ReferralBinding, TrusteeSession},
     trustees::bitcoin::BtcTrusteeAddrInfo,
 };
 use xpallet_support::try_addr;
@@ -56,7 +56,7 @@ use xpallet_support::try_addr;
 pub use self::types::{BtcAddress, BtcParams, BtcTxVerifier, BtcWithdrawalProposal};
 pub use self::weights::WeightInfo;
 use self::{
-    trustee::{get_last_trustee_address_pair, get_trustee_address_pair},
+    trustee::{get_current_trustee_address_pair, get_previous_trustee_address_pair},
     tx::remove_pending_deposit,
     types::{
         BtcDepositCache, BtcHeaderIndex, BtcHeaderInfo, BtcRelayedTx, BtcRelayedTxInfo,
@@ -81,8 +81,8 @@ pub trait Trait: xpallet_assets::Trait + xpallet_gateway_records::Trait {
     type AccountExtractor: AccountExtractor<Self::AccountId, ReferralId>;
     type TrusteeSessionProvider: TrusteeSession<Self::AccountId, BtcTrusteeAddrInfo>;
     type TrusteeOrigin: EnsureOrigin<Self::Origin, Success = Self::AccountId>;
-    type Channel: ChannelBinding<Self::AccountId>;
-    type AddrBinding: AddrBinding<Self::AccountId, BtcAddress>;
+    type ReferralBinding: ReferralBinding<Self::AccountId>;
+    type AddressBinding: AddressBinding<Self::AccountId, BtcAddress>;
     type WeightInfo: WeightInfo;
 }
 
@@ -435,7 +435,7 @@ impl<T: Trait> ChainT<BalanceOf<T>> for Module<T> {
             err
         })?;
 
-        match get_trustee_address_pair::<T>() {
+        match get_current_trustee_address_pair::<T>() {
             Ok((hot_addr, cold_addr)) => {
                 // do not allow withdraw from trustee address
                 if address == hot_addr || address == cold_addr {
@@ -600,8 +600,8 @@ impl<T: Trait> Module<T> {
 
         let network = Module::<T>::network_id();
         let min_deposit = Module::<T>::btc_min_deposit();
-        let current_trustee_pair = get_trustee_address_pair::<T>()?;
-        let previous_trustee_pair = get_last_trustee_address_pair::<T>().ok();
+        let current_trustee_pair = get_current_trustee_address_pair::<T>()?;
+        let previous_trustee_pair = get_previous_trustee_address_pair::<T>().ok();
         let state = tx::process_tx::<T>(
             tx.raw,
             prev_tx,

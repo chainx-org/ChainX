@@ -35,15 +35,15 @@ use chainx_primitives::{AddrStr, AssetId, ChainAddress, Text};
 use xp_logging::{error, info};
 use xp_runtime::Memo;
 use xpallet_assets::{AssetRestrictions, BalanceOf, Chain, ChainT, WithdrawalLimit};
-use xpallet_gateway_records::WithdrawalState;
+use xpallet_gateway_records::{WithdrawalRecordId, WithdrawalState};
 use xpallet_support::traits::{MultisigAddressFor, Validator};
 
-use crate::traits::TrusteeForChain;
-use crate::types::{
+use self::traits::TrusteeForChain;
+use self::types::{
     GenericTrusteeIntentionProps, GenericTrusteeSessionInfo, TrusteeInfoConfig,
     TrusteeIntentionProps,
 };
-pub use crate::weights::WeightInfo;
+pub use self::weights::WeightInfo;
 
 pub trait Trait: xpallet_gateway_records::Trait {
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
@@ -52,9 +52,8 @@ pub trait Trait: xpallet_gateway_records::Trait {
 
     type DetermineMultisigAddress: MultisigAddressFor<Self::AccountId>;
 
-    // for chain
+    // for bitcoin
     type Bitcoin: ChainT<BalanceOf<Self>>;
-
     type BitcoinTrustee: TrusteeForChain<
         Self::AccountId,
         trustees::bitcoin::BtcTrusteeType,
@@ -104,11 +103,15 @@ decl_error! {
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         type Error = Error<T>;
+
         fn deposit_event() = default;
 
+        /// Create a withdrawal.
         /// Withdraws some balances of `asset_id` to address `addr` of target chain.
         ///
-        /// NOTE: `ext` is for the compatiblity purpose, e.g., EOS requires a memo when doing the transfer.
+        /// WithdrawalRecord State: `Applying`
+        ///
+        /// NOTE: `ext` is for the compatibility purpose, e.g., EOS requires a memo when doing the transfer.
         #[weight = <T as Trait>::WeightInfo::withdraw()]
         pub fn withdraw(
             origin,
@@ -129,13 +132,16 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = <T as Trait>::WeightInfo::withdraw()]
-        pub fn revoke_withdraw(origin, id: u32) -> DispatchResult {
+        /// Cancel the withdrawal by the applicant.
+        ///
+        /// WithdrawalRecord State: `Applying` ==> `NormalCancel`
+        #[weight = <T as Trait>::WeightInfo::cancel_withdrawal()]
+        pub fn cancel_withdrawal(origin, id: WithdrawalRecordId) -> DispatchResult {
             let from = ensure_signed(origin)?;
             xpallet_gateway_records::Module::<T>::cancel_withdrawal(id, &from)
         }
 
-        // trustees
+        /// Setup the trustee.
         #[weight = <T as Trait>::WeightInfo::setup_trustee()]
         pub fn setup_trustee(
             origin,
@@ -149,8 +155,8 @@ decl_module! {
             Self::setup_trustee_impl(who, chain, about, hot_entity, cold_entity)
         }
 
-        /// use for trustee multisig addr
-        #[weight = <T as Trait>::WeightInfo::transition_trustee_session(new_trustees.len() as u32)]
+        /// Transition the trustee session.
+        #[weight = <T as Trait>::WeightInfo::transition_trustee_session()]
         pub fn transition_trustee_session(
             origin,
             chain: Chain,
@@ -168,17 +174,18 @@ decl_module! {
             };
 
             info!(
-                "[transition_trustee_session_by_root] Try to transition trustees, chain:{:?}, new_trustees:{:?}",
+                "[transition_trustee_session] Try to transition trustees, chain:{:?}, new_trustees:{:?}",
                 chain,
                 new_trustees
             );
             Self::transition_trustee_session_impl(chain, new_trustees)
         }
 
+        /// Set the state of withdraw record by the trustees.
         #[weight = <T as Trait>::WeightInfo::set_withdrawal_state()]
         pub fn set_withdrawal_state(
             origin,
-            #[compact] withdrawal_id: u32,
+            #[compact] withdrawal_id: WithdrawalRecordId,
             state: WithdrawalState
         ) -> DispatchResult {
             let from = ensure_signed(origin)?;
@@ -192,6 +199,9 @@ decl_module! {
             xpallet_gateway_records::Module::<T>::set_withdrawal_state_by_trustees(withdrawal_id, chain, state)
         }
 
+        /// Set the config of trustee information.
+        ///
+        /// This is a root-only operation.
         #[weight = <T as Trait>::WeightInfo::set_trustee_info_config()]
         pub fn set_trustee_info_config(origin, chain: Chain, config: TrusteeInfoConfig) -> DispatchResult {
             ensure_root(origin)?;
@@ -199,8 +209,11 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = 0]
-        pub fn force_set_binding(
+        /// Set the referral binding of corresponding chain and account.
+        ///
+        /// This is a root-only operation.
+        #[weight = <T as Trait>::WeightInfo::force_set_referral_binding()]
+        pub fn force_set_referral_binding(
             origin,
             chain: Chain,
             who: <T::Lookup as StaticLookup>::Source,
@@ -217,32 +230,45 @@ decl_module! {
 
 decl_storage! {
     trait Store for Module<T: Trait> as XGatewayCommon {
-        // for trustee
-        pub TrusteeMultiSigAddr get(fn trustee_multisig_addr): map hasher(twox_64_concat) Chain => T::AccountId;
+        // Trustee multisig address of the corresponding chain.
+        pub TrusteeMultiSigAddr get(fn trustee_multisig_addr):
+            map hasher(twox_64_concat) Chain => T::AccountId;
 
-        /// trustee basal info config
-        pub TrusteeInfoConfigOf get(fn trustee_info_config): map hasher(twox_64_concat) Chain => TrusteeInfoConfig;
+        /// Trustee info config of the corresponding chain.
+        pub TrusteeInfoConfigOf get(fn trustee_info_config_of):
+            map hasher(twox_64_concat) Chain => TrusteeInfoConfig;
 
-        /// when generate trustee, auto generate a new session number, increase the newest trustee addr, can't modify by user
-        pub TrusteeSessionInfoLen get(fn trustee_session_info_len): map hasher(twox_64_concat) Chain => u32 = 0;
+        /// Next Trustee session info number of the chain.
+        ///
+        /// Auto generate a new session number (0) when generate new trustee of a chain.
+        /// If the trustee of a chain is changed, the corresponding number will increase by 1.
+        ///
+        /// NOTE: The number can't be modified by users.
+        pub TrusteeSessionInfoLen get(fn next_trustee_session_info_number_of):
+            map hasher(twox_64_concat) Chain => u32 = 0;
 
+        /// Trustee session info of the corresponding chain and number.
         pub TrusteeSessionInfoOf get(fn trustee_session_info_of):
             double_map hasher(twox_64_concat) Chain, hasher(twox_64_concat) u32
             => Option<GenericTrusteeSessionInfo<T::AccountId>>;
 
+        /// Trustee intention properties of the corresponding account and chain.
         pub TrusteeIntentionPropertiesOf get(fn trustee_intention_props_of):
             double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) Chain
             => Option<GenericTrusteeIntentionProps>;
 
-        pub AddressBinding:
-            double_map hasher(twox_64_concat) Chain, hasher(blake2_128_concat) ChainAddress
-            => Option<T::AccountId>;
-
+        /// The bound address of the corresponding account and chain.
         pub BoundAddressOf:
             double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) Chain
             => Vec<ChainAddress>;
 
-        pub ChannelBindingOf get(fn channel_binding_of):
+        /// The address binding of the corresponding chain and chain address.
+        pub AddressBindingOf:
+            double_map hasher(twox_64_concat) Chain, hasher(blake2_128_concat) ChainAddress
+            => Option<T::AccountId>;
+
+        /// The referral binding of the corresponding account and chain.
+        pub ReferralBindingOf get(fn referral_binding_of):
             double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) Chain
             => Option<T::AccountId>;
     }
@@ -353,7 +379,7 @@ impl<T: Trait> Module<T> {
         chain: Chain,
         new_trustees: Vec<T::AccountId>,
     ) -> Result<GenericTrusteeSessionInfo<T::AccountId>, DispatchError> {
-        let config = Self::trustee_info_config(chain);
+        let config = Self::trustee_info_config_of(chain);
         let has_duplicate =
             (1..new_trustees.len()).any(|i| new_trustees[i..].contains(&new_trustees[i - 1]));
         if has_duplicate {
@@ -402,15 +428,19 @@ impl<T: Trait> Module<T> {
         let info = Self::try_generate_session_info(chain, new_trustees)?;
         let multi_addr = Self::generate_multisig_addr(chain, &info)?;
 
-        let session_number = Self::trustee_session_info_len(chain);
+        let curr_session_number = Self::next_trustee_session_info_number_of(chain);
         // FIXME: rethink about the overflow case.
-        let next_number = session_number.checked_add(1).unwrap_or(0u32);
+        let next_session_number = curr_session_number.checked_add(1).unwrap_or(0u32);
 
-        TrusteeSessionInfoLen::insert(chain, next_number);
-        TrusteeSessionInfoOf::<T>::insert(chain, session_number, info.clone());
+        TrusteeSessionInfoLen::insert(chain, next_session_number);
+        TrusteeSessionInfoOf::<T>::insert(chain, curr_session_number, info.clone());
         TrusteeMultiSigAddr::<T>::insert(chain, multi_addr);
 
-        Self::deposit_event(Event::<T>::TrusteeSetChanged(chain, session_number, info));
+        Self::deposit_event(Event::<T>::TrusteeSetChanged(
+            chain,
+            curr_session_number,
+            info,
+        ));
         Ok(())
     }
 
@@ -419,7 +449,7 @@ impl<T: Trait> Module<T> {
         info: &GenericTrusteeSessionInfo<T::AccountId>,
     ) -> Result<T::AccountId, DispatchError> {
         let multi_addr =
-            T::DetermineMultisigAddress::calc_multisig(&info.trustee_list, info.threshold);
+            T::DetermineMultisigAddress::calc_multisig(&info.0.trustee_list, info.0.threshold);
 
         // Each chain must have a distinct multisig address,
         // duplicated multisig address is not allowed.
@@ -433,7 +463,7 @@ impl<T: Trait> Module<T> {
     }
 
     fn set_referral_binding(chain: Chain, who: T::AccountId, referral: T::AccountId) {
-        ChannelBindingOf::<T>::insert(&who, &chain, referral.clone());
+        ReferralBindingOf::<T>::insert(&who, &chain, referral.clone());
         Self::deposit_event(Event::<T>::ReferralBinded(who, chain, referral))
     }
 }
