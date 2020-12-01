@@ -533,8 +533,9 @@ decl_module! {
             }
         }
 
+        /// Clear the records in Staking for leaked `BondedWithdrawal` frozen balances.
         #[weight = T::WeightInfo::unlock_unbonded_withdrawal()]
-        fn force_unlock_unbonded_withdrawal(origin, who: T::AccountId) {
+        fn force_unlock_bonded_withdrawal(origin, who: T::AccountId) {
             ensure_root(origin)?;
             Locks::<T>::mutate(&who, |locks| {
                 locks.remove(&LockedType::BondedWithdrawal);
