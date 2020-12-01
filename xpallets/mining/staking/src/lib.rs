@@ -272,7 +272,7 @@ decl_event!(
         /// Offenders were forcibly to be chilled due to insufficient reward pot balance. [session_index, chilled_validators]
         ForceChilled(SessionIndex, Vec<AccountId>),
         /// Unlock the unbonded withdrawal by force. [account]
-        ForceWithdrawn(AccountId),
+        ForceAllWithdrawn(AccountId),
     }
 );
 
@@ -544,7 +544,7 @@ decl_module! {
                     nominator.unbonded_chunks.clear();
                 });
             }
-            Self::deposit_event(Event::<T>::ForceWithdrawn(who));
+            Self::deposit_event(Event::<T>::ForceAllWithdrawn(who));
         }
     }
 }
