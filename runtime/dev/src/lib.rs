@@ -830,8 +830,8 @@ impl xpallet_gateway_bitcoin::Trait for Runtime {
     type AccountExtractor = xp_gateway_bitcoin::OpReturnExtractor;
     type TrusteeSessionProvider = trustees::bitcoin::BtcTrusteeSessionManager<Runtime>;
     type TrusteeOrigin = EnsureSignedBy<trustees::bitcoin::BtcTrusteeMultisig<Runtime>, AccountId>;
-    type Channel = XGatewayCommon;
-    type AddrBinding = XGatewayCommon;
+    type ReferralBinding = XGatewayCommon;
+    type AddressBinding = XGatewayCommon;
     type WeightInfo = xpallet_gateway_bitcoin::weights::SubstrateWeight<Runtime>;
 }
 
@@ -873,7 +873,7 @@ impl xpallet_mining_staking::Trait for Runtime {
 pub struct ReferralGetter;
 impl xpallet_mining_asset::GatewayInterface<AccountId> for ReferralGetter {
     fn referral_of(who: &AccountId, asset_id: AssetId) -> Option<AccountId> {
-        use xpallet_gateway_common::traits::ChannelBinding;
+        use xpallet_gateway_common::traits::ReferralBinding;
         XGatewayCommon::get_binding_info(&asset_id, who)
     }
 }
