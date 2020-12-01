@@ -419,7 +419,7 @@ impl<T: Trait> Module<T> {
         info: &GenericTrusteeSessionInfo<T::AccountId>,
     ) -> Result<T::AccountId, DispatchError> {
         let multi_addr =
-            T::DetermineMultisigAddress::calc_multisig(&info.trustee_list, info.threshold);
+            T::DetermineMultisigAddress::calc_multisig(&info.0.trustee_list, info.0.threshold);
 
         // Each chain must have a distinct multisig address,
         // duplicated multisig address is not allowed.
