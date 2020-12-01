@@ -10,7 +10,6 @@ use sp_std::{convert::TryFrom, prelude::Vec};
 use chainx_primitives::Text;
 
 use crate::traits::BytesLike;
-use crate::utils::two_thirds_unsafe;
 
 /// The config of trustee info.
 #[derive(PartialEq, Clone, Encode, Decode, Default, RuntimeDebug)]
@@ -108,55 +107,5 @@ impl<TrusteeEntity: BytesLike> TryFrom<GenericTrusteeIntentionProps>
             hot_entity: TrusteeEntity::try_from(value.0.hot_entity).map_err(|_| ())?,
             cold_entity: TrusteeEntity::try_from(value.0.cold_entity).map_err(|_| ())?,
         })
-    }
-}
-
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct GenericAllSessionInfo<AccountId> {
-    pub hot_entity: Vec<u8>,
-    pub cold_entity: Vec<u8>,
-    pub counts: Counts,
-    pub trustees_info: Vec<(AccountId, GenericTrusteeIntentionProps)>,
-}
-
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct Counts {
-    pub required: u32,
-    pub total: u32,
-}
-
-pub fn into_generic_all_info<
-    AccountId: Clone,
-    TrusteeEntity: BytesLike,
-    TrusteeAddress: BytesLike,
-    F,
->(
-    session_info: TrusteeSessionInfo<AccountId, TrusteeAddress>,
-    get_props: F,
-) -> GenericAllSessionInfo<AccountId>
-where
-    F: Fn(&AccountId) -> Option<TrusteeIntentionProps<TrusteeEntity>>,
-{
-    let session_info: GenericTrusteeSessionInfo<AccountId> = session_info.into();
-
-    let total = session_info.0.trustee_list.len() as u32;
-    let required = two_thirds_unsafe(total);
-
-    let mut trustees_info: Vec<(AccountId, GenericTrusteeIntentionProps)> = Vec::new();
-    for accountid in session_info.0.trustee_list {
-        if let Some(props) = get_props(&accountid) {
-            trustees_info.push((accountid, props.into()))
-        }
-    }
-
-    GenericAllSessionInfo {
-        hot_entity: session_info.0.hot_address,
-        cold_entity: session_info.0.cold_address,
-        counts: Counts { required, total },
-        trustees_info,
     }
 }
