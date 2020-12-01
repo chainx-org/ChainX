@@ -271,6 +271,8 @@ decl_event!(
         Withdrawn(AccountId, Balance),
         /// Offenders were forcibly to be chilled due to insufficient reward pot balance. [session_index, chilled_validators]
         ForceChilled(SessionIndex, Vec<AccountId>),
+        /// Unlock the unbonded withdrawal by force. [account]
+        ForceAllWithdrawn(AccountId),
     }
 );
 
@@ -408,7 +410,6 @@ decl_module! {
 
             let Unbonded { value, locked_until } = unbonded_chunks[unbonded_index as usize];
             let current_block = <frame_system::Module<T>>::block_number();
-
             ensure!(current_block > locked_until, Error::<T>::UnbondedWithdrawalNotYetDue);
 
             Self::apply_unlock_unbonded_withdrawal(&sender, value);
@@ -530,6 +531,21 @@ decl_module! {
             } else {
                 Immortals::<T>::put(new);
             }
+        }
+
+        /// Clear the records in Staking for leaked `BondedWithdrawal` frozen balances.
+        #[weight = T::WeightInfo::unlock_unbonded_withdrawal()]
+        fn force_unlock_bonded_withdrawal(origin, who: T::AccountId) {
+            ensure_root(origin)?;
+            Locks::<T>::mutate(&who, |locks| {
+                locks.remove(&LockedType::BondedWithdrawal);
+            });
+            for (target, _) in Nominations::<T>::iter_prefix(&who) {
+                Nominations::<T>::mutate(&who, &target, |nominator| {
+                    nominator.unbonded_chunks.clear();
+                });
+            }
+            Self::deposit_event(Event::<T>::ForceAllWithdrawn(who));
         }
     }
 }
@@ -876,8 +892,11 @@ impl<T: Trait> Module<T> {
             Error::<T>::InsufficientBalance
         );
 
-        Self::set_lock(who, new_bonded);
         new_locks.insert(LockedType::Bonded, new_bonded);
+        let staking_locked = new_locks
+            .values()
+            .fold(Zero::zero(), |acc: BalanceOf<T>, x| acc + *x);
+        Self::set_lock(who, staking_locked);
         Locks::<T>::insert(who, new_locks);
 
         Ok(())

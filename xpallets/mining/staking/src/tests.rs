@@ -118,7 +118,27 @@ fn bond_should_work() {
         let before_bond = Balances::usable_balance(&1);
         // old_lock 10
         let old_lock = *<Locks<Test>>::get(1).get(&LockedType::Bonded).unwrap();
+        // { bonded: 10, unbonded_withdrawal: 0 }
+        assert_eq!(
+            frame_system::Account::<Test>::get(&1).data,
+            pallet_balances::AccountData {
+                free: 100,
+                reserved: 0,
+                misc_frozen: 10,
+                fee_frozen: 10
+            }
+        );
+        // { bonded: 20, unbonded_withdrawal: 0 }
         assert_ok!(t_bond(1, 2, 10));
+        assert_eq!(
+            frame_system::Account::<Test>::get(&1).data,
+            pallet_balances::AccountData {
+                free: 100,
+                reserved: 0,
+                misc_frozen: 20,
+                fee_frozen: 20
+            }
+        );
 
         assert_bonded_locks(1, old_lock + 10);
         assert_eq!(Balances::usable_balance(&1), before_bond - 10);
@@ -137,6 +157,23 @@ fn bond_should_work() {
                 last_vote_weight: 0,
                 last_vote_weight_update: 2,
                 unbonded_chunks: vec![]
+            }
+        );
+
+        // { bonded: 12, unbonded_withdrawal: 8 }
+        assert_ok!(t_unbond(1, 2, 8));
+
+        // { bonded: 13, unbonded_withdrawal: 8 }
+        assert_ok!(t_bond(1, 3, 1));
+
+        assert_bonded_locks(1, 13);
+        assert_eq!(
+            frame_system::Account::<Test>::get(&1).data,
+            pallet_balances::AccountData {
+                free: 100,
+                reserved: 0,
+                misc_frozen: 13 + 8,
+                fee_frozen: 13 + 8
             }
         );
     });
