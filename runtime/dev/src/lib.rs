@@ -874,7 +874,7 @@ pub struct ReferralGetter;
 impl xpallet_mining_asset::GatewayInterface<AccountId> for ReferralGetter {
     fn referral_of(who: &AccountId, asset_id: AssetId) -> Option<AccountId> {
         use xpallet_gateway_common::traits::ReferralBinding;
-        XGatewayCommon::get_binding_info(&asset_id, who)
+        XGatewayCommon::referral(&asset_id, who)
     }
 }
 
