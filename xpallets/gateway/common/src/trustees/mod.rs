@@ -2,20 +2,15 @@
 
 pub mod bitcoin;
 
-use sp_std::{convert::TryFrom, marker::PhantomData, prelude::*};
-
-use codec::{Decode, Encode, Error as CodecError};
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
-
 use frame_support::{dispatch::DispatchError, traits::Contains};
+use sp_std::{convert::TryFrom, marker::PhantomData, prelude::*};
 
 use xp_logging::{error, warn};
 use xpallet_assets::Chain;
 use xpallet_support::traits::MultiSig;
 
 use crate::traits::{BytesLike, ChainProvider, TrusteeSession};
-use crate::types::{TrusteeIntentionProps, TrusteeSessionInfo};
+use crate::types::TrusteeSessionInfo;
 use crate::{Error, Module, Trait};
 
 pub struct TrusteeSessionManager<T: Trait, TrusteeAddress>(
