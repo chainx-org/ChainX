@@ -540,6 +540,9 @@ decl_module! {
         #[weight = T::WeightInfo::unlock_unbonded_withdrawal()]
         fn force_unlock_bonded_withdrawal(origin, who: T::AccountId) {
             ensure_root(origin)?;
+            Locks::<T>::mutate(&who, |locks| {
+                locks.remove(&LockedType::BondedWithdrawal);
+            });
             Self::purge_unlockings(&who);
             Self::deposit_event(Event::<T>::ForceAllWithdrawn(who));
         }
@@ -548,6 +551,7 @@ decl_module! {
         fn force_reset_staking_lock(origin, accounts: Vec<T::AccountId>) {
             for who in accounts.iter() {
                 Locks::<T>::mutate(who, |locks| {
+                    locks.remove(&LockedType::BondedWithdrawal);
                     Self::set_lock(who, *locks.entry(LockedType::Bonded).or_default());
                     Self::purge_unlockings(&who);
                 });
@@ -784,9 +788,6 @@ impl<T: Trait> Module<T> {
     }
 
     fn purge_unlockings(who: &T::AccountId) {
-        Locks::<T>::mutate(who, |locks| {
-            locks.remove(&LockedType::BondedWithdrawal);
-        });
         for (target, _) in Nominations::<T>::iter_prefix(who) {
             Nominations::<T>::mutate(&who, &target, |nominator| {
                 nominator.unbonded_chunks.clear();
