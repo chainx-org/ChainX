@@ -5,7 +5,7 @@ use codec::{Decode, Encode, Error as CodecError};
 use serde::{Deserialize, Serialize};
 
 use sp_runtime::RuntimeDebug;
-use sp_std::{convert::TryFrom, fmt};
+use sp_std::{convert::TryFrom, fmt, prelude::Vec};
 
 use xpallet_assets::Chain;
 
