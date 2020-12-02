@@ -552,8 +552,8 @@ decl_module! {
             for who in accounts.iter() {
                 Locks::<T>::mutate(who, |locks| {
                     locks.remove(&LockedType::BondedWithdrawal);
+                    Self::purge_unlockings(who);
                     Self::set_lock(who, *locks.entry(LockedType::Bonded).or_default());
-                    Self::purge_unlockings(&who);
                 });
             }
         }
