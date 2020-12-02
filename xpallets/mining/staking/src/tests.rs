@@ -217,6 +217,7 @@ fn total_staking_locked_no_more_than_free_balance_should_work() {
         );
         assert_eq!(Balances::usable_balance(&1), 10);
 
+        // Total locked balance in Staking can not be more than current _usable_ balance.
         assert_err!(t_bond(1, 2, 80), Error::<Test>::InsufficientBalance);
         assert_err!(t_bond(1, 2, 11), Error::<Test>::InsufficientBalance);
         assert_ok!(t_bond(1, 2, 10));
