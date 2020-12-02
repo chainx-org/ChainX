@@ -167,6 +167,7 @@ fn bond_should_work() {
         assert_ok!(t_bond(1, 3, 1));
 
         assert_bonded_locks(1, 13);
+        // https://github.com/chainx-org/ChainX/issues/402
         assert_eq!(
             frame_system::Account::<Test>::get(&1).data,
             pallet_balances::AccountData {
@@ -176,6 +177,65 @@ fn bond_should_work() {
                 fee_frozen: 13 + 8
             }
         );
+    });
+}
+
+#[test]
+fn total_staking_locked_no_more_than_free_balance_should_work() {
+    ExtBuilder::default().build_and_execute(|| {
+        assert_ok!(t_bond(1, 2, 80));
+        assert_eq!(
+            Locks::<Test>::get(&1),
+            vec![(LockedType::Bonded, 90)].into_iter().collect()
+        );
+        assert_eq!(
+            frame_system::Account::<Test>::get(&1).data,
+            pallet_balances::AccountData {
+                free: 100,
+                reserved: 0,
+                misc_frozen: 90,
+                fee_frozen: 90,
+            }
+        );
+        assert_eq!(Balances::usable_balance(&1), 10);
+
+        assert_ok!(t_unbond(1, 2, 80));
+        assert_eq!(
+            Locks::<Test>::get(&1),
+            vec![(LockedType::Bonded, 10), (LockedType::BondedWithdrawal, 80)]
+                .into_iter()
+                .collect()
+        );
+        assert_eq!(
+            frame_system::Account::<Test>::get(&1).data,
+            pallet_balances::AccountData {
+                free: 100,
+                reserved: 0,
+                misc_frozen: 90,
+                fee_frozen: 90,
+            }
+        );
+        assert_eq!(Balances::usable_balance(&1), 10);
+
+        assert_err!(t_bond(1, 2, 80), Error::<Test>::InsufficientBalance);
+        assert_err!(t_bond(1, 2, 11), Error::<Test>::InsufficientBalance);
+        assert_ok!(t_bond(1, 2, 10));
+        assert_eq!(
+            Locks::<Test>::get(&1),
+            vec![(LockedType::Bonded, 20), (LockedType::BondedWithdrawal, 80)]
+                .into_iter()
+                .collect()
+        );
+        assert_eq!(
+            frame_system::Account::<Test>::get(&1).data,
+            pallet_balances::AccountData {
+                free: 100,
+                reserved: 0,
+                misc_frozen: 90 + 10,
+                fee_frozen: 90 + 10,
+            }
+        );
+        assert_eq!(Balances::usable_balance(&1), 0);
     });
 }
 
@@ -650,11 +710,12 @@ fn balances_reserve_should_work() {
         assert_eq!(Balances::free_balance(&who), 10);
 
         // Bond 6
-        assert_ok!(XStaking::bond_reserve(&who, 6));
+        XStaking::bond_reserve(&who, 6);
         assert_eq!(Balances::usable_balance(&who), 4);
-        let mut locks = BTreeMap::new();
-        locks.insert(LockedType::Bonded, 6);
-        assert_eq!(XStaking::locks(&who), locks);
+        assert_eq!(
+            XStaking::locks(&who),
+            vec![(LockedType::Bonded, 6)].into_iter().collect()
+        );
         assert_eq!(
             frame_system::Account::<Test>::get(&who).data,
             pallet_balances::AccountData {
@@ -670,9 +731,11 @@ fn balances_reserve_should_work() {
         );
 
         // Bond 2 extra
-        assert_ok!(XStaking::bond_reserve(&who, 2));
-        let mut locks = BTreeMap::new();
-        locks.insert(LockedType::Bonded, 8);
+        XStaking::bond_reserve(&who, 2);
+        assert_eq!(
+            XStaking::locks(&who),
+            vec![(LockedType::Bonded, 6 + 2)].into_iter().collect()
+        );
         assert_eq!(
             frame_system::Account::<Test>::get(&who).data,
             pallet_balances::AccountData {
@@ -682,56 +745,60 @@ fn balances_reserve_should_work() {
                 fee_frozen: 8
             }
         );
-        assert_err!(
-            XStaking::bond_reserve(&who, 3),
-            <Error<Test>>::InsufficientBalance
-        );
+
+        // Bond 3 extra
+        XStaking::bond_reserve(&who, 3);
 
         // Unbond 5 now, the frozen balances stay the same,
         // only internal Staking locked state changes.
         assert_ok!(XStaking::unbond_reserve(&who, 5));
-        let mut locks = BTreeMap::new();
-        locks.insert(LockedType::Bonded, 3);
-        locks.insert(LockedType::BondedWithdrawal, 5);
-        assert_eq!(XStaking::locks(&who), locks);
+        assert_eq!(
+            XStaking::locks(&who),
+            vec![(LockedType::Bonded, 6), (LockedType::BondedWithdrawal, 5)]
+                .into_iter()
+                .collect()
+        );
         assert_eq!(
             frame_system::Account::<Test>::get(&who).data,
             pallet_balances::AccountData {
                 free: 10,
                 reserved: 0,
-                misc_frozen: 8,
-                fee_frozen: 8
+                misc_frozen: 11,
+                fee_frozen: 11
             }
         );
 
         // Unlock unbonded withdrawal 4.
         XStaking::apply_unlock_unbonded_withdrawal(&who, 4);
-        let mut locks = BTreeMap::new();
-        locks.insert(LockedType::Bonded, 3);
-        locks.insert(LockedType::BondedWithdrawal, 1);
-        assert_eq!(XStaking::locks(&who), locks);
+        assert_eq!(
+            XStaking::locks(&who),
+            vec![(LockedType::Bonded, 6), (LockedType::BondedWithdrawal, 1)]
+                .into_iter()
+                .collect()
+        );
         assert_eq!(
             frame_system::Account::<Test>::get(&who).data,
             pallet_balances::AccountData {
                 free: 10,
                 reserved: 0,
-                misc_frozen: 4,
-                fee_frozen: 4
+                misc_frozen: 11 - 4,
+                fee_frozen: 11 - 4
             }
         );
 
         // Unlock unbonded withdrawal 1.
         XStaking::apply_unlock_unbonded_withdrawal(&who, 1);
-        let mut locks = BTreeMap::new();
-        locks.insert(LockedType::Bonded, 3);
-        assert_eq!(XStaking::locks(&who), locks);
+        assert_eq!(
+            XStaking::locks(&who),
+            vec![(LockedType::Bonded, 6)].into_iter().collect()
+        );
         assert_eq!(
             frame_system::Account::<Test>::get(&who).data,
             pallet_balances::AccountData {
                 free: 10,
                 reserved: 0,
-                misc_frozen: 3,
-                fee_frozen: 3
+                misc_frozen: 11 - 4 - 1,
+                fee_frozen: 11 - 4 - 1
             }
         );
     });
