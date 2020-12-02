@@ -1,8 +1,23 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use super::*;
-use light_bitcoin::keys::Public as BtcPublic;
+use codec::{Decode, Encode, Error as CodecError};
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
+
 use sp_runtime::RuntimeDebug;
+use sp_std::{convert::TryFrom, fmt};
+
+use xpallet_assets::Chain;
+
+use super::{TrusteeMultisigProvider, TrusteeSessionManager};
+use crate::traits::ChainProvider;
+use crate::types::{TrusteeIntentionProps, TrusteeSessionInfo};
+
+pub type BtcAddress = Vec<u8>;
+pub type BtcTrusteeSessionInfo<AccountId> = TrusteeSessionInfo<AccountId, BtcTrusteeAddrInfo>;
+pub type BtcTrusteeIntentionProps = TrusteeIntentionProps<BtcTrusteeType>;
+pub type BtcTrusteeSessionManager<T> = TrusteeSessionManager<T, BtcTrusteeAddrInfo>;
+pub type BtcTrusteeMultisig<T> = TrusteeMultisigProvider<T, BtcTrusteeType>;
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -14,9 +29,9 @@ pub struct BtcTrusteeAddrInfo {
     pub redeem_script: Vec<u8>,
 }
 
-#[cfg(feature = "std")]
-impl std::fmt::Debug for BtcTrusteeAddrInfo {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Debug for BtcTrusteeAddrInfo {
+    #[cfg(feature = "std")]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let redeem_script_in_hex = hex::encode(&self.redeem_script);
         if redeem_script_in_hex.len() > 16 {
             write!(
@@ -35,16 +50,20 @@ impl std::fmt::Debug for BtcTrusteeAddrInfo {
             )
         }
     }
-}
 
-#[cfg(not(feature = "std"))]
-impl core::fmt::Debug for BtcTrusteeAddrInfo {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    #[cfg(not(feature = "std"))]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "BtcTrusteeAddrInfo {{ addr: {:?}, redeem_script: {:?} }}",
             self.addr, self.redeem_script
         )
+    }
+}
+
+impl From<BtcTrusteeAddrInfo> for Vec<u8> {
+    fn from(value: BtcTrusteeAddrInfo) -> Self {
+        value.encode()
     }
 }
 
@@ -56,74 +75,27 @@ impl TryFrom<Vec<u8>> for BtcTrusteeAddrInfo {
     }
 }
 
-impl Into<Vec<u8>> for BtcTrusteeAddrInfo {
-    fn into(self) -> Vec<u8> {
-        self.encode()
+impl ChainProvider for BtcTrusteeAddrInfo {
+    fn chain() -> Chain {
+        Chain::Bitcoin
     }
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-pub struct BtcTrusteeType(pub BtcPublic);
-impl Into<Vec<u8>> for BtcTrusteeType {
-    fn into(self) -> Vec<u8> {
-        self.0.to_vec()
-    }
-}
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct BtcTrusteeType(pub light_bitcoin::keys::Public);
 
-#[cfg(feature = "std")]
-mod serde_impl {
-    use super::*;
-    use serde::{de::Error, Deserializer, Serializer};
-    use xp_rpc::serde_hex;
-
-    impl Serialize for BtcTrusteeType {
-        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
-        {
-            let d = (&*self.0).to_vec();
-            serde_hex::serialize(&d, serializer)
-        }
+impl From<BtcTrusteeType> for Vec<u8> {
+    fn from(value: BtcTrusteeType) -> Self {
+        value.0.to_vec()
     }
-    impl<'de> Deserialize<'de> for BtcTrusteeType {
-        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: Deserializer<'de>,
-        {
-            let data: Vec<u8> = serde_hex::deserialize(deserializer)?;
-            let pubkey = BtcPublic::from_slice(&data)
-                .map_err(|e| Error::custom(format!("not valid pubkey hex:{:?}", e)))?;
-            Ok(BtcTrusteeType(pubkey))
-        }
-    }
-
-    // pub mod btc_addr {
-    //     use super::*;
-    //     use sp_std::str::FromStr;
-    //
-    //     pub fn serialize<S>(value: &Address, serializer: S) -> Result<S::Ok, S::Error>
-    //     where
-    //         S: Serializer,
-    //     {
-    //         let output = value.to_string();
-    //         serializer.serialize_str(&output)
-    //     }
-    //
-    //     pub fn deserialize<'de, D>(deserializer: D) -> Result<Address, D::Error>
-    //     where
-    //         D: Deserializer<'de>,
-    //     {
-    //         let s: String = Deserialize::deserialize(deserializer)?;
-    //         Address::from_str(&s).map_err(|e| Error::custom(format!("{:?}", e)))
-    //     }
-    // }
 }
 
 impl TryFrom<Vec<u8>> for BtcTrusteeType {
     type Error = ();
 
     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
-        BtcPublic::from_slice(&value)
+        light_bitcoin::keys::Public::from_slice(&value)
             .map(BtcTrusteeType)
             .map_err(|_| ())
     }
@@ -135,14 +107,14 @@ impl ChainProvider for BtcTrusteeType {
     }
 }
 
-impl ChainProvider for BtcTrusteeAddrInfo {
-    fn chain() -> Chain {
-        Chain::Bitcoin
-    }
+#[test]
+fn test_serde_btc_trustee_type() {
+    let pubkey = BtcTrusteeType(light_bitcoin::keys::Public::Compressed(Default::default()));
+    let ser = serde_json::to_string(&pubkey).unwrap();
+    assert_eq!(
+        ser,
+        "\"0x000000000000000000000000000000000000000000000000000000000000000000\""
+    );
+    let de = serde_json::from_str::<BtcTrusteeType>(&ser).unwrap();
+    assert_eq!(de, pubkey);
 }
-
-pub type BtcTrusteeIntentionProps = TrusteeIntentionProps<BtcTrusteeType>;
-pub type BtcTrusteeSessionInfo<AccountId> = TrusteeSessionInfo<AccountId, BtcTrusteeAddrInfo>;
-pub type BtcTrusteeSessionManager<T> = TrusteeSessionManager<T, BtcTrusteeAddrInfo>;
-pub type BtcTrusteeMultisig<T> = TrusteeMultisigProvider<T, BtcTrusteeType>;
-pub type BtcAddress = Vec<u8>;
