@@ -155,7 +155,7 @@ benchmarks! {
         let who_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(who.clone());
     }: _(RawOrigin::Root, Chain::Bitcoin, who_lookup.clone(), who_lookup.clone())
     verify {
-        assert_eq!(Module::<T>::channel_binding_of(&who, Chain::Bitcoin), Some(who));
+        assert_eq!(Module::<T>::referral_binding_of(&who, Chain::Bitcoin), Some(who));
     }
 }
 

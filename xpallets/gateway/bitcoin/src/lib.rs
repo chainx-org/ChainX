@@ -48,7 +48,7 @@ use xp_gateway_common::AccountExtractor;
 use xp_logging::{debug, error, info};
 use xpallet_assets::{BalanceOf, Chain, ChainT, WithdrawalLimit};
 use xpallet_gateway_common::{
-    traits::{AddrBinding, ChannelBinding, TrusteeSession},
+    traits::{AddressBinding, ReferralBinding, TrusteeSession},
     trustees::bitcoin::BtcTrusteeAddrInfo,
 };
 use xpallet_support::try_addr;
@@ -81,8 +81,8 @@ pub trait Trait: xpallet_assets::Trait + xpallet_gateway_records::Trait {
     type AccountExtractor: AccountExtractor<Self::AccountId, ReferralId>;
     type TrusteeSessionProvider: TrusteeSession<Self::AccountId, BtcTrusteeAddrInfo>;
     type TrusteeOrigin: EnsureOrigin<Self::Origin, Success = Self::AccountId>;
-    type Channel: ChannelBinding<Self::AccountId>;
-    type AddrBinding: AddrBinding<Self::AccountId, BtcAddress>;
+    type ReferralBinding: ReferralBinding<Self::AccountId>;
+    type AddressBinding: AddressBinding<Self::AccountId, BtcAddress>;
     type WeightInfo: WeightInfo;
 }
 

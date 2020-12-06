@@ -21,29 +21,28 @@ pub mod types;
 pub mod utils;
 pub mod weights;
 
-use sp_runtime::traits::StaticLookup;
-use sp_std::{collections::btree_map::BTreeMap, convert::TryFrom, prelude::*};
-
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult},
     ensure, IterableStorageMap,
 };
 use frame_system::{ensure_root, ensure_signed};
+use sp_runtime::traits::StaticLookup;
+use sp_std::{collections::btree_map::BTreeMap, convert::TryFrom, prelude::*};
 
 use chainx_primitives::{AddrStr, AssetId, ChainAddress, Text};
 use xp_logging::{error, info};
 use xp_runtime::Memo;
 use xpallet_assets::{AssetRestrictions, BalanceOf, Chain, ChainT, WithdrawalLimit};
-use xpallet_gateway_records::WithdrawalState;
+use xpallet_gateway_records::{WithdrawalRecordId, WithdrawalState};
 use xpallet_support::traits::{MultisigAddressFor, Validator};
 
-use crate::traits::TrusteeForChain;
-use crate::types::{
+use self::traits::TrusteeForChain;
+use self::types::{
     GenericTrusteeIntentionProps, GenericTrusteeSessionInfo, TrusteeInfoConfig,
     TrusteeIntentionProps,
 };
-pub use crate::weights::WeightInfo;
+pub use self::weights::WeightInfo;
 
 pub trait Trait: xpallet_gateway_records::Trait {
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
@@ -52,9 +51,8 @@ pub trait Trait: xpallet_gateway_records::Trait {
 
     type DetermineMultisigAddress: MultisigAddressFor<Self::AccountId>;
 
-    // for chain
+    // for bitcoin
     type Bitcoin: ChainT<BalanceOf<Self>>;
-
     type BitcoinTrustee: TrusteeForChain<
         Self::AccountId,
         trustees::bitcoin::BtcTrusteeType,
@@ -104,6 +102,7 @@ decl_error! {
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         type Error = Error<T>;
+
         fn deposit_event() = default;
 
         /// Withdraws some balances of `asset_id` to address `addr` of target chain.
@@ -130,7 +129,7 @@ decl_module! {
         }
 
         #[weight = <T as Trait>::WeightInfo::withdraw()]
-        pub fn revoke_withdraw(origin, id: u32) -> DispatchResult {
+        pub fn revoke_withdraw(origin, id: WithdrawalRecordId) -> DispatchResult {
             let from = ensure_signed(origin)?;
             xpallet_gateway_records::Module::<T>::cancel_withdrawal(id, &from)
         }
@@ -178,7 +177,7 @@ decl_module! {
         #[weight = <T as Trait>::WeightInfo::set_withdrawal_state()]
         pub fn set_withdrawal_state(
             origin,
-            #[compact] withdrawal_id: u32,
+            #[compact] id: WithdrawalRecordId,
             state: WithdrawalState
         ) -> DispatchResult {
             let from = ensure_signed(origin)?;
@@ -189,7 +188,7 @@ decl_module! {
                 .find_map(|(chain, multisig)| if from == multisig { Some(chain) } else { None })
                 .ok_or(Error::<T>::InvalidMultisig)?;
 
-            xpallet_gateway_records::Module::<T>::set_withdrawal_state_by_trustees(withdrawal_id, chain, state)
+            xpallet_gateway_records::Module::<T>::set_withdrawal_state_by_trustees(id, chain, state)
         }
 
         #[weight = <T as Trait>::WeightInfo::set_trustee_info_config()]
@@ -234,7 +233,7 @@ decl_storage! {
             double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) Chain
             => Option<GenericTrusteeIntentionProps>;
 
-        pub AddressBinding:
+        pub AddressBindingOf:
             double_map hasher(twox_64_concat) Chain, hasher(blake2_128_concat) ChainAddress
             => Option<T::AccountId>;
 
@@ -242,7 +241,7 @@ decl_storage! {
             double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) Chain
             => Vec<ChainAddress>;
 
-        pub ChannelBindingOf get(fn channel_binding_of):
+        pub ReferralBindingOf get(fn referral_binding_of):
             double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) Chain
             => Option<T::AccountId>;
     }
@@ -433,7 +432,7 @@ impl<T: Trait> Module<T> {
     }
 
     fn set_referral_binding(chain: Chain, who: T::AccountId, referral: T::AccountId) {
-        ChannelBindingOf::<T>::insert(&who, &chain, referral.clone());
+        ReferralBindingOf::<T>::insert(&who, &chain, referral.clone());
         Self::deposit_event(Event::<T>::ReferralBinded(who, chain, referral))
     }
 }
