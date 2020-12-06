@@ -365,14 +365,14 @@ fn withdraw_unbond_should_work() {
 
         t_system_block_number_inc(1);
 
-        assert_ok!(t_unbond(1, 2, 5));
-        let before_unbond = Balances::usable_balance(&1);
-        assert_eq!(Balances::usable_balance(&1), before_unbond);
+        let unbond_value = 10;
+
+        assert_ok!(t_unbond(1, 2, unbond_value));
 
         assert_eq!(
             <Nominations<Test>>::get(1, 2).unbonded_chunks,
             vec![Unbonded {
-                value: 5,
+                value: unbond_value,
                 locked_until: DEFAULT_BONDING_DURATION + 3
             }]
         );
@@ -386,9 +386,27 @@ fn withdraw_unbond_should_work() {
         t_system_block_number_inc(1);
 
         let before_withdraw_unbonded = Balances::usable_balance(&1);
-        assert_ok!(t_withdraw_unbonded(1, 2, 0),);
-        assert_eq!(Balances::usable_balance(&1), before_withdraw_unbonded + 5);
+        assert_ok!(t_withdraw_unbonded(1, 2, 0));
+        assert_eq!(
+            Balances::usable_balance(&1),
+            before_withdraw_unbonded + unbond_value
+        );
+
         assert_bonded_withdrawal_locks(1, 0);
+
+        // Unbond total stakes should work.
+        assert_ok!(t_unbond(1, 1, 10));
+        t_system_block_number_inc(DEFAULT_VALIDATOR_BONDING_DURATION + 1);
+        assert_ok!(t_withdraw_unbonded(1, 1, 0));
+        assert_eq!(
+            frame_system::Account::<Test>::get(&1).data,
+            pallet_balances::AccountData {
+                free: 100,
+                reserved: 0,
+                misc_frozen: 0,
+                fee_frozen: 0,
+            }
+        );
     });
 }
 

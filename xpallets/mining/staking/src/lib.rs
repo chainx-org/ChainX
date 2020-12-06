@@ -549,12 +549,21 @@ decl_module! {
 
         #[weight = 10_000_000]
         fn force_reset_staking_lock(origin, accounts: Vec<T::AccountId>) {
+            ensure_root(origin)?;
             for who in accounts.iter() {
                 Locks::<T>::mutate(who, |locks| {
                     locks.remove(&LockedType::BondedWithdrawal);
                     Self::purge_unlockings(who);
                     Self::set_lock(who, *locks.entry(LockedType::Bonded).or_default());
                 });
+            }
+        }
+
+        #[weight = 10_000_000]
+        fn force_set_lock(origin, new_locks: Vec<(T::AccountId, BalanceOf<T>)>) {
+            ensure_root(origin)?;
+            for (who, new_lock) in new_locks {
+                Self::set_lock(&who, new_lock);
             }
         }
     }
@@ -781,10 +790,14 @@ impl<T: Trait> Module<T> {
         T::Currency::transfer(from, to, value, ExistenceRequirement::KeepAlive)
     }
 
-    /// Create/Update a new balance lock on account `who`.
+    /// Create/Update/Remove a new balance lock on account `who`.
     #[inline]
     fn set_lock(who: &T::AccountId, new_locked: BalanceOf<T>) {
-        T::Currency::set_lock(STAKING_ID, who, new_locked, WithdrawReasons::all());
+        if new_locked.is_zero() {
+            T::Currency::remove_lock(STAKING_ID, who);
+        } else {
+            T::Currency::set_lock(STAKING_ID, who, new_locked, WithdrawReasons::all());
+        }
     }
 
     fn purge_unlockings(who: &T::AccountId) {
