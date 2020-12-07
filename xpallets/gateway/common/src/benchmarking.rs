@@ -133,11 +133,11 @@ benchmarks! {
             candidators.push(account);
         }
 
-        assert_eq!(Module::<T>::next_trustee_session_info_number_of(Chain::Bitcoin), 0);
+        assert_eq!(Module::<T>::trustee_session_info_len(Chain::Bitcoin), 0);
         assert!(Module::<T>::trustee_session_info_of(Chain::Bitcoin, 0).is_none());
     }: _(RawOrigin::Signed(caller.clone()), Chain::Bitcoin, candidators)
     verify {
-        assert_eq!(Module::<T>::next_trustee_session_info_number_of(Chain::Bitcoin), 1);
+        assert_eq!(Module::<T>::trustee_session_info_len(Chain::Bitcoin), 1);
         assert!(Module::<T>::trustee_session_info_of(Chain::Bitcoin, 0).is_some());
     }
 
