@@ -310,6 +310,66 @@ pub fn testnet_config() -> Result<ChainXChainSpec, String> {
     ))
 }
 
+pub fn private_testnet_config() -> Result<ChainXChainSpec, String> {
+    let wasm_binary =
+        chainx::WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
+
+    // 5EWtScne4zWsGaP4gVo8DmLpChVx3MzoQTpKJCEdBTYDA1Dy
+    let root_key: AccountId =
+        hex!["6c707b1690a6b0e01b5dea252fe1887930a5afc0ec203f96705331749c37ae4a"].into();
+
+    // 5HGZzRCfvLM7LSdkPZF5SzD4tj9BKvCTQuGkJd1jedrcCKFc
+    let vesting_key: AccountId =
+        hex!["e639a1a8ff3bd1fe15faa922ef2b772b9ee1c8d9cdc63ad36af12ab5ca155d4a"].into();
+
+    let initial_authorities: Vec<AuthorityKeysTuple> = vec![(
+        (
+            // 5DPgEmPRBhXj8fpsHm3aXrNtjXNVv7MHnUYQVLFhzMyzabaN
+            hex!["3ab47230dff92003f6f4f79cf7930cfe3f3fd77eedfea55acfde77223ac1a47a"].into(),
+            b"Validator1".to_vec(),
+        ),
+        // 5EPgwcbLknydnWGmHem3rmwhdjk55e9HfoqjF5A5zRQDkWxj
+        hex!["66f30ce2de3f23c2383c0ecea1e2a2e0520c18931d3a9bca64be78e3f9f7b62f"].unchecked_into(),
+        // 5FTYv429Xnkmn7HR4FCWPxnTpvveqpqjVKng3H6ypaBpXeVN
+        hex!["96213e8f2f57edfec52b6ffc260d4e8257e8addabe7797fa197f0aa8f6b7e748"].unchecked_into(),
+        // 5G4KNiQahHTY1LSafhfZnwGLtAnB39TMuc9nhpWMerE98RYQ
+        hex!["b0a540b56805d5b14df2787360728d72197bec577601ad49e274d3914f8b407a"].unchecked_into(),
+        // 5HNR82T2juJY6hx48ExdwUBQcpHQvHc5QPCcEzusdHMtLfMZ
+        hex!["eaaf3faeb72a15004fb5f9c68de188310b8cf3fbbbd8e8eb4db8aa9e95c40966"].unchecked_into(),
+    )];
+
+    let constructor = move || {
+        // TODO: use mainnet_genesis() or create a new testnet_genesis()?
+        testnet_genesis(
+            &wasm_binary[..],
+            initial_authorities.clone(),
+            root_key.clone(),
+            vesting_key.clone(),
+            genesis_assets(),
+            btc_genesis_params(include_str!("res/btc_genesis_params_testnet.json")),
+            crate::genesis::bitcoin::local_testnet_trustees(),
+        )
+    };
+
+    Ok(ChainXChainSpec::from_genesis(
+        "ChainX PTC0",
+        "chainx_ptc0",
+        ChainType::Live,
+        constructor,
+        bootnodes![],
+        Some(
+            TelemetryEndpoints::new(vec![
+                (CHAINX_TELEMETRY_URL.to_string(), 0),
+                (POLKADOT_TELEMETRY_URL.to_string(), 0),
+            ])
+            .expect("ChainX telemetry url is valid; qed"),
+        ),
+        Some("pcx-ptc0"),
+        Some(as_properties(NetworkType::Testnet)),
+        Default::default(),
+    ))
+}
+
 fn chainx_session_keys(
     babe: BabeId,
     grandpa: GrandpaId,
