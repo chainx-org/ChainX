@@ -340,11 +340,6 @@ decl_module! {
 
         fn deposit_event() = default;
 
-        fn on_runtime_upgrade() -> frame_support::weights::Weight {
-            Immortals::<T>::kill();
-            1
-        }
-
         /// Nominate the `target` with `value` of the origin account's balance locked.
         #[weight = T::WeightInfo::bond()]
         pub fn bond(origin, target: <T::Lookup as StaticLookup>::Source, #[compact] value: BalanceOf<T>) {
