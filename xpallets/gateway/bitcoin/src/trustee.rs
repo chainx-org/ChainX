@@ -57,8 +57,8 @@ pub fn get_current_trustee_address_pair<T: Trait>() -> Result<(Address, Address)
 }
 
 #[inline]
-pub fn get_previous_trustee_address_pair<T: Trait>() -> Result<(Address, Address), DispatchError> {
-    T::TrusteeSessionProvider::previous_trustee_session().map(|session_info| {
+pub fn get_last_trustee_address_pair<T: Trait>() -> Result<(Address, Address), DispatchError> {
+    T::TrusteeSessionProvider::last_trustee_session().map(|session_info| {
         (
             Module::<T>::verify_btc_address(&session_info.hot_address.addr)
                 .expect("should not parse error from storage data; qed"),

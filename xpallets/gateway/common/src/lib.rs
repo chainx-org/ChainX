@@ -78,17 +78,17 @@ decl_event!(
 decl_error! {
     /// Error for the This Module
     pub enum Error for Module<T: Trait> {
-        ///
+        /// the value of withdrawal less than than the minimum value
         InvalidWithdrawal,
-        ///
+        /// convert generic data into trustee session info error
         InvalidGenericData,
-        ///
+        /// trustee session info not found
         InvalidTrusteeSession,
-        ///
+        /// exceed the maximum length of the about field of trustess session info
         InvalidAboutLen,
-        ///
+        /// invalid multisig
         InvalidMultisig,
-        ///
+        /// Unsupported chain
         NotSupportedChain,
         /// existing duplicate account
         DuplicatedAccountId,
@@ -223,7 +223,7 @@ decl_module! {
         }
 
         /// Transition the trustee session.
-        #[weight = <T as Trait>::WeightInfo::transition_trustee_session()]
+        #[weight = <T as Trait>::WeightInfo::transition_trustee_session(new_trustees.len() as u32)]
         pub fn transition_trustee_session(
             origin,
             chain: Chain,

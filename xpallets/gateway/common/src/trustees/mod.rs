@@ -49,7 +49,7 @@ impl<T: Trait, TrusteeAddress: BytesLike + ChainProvider>
         Self::trustee_session(curr_session_number)
     }
 
-    fn previous_trustee_session(
+    fn last_trustee_session(
     ) -> Result<TrusteeSessionInfo<T::AccountId, TrusteeAddress>, DispatchError> {
         let chain = TrusteeAddress::chain();
         let prev_session_number = match Module::<T>::trustee_session_info_len(chain).checked_sub(2)

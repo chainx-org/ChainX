@@ -33,7 +33,7 @@ pub trait WeightInfo {
     fn withdraw() -> Weight;
     fn cancel_withdrawal() -> Weight;
     fn setup_trustee() -> Weight;
-    fn transition_trustee_session() -> Weight;
+    fn transition_trustee_session(n: u32) -> Weight;
     fn set_withdrawal_state() -> Weight;
     fn set_trustee_info_config() -> Weight;
     fn force_set_referral_binding() -> Weight;
@@ -57,7 +57,7 @@ impl<T: frame_system::Trait> WeightInfo for SubstrateWeight<T> {
             .saturating_add(T::DbWeight::get().reads(1 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
-    fn transition_trustee_session() -> Weight {
+    fn transition_trustee_session(_n: u32) -> Weight {
         (147_864_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(8 as Weight))
             .saturating_add(T::DbWeight::get().writes(3 as Weight))
@@ -92,7 +92,7 @@ impl WeightInfo for () {
             .saturating_add(RocksDbWeight::get().reads(1 as Weight))
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
-    fn transition_trustee_session() -> Weight {
+    fn transition_trustee_session(_n: u32) -> Weight {
         (147_864_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(8 as Weight))
             .saturating_add(RocksDbWeight::get().writes(3 as Weight))

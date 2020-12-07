@@ -32,8 +32,7 @@ pub trait TrusteeSession<AccountId, TrusteeAddress: BytesLike> {
     fn current_trustee_session(
     ) -> Result<TrusteeSessionInfo<AccountId, TrusteeAddress>, DispatchError>;
 
-    fn previous_trustee_session(
-    ) -> Result<TrusteeSessionInfo<AccountId, TrusteeAddress>, DispatchError>;
+    fn last_trustee_session() -> Result<TrusteeSessionInfo<AccountId, TrusteeAddress>, DispatchError>;
 
     #[cfg(feature = "std")]
     fn genesis_trustee(chain: Chain, init: &[AccountId]);
@@ -51,8 +50,8 @@ impl<AccountId, TrusteeAddress: BytesLike> TrusteeSession<AccountId, TrusteeAddr
         Err("NoTrustee".into())
     }
 
-    fn previous_trustee_session(
-    ) -> Result<TrusteeSessionInfo<AccountId, TrusteeAddress>, DispatchError> {
+    fn last_trustee_session() -> Result<TrusteeSessionInfo<AccountId, TrusteeAddress>, DispatchError>
+    {
         Err("NoTrustee".into())
     }
 
