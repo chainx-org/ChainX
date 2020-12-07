@@ -59,7 +59,7 @@ impl<T: Trait, Address: Into<Vec<u8>>> AddressBinding<T::AccountId, Address> for
         if let Some(accountid) = AddressBindingOf::<T>::get(chain, &address) {
             if accountid != who {
                 debug!(
-                    "[update_addr_binding] Current address binding need to changed (old:{:?} => new:{:?})",
+                    "[update_address_binding] Current address binding need to changed (old:{:?} => new:{:?})",
                     accountid, who
                 );
                 // old accountid is not equal to new accountid, means should change this addr bind to new account
@@ -77,7 +77,7 @@ impl<T: Trait, Address: Into<Vec<u8>>> AddressBinding<T::AccountId, Address> for
         });
 
         info!(
-            "[update_addr_binding] Update address binding:[chain:{:?}, addr:{:?}, who:{:?}]",
+            "[update_address_binding] Update address binding:[chain:{:?}, addr:{:?}, who:{:?}]",
             chain,
             try_addr(&address),
             who,
