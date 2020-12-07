@@ -348,7 +348,10 @@ decl_module! {
 
             ensure!(!value.is_zero(), Error::<T>::ZeroBalance);
             ensure!(Self::is_validator(&target), Error::<T>::NotValidator);
-            ensure!(value <= Self::free_balance(&sender), Error::<T>::InsufficientBalance);
+            ensure!(
+                value + Self::total_locked_of(&sender) <= Self::free_balance(&sender),
+                Error::<T>::InsufficientBalance
+            );
             if !Self::is_validator_bonding_itself(&sender, &target) {
                 Self::check_validator_acceptable_votes_limit(&target, value)?;
             }
@@ -540,12 +543,28 @@ decl_module! {
             Locks::<T>::mutate(&who, |locks| {
                 locks.remove(&LockedType::BondedWithdrawal);
             });
-            for (target, _) in Nominations::<T>::iter_prefix(&who) {
-                Nominations::<T>::mutate(&who, &target, |nominator| {
-                    nominator.unbonded_chunks.clear();
+            Self::purge_unlockings(&who);
+            Self::deposit_event(Event::<T>::ForceAllWithdrawn(who));
+        }
+
+        #[weight = 10_000_000]
+        fn force_reset_staking_lock(origin, accounts: Vec<T::AccountId>) {
+            ensure_root(origin)?;
+            for who in accounts.iter() {
+                Locks::<T>::mutate(who, |locks| {
+                    locks.remove(&LockedType::BondedWithdrawal);
+                    Self::purge_unlockings(who);
+                    Self::set_lock(who, *locks.entry(LockedType::Bonded).or_default());
                 });
             }
-            Self::deposit_event(Event::<T>::ForceAllWithdrawn(who));
+        }
+
+        #[weight = 10_000_000]
+        fn force_set_lock(origin, new_locks: Vec<(T::AccountId, BalanceOf<T>)>) {
+            ensure_root(origin)?;
+            for (who, new_lock) in new_locks {
+                Self::set_lock(&who, new_lock);
+            }
         }
     }
 }
@@ -614,7 +633,7 @@ impl<T: Trait> Module<T> {
                     Self::free_balance(who) >= *self_bonded,
                     "Validator does not have enough balance to bond."
                 );
-                Self::bond_reserve(who, *self_bonded)?;
+                Self::bond_reserve(who, *self_bonded);
                 Nominations::<T>::mutate(who, who, |nominator| {
                     nominator.nomination = *self_bonded;
                 });
@@ -638,7 +657,7 @@ impl<T: Trait> Module<T> {
         value: BalanceOf<T>,
     ) -> DispatchResult {
         if !value.is_zero() {
-            Self::bond_reserve(sender, value)?;
+            Self::bond_reserve(sender, value);
             Nominations::<T>::mutate(sender, target, |nominator| {
                 nominator.nomination = value;
             });
@@ -771,10 +790,22 @@ impl<T: Trait> Module<T> {
         T::Currency::transfer(from, to, value, ExistenceRequirement::KeepAlive)
     }
 
-    /// Create/Update a new balance lock on account `who`.
+    /// Create/Update/Remove a new balance lock on account `who`.
     #[inline]
     fn set_lock(who: &T::AccountId, new_locked: BalanceOf<T>) {
-        T::Currency::set_lock(STAKING_ID, who, new_locked, WithdrawReasons::all());
+        if new_locked.is_zero() {
+            T::Currency::remove_lock(STAKING_ID, who);
+        } else {
+            T::Currency::set_lock(STAKING_ID, who, new_locked, WithdrawReasons::all());
+        }
+    }
+
+    fn purge_unlockings(who: &T::AccountId) {
+        for (target, _) in Nominations::<T>::iter_prefix(who) {
+            Nominations::<T>::mutate(&who, &target, |nominator| {
+                nominator.unbonded_chunks.clear();
+            });
+        }
     }
 
     /// Returns an iterator of tuple (active_validator, total_votes_of_this_validator).
@@ -882,24 +913,15 @@ impl<T: Trait> Module<T> {
     }
 
     /// Set a lock on `value` of free balance of an account.
-    pub(crate) fn bond_reserve(who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
-        let mut new_locks = Self::locks(who);
-        let old_bonded = *new_locks.entry(LockedType::Bonded).or_default();
-        let new_bonded = old_bonded + value;
+    pub(crate) fn bond_reserve(who: &T::AccountId, value: BalanceOf<T>) {
+        Locks::<T>::mutate(who, |locks| {
+            *locks.entry(LockedType::Bonded).or_default() += value;
 
-        ensure!(
-            Self::free_balance(who) >= new_bonded,
-            Error::<T>::InsufficientBalance
-        );
-
-        new_locks.insert(LockedType::Bonded, new_bonded);
-        let staking_locked = new_locks
-            .values()
-            .fold(Zero::zero(), |acc: BalanceOf<T>, x| acc + *x);
-        Self::set_lock(who, staking_locked);
-        Locks::<T>::insert(who, new_locks);
-
-        Ok(())
+            let staking_locked = locks
+                .values()
+                .fold(Zero::zero(), |acc: BalanceOf<T>, x| acc + *x);
+            Self::set_lock(who, staking_locked);
+        });
     }
 
     fn can_unbond(
@@ -981,7 +1003,7 @@ impl<T: Trait> Module<T> {
         nominee: &T::AccountId,
         value: BalanceOf<T>,
     ) -> DispatchResult {
-        Self::bond_reserve(nominator, value)?;
+        Self::bond_reserve(nominator, value);
         Self::update_vote_weight(nominator, nominee, Delta::Add(value));
         Self::deposit_event(Event::<T>::Bonded(
             nominator.clone(),

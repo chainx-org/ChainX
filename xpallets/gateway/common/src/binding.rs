@@ -12,7 +12,7 @@ use crate::traits::{AddressBinding, ReferralBinding};
 use crate::{AddressBindingOf, BoundAddressOf, Module, Trait};
 
 impl<T: Trait> ReferralBinding<T::AccountId> for Module<T> {
-    fn update_binding(assert_id: &AssetId, who: &T::AccountId, channel_name: Option<ReferralId>) {
+    fn update_binding(assert_id: &AssetId, who: &T::AccountId, referral_name: Option<ReferralId>) {
         let chain = match xpallet_assets_registrar::Module::<T>::chain_of(assert_id) {
             Ok(chain) => chain,
             Err(err) => {
@@ -24,12 +24,12 @@ impl<T: Trait> ReferralBinding<T::AccountId> for Module<T> {
             }
         };
 
-        if let Some(name) = channel_name {
-            if let Some(channel) = T::Validator::validator_for(&name) {
+        if let Some(name) = referral_name {
+            if let Some(referral) = T::Validator::validator_for(&name) {
                 match Self::referral_binding_of(who, chain) {
                     None => {
                         // set to storage
-                        Self::set_referral_binding(chain, who.clone(), channel);
+                        Self::set_referral_binding(chain, who.clone(), referral);
                     }
                     Some(channel) => {
                         debug!(
@@ -40,7 +40,7 @@ impl<T: Trait> ReferralBinding<T::AccountId> for Module<T> {
                 }
             } else {
                 warn!(
-                    "[update_referrak_binding] {:?} has no referral, cannot update binding",
+                    "[update_referral_binding] {:?} has no referral, cannot update binding",
                     try_str(name)
                 );
             };
@@ -53,9 +53,9 @@ impl<T: Trait> ReferralBinding<T::AccountId> for Module<T> {
     }
 }
 
-impl<T: Trait, Addr: Into<Vec<u8>>> AddressBinding<T::AccountId, Addr> for Module<T> {
-    fn update_binding(chain: Chain, addr: Addr, who: T::AccountId) {
-        let address = addr.into();
+impl<T: Trait, Address: Into<Vec<u8>>> AddressBinding<T::AccountId, Address> for Module<T> {
+    fn update_binding(chain: Chain, address: Address, who: T::AccountId) {
+        let address = address.into();
         if let Some(accountid) = AddressBindingOf::<T>::get(chain, &address) {
             if accountid != who {
                 debug!(
@@ -85,8 +85,8 @@ impl<T: Trait, Addr: Into<Vec<u8>>> AddressBinding<T::AccountId, Addr> for Modul
         AddressBindingOf::<T>::insert(chain, address, who);
     }
 
-    fn address(chain: Chain, addr: Addr) -> Option<T::AccountId> {
-        let addr_bytes: ChainAddress = addr.into();
+    fn address(chain: Chain, address: Address) -> Option<T::AccountId> {
+        let addr_bytes: ChainAddress = address.into();
         AddressBindingOf::<T>::get(chain, &addr_bytes)
     }
 }

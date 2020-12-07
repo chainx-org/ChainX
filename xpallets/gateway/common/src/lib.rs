@@ -21,15 +21,14 @@ pub mod types;
 pub mod utils;
 pub mod weights;
 
-use sp_runtime::traits::StaticLookup;
-use sp_std::{collections::btree_map::BTreeMap, convert::TryFrom, prelude::*};
-
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult},
     ensure, IterableStorageMap,
 };
 use frame_system::{ensure_root, ensure_signed};
+use sp_runtime::traits::StaticLookup;
+use sp_std::{collections::btree_map::BTreeMap, convert::TryFrom, prelude::*};
 
 use chainx_primitives::{AddrStr, AssetId, ChainAddress, Text};
 use xp_logging::{error, info};
@@ -97,6 +96,74 @@ decl_error! {
         NotRegistered,
         /// just allow validator to register trustee
         NotValidator,
+    }
+}
+
+decl_storage! {
+    trait Store for Module<T: Trait> as XGatewayCommon {
+        // Trustee multisig address of the corresponding chain.
+        pub TrusteeMultiSigAddr get(fn trustee_multisig_addr):
+            map hasher(twox_64_concat) Chain => T::AccountId;
+
+        /// Trustee info config of the corresponding chain.
+        pub TrusteeInfoConfigOf get(fn trustee_info_config_of):
+            map hasher(twox_64_concat) Chain => TrusteeInfoConfig;
+
+        /// Next Trustee session info number of the chain.
+        ///
+        /// Auto generate a new session number (0) when generate new trustee of a chain.
+        /// If the trustee of a chain is changed, the corresponding number will increase by 1.
+        ///
+        /// NOTE: The number can't be modified by users.
+        pub TrusteeSessionInfoLen get(fn trustee_session_info_len):
+            map hasher(twox_64_concat) Chain => u32 = 0;
+
+        /// Trustee session info of the corresponding chain and number.
+        pub TrusteeSessionInfoOf get(fn trustee_session_info_of):
+            double_map hasher(twox_64_concat) Chain, hasher(twox_64_concat) u32
+            => Option<GenericTrusteeSessionInfo<T::AccountId>>;
+
+        /// Trustee intention properties of the corresponding account and chain.
+        pub TrusteeIntentionPropertiesOf get(fn trustee_intention_props_of):
+            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) Chain
+            => Option<GenericTrusteeIntentionProps>;
+
+        /// The account of the corresponding chain and chain address.
+        pub AddressBindingOf:
+            double_map hasher(twox_64_concat) Chain, hasher(blake2_128_concat) ChainAddress
+            => Option<T::AccountId>;
+
+        /// The bound address of the corresponding account and chain.
+        pub BoundAddressOf:
+            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) Chain
+            => Vec<ChainAddress>;
+
+        /// The referral account of the corresponding account and chain.
+        pub ReferralBindingOf get(fn referral_binding_of):
+            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) Chain
+            => Option<T::AccountId>;
+    }
+    add_extra_genesis {
+        config(trustees): Vec<(Chain, TrusteeInfoConfig, Vec<(T::AccountId, Text, Vec<u8>, Vec<u8>)>)>;
+        build(|config| {
+            for (chain, info_config, trustee_infos) in config.trustees.iter() {
+                let mut trustees = Vec::with_capacity(trustee_infos.len());
+                for (who, about, hot, cold) in trustee_infos.iter() {
+                    Module::<T>::setup_trustee_impl(
+                        who.clone(),
+                        *chain,
+                        about.clone(),
+                        hot.clone(),
+                        cold.clone(),
+                    )
+                    .expect("setup trustee can not fail; qed");
+                    trustees.push(who.clone());
+                }
+                // config set should before transition
+                TrusteeInfoConfigOf::insert(chain, info_config.clone());
+                // trustee init should happen in chain module like gateway_bitcoin/gateway_ethereum.
+            }
+        })
     }
 }
 
@@ -185,7 +252,7 @@ decl_module! {
         #[weight = <T as Trait>::WeightInfo::set_withdrawal_state()]
         pub fn set_withdrawal_state(
             origin,
-            #[compact] withdrawal_id: WithdrawalRecordId,
+            #[compact] id: WithdrawalRecordId,
             state: WithdrawalState
         ) -> DispatchResult {
             let from = ensure_signed(origin)?;
@@ -196,7 +263,7 @@ decl_module! {
                 .find_map(|(chain, multisig)| if from == multisig { Some(chain) } else { None })
                 .ok_or(Error::<T>::InvalidMultisig)?;
 
-            xpallet_gateway_records::Module::<T>::set_withdrawal_state_by_trustees(withdrawal_id, chain, state)
+            xpallet_gateway_records::Module::<T>::set_withdrawal_state_by_trustees(id, chain, state)
         }
 
         /// Set the config of trustee information.
@@ -225,74 +292,6 @@ decl_module! {
             Self::set_referral_binding(chain, who, referral);
             Ok(())
         }
-    }
-}
-
-decl_storage! {
-    trait Store for Module<T: Trait> as XGatewayCommon {
-        // Trustee multisig address of the corresponding chain.
-        pub TrusteeMultiSigAddr get(fn trustee_multisig_addr):
-            map hasher(twox_64_concat) Chain => T::AccountId;
-
-        /// Trustee info config of the corresponding chain.
-        pub TrusteeInfoConfigOf get(fn trustee_info_config_of):
-            map hasher(twox_64_concat) Chain => TrusteeInfoConfig;
-
-        /// Next Trustee session info number of the chain.
-        ///
-        /// Auto generate a new session number (0) when generate new trustee of a chain.
-        /// If the trustee of a chain is changed, the corresponding number will increase by 1.
-        ///
-        /// NOTE: The number can't be modified by users.
-        pub TrusteeSessionInfoLen get(fn next_trustee_session_info_number_of):
-            map hasher(twox_64_concat) Chain => u32 = 0;
-
-        /// Trustee session info of the corresponding chain and number.
-        pub TrusteeSessionInfoOf get(fn trustee_session_info_of):
-            double_map hasher(twox_64_concat) Chain, hasher(twox_64_concat) u32
-            => Option<GenericTrusteeSessionInfo<T::AccountId>>;
-
-        /// Trustee intention properties of the corresponding account and chain.
-        pub TrusteeIntentionPropertiesOf get(fn trustee_intention_props_of):
-            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) Chain
-            => Option<GenericTrusteeIntentionProps>;
-
-        /// The bound address of the corresponding account and chain.
-        pub BoundAddressOf:
-            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) Chain
-            => Vec<ChainAddress>;
-
-        /// The address binding of the corresponding chain and chain address.
-        pub AddressBindingOf:
-            double_map hasher(twox_64_concat) Chain, hasher(blake2_128_concat) ChainAddress
-            => Option<T::AccountId>;
-
-        /// The referral binding of the corresponding account and chain.
-        pub ReferralBindingOf get(fn referral_binding_of):
-            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) Chain
-            => Option<T::AccountId>;
-    }
-    add_extra_genesis {
-        config(trustees): Vec<(Chain, TrusteeInfoConfig, Vec<(T::AccountId, Text, Vec<u8>, Vec<u8>)>)>;
-        build(|config| {
-            for (chain, info_config, trustee_infos) in config.trustees.iter() {
-                let mut trustees = Vec::with_capacity(trustee_infos.len());
-                for (who, about, hot, cold) in trustee_infos.iter() {
-                    Module::<T>::setup_trustee_impl(
-                        who.clone(),
-                        *chain,
-                        about.clone(),
-                        hot.clone(),
-                        cold.clone(),
-                    )
-                    .expect("setup trustee can not fail; qed");
-                    trustees.push(who.clone());
-                }
-                // config set should before transition
-                TrusteeInfoConfigOf::insert(chain, info_config.clone());
-                // trustee init should happen in chain module like gateway_bitcoin/gateway_ethereum.
-            }
-        })
     }
 }
 
@@ -428,7 +427,7 @@ impl<T: Trait> Module<T> {
         let info = Self::try_generate_session_info(chain, new_trustees)?;
         let multi_addr = Self::generate_multisig_addr(chain, &info)?;
 
-        let curr_session_number = Self::next_trustee_session_info_number_of(chain);
+        let curr_session_number = Self::trustee_session_info_len(chain);
         // FIXME: rethink about the overflow case.
         let next_session_number = curr_session_number.checked_add(1).unwrap_or(0u32);
 

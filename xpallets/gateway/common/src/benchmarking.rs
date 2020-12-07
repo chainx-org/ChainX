@@ -156,7 +156,6 @@ benchmarks! {
             ASSET_ID, withdrawal, addr, memo,
         )
         .unwrap();
-
         let withdrawal_id: WithdrawalRecordId = 0;
         assert!(XGatewayRecords::<T>::pending_withdrawals(withdrawal_id).is_some());
         assert_eq!(XGatewayRecords::<T>::state_of(withdrawal_id), Some(WithdrawalState::Applying));

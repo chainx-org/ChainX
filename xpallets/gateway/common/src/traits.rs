@@ -9,7 +9,6 @@ use xpallet_assets::Chain;
 use crate::types::{TrusteeInfoConfig, TrusteeIntentionProps, TrusteeSessionInfo};
 
 pub trait BytesLike: Into<Vec<u8>> + TryFrom<Vec<u8>> {}
-
 impl<T: Into<Vec<u8>> + TryFrom<Vec<u8>>> BytesLike for T {}
 
 pub trait ChainProvider {
@@ -62,7 +61,7 @@ impl<AccountId, TrusteeAddress: BytesLike> TrusteeSession<AccountId, TrusteeAddr
 }
 
 pub trait ReferralBinding<AccountId> {
-    fn update_binding(asset_id: &AssetId, who: &AccountId, referral: Option<ReferralId>);
+    fn update_binding(asset_id: &AssetId, who: &AccountId, referral_name: Option<ReferralId>);
     fn referral(asset_id: &AssetId, who: &AccountId) -> Option<AccountId>;
 }
 
@@ -78,9 +77,9 @@ pub trait AddressBinding<AccountId, Address: Into<Vec<u8>>> {
     fn address(chain: Chain, address: Address) -> Option<AccountId>;
 }
 
-impl<AccountId, Addr: Into<Vec<u8>>> AddressBinding<AccountId, Addr> for () {
-    fn update_binding(_: Chain, _: Addr, _: AccountId) {}
-    fn address(_: Chain, _: Addr) -> Option<AccountId> {
+impl<AccountId, Address: Into<Vec<u8>>> AddressBinding<AccountId, Address> for () {
+    fn update_binding(_: Chain, _: Address, _: AccountId) {}
+    fn address(_: Chain, _: Address) -> Option<AccountId> {
         None
     }
 }

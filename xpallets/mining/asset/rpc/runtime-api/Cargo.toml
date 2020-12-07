@@ -1,6 +1,6 @@
 [package]
 name = "xpallet-mining-asset-rpc-runtime-api"
-version = "2.0.3"
+version = "2.0.5"
 authors = ["The ChainX Authors"]
 edition = "2018"
 

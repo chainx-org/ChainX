@@ -2,7 +2,7 @@
 
 //! Weights for xpallet_gateway_common
 //! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 2.0.0
-//! DATE: 2020-12-01, STEPS: [50, ], REPEAT: 20, LOW RANGE: [], HIGH RANGE: []
+//! DATE: 2020-12-07, STEPS: [50, ], REPEAT: 20, LOW RANGE: [], HIGH RANGE: []
 //! EXECUTION: Some(Wasm), WASM-EXECUTION: Compiled, CHAIN: Some("benchmarks"), DB CACHE: 128
 
 // Executed Command:
@@ -43,12 +43,12 @@ pub trait WeightInfo {
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Trait> WeightInfo for SubstrateWeight<T> {
     fn withdraw() -> Weight {
-        (221_669_000 as Weight)
+        (226_245_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(10 as Weight))
             .saturating_add(T::DbWeight::get().writes(6 as Weight))
     }
     fn cancel_withdrawal() -> Weight {
-        (125_767_000 as Weight)
+        (130_921_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(6 as Weight))
             .saturating_add(T::DbWeight::get().writes(4 as Weight))
     }
@@ -63,27 +63,27 @@ impl<T: frame_system::Trait> WeightInfo for SubstrateWeight<T> {
             .saturating_add(T::DbWeight::get().writes(3 as Weight))
     }
     fn set_withdrawal_state() -> Weight {
-        (200_095_000 as Weight)
+        (217_002_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(11 as Weight))
             .saturating_add(T::DbWeight::get().writes(6 as Weight))
     }
     fn set_trustee_info_config() -> Weight {
-        (5_726_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
+        (6_432_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     fn force_set_referral_binding() -> Weight {
-        (27_623_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
+        (30_667_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
     fn withdraw() -> Weight {
-        (221_669_000 as Weight)
+        (226_245_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(10 as Weight))
             .saturating_add(RocksDbWeight::get().writes(6 as Weight))
     }
     fn cancel_withdrawal() -> Weight {
-        (125_767_000 as Weight)
+        (130_921_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(6 as Weight))
             .saturating_add(RocksDbWeight::get().writes(4 as Weight))
     }
@@ -98,14 +98,14 @@ impl WeightInfo for () {
             .saturating_add(RocksDbWeight::get().writes(3 as Weight))
     }
     fn set_withdrawal_state() -> Weight {
-        (200_095_000 as Weight)
+        (217_002_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(11 as Weight))
             .saturating_add(RocksDbWeight::get().writes(6 as Weight))
     }
     fn set_trustee_info_config() -> Weight {
-        (5_726_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
+        (6_432_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
     fn force_set_referral_binding() -> Weight {
-        (27_623_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
+        (30_667_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
 }
