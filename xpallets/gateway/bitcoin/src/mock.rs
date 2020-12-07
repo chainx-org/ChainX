@@ -160,8 +160,8 @@ impl Trait for Test {
         xpallet_gateway_common::trustees::bitcoin::BtcTrusteeMultisig<Test>,
         AccountId,
     >;
-    type Channel = XGatewayCommon;
-    type AddrBinding = XGatewayCommon;
+    type ReferralBinding = XGatewayCommon;
+    type AddressBinding = XGatewayCommon;
     type WeightInfo = ();
 }
 

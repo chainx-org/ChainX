@@ -56,8 +56,8 @@ where
     ) -> Result<BTreeMap<WithdrawalRecordId, RpcWithdrawalRecord<AccountId, Balance, BlockNumber>>>;
 
     /// Return current pending withdraw list for a chain
-    #[rpc(name = "xgatewayrecords_pendingWithdrawalList")]
-    fn pending_withdrawal_list(
+    #[rpc(name = "xgatewayrecords_pendingWithdrawalListByChain")]
+    fn pending_withdrawal_list_by_chain(
         &self,
         chain: Chain,
         at: Option<BlockHash>,
@@ -106,7 +106,7 @@ where
             .map_err(runtime_error_into_rpc_err)
     }
 
-    fn pending_withdrawal_list(
+    fn pending_withdrawal_list_by_chain(
         &self,
         chain: Chain,
         at: Option<<Block as BlockT>::Hash>,

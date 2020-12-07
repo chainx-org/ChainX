@@ -304,5 +304,6 @@ impl<T: Trait> xp_mining_staking::AssetMining<BalanceOf<T>> for Module<T> {
     fn reward(asset_id: AssetId, value: BalanceOf<T>) {
         let reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(&asset_id);
         <T as xpallet_assets::Trait>::Currency::deposit_creating(&reward_pot, value);
+        Self::deposit_event(Event::<T>::Minted(reward_pot, value));
     }
 }

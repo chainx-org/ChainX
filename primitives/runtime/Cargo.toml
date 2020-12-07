@@ -1,6 +1,6 @@
 [package]
 name = "xp-runtime"
-version = "2.0.1"
+version = "2.0.4"
 authors = ["The ChainX Authors"]
 edition = "2018"
 

@@ -104,7 +104,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("chainx"),
     impl_name: create_runtime_str!("chainx-net"),
     authoring_version: 1,
-    spec_version: 2,
+    spec_version: 6,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -124,43 +124,10 @@ pub struct BaseFilter;
 impl Filter<Call> for BaseFilter {
     fn filter(call: &Call) -> bool {
         use frame_support::dispatch::GetCallMetadata;
-        use pallet_balances::Call as BalancesCall;
-        use xpallet_mining_staking::Call as XStakingCall;
-
-        match call {
-            Call::Balances(balances_call) => {
-                // Enable force_transfer so that we can transfer some balances to the tech committee members.
-                if let BalancesCall::force_transfer(..) = balances_call {
-                    return true;
-                }
-            }
-            Call::XStaking(xstaking_call) => match xstaking_call {
-                // Enable validate and register for validators to join the network.
-                XStakingCall::validate(..) | XStakingCall::register(..) => return true,
-                _ => {}
-            },
-            _ => {}
-        }
 
         match call {
             Call::Currencies(_) => return false, // forbidden Currencies call now
-            Call::Democracy(_)
-            | Call::Council(_)
-            | Call::TechnicalCommittee(_)
-            | Call::Elections(_)
-            | Call::TechnicalMembership(_)
-            | Call::Treasury(_)
-            | Call::Identity(_)
-            | Call::Indices(_)
-            | Call::Balances(_)
-            | Call::Utility(_)
-            | Call::Multisig(_) => return false,
-            Call::XAssetsRegistrar(_)
-            | Call::XAssets(_)
-            | Call::XStaking(_)
-            | Call::XMiningAsset(_)
-            // NOTE: Bitcoin and Spot will be enabled after the above X Modules.
-            | Call::XGatewayBitcoin(_)
+            Call::XGatewayBitcoin(_)
             | Call::XGatewayCommon(_)
             | Call::XGatewayRecords(_)
             | Call::XSpot(_) => return false,
@@ -869,8 +836,8 @@ impl xpallet_gateway_bitcoin::Trait for Runtime {
     type AccountExtractor = xp_gateway_bitcoin::OpReturnExtractor;
     type TrusteeSessionProvider = trustees::bitcoin::BtcTrusteeSessionManager<Runtime>;
     type TrusteeOrigin = EnsureSignedBy<trustees::bitcoin::BtcTrusteeMultisig<Runtime>, AccountId>;
-    type Channel = XGatewayCommon;
-    type AddrBinding = XGatewayCommon;
+    type ReferralBinding = XGatewayCommon;
+    type AddressBinding = XGatewayCommon;
     type WeightInfo = xpallet_gateway_bitcoin::weights::SubstrateWeight<Runtime>;
 }
 
@@ -913,8 +880,8 @@ impl xpallet_mining_staking::Trait for Runtime {
 pub struct ReferralGetter;
 impl xpallet_mining_asset::GatewayInterface<AccountId> for ReferralGetter {
     fn referral_of(who: &AccountId, asset_id: AssetId) -> Option<AccountId> {
-        use xpallet_gateway_common::traits::ChannelBinding;
-        XGatewayCommon::get_binding_info(&asset_id, who)
+        use xpallet_gateway_common::traits::ReferralBinding;
+        XGatewayCommon::referral(&asset_id, who)
     }
 }
 

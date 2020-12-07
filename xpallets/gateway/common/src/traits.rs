@@ -9,7 +9,6 @@ use xpallet_assets::Chain;
 use crate::types::{TrusteeInfoConfig, TrusteeIntentionProps, TrusteeSessionInfo};
 
 pub trait BytesLike: Into<Vec<u8>> + TryFrom<Vec<u8>> {}
-
 impl<T: Into<Vec<u8>> + TryFrom<Vec<u8>>> BytesLike for T {}
 
 pub trait ChainProvider {
@@ -60,26 +59,26 @@ impl<AccountId, TrusteeAddress: BytesLike> TrusteeSession<AccountId, TrusteeAddr
     fn genesis_trustee(_: Chain, _: &[AccountId]) {}
 }
 
-pub trait ChannelBinding<AccountId> {
-    fn update_binding(asset_id: &AssetId, who: &AccountId, channel_name: Option<ReferralId>);
-    fn get_binding_info(asset_id: &AssetId, who: &AccountId) -> Option<AccountId>;
+pub trait ReferralBinding<AccountId> {
+    fn update_binding(asset_id: &AssetId, who: &AccountId, referral_name: Option<ReferralId>);
+    fn referral(asset_id: &AssetId, who: &AccountId) -> Option<AccountId>;
 }
 
-impl<AccountId> ChannelBinding<AccountId> for () {
+impl<AccountId> ReferralBinding<AccountId> for () {
     fn update_binding(_: &AssetId, _: &AccountId, _: Option<ReferralId>) {}
-    fn get_binding_info(_: &AssetId, _: &AccountId) -> Option<AccountId> {
+    fn referral(_: &AssetId, _: &AccountId) -> Option<AccountId> {
         None
     }
 }
 
-pub trait AddrBinding<AccountId, Addr: Into<Vec<u8>>> {
-    fn update_binding(chain: Chain, addr: Addr, who: AccountId);
-    fn get_binding(chain: Chain, addr: Addr) -> Option<AccountId>;
+pub trait AddressBinding<AccountId, Address: Into<Vec<u8>>> {
+    fn update_binding(chain: Chain, address: Address, who: AccountId);
+    fn address(chain: Chain, address: Address) -> Option<AccountId>;
 }
 
-impl<AccountId, Addr: Into<Vec<u8>>> AddrBinding<AccountId, Addr> for () {
-    fn update_binding(_: Chain, _: Addr, _: AccountId) {}
-    fn get_binding(_: Chain, _: Addr) -> Option<AccountId> {
+impl<AccountId, Address: Into<Vec<u8>>> AddressBinding<AccountId, Address> for () {
+    fn update_binding(_: Chain, _: Address, _: AccountId) {}
+    fn address(_: Chain, _: Address) -> Option<AccountId> {
         None
     }
 }

@@ -18,7 +18,7 @@ use xp_gateway_bitcoin::{BtcDepositInfo, BtcTxMetaType, BtcTxTypeDetector};
 use xp_gateway_common::AccountExtractor;
 use xp_logging::{debug, error, info, warn};
 use xpallet_assets::ChainT;
-use xpallet_gateway_common::traits::{AddrBinding, ChannelBinding};
+use xpallet_gateway_common::traits::{AddressBinding, ReferralBinding};
 use xpallet_support::try_str;
 
 pub use self::validator::validate_transaction;
@@ -67,7 +67,7 @@ fn deposit<T: Trait>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) -> 
             // remove old unbinding deposit info
             remove_pending_deposit::<T>(&input_addr, &account);
             // update or override binding info
-            T::AddrBinding::update_binding(Module::<T>::chain(), input_addr, account.clone());
+            T::AddressBinding::update_binding(Module::<T>::chain(), input_addr, account.clone());
             AccountInfo::<T::AccountId>::Account((account, referral))
         }
         (Some((account, referral)), None) => {
@@ -82,7 +82,7 @@ fn deposit<T: Trait>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) -> 
         (None, Some(input_addr)) => {
             // no opreturn but have input addr, use input addr to get accountid
             let addr_bytes = addr2vecu8(&input_addr);
-            match T::AddrBinding::get_binding(Module::<T>::chain(), addr_bytes) {
+            match T::AddressBinding::address(Module::<T>::chain(), addr_bytes) {
                 Some(account) => AccountInfo::Account((account, None)),
                 None => AccountInfo::Address(input_addr),
             }
@@ -98,7 +98,11 @@ fn deposit<T: Trait>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) -> 
 
     match account_info {
         AccountInfo::<_>::Account((account, referral)) => {
-            T::Channel::update_binding(&<Module<T> as ChainT<_>>::ASSET_ID, &account, referral);
+            T::ReferralBinding::update_binding(
+                &<Module<T> as ChainT<_>>::ASSET_ID,
+                &account,
+                referral,
+            );
             match deposit_token::<T>(txid, &account, deposit_info.deposit_value) {
                 Ok(_) => {
                     info!(

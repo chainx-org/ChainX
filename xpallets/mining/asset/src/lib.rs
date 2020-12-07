@@ -143,6 +143,8 @@ decl_event!(
     {
         /// An asset miner claimed the mining reward. [claimer, asset_id, amount]
         Claimed(AccountId, AssetId, Balance),
+        /// Issue new balance to the reward pot. [reward_pot_account, amount]
+        Minted(AccountId, Balance),
     }
 );
 

@@ -219,7 +219,7 @@
             ],
             "type": "BTreeMap<WithdrawalRecordId, RpcWithdrawalRecord<AccountId, Balance, BlockNumber>>"
         },
-        "pendingWithdrawalList": {
+        "pendingWithdrawalListByChain": {
             "description": "Return current pending withdraw list for a chain",
             "params": [
                 {
