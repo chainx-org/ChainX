@@ -278,7 +278,7 @@ pub fn testnet_config() -> Result<ChainXChainSpec, String> {
 
     let constructor = move || {
         // TODO: use mainnet_genesis() or create a new testnet_genesis()?
-        mainnet_genesis(
+        testnet_genesis(
             &wasm_binary[..],
             initial_authorities.clone(),
             root_key.clone(),
@@ -503,6 +503,154 @@ fn build_genesis(
             params: crate::genesis::genesis_builder_params(),
             initial_authorities_endowed,
             root_endowed: 0,
+        }),
+    }
+}
+
+fn testnet_genesis(
+    wasm_binary: &[u8],
+    initial_authorities: Vec<AuthorityKeysTuple>,
+    root_key: AccountId,
+    vesting_account: AccountId,
+    assets: Vec<AssetParams>,
+    bitcoin: BtcGenesisParams,
+    trustees: Vec<(Chain, TrusteeInfoConfig, Vec<BtcTrusteeParams>)>,
+) -> chainx::GenesisConfig {
+    // 1000 PCX
+    const STAKING_LOCKED: Balance = 100_000 * DOLLARS;
+    // 100 PCX
+    const ROOT_ENDOWED: Balance = 10_000 * DOLLARS;
+
+    let (assets, assets_restrictions) = init_assets(assets);
+
+    let initial_authorities_len = initial_authorities.len();
+
+    let tech_comm_members: Vec<AccountId> = vec![
+        // 5C7VzhPqJsLXcyJmX71ZEt7GdkAMTxHNPwh6BSb8thgBbQU1
+        hex!["0221ce7c4a0b771faaf0bbae23c3a1965348cb5257611313a73c3d4a53599509"].into(),
+        // 5D7F1AJoDwuCvZZKEggeGk2brxYty9mkamUcFHyshYBnbWs3
+        hex!["2e2b928d39b7a9c8688509927e17031001fab604557db093ead5069474e0584e"].into(),
+        // 5HG5CswZ6X39BYqt8Dc8e4Cn2HieGnnUiG39ddGn2oq5G36W
+        hex!["e5d8bb656b124beb40990ef9346c441f888981ec7e0d4c55c9c72c176aec5290"].into(),
+    ];
+
+    let mut balances = initial_authorities
+        .iter()
+        .map(|((validator, _), _, _, _, _)| validator)
+        .cloned()
+        .map(|validator| (validator, STAKING_LOCKED))
+        .collect::<Vec<_>>();
+
+    // 100 PCX to root account for paying the transaction fee.
+    balances.push((root_key.clone(), ROOT_ENDOWED));
+
+    let initial_authorities_endowed = initial_authorities_len as Balance * STAKING_LOCKED;
+
+    let validators = initial_authorities
+        .clone()
+        .into_iter()
+        .map(|((validator, referral_id), _, _, _, _)| (validator, referral_id, STAKING_LOCKED))
+        .collect::<Vec<_>>();
+
+    let btc_genesis_trustees = trustees
+        .iter()
+        .find_map(|(chain, _, trustee_params)| {
+            if *chain == Chain::Bitcoin {
+                Some(
+                    trustee_params
+                        .iter()
+                        .map(|i| (i.0).clone())
+                        .collect::<Vec<_>>(),
+                )
+            } else {
+                None
+            }
+        })
+        .expect("bitcoin trustees generation can not fail; qed");
+
+    chainx::GenesisConfig {
+        frame_system: Some(chainx::SystemConfig {
+            code: wasm_binary.to_vec(),
+            changes_trie_config: Default::default(),
+        }),
+        pallet_babe: Some(Default::default()),
+        pallet_grandpa: Some(chainx::GrandpaConfig {
+            authorities: vec![],
+        }),
+        pallet_collective_Instance1: Some(chainx::CouncilConfig::default()),
+        pallet_collective_Instance2: Some(chainx::TechnicalCommitteeConfig {
+            members: tech_comm_members,
+            phantom: Default::default(),
+        }),
+        pallet_membership_Instance1: Some(Default::default()),
+        pallet_democracy: Some(chainx::DemocracyConfig::default()),
+        pallet_treasury: Some(Default::default()),
+        pallet_elections_phragmen: Some(chainx::ElectionsConfig::default()),
+        pallet_im_online: Some(chainx::ImOnlineConfig { keys: vec![] }),
+        pallet_authority_discovery: Some(chainx::AuthorityDiscoveryConfig { keys: vec![] }),
+        pallet_session: Some(chainx::SessionConfig {
+            keys: initial_authorities
+                .iter()
+                .map(|x| {
+                    (
+                        (x.0).0.clone(),
+                        (x.0).0.clone(),
+                        chainx_session_keys(x.1.clone(), x.2.clone(), x.3.clone(), x.4.clone()),
+                    )
+                })
+                .collect::<Vec<_>>(),
+        }),
+        pallet_balances: Some(chainx::BalancesConfig { balances }),
+        pallet_indices: Some(chainx::IndicesConfig { indices: vec![] }),
+        pallet_sudo: Some(chainx::SudoConfig { key: root_key }),
+        xpallet_system: Some(chainx::XSystemConfig {
+            network_props: NetworkType::Testnet,
+        }),
+        xpallet_assets_registrar: Some(chainx::XAssetsRegistrarConfig { assets }),
+        xpallet_assets: Some(chainx::XAssetsConfig {
+            assets_restrictions,
+            endowed: Default::default(),
+        }),
+        xpallet_gateway_common: Some(chainx::XGatewayCommonConfig { trustees }),
+        xpallet_gateway_bitcoin: Some(chainx::XGatewayBitcoinConfig {
+            genesis_trustees: btc_genesis_trustees,
+            network_id: bitcoin.network,
+            confirmation_number: bitcoin.confirmation_number,
+            genesis_hash: bitcoin.hash(),
+            genesis_info: (bitcoin.header(), bitcoin.height),
+            params_info: BtcParams::new(
+                486604799,            // max_bits
+                2 * 60 * 60,          // block_max_future
+                2 * 7 * 24 * 60 * 60, // target_timespan_seconds
+                10 * 60,              // target_spacing_seconds
+                4,                    // retargeting_factor
+            ), // retargeting_factor
+            btc_withdrawal_fee: 500000,
+            max_withdrawal_count: 100,
+            verifier: BtcTxVerifier::Recover,
+        }),
+        xpallet_mining_staking: Some(chainx::XStakingConfig {
+            validators,
+            validator_count: initial_authorities_len as u32, // Start mainnet in PoA
+            sessions_per_era: 12,
+            vesting_account,
+            glob_dist_ratio: (12, 88), // (Treasury, X-type Asset and Staking) = (12, 88)
+            mining_ratio: (10, 90),    // (Asset Mining, Staking) = (10, 90)
+            minimum_penalty: 100 * DOLLARS,
+            candidate_requirement: (100 * DOLLARS, 1_000 * DOLLARS), // Minimum value (self_bonded, total_bonded) to be a validator candidate
+            ..Default::default()
+        }),
+        xpallet_mining_asset: Some(chainx::XMiningAssetConfig {
+            claim_restrictions: vec![(X_BTC, (10, DAYS * 7))],
+            mining_power_map: vec![(X_BTC, 400)],
+        }),
+        xpallet_dex_spot: Some(chainx::XSpotConfig {
+            trading_pairs: vec![(PCX, X_BTC, 9, 2, 100000, true)],
+        }),
+        xpallet_genesis_builder: Some(chainx::XGenesisBuilderConfig {
+            params: crate::genesis::genesis_builder_params(),
+            root_endowed: ROOT_ENDOWED,
+            initial_authorities_endowed,
         }),
     }
 }
