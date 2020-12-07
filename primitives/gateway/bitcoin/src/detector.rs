@@ -28,7 +28,7 @@ pub struct BtcTxTypeDetector {
     min_deposit: u64,
     // (current hot trustee address, current cold trustee address)
     current_trustee_pair: (Address, Address),
-    // (previous hot trustee address, previous cold trustee address)
+    // (last hot trustee address, last cold trustee address)
     last_trustee_pair: Option<(Address, Address)>,
 }
 
@@ -95,9 +95,9 @@ impl BtcTxTypeDetector {
                     BtcTxMetaType::Withdrawal
                 };
             }
-            if let Some(previous_trustee_pair) = self.last_trustee_pair {
-                if is_trustee_addr(input_addr, previous_trustee_pair) && all_outputs_is_trustee {
-                    // inputs should from previous trustee address, outputs should all be current trustee addresses
+            if let Some(last_trustee_pair) = self.last_trustee_pair {
+                if is_trustee_addr(input_addr, last_trustee_pair) && all_outputs_is_trustee {
+                    // inputs should from last trustee address, outputs should all be current trustee addresses
                     return BtcTxMetaType::TrusteeTransition;
                 }
             }

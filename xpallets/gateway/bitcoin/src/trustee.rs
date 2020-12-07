@@ -32,21 +32,30 @@ use crate::{
     Error, Event, Module, Trait, WithdrawalProposal,
 };
 
-pub fn trustee_session<T: Trait>(
+pub fn current_trustee_session<T: Trait>(
 ) -> Result<TrusteeSessionInfo<T::AccountId, BtcTrusteeAddrInfo>, DispatchError> {
     T::TrusteeSessionProvider::current_trustee_session()
 }
 
 #[inline]
-fn trustee_addr_info_pair<T: Trait>(
+fn current_trustee_addr_pair<T: Trait>(
 ) -> Result<(BtcTrusteeAddrInfo, BtcTrusteeAddrInfo), DispatchError> {
     T::TrusteeSessionProvider::current_trustee_session()
         .map(|session_info| (session_info.hot_address, session_info.cold_address))
 }
 
+pub fn get_hot_trustee_address<T: Trait>() -> Result<Address, DispatchError> {
+    current_trustee_addr_pair::<T>()
+        .and_then(|(addr_info, _)| Module::<T>::verify_btc_address(&addr_info.addr))
+}
+
+pub fn get_hot_trustee_redeem_script<T: Trait>() -> Result<Script, DispatchError> {
+    current_trustee_addr_pair::<T>().map(|(addr_info, _)| addr_info.redeem_script.into())
+}
+
 #[inline]
 pub fn get_current_trustee_address_pair<T: Trait>() -> Result<(Address, Address), DispatchError> {
-    trustee_addr_info_pair::<T>().map(|(hot_info, cold_info)| {
+    current_trustee_addr_pair::<T>().map(|(hot_info, cold_info)| {
         (
             Module::<T>::verify_btc_address(&hot_info.addr)
                 .expect("should not parse error from storage data; qed"),
@@ -66,15 +75,6 @@ pub fn get_last_trustee_address_pair<T: Trait>() -> Result<(Address, Address), D
                 .expect("should not parse error from storage data; qed"),
         )
     })
-}
-
-pub fn get_hot_trustee_address<T: Trait>() -> Result<Address, DispatchError> {
-    trustee_addr_info_pair::<T>()
-        .and_then(|(addr_info, _)| Module::<T>::verify_btc_address(&addr_info.addr))
-}
-
-pub fn get_hot_trustee_redeem_script<T: Trait>() -> Result<Script, DispatchError> {
-    trustee_addr_info_pair::<T>().map(|(addr_info, _)| addr_info.redeem_script.into())
 }
 
 fn check_keys<T: Trait>(keys: &[Public]) -> DispatchResult {
@@ -222,7 +222,7 @@ impl<T: Trait> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo>
 
 impl<T: Trait> Module<T> {
     pub fn ensure_trustee(who: &T::AccountId) -> DispatchResult {
-        let trustee_session_info = trustee_session::<T>()?;
+        let trustee_session_info = current_trustee_session::<T>()?;
         if trustee_session_info.trustee_list.iter().any(|n| n == who) {
             Ok(())
         } else {
