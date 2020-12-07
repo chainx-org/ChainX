@@ -35,7 +35,7 @@ fn charlie<T: Trait>() -> T::AccountId {
     // sr25519 Charlie
     account::<T>("90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22")
 }
-fn trustees<T: Trait>() -> Vec<(T::AccountId, Vec<u8>, Vec<u8>, Vec<u8>)> {
+fn new_trustees<T: Trait>() -> Vec<(T::AccountId, Vec<u8>, Vec<u8>, Vec<u8>)> {
     vec![
         (
             alice::<T>(),
@@ -128,7 +128,7 @@ benchmarks! {
         TrusteeMultiSigAddr::<T>::insert(Chain::Bitcoin, caller.clone());
 
         let mut candidators = vec![];
-        for (account, about, hot, cold) in trustees::<T>() {
+        for (account, about, hot, cold) in new_trustees::<T>() {
             Module::<T>::setup_trustee_impl(account.clone(), Chain::Bitcoin, about, hot, cold).unwrap();
             candidators.push(account);
         }
@@ -164,7 +164,7 @@ benchmarks! {
         XGatewayRecords::<T>::process_withdrawal(withdrawal_id, Chain::Bitcoin).unwrap();
         assert_eq!(XGatewayRecords::<T>::state_of(withdrawal_id), Some(WithdrawalState::Processing));
     }: _(RawOrigin::Signed(caller.clone()), withdrawal_id, WithdrawalState::RootFinish)
-     verify {
+    verify {
         assert!(XGatewayRecords::<T>::pending_withdrawals(withdrawal_id).is_none());
     }
 

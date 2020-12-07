@@ -173,9 +173,12 @@ decl_module! {
 
         fn deposit_event() = default;
 
+        /// Create a withdrawal.
         /// Withdraws some balances of `asset_id` to address `addr` of target chain.
         ///
-        /// NOTE: `ext` is for the compatiblity purpose, e.g., EOS requires a memo when doing the transfer.
+        /// WithdrawalRecord State: `Applying`
+        ///
+        /// NOTE: `ext` is for the compatibility purpose, e.g., EOS requires a memo when doing the transfer.
         #[weight = <T as Trait>::WeightInfo::withdraw()]
         pub fn withdraw(
             origin,
@@ -196,13 +199,16 @@ decl_module! {
             Ok(())
         }
 
+        /// Cancel the withdrawal by the applicant.
+        ///
+        /// WithdrawalRecord State: `Applying` ==> `NormalCancel`
         #[weight = <T as Trait>::WeightInfo::cancel_withdrawal()]
         pub fn cancel_withdrawal(origin, id: WithdrawalRecordId) -> DispatchResult {
             let from = ensure_signed(origin)?;
             xpallet_gateway_records::Module::<T>::cancel_withdrawal(id, &from)
         }
 
-        // trustees
+        /// Setup the trustee.
         #[weight = <T as Trait>::WeightInfo::setup_trustee()]
         pub fn setup_trustee(
             origin,
@@ -216,7 +222,7 @@ decl_module! {
             Self::setup_trustee_impl(who, chain, about, hot_entity, cold_entity)
         }
 
-        /// use for trustee multisig addr
+        /// Transition the trustee session.
         #[weight = <T as Trait>::WeightInfo::transition_trustee_session(new_trustees.len() as u32)]
         pub fn transition_trustee_session(
             origin,
@@ -235,13 +241,14 @@ decl_module! {
             };
 
             info!(
-                "[transition_trustee_session_by_root] Try to transition trustees, chain:{:?}, new_trustees:{:?}",
+                "[transition_trustee_session] Try to transition trustees, chain:{:?}, new_trustees:{:?}",
                 chain,
                 new_trustees
             );
             Self::transition_trustee_session_impl(chain, new_trustees)
         }
 
+        /// Set the state of withdraw record by the trustees.
         #[weight = <T as Trait>::WeightInfo::set_withdrawal_state()]
         pub fn set_withdrawal_state(
             origin,
@@ -259,6 +266,9 @@ decl_module! {
             xpallet_gateway_records::Module::<T>::set_withdrawal_state_by_trustees(id, chain, state)
         }
 
+        /// Set the config of trustee information.
+        ///
+        /// This is a root-only operation.
         #[weight = <T as Trait>::WeightInfo::set_trustee_info_config()]
         pub fn set_trustee_info_config(origin, chain: Chain, config: TrusteeInfoConfig) -> DispatchResult {
             ensure_root(origin)?;
@@ -266,6 +276,9 @@ decl_module! {
             Ok(())
         }
 
+        /// Set the referral binding of corresponding chain and account.
+        ///
+        /// This is a root-only operation.
         #[weight = <T as Trait>::WeightInfo::force_set_referral_binding()]
         pub fn force_set_referral_binding(
             origin,
