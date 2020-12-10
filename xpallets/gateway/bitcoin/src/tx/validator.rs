@@ -82,7 +82,8 @@ pub fn parse_and_check_signed_tx_impl<T: Trait>(
         let script: Script = tx.inputs[i].script_sig.clone().into();
         if script.len() < 2 {
             // if script length less than 2, it must has no sig in input, use 0 to represent it
-            return Err(Error::<T>::InvalidSignCount.into());
+            input_signs.push(0);
+            continue;
         }
         let (sigs, _) = script
             .extract_multi_scriptsig()
