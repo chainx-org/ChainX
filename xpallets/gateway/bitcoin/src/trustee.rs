@@ -505,7 +505,7 @@ fn insert_trustee_vote_state<T: Trait>(
         Some(_) => {
             // if account is exist, override state
             error!("[insert_trustee_vote_state] {:?} has already vote for this withdrawal proposal, old vote:{}", who, state);
-            return Err("already vote for this withdrawal proposal".into());
+            return Err(Error::<T>::DuplicateVote.into());
         }
         None => {
             trustee_list.push((who.clone(), state));
