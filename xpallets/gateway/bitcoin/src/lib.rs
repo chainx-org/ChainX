@@ -161,6 +161,8 @@ decl_error! {
         NotFinishProposal,
         /// no withdrawal record for this id
         NoWithdrawalRecord,
+        /// already vote for this withdrawal proposal
+        DuplicateVote,
     }
 }
 
