@@ -185,7 +185,7 @@
         "restrictions": "AssetRestrictions"
     },
     "RpcOrder": {
-        "order_id": "OrderId",
+        "id": "OrderId",
         "side": "Side",
         "price": "RpcPrice",
         "amount": "RpcBalance",
