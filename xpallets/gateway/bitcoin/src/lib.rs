@@ -17,12 +17,12 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-use sp_runtime::{traits::Zero, SaturatedConversion};
+use sp_runtime::SaturatedConversion;
 use sp_std::prelude::*;
 
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
-    dispatch::{DispatchError, DispatchResult, DispatchResultWithPostInfo, PostDispatchInfo},
+    dispatch::{DispatchError, DispatchResult, DispatchResultWithPostInfo},
     ensure,
     traits::{EnsureOrigin, UnixTime},
     weights::Pays,
@@ -277,11 +277,8 @@ decl_module! {
 
             Self::apply_push_header(header)?;
 
-            let post_info = PostDispatchInfo {
-                actual_weight: Some(Zero::zero()),
-                pays_fee: Pays::No,
-            };
-            Ok(post_info)
+            // Relayer does not pay a fee.
+            Ok(Pays::No.into())
         }
 
         /// if use `RelayTx` struct would export in metadata, cause complex in front-end
@@ -304,11 +301,7 @@ decl_module! {
 
             Self::apply_push_transaction(relay_tx, prev_tx)?;
 
-            let post_info = PostDispatchInfo {
-                actual_weight: Some(Zero::zero()),
-                pays_fee: Pays::No,
-            };
-            Ok(post_info)
+            Ok(Pays::No.into())
         }
 
         /// Trustee create a proposal for a withdrawal list. `tx` is the proposal withdrawal transaction.
@@ -532,18 +525,18 @@ impl<T: Trait> Module<T> {
             let best_index = Self::best_index();
 
             if header_info.height > best_index.height {
-                // new best index
-                let new_best_index = BtcHeaderIndex {
-                    hash,
-                    height: header_info.height,
-                };
                 // note update_confirmed_header would mutate other storage depend on BlockHashFor
                 let confirmed_index = header::update_confirmed_header::<T>(&header_info);
                 info!(
                     "[apply_push_header] Update new height:{}, hash:{:?}, confirm:{:?}",
                     header_info.height, hash, confirmed_index
                 );
-                // change new best index
+
+                // new best index
+                let new_best_index = BtcHeaderIndex {
+                    hash,
+                    height: header_info.height,
+                };
                 BestIndex::put(new_best_index);
             } else {
                 // forked chain

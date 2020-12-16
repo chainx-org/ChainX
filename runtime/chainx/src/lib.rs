@@ -104,7 +104,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("chainx"),
     impl_name: create_runtime_str!("chainx-net"),
     authoring_version: 1,
-    spec_version: 6,
+    spec_version: 7,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -127,10 +127,6 @@ impl Filter<Call> for BaseFilter {
 
         match call {
             Call::Currencies(_) => return false, // forbidden Currencies call now
-            Call::XGatewayBitcoin(_)
-            | Call::XGatewayCommon(_)
-            | Call::XGatewayRecords(_)
-            | Call::XSpot(_) => return false,
             _ => {}
         }
 
