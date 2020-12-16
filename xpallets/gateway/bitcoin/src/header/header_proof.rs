@@ -49,6 +49,11 @@ impl<'a> HeaderVerifier<'a> {
     }
 }
 
+enum RequiredWork {
+    Value(Compact),
+    NotCheck,
+}
+
 pub struct HeaderWork<'a> {
     info: &'a BtcHeaderInfo,
 }
@@ -61,21 +66,26 @@ impl<'a> HeaderWork<'a> {
     fn check<T: Trait>(&self, params: &BtcParams) -> DispatchResult {
         let previous_header_hash = self.info.header.previous_header_hash;
         let work = work_required::<T>(previous_header_hash, self.info.height, params);
-        if work != self.info.header.bits {
-            error!(
-                "[check_header_work] nBits do not match difficulty rules, work:{:?}, header bits:{:?}, height:{}",
-                work, self.info.header.bits, self.info.height
-            );
-            return Err(Error::<T>::HeaderNBitsNotMatch.into());
+        match work {
+            RequiredWork::Value(work) => {
+                if work != self.info.header.bits {
+                    error!(
+                        "[check_header_work] nBits do not match difficulty rules, work:{:?}, header bits:{:?}, height:{}",
+                        work, self.info.header.bits, self.info.height
+                    );
+                    return Err(Error::<T>::HeaderNBitsNotMatch.into());
+                }
+                Ok(())
+            }
+            RequiredWork::NotCheck => Ok(()),
         }
-        Ok(())
     }
 }
 
-pub fn work_required<T: Trait>(parent_hash: H256, height: u32, params: &BtcParams) -> Compact {
+pub fn work_required<T: Trait>(parent_hash: H256, height: u32, params: &BtcParams) -> RequiredWork {
     let max_bits = params.max_bits();
     if height == 0 {
-        return max_bits;
+        return RequiredWork::Value(max_bits);
     }
 
     let parent_header: BtcHeader = Module::<T>::headers(&parent_hash)
@@ -94,7 +104,7 @@ pub fn work_required<T: Trait>(parent_hash: H256, height: u32, params: &BtcParam
         "[work_required] Use old work required, old bits:{:?}",
         parent_header.bits
     );
-    parent_header.bits
+    RequiredWork::Value(parent_header.bits)
 }
 
 fn is_retarget_height(height: u32, params: &BtcParams) -> bool {
@@ -106,7 +116,7 @@ fn work_required_retarget<T: Trait>(
     parent_header: BtcHeader,
     height: u32,
     params: &BtcParams,
-) -> Compact {
+) -> RequiredWork {
     let retarget_num = height - params.retargeting_interval();
 
     // timestamp of parent block
@@ -117,7 +127,8 @@ fn work_required_retarget<T: Trait>(
     let (genesis_header, genesis_height) = Module::<T>::genesis_info();
     let mut retarget_header = parent_header;
     if retarget_num < genesis_height {
-        retarget_header = genesis_header;
+        // retarget_header = genesis_header;
+        return RequiredWork::NotCheck;
     } else {
         let hash_list = Module::<T>::block_hash_for(&retarget_num);
         for h in hash_list {
@@ -148,11 +159,11 @@ fn work_required_retarget<T: Trait>(
         retarget, maximum
     );
 
-    if retarget > maximum {
+    RequiredWork::Value(if retarget > maximum {
         params.max_bits()
     } else {
         retarget.into()
-    }
+    })
 }
 
 /// Returns constrained number of seconds since last retarget
