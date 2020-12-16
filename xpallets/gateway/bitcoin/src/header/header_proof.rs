@@ -126,7 +126,7 @@ fn work_required_retarget<T: Trait>(
     // bits of last block
     let last_bits = parent_header.bits;
 
-    let (genesis_header, genesis_height) = Module::<T>::genesis_info();
+    let (_, genesis_height) = Module::<T>::genesis_info();
     let mut retarget_header = parent_header;
     if retarget_num < genesis_height {
         // retarget_header = genesis_header;
