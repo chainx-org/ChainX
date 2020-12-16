@@ -127,10 +127,6 @@ impl Filter<Call> for BaseFilter {
 
         match call {
             Call::Currencies(_) => return false, // forbidden Currencies call now
-            Call::XGatewayBitcoin(_)
-            | Call::XGatewayCommon(_)
-            | Call::XGatewayRecords(_)
-            | Call::XSpot(_) => return false,
             _ => {}
         }
 
