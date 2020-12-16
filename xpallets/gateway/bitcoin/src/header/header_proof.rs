@@ -51,7 +51,7 @@ impl<'a> HeaderVerifier<'a> {
 }
 
 #[derive(RuntimeDebug)]
-enum RequiredWork {
+pub enum RequiredWork {
     Value(Compact),
     NotCheck,
 }
