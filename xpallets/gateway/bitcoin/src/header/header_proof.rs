@@ -1,6 +1,7 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 use frame_support::{dispatch::DispatchResult, traits::UnixTime};
+use sp_runtime::RuntimeDebug;
 use sp_std::{cmp, convert::TryFrom};
 
 use light_bitcoin::{
@@ -49,6 +50,7 @@ impl<'a> HeaderVerifier<'a> {
     }
 }
 
+#[derive(RuntimeDebug)]
 enum RequiredWork {
     Value(Compact),
     NotCheck,
