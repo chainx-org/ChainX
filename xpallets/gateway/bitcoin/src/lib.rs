@@ -277,11 +277,8 @@ decl_module! {
 
             Self::apply_push_header(header)?;
 
-            let post_info = PostDispatchInfo {
-                actual_weight: Some(Zero::zero()),
-                pays_fee: Pays::No,
-            };
-            Ok(post_info)
+            // Relayer does not pay a fee.
+            Ok(Pays::No.into())
         }
 
         /// if use `RelayTx` struct would export in metadata, cause complex in front-end
@@ -304,11 +301,7 @@ decl_module! {
 
             Self::apply_push_transaction(relay_tx, prev_tx)?;
 
-            let post_info = PostDispatchInfo {
-                actual_weight: Some(Zero::zero()),
-                pays_fee: Pays::No,
-            };
-            Ok(post_info)
+            Ok(Pays::No.into())
         }
 
         /// Trustee create a proposal for a withdrawal list. `tx` is the proposal withdrawal transaction.
