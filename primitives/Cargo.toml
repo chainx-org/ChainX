@@ -1,6 +1,6 @@
 [package]
 name = "chainx-primitives"
-version = "2.0.6"
+version = "2.0.7"
 authors = ["The ChainX Authors"]
 edition = "2018"
 
