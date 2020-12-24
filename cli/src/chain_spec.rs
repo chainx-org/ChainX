@@ -34,7 +34,7 @@ use chainx_runtime as chainx;
 
 // Note this is the URL for the telemetry server
 const POLKADOT_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
-const CHAINX_TELEMETRY_URL: &str = "ws://stats.chainx.org:1024/submit/";
+const CHAINX_TELEMETRY_URL: &str = "wss://telemetry.chainx.org/submit/";
 
 /// Node `ChainSpec` extensions.
 ///
