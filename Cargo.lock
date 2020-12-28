@@ -737,6 +737,7 @@ dependencies = [
  "xp-genesis-builder",
  "xp-protocol",
  "xpallet-gateway-bitcoin",
+ "xpallet-gateway-bitcoin-offchain",
  "xpallet-gateway-common",
 ]
 
@@ -806,6 +807,7 @@ dependencies = [
  "xpallet-dex-spot",
  "xpallet-dex-spot-rpc-runtime-api",
  "xpallet-gateway-bitcoin",
+ "xpallet-gateway-bitcoin-offchain",
  "xpallet-gateway-common",
  "xpallet-gateway-common-rpc-runtime-api",
  "xpallet-gateway-records",
@@ -3531,6 +3533,24 @@ dependencies = [
  "failure",
  "nalgebra",
  "statrs",
+]
+
+[[package]]
+name = "lite-json"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0460d985423a026b4d9b828a7c6eed1bcf606f476322f3f9b507529686a61715"
+dependencies = [
+ "lite-parser",
+]
+
+[[package]]
+name = "lite-parser"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0c50092e40e0ccd1bf2015a10333fde0502ff95b832b0895dc1ca0d7ac6c52f6"
+dependencies = [
+ "paste",
 ]
 
 [[package]]
@@ -9256,6 +9276,35 @@ dependencies = [
  "xpallet-gateway-common",
  "xpallet-gateway-records",
  "xpallet-support",
+]
+
+[[package]]
+name = "xpallet-gateway-bitcoin-offchain"
+version = "2.0.5"
+dependencies = [
+ "chainx-primitives",
+ "frame-support",
+ "frame-system",
+ "hex",
+ "light-bitcoin",
+ "lite-json",
+ "pallet-balances",
+ "pallet-session",
+ "parity-scale-codec",
+ "serde",
+ "sp-application-crypto",
+ "sp-core",
+ "sp-io",
+ "sp-keystore",
+ "sp-runtime",
+ "sp-std",
+ "xp-gateway-bitcoin",
+ "xp-logging",
+ "xpallet-assets",
+ "xpallet-assets-registrar",
+ "xpallet-gateway-bitcoin",
+ "xpallet-gateway-common",
+ "xpallet-gateway-records",
 ]
 
 [[package]]

@@ -46,6 +46,7 @@ use pallet_session::historical as pallet_session_historical;
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 
 use xpallet_dex_spot::{Depth, FullPairInfo, RpcOrder, TradingPairId};
+use xpallet_gateway_bitcoin_offchain::AuthorityId as GatewayBitcoinRelayId;
 use xpallet_mining_asset::{MinerLedger, MiningAssetInfo, MiningDividendInfo};
 use xpallet_mining_staking::{NominatorInfo, NominatorLedger, ValidatorInfo};
 use xpallet_support::traits::MultisigAddressFor;
@@ -332,6 +333,7 @@ impl_opaque_keys! {
         pub grandpa: Grandpa,
         pub im_online: ImOnline,
         pub authority_discovery: AuthorityDiscovery,
+        pub gateway_bitcoin_relay: XGatewayBitcoinOffchain,
     }
 }
 
@@ -835,6 +837,12 @@ impl xpallet_gateway_bitcoin::Trait for Runtime {
     type WeightInfo = xpallet_gateway_bitcoin::weights::SubstrateWeight<Runtime>;
 }
 
+impl xpallet_gateway_bitcoin_offchain::Trait for Runtime {
+    type Event = Event;
+    type Call = Call;
+    type AuthorityId = GatewayBitcoinRelayId;
+}
+
 impl xpallet_dex_spot::Trait for Runtime {
     type Event = Event;
     type Price = Balance;
@@ -944,6 +952,7 @@ construct_runtime!(
         XGatewayRecords: xpallet_gateway_records::{Module, Call, Storage, Event<T>},
         XGatewayCommon: xpallet_gateway_common::{Module, Call, Storage, Event<T>, Config<T>},
         XGatewayBitcoin: xpallet_gateway_bitcoin::{Module, Call, Storage, Event<T>, Config<T>},
+        XGatewayBitcoinOffchain: xpallet_gateway_bitcoin_offchain::{Module, Call, Storage, Event<T>, Config<T>},
 
         // DEX
         XSpot: xpallet_dex_spot::{Module, Call, Storage, Event<T>, Config<T>},
@@ -1340,5 +1349,4 @@ impl_runtime_apis! {
             Ok(batches)
         }
     }
-
 }
