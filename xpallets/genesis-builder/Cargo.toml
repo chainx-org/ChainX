@@ -1,6 +1,6 @@
 [package]
 name = "xpallet-genesis-builder"
-version = "2.0.7"
+version = "2.0.7-1"
 authors = ["The ChainX Authors"]
 edition = "2018"
 
