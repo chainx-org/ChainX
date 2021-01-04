@@ -1,0 +1,41 @@
+[package]
+name = "chainx-runtime-common"
+version = "2.0.7-1"
+authors = ["The ChainX Authors"]
+edition = "2018"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "1.3.4", default-features = false, features = ["derive"] }
+hex-literal = { version = "0.3.1", optional = true }
+serde = { version = "1.0.101", optional = true, features = ["derive"] }
+smallvec = "1.4.1"
+static_assertions = "1.1.0"
+
+# Substrate primitives
+sp-runtime = { version = "2.0.0", default-features = false }
+
+# Substrate pallets
+frame-support = { version = "2.0.0", default-features = false }
+frame-system = { version = "2.0.0", default-features = false }
+pallet-balances = { version = "2.0.0", default-features = false }
+pallet-transaction-payment = { version = "2.0.0", default-features = false }
+
+# ChainX primitives
+chainx-primitives = { path = "../../primitives", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+    # Substrate primitives
+    "sp-runtime/std",
+    # Substrate pallets
+    "frame-support/std",
+    "frame-system/std",
+    "pallet-balances/std",
+    "pallet-transaction-payment/std",
+    # ChainX primitives
+    "chainx-primitives/std",
+]
