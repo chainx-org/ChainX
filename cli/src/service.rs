@@ -354,7 +354,7 @@ pub fn new_light(config: Configuration) -> Result<TaskManager, ServiceError> {
     let (grandpa_block_import, _) = sc_finality_grandpa::block_import(
         client.clone(),
         &(client.clone() as Arc<_>),
-        select_chain.clone()
+        select_chain.clone(),
     )?;
     let justification_import = grandpa_block_import.clone();
 
