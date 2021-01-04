@@ -379,7 +379,7 @@ impl pallet_transaction_payment::Config for Runtime {
     type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
 }
 
-impl xpallet_transaction_fee::Trait for Runtime {}
+impl xpallet_transaction_fee::Config for Runtime {}
 
 parameter_types! {
     pub const SessionDuration: BlockNumber = EPOCH_DURATION_IN_BLOCKS;
@@ -766,7 +766,7 @@ impl orml_currencies::Config for Runtime {
 ///////////////////////////////////////////
 // Chainx pallets
 ///////////////////////////////////////////
-impl xpallet_system::Trait for Runtime {
+impl xpallet_system::Config for Runtime {
     type Event = Event;
     type Currency = Balances;
 }
@@ -775,14 +775,14 @@ parameter_types! {
     pub const ChainXAssetId: AssetId = xp_protocol::PCX;
 }
 
-impl xpallet_assets_registrar::Trait for Runtime {
+impl xpallet_assets_registrar::Config for Runtime {
     type Event = Event;
     type NativeAssetId = ChainXAssetId;
     type RegistrarHandler = XMiningAsset;
     type WeightInfo = xpallet_assets_registrar::weights::SubstrateWeight<Runtime>;
 }
 
-impl xpallet_assets::Trait for Runtime {
+impl xpallet_assets::Config for Runtime {
     type Event = Event;
     type Currency = Balances;
     type Amount = Amount;
@@ -792,7 +792,7 @@ impl xpallet_assets::Trait for Runtime {
     type WeightInfo = xpallet_assets::weights::SubstrateWeight<Runtime>;
 }
 
-impl xpallet_gateway_records::Trait for Runtime {
+impl xpallet_gateway_records::Config for Runtime {
     type Event = Event;
     type WeightInfo = xpallet_gateway_records::weights::SubstrateWeight<Runtime>;
 }
@@ -804,7 +804,7 @@ impl MultisigAddressFor<AccountId> for MultisigProvider {
     }
 }
 
-impl xpallet_gateway_common::Trait for Runtime {
+impl xpallet_gateway_common::Config for Runtime {
     type Event = Event;
     type Validator = XStaking;
     type DetermineMultisigAddress = MultisigProvider;
@@ -813,7 +813,7 @@ impl xpallet_gateway_common::Trait for Runtime {
     type WeightInfo = xpallet_gateway_common::weights::SubstrateWeight<Runtime>;
 }
 
-impl xpallet_gateway_bitcoin::Trait for Runtime {
+impl xpallet_gateway_bitcoin::Config for Runtime {
     type Event = Event;
     type UnixTime = Timestamp;
     type AccountExtractor = xp_gateway_bitcoin::OpReturnExtractor;
@@ -824,7 +824,7 @@ impl xpallet_gateway_bitcoin::Trait for Runtime {
     type WeightInfo = xpallet_gateway_bitcoin::weights::SubstrateWeight<Runtime>;
 }
 
-impl xpallet_dex_spot::Trait for Runtime {
+impl xpallet_dex_spot::Config for Runtime {
     type Event = Event;
     type Price = Balance;
     type WeightInfo = xpallet_dex_spot::weights::SubstrateWeight<Runtime>;
@@ -845,7 +845,7 @@ parameter_types! {
     pub const MaximumReferralId: u32 = 12;
 }
 
-impl xpallet_mining_staking::Trait for Runtime {
+impl xpallet_mining_staking::Config for Runtime {
     type Event = Event;
     type Currency = Balances;
     type MigrationSessionOffset = MigrationSessionOffset;
@@ -868,7 +868,7 @@ impl xpallet_mining_asset::GatewayInterface<AccountId> for ReferralGetter {
     }
 }
 
-impl xpallet_mining_asset::Trait for Runtime {
+impl xpallet_mining_asset::Config for Runtime {
     type Event = Event;
     type StakingInterface = Self;
     type GatewayInterface = ReferralGetter;
@@ -878,7 +878,7 @@ impl xpallet_mining_asset::Trait for Runtime {
     type WeightInfo = xpallet_mining_asset::weights::SubstrateWeight<Runtime>;
 }
 
-impl xpallet_genesis_builder::Trait for Runtime {}
+impl xpallet_genesis_builder::Config for Runtime {}
 
 construct_runtime!(
     pub enum Runtime where
@@ -1297,7 +1297,7 @@ impl_runtime_apis! {
         ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, RuntimeString> {
             use frame_benchmarking::{Benchmarking, BenchmarkBatch, add_benchmark, TrackedStorageKey};
 
-            impl frame_system_benchmarking::Trait for Runtime {}
+            impl frame_system_benchmarking::Config for Runtime {}
 
             let whitelist: Vec<TrackedStorageKey> = vec![
                 // // Block Number

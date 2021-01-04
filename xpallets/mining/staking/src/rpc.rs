@@ -12,7 +12,7 @@ use sp_runtime::RuntimeDebug;
 use xp_mining_common::RewardPotAccountFor;
 
 use crate::{
-    types::*, BalanceOf, LastRebondOf, Module, Nominations, SessionInterface, Trait,
+    types::*, BalanceOf, Config, LastRebondOf, Module, Nominations, SessionInterface,
     ValidatorLedgers, Validators,
 };
 
@@ -46,7 +46,7 @@ pub struct NominatorInfo<BlockNumber> {
     pub last_rebond: Option<BlockNumber>,
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     pub fn validators_info(
     ) -> Vec<ValidatorInfo<T::AccountId, BalanceOf<T>, VoteWeight, T::BlockNumber>> {
         Self::validator_set().map(Self::validator_info_of).collect()

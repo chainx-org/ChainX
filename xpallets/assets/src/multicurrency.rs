@@ -22,9 +22,9 @@ use xp_logging::error;
 use xpallet_support::traits::TreasuryAccount;
 
 use crate::types::{AssetType, BalanceLock};
-use crate::{AssetBalance, BalanceOf, Error, Module, Trait};
+use crate::{AssetBalance, BalanceOf, Config, Error, Module};
 
-impl<T: Trait> MultiCurrency<T::AccountId> for Module<T> {
+impl<T: Config> MultiCurrency<T::AccountId> for Module<T> {
     type CurrencyId = AssetId;
     type Balance = BalanceOf<T>;
 
@@ -173,7 +173,7 @@ impl<T: Trait> MultiCurrency<T::AccountId> for Module<T> {
     }
 }
 
-impl<T: Trait> MultiCurrencyExtended<T::AccountId> for Module<T> {
+impl<T: Config> MultiCurrencyExtended<T::AccountId> for Module<T> {
     type Amount = T::Amount;
 
     fn update_balance(
@@ -195,7 +195,7 @@ impl<T: Trait> MultiCurrencyExtended<T::AccountId> for Module<T> {
     }
 }
 
-impl<T: Trait> MultiReservableCurrency<T::AccountId> for Module<T> {
+impl<T: Config> MultiReservableCurrency<T::AccountId> for Module<T> {
     fn can_reserve(
         currency_id: Self::CurrencyId,
         who: &T::AccountId,
@@ -324,7 +324,7 @@ impl<T: Trait> MultiReservableCurrency<T::AccountId> for Module<T> {
     }
 }
 
-impl<T: Trait> MultiLockableCurrency<T::AccountId> for Module<T> {
+impl<T: Config> MultiLockableCurrency<T::AccountId> for Module<T> {
     type Moment = T::BlockNumber;
 
     fn set_lock(
@@ -402,7 +402,7 @@ impl<T: Trait> MultiLockableCurrency<T::AccountId> for Module<T> {
     }
 }
 
-impl<T: Trait> MergeAccount<T::AccountId> for Module<T> {
+impl<T: Config> MergeAccount<T::AccountId> for Module<T> {
     #[transactional]
     fn merge_account(source: &T::AccountId, dest: &T::AccountId) -> DispatchResult {
         AssetBalance::<T>::iter_prefix(source).try_for_each(

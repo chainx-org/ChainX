@@ -37,7 +37,7 @@ pub use xp_assets_registrar::{Chain, RegistrarHandler};
 /// The module's config trait.
 ///
 /// `frame_system::Config` should always be included in our implied traits.
-pub trait Trait: frame_system::Config {
+pub trait Config: frame_system::Config {
     /// The overarching event type.
     type Event: From<Event> + Into<<Self as frame_system::Config>::Event>;
 
@@ -65,7 +65,7 @@ decl_event!(
 
 decl_error! {
     /// Error for the XAssetRegistrar Module
-    pub enum Error for Module<T: Trait> {
+    pub enum Error for Module<T: Config> {
         /// Token symbol length is zero or too long
         InvalidAssetTokenSymbolLength,
         /// Token symbol char is invalid, only allow ASCII alphanumeric character or '-', '.', '|', '~'
@@ -88,7 +88,7 @@ decl_error! {
 }
 
 decl_storage! {
-    trait Store for Module<T: Trait> as XAssetsRegistrar {
+    trait Store for Module<T: Config> as XAssetsRegistrar {
         /// Asset id list for each Chain.
         pub AssetIdsOf get(fn asset_ids_of): map hasher(twox_64_concat) Chain => Vec<AssetId>;
 
@@ -119,7 +119,7 @@ decl_storage! {
 }
 
 decl_module! {
-    pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+    pub struct Module<T: Config> for enum Call where origin: T::Origin {
         type Error = Error<T>;
 
         fn deposit_event() = default;
@@ -224,7 +224,7 @@ decl_module! {
     }
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     /// Returns an iterator of all the asset ids of all chains so far.
     #[inline]
     pub fn asset_ids() -> impl Iterator<Item = AssetId> {

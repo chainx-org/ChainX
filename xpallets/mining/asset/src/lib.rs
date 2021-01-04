@@ -43,7 +43,7 @@ pub use self::rpc::*;
 pub use self::types::*;
 pub use self::weights::WeightInfo;
 
-pub trait Trait: xpallet_assets::Trait {
+pub trait Config: xpallet_assets::Config {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 
@@ -73,9 +73,9 @@ impl<AccountId, Balance: Default> StakingInterface<AccountId, Balance> for () {
     }
 }
 
-impl<T: Trait> StakingInterface<<T as frame_system::Config>::AccountId, u128> for T
+impl<T: Config> StakingInterface<<T as frame_system::Config>::AccountId, u128> for T
 where
-    T: xpallet_mining_staking::Trait,
+    T: xpallet_mining_staking::Config,
 {
     fn staked_of(who: &<T as frame_system::Config>::AccountId) -> u128 {
         xpallet_mining_staking::Module::<T>::staked_of(who).saturated_into()
@@ -94,7 +94,7 @@ impl<AccountId> GatewayInterface<AccountId> for () {
 }
 
 decl_storage! {
-    trait Store for Module<T: Trait> as XMiningAsset {
+    trait Store for Module<T: Config> as XMiningAsset {
         /// Possible reward for the new asset owners that does not have native coins yet.
         pub DepositReward get(fn deposit_reward): BalanceOf<T> = 100_000.into();
 
@@ -150,7 +150,7 @@ decl_event!(
 
 decl_error! {
     /// Error for the staking module.
-    pub enum Error for Module<T: Trait> {
+    pub enum Error for Module<T: Config> {
         /// The asset does not have the mining rights.
         NotPrevilegedAsset,
         /// Claimer does not have enough Staking locked balance.
@@ -164,26 +164,26 @@ decl_error! {
     }
 }
 
-impl<T: Trait> From<ZeroMiningWeightError> for Error<T> {
+impl<T: Config> From<ZeroMiningWeightError> for Error<T> {
     fn from(_: ZeroMiningWeightError) -> Self {
         Self::ZeroMiningWeight
     }
 }
 
-impl<T: Trait> From<DispatchError> for Error<T> {
+impl<T: Config> From<DispatchError> for Error<T> {
     fn from(_: DispatchError) -> Self {
         Self::DispatchError
     }
 }
 
 decl_module! {
-    pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+    pub struct Module<T: Config> for enum Call where origin: T::Origin {
         type Error = Error<T>;
 
         fn deposit_event() = default;
 
         /// Claims the staking reward given the `target` validator.
-        #[weight = <T as Trait>::WeightInfo::claim()]
+        #[weight = <T as Config>::WeightInfo::claim()]
         fn claim(origin, #[compact] target: AssetId) {
             let sender = ensure_signed(origin)?;
 
@@ -195,7 +195,7 @@ decl_module! {
             <Self as Claim<T::AccountId>>::claim(&sender, &target)?;
         }
 
-        #[weight = <T as Trait>::WeightInfo::set_claim_staking_requirement()]
+        #[weight = <T as Config>::WeightInfo::set_claim_staking_requirement()]
         fn set_claim_staking_requirement(origin, #[compact] asset_id: AssetId, #[compact] new: StakingRequirement) {
             ensure_root(origin)?;
             ClaimRestrictionOf::<T>::mutate(asset_id, |restriction| {
@@ -203,7 +203,7 @@ decl_module! {
             });
         }
 
-        #[weight = <T as Trait>::WeightInfo::set_claim_frequency_limit()]
+        #[weight = <T as Config>::WeightInfo::set_claim_frequency_limit()]
         fn set_claim_frequency_limit(origin, #[compact] asset_id: AssetId, #[compact] new: T::BlockNumber) {
             ensure_root(origin)?;
             ClaimRestrictionOf::<T>::mutate(asset_id, |restriction| {
@@ -211,7 +211,7 @@ decl_module! {
             });
         }
 
-        #[weight = <T as Trait>::WeightInfo::set_asset_power()]
+        #[weight = <T as Config>::WeightInfo::set_asset_power()]
         fn set_asset_power(origin, #[compact] asset_id: AssetId, #[compact] new: FixedAssetPower) {
             ensure_root(origin)?;
             FixedAssetPowerOf::insert(asset_id, new);
@@ -219,7 +219,7 @@ decl_module! {
     }
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     #[inline]
     fn last_claim(who: &T::AccountId, asset_id: &AssetId) -> Option<T::BlockNumber> {
         MinerLedgers::<T>::get(who, asset_id).last_claim
@@ -227,12 +227,12 @@ impl<T: Trait> Module<T> {
 
     #[inline]
     fn free_balance(who: &T::AccountId) -> BalanceOf<T> {
-        <T as xpallet_assets::Trait>::Currency::free_balance(who)
+        <T as xpallet_assets::Config>::Currency::free_balance(who)
     }
 
     #[inline]
     fn transfer(from: &T::AccountId, to: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
-        <T as xpallet_assets::Trait>::Currency::transfer(
+        <T as xpallet_assets::Config>::Currency::transfer(
             from,
             to,
             value,

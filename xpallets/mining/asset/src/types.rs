@@ -8,7 +8,7 @@ use sp_runtime::RuntimeDebug;
 use chainx_primitives::AssetId;
 use xp_mining_common::WeightType;
 
-use crate::Trait;
+use crate::Config;
 
 pub type MiningWeight = WeightType;
 pub type FixedAssetPower = u32;
@@ -25,12 +25,12 @@ pub struct AssetLedger<MiningWeight, BlockNumber> {
     pub last_total_mining_weight_update: BlockNumber,
 }
 
-pub struct AssetLedgerWrapper<'a, T: Trait> {
+pub struct AssetLedgerWrapper<'a, T: Config> {
     pub asset_id: &'a AssetId,
     pub inner: &'a mut AssetLedger<MiningWeight, T::BlockNumber>,
 }
 
-impl<'a, T: Trait> AssetLedgerWrapper<'a, T> {
+impl<'a, T: Config> AssetLedgerWrapper<'a, T> {
     pub fn new(
         asset_id: &'a AssetId,
         inner: &'a mut AssetLedger<MiningWeight, T::BlockNumber>,
@@ -56,13 +56,13 @@ pub struct MinerLedger<MiningWeight, BlockNumber> {
     pub last_claim: Option<BlockNumber>,
 }
 
-pub struct MinerLedgerWrapper<'a, T: Trait> {
+pub struct MinerLedgerWrapper<'a, T: Config> {
     pub miner: &'a T::AccountId,
     pub asset_id: &'a AssetId,
     pub inner: &'a mut MinerLedger<MiningWeight, T::BlockNumber>,
 }
 
-impl<'a, T: Trait> MinerLedgerWrapper<'a, T> {
+impl<'a, T: Config> MinerLedgerWrapper<'a, T> {
     pub fn new(
         miner: &'a T::AccountId,
         asset_id: &'a AssetId,

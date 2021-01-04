@@ -9,9 +9,9 @@ use xpallet_assets::Chain;
 use xpallet_support::{traits::Validator, try_addr, try_str};
 
 use crate::traits::{AddressBinding, ReferralBinding};
-use crate::{AddressBindingOf, BoundAddressOf, Module, Trait};
+use crate::{AddressBindingOf, BoundAddressOf, Config, Module};
 
-impl<T: Trait> ReferralBinding<T::AccountId> for Module<T> {
+impl<T: Config> ReferralBinding<T::AccountId> for Module<T> {
     fn update_binding(assert_id: &AssetId, who: &T::AccountId, referral_name: Option<ReferralId>) {
         let chain = match xpallet_assets_registrar::Module::<T>::chain_of(assert_id) {
             Ok(chain) => chain,
@@ -53,7 +53,7 @@ impl<T: Trait> ReferralBinding<T::AccountId> for Module<T> {
     }
 }
 
-impl<T: Trait, Address: Into<Vec<u8>>> AddressBinding<T::AccountId, Address> for Module<T> {
+impl<T: Config, Address: Into<Vec<u8>>> AddressBinding<T::AccountId, Address> for Module<T> {
     fn update_binding(chain: Chain, address: Address, who: T::AccountId) {
         let address = address.into();
         if let Some(accountid) = AddressBindingOf::<T>::get(chain, &address) {
@@ -92,7 +92,7 @@ impl<T: Trait, Address: Into<Vec<u8>>> AddressBinding<T::AccountId, Address> for
 }
 
 // export for runtime-api
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     pub fn bound_addrs(who: &T::AccountId) -> BTreeMap<Chain, Vec<ChainAddress>> {
         BoundAddressOf::<T>::iter_prefix(&who).collect()
     }

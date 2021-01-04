@@ -13,8 +13,8 @@ use chainx_primitives::AssetId;
 use xp_mining_common::RewardPotAccountFor;
 
 use crate::{
-    types::*, AssetLedgers, BalanceOf, ClaimRestrictionOf, FixedAssetPowerOf, MinerLedgers,
-    MiningPrevilegedAssets, Module, Trait,
+    types::*, AssetLedgers, BalanceOf, ClaimRestrictionOf, Config, FixedAssetPowerOf, MinerLedgers,
+    MiningPrevilegedAssets, Module,
 };
 
 /// Mining asset info.
@@ -43,7 +43,7 @@ pub struct MiningDividendInfo<Balance> {
     pub insufficient_stake: Balance,
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     /// Get overall information about all mining assets.
     pub fn mining_assets(
     ) -> Vec<MiningAssetInfo<T::AccountId, BalanceOf<T>, MiningWeight, T::BlockNumber>> {

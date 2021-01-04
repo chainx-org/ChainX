@@ -78,7 +78,7 @@ where
     }
 }
 
-impl<T: Trait> ComputeMiningWeight<T::AccountId, T::BlockNumber> for Module<T> {
+impl<T: Config> ComputeMiningWeight<T::AccountId, T::BlockNumber> for Module<T> {
     type Claimee = T::AccountId;
     type Error = Error<T>;
 
@@ -107,7 +107,7 @@ type DividendParams<T> = (
     <T as frame_system::Config>::AccountId,
 );
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     /// Returns the tuple of (dividend, source_weight, target_weight) if the nominator claims right now.
     pub fn calculate_dividend_on_claim(
         nominator: &T::AccountId,
@@ -193,7 +193,7 @@ impl<T: Trait> Module<T> {
     }
 }
 
-impl<T: Trait> Claim<T::AccountId> for Module<T> {
+impl<T: Config> Claim<T::AccountId> for Module<T> {
     type Claimee = T::AccountId;
     type Error = Error<T>;
 
@@ -220,7 +220,7 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
     }
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     /// Issue new session reward and try slashing the offenders at the same time.
     fn mint_and_slash(session_index: SessionIndex) {
         // Only the active validators can be rewarded.
@@ -239,7 +239,7 @@ impl<T: Trait> Module<T> {
     }
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     fn new_session(session_index: SessionIndex) -> Option<Vec<T::AccountId>> {
         debug!(
             "[new_session] session_index:{:?}, current_era:{:?}",
@@ -354,7 +354,7 @@ impl<T: Trait> Module<T> {
 ///
 /// Once the first new_session is planned, all session must start and then end in order, though
 /// some session can lag in between the newest session planned and the latest session started.
-impl<T: Trait> pallet_session::SessionManager<T::AccountId> for Module<T> {
+impl<T: Config> pallet_session::SessionManager<T::AccountId> for Module<T> {
     fn new_session(new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
         Self::new_session(new_index)
     }
@@ -371,7 +371,7 @@ type Reporter<T> = <T as frame_system::Config>::AccountId;
 
 /// Substrate:
 /// A tuple of the validator's ID and their full identification.
-/// pub type IdentificationTuple<T> = (<T as crate::Trait>::ValidatorId, <T as Trait>::FullIdentification);
+/// pub type IdentificationTuple<T> = (<T as crate::Config>::ValidatorId, <T as Config>::FullIdentification);
 /// ChainX:
 /// We do not have the FullIdentification info, but the reward pot.
 pub type IdentificationTuple<T> = (
@@ -384,7 +384,7 @@ type Offender<T> = IdentificationTuple<T>;
 
 /// This is intended to be used with `FilterHistoricalOffences` in Substrate/Staking.
 /// In ChainX, we always apply the slash immediately, no deferred slash.
-impl<T: Trait> OnOffenceHandler<Reporter<T>, IdentificationTuple<T>, Weight> for Module<T>
+impl<T: Config> OnOffenceHandler<Reporter<T>, IdentificationTuple<T>, Weight> for Module<T>
 where
     T: pallet_session::Config<ValidatorId = <T as frame_system::Config>::AccountId>,
     T::SessionHandler: pallet_session::SessionHandler<<T as frame_system::Config>::AccountId>,
@@ -429,9 +429,9 @@ where
 /// Simple validator reward pot account determiner.
 ///
 /// Formula: `blake2_256(blake2_256(validator_pubkey) + blake2_256(registered_at))`
-pub struct SimpleValidatorRewardPotAccountDeterminer<T: Trait>(sp_std::marker::PhantomData<T>);
+pub struct SimpleValidatorRewardPotAccountDeterminer<T: Config>(sp_std::marker::PhantomData<T>);
 
-impl<T: Trait> xp_mining_common::RewardPotAccountFor<T::AccountId, T::AccountId>
+impl<T: Config> xp_mining_common::RewardPotAccountFor<T::AccountId, T::AccountId>
     for SimpleValidatorRewardPotAccountDeterminer<T>
 where
     T::AccountId: UncheckedFrom<T::Hash> + AsRef<[u8]>,

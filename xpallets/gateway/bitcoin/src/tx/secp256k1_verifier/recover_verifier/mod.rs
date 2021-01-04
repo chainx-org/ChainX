@@ -20,7 +20,7 @@ use light_bitcoin::{
 
 pub use self::error::Secp256k1Error;
 use self::scalar::Scalar;
-use crate::{Error, Trait};
+use crate::{Config, Error};
 
 #[derive(Clone, Eq, PartialEq)]
 /// An ECDSA signature.
@@ -51,7 +51,7 @@ impl Signature {
     }
 }
 
-pub fn verify_sig_impl<T: Trait>(
+pub fn verify_sig_impl<T: Config>(
     sig: &Bytes,
     pubkey: &Bytes,
     tx: &Transaction,
@@ -80,14 +80,14 @@ pub fn verify_sig_impl<T: Trait>(
     )
 }
 
-pub struct TransactionSignatureChecker<T: Trait> {
+pub struct TransactionSignatureChecker<T: Config> {
     pub signer: TransactionInputSigner,
     pub input_index: usize,
     pub input_amount: u64,
     _marker: sp_std::marker::PhantomData<T>,
 }
 
-impl<T: Trait> TransactionSignatureChecker<T> {
+impl<T: Config> TransactionSignatureChecker<T> {
     fn check_signature(
         &self,
         signature: &Signature,
@@ -116,7 +116,7 @@ impl<T: Trait> TransactionSignatureChecker<T> {
         let mut sig: [u8; 65] = [0; 65];
         (&mut sig[0..64]).copy_from_slice(&signature.serialize());
 
-        fn convert<T: Trait>(e: EcdsaVerifyError) -> Error<T> {
+        fn convert<T: Config>(e: EcdsaVerifyError) -> Error<T> {
             match e {
                 EcdsaVerifyError::BadRS | EcdsaVerifyError::BadV => Error::<T>::ConstructBadSign,
                 EcdsaVerifyError::BadSignature => Error::<T>::BadSignature,

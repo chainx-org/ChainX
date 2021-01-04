@@ -30,7 +30,7 @@ use light_bitcoin::{
 
 use crate::{
     types::{BtcParams, BtcTxVerifier},
-    Error, GenesisConfig, Module, Trait,
+    Config, Error, GenesisConfig, Module,
 };
 
 /// The AccountId alias in this test module.
@@ -53,7 +53,7 @@ parameter_types! {
     pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
 }
 
-impl frame_system::Trait for Test {
+impl frame_system::Config for Test {
     type BaseCallFilter = ();
     type Origin = Origin;
     type Call = ();
@@ -84,7 +84,7 @@ impl frame_system::Trait for Test {
 parameter_types! {
     pub const ExistentialDeposit: u64 = 0;
 }
-impl pallet_balances::Trait for Test {
+impl pallet_balances::Config for Test {
     type MaxLocks = ();
     type Balance = Balance;
     type DustRemoval = ();
@@ -99,14 +99,14 @@ parameter_types! {
     pub const ChainXAssetId: AssetId = 0;
 }
 
-impl xpallet_assets_registrar::Trait for Test {
+impl xpallet_assets_registrar::Config for Test {
     type Event = ();
     type NativeAssetId = ChainXAssetId;
     type RegistrarHandler = ();
     type WeightInfo = ();
 }
 
-impl xpallet_assets::Trait for Test {
+impl xpallet_assets::Config for Test {
     type Event = ();
     type Currency = Balances;
     type Amount = Amount;
@@ -116,12 +116,12 @@ impl xpallet_assets::Trait for Test {
     type WeightInfo = ();
 }
 
-impl xpallet_gateway_records::Trait for Test {
+impl xpallet_gateway_records::Config for Test {
     type Event = ();
     type WeightInfo = ();
 }
 
-impl xpallet_gateway_common::Trait for Test {
+impl xpallet_gateway_common::Config for Test {
     type Event = ();
     type Validator = ();
     type DetermineMultisigAddress = ();
@@ -150,7 +150,7 @@ impl UnixTime for Timestamp {
     }
 }
 
-impl Trait for Test {
+impl Config for Test {
     type Event = ();
     type UnixTime = Timestamp;
     type AccountExtractor = xp_gateway_bitcoin::OpReturnExtractor;

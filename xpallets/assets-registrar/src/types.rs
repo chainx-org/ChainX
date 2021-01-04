@@ -11,7 +11,7 @@ use chainx_primitives::{Decimals, Desc, Token};
 use xp_assets_registrar::Chain;
 
 use crate::verifier::*;
-use crate::Trait;
+use crate::Config;
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -45,7 +45,7 @@ impl fmt::Debug for AssetInfo {
 }
 
 impl AssetInfo {
-    pub fn new<T: Trait>(
+    pub fn new<T: Config>(
         token: Token,
         token_name: Token,
         chain: Chain,
@@ -63,7 +63,7 @@ impl AssetInfo {
         Ok(asset)
     }
 
-    pub fn is_valid<T: Trait>(&self) -> DispatchResult {
+    pub fn is_valid<T: Config>(&self) -> DispatchResult {
         is_valid_token::<T>(&self.token)?;
         is_valid_token_name::<T>(&self.token_name)?;
         is_valid_desc::<T>(&self.desc)

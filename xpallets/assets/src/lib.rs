@@ -53,12 +53,12 @@ pub use self::types::{
 pub use self::weights::WeightInfo;
 
 pub type BalanceOf<T> =
-    <<T as Trait>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+    <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 /// The module's config trait.
 ///
 /// `frame_system::Config` should always be included in our implied traits.
-pub trait Trait: xpallet_assets_registrar::Trait {
+pub trait Config: xpallet_assets_registrar::Config {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 
@@ -88,7 +88,7 @@ pub trait Trait: xpallet_assets_registrar::Trait {
 
 decl_error! {
     /// Error for the Assets Module
-    pub enum Error for Module<T: Trait> {
+    pub enum Error for Module<T: Config> {
         ///
         InvalidAsset,
         /// Got an overflow after adding
@@ -130,7 +130,7 @@ decl_event!(
 );
 
 decl_storage! {
-    trait Store for Module<T: Trait> as XAssets {
+    trait Store for Module<T: Config> as XAssets {
         /// asset extend limit properties, set asset "can do", example, `CanTransfer`, `CanDestroyWithdrawal`
         /// notice if not set AssetRestriction, default is true for this limit
         /// if want let limit make sense, must set false for the limit
@@ -175,7 +175,7 @@ decl_storage! {
 }
 
 decl_module! {
-    pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+    pub struct Module<T: Config> for enum Call where origin: T::Origin {
         type Error = Error<T>;
 
         fn deposit_event() = default;
@@ -233,7 +233,7 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = <T as Trait>::WeightInfo::set_asset_limit()]
+        #[weight = <T as Config>::WeightInfo::set_asset_limit()]
         pub fn set_asset_limit(origin, #[compact] id: AssetId, restrictions: AssetRestrictions) -> DispatchResult {
             ensure_root(origin)?;
             Self::set_asset_restrictions(id, restrictions)
@@ -242,7 +242,7 @@ decl_module! {
 }
 
 // others
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     fn set_asset_restrictions(
         asset_id: AssetId,
         restrictions: AssetRestrictions,
@@ -253,7 +253,7 @@ impl<T: Trait> Module<T> {
     }
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     pub fn ensure_not_native_asset(asset_id: &AssetId) -> DispatchResult {
         ensure!(
             *asset_id != T::NativeAssetId::get(),
@@ -264,7 +264,7 @@ impl<T: Trait> Module<T> {
 }
 
 // asset related
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     pub fn total_asset_infos() -> BTreeMap<AssetId, TotalAssetInfo<BalanceOf<T>>> {
         xpallet_assets_registrar::Module::<T>::asset_infos()
             .filter_map(|(id, info)| {
@@ -339,7 +339,7 @@ impl<T: Trait> Module<T> {
 }
 
 // public read interface
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     pub fn total_issuance(id: &AssetId) -> BalanceOf<T> {
         let map = Self::total_asset_balance(id);
         map.values().fold(Zero::zero(), |acc, &x| acc + x)
@@ -379,7 +379,7 @@ impl<T: Trait> Module<T> {
 }
 
 // public write interface
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     /// Sets the free balance of `who` without sanity checks and triggering the asset changed hook.
     #[cfg(feature = "std")]
     pub fn force_set_free_balance(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) {
@@ -499,7 +499,7 @@ impl<T: Trait> Module<T> {
 }
 
 /// token issue destroy reserve/unreserve, it's core function
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     /// Returns the balance of `who` given `asset_id` and `ty`.
     fn asset_typed_balance(who: &T::AccountId, asset_id: &AssetId, ty: AssetType) -> BalanceOf<T> {
         Self::asset_balance(who, asset_id)

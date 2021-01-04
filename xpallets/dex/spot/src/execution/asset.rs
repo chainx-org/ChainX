@@ -5,7 +5,7 @@
 use super::*;
 use xpallet_assets::AssetType::{self, ReservedDexSpot, Usable};
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     /// Delivery the assets to maker and taker respectively when executing the order.
     pub(super) fn delivery_asset_to_each_other(
         maker_order_side: Side,
@@ -78,7 +78,7 @@ impl<T: Trait> Module<T> {
         value: BalanceOf<T>,
     ) -> DispatchResult {
         if Self::is_native_asset(asset_id) {
-            <T as xpallet_assets::Trait>::Currency::unreserve(who, value);
+            <T as xpallet_assets::Config>::Currency::unreserve(who, value);
             NativeReserves::<T>::mutate(who, |reserved| *reserved -= value);
         } else {
             Self::unreserve_foreign_asset(who, asset_id, value)?;
@@ -93,7 +93,7 @@ impl<T: Trait> Module<T> {
         value: BalanceOf<T>,
     ) -> DispatchResult {
         if Self::is_native_asset(asset_id) {
-            <T as xpallet_assets::Trait>::Currency::reserve(who, value)?;
+            <T as xpallet_assets::Config>::Currency::reserve(who, value)?;
             NativeReserves::<T>::mutate(who, |reserved| *reserved += value);
         } else {
             ensure!(
@@ -113,7 +113,7 @@ impl<T: Trait> Module<T> {
     ) -> DispatchResult {
         // The account `to` definitely exists so this should always succeed.
         // This is equivalent to unreserve(from, value) + transfer(from, to, value)
-        <T as xpallet_assets::Trait>::Currency::repatriate_reserved(
+        <T as xpallet_assets::Config>::Currency::repatriate_reserved(
             from,
             to,
             value,

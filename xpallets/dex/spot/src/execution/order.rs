@@ -6,7 +6,7 @@ use super::*;
 use sp_runtime::traits::CheckedAdd;
 use sp_std::cmp::Ordering;
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     /// When the price is far from the current handicap, i.e.,
     /// - buy: less than the lowest_ask
     /// - sell: larger than the highest_bid

@@ -44,7 +44,7 @@ use self::types::{
 };
 pub use self::weights::WeightInfo;
 
-pub trait Trait: xpallet_gateway_records::Trait {
+pub trait Config: xpallet_gateway_records::Config {
     type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 
     type Validator: Validator<Self::AccountId>;
@@ -77,7 +77,7 @@ decl_event!(
 
 decl_error! {
     /// Error for the This Module
-    pub enum Error for Module<T: Trait> {
+    pub enum Error for Module<T: Config> {
         /// the value of withdrawal less than than the minimum value
         InvalidWithdrawal,
         /// convert generic data into trustee session info error
@@ -100,7 +100,7 @@ decl_error! {
 }
 
 decl_storage! {
-    trait Store for Module<T: Trait> as XGatewayCommon {
+    trait Store for Module<T: Config> as XGatewayCommon {
         // Trustee multisig address of the corresponding chain.
         pub TrusteeMultiSigAddr get(fn trustee_multisig_addr):
             map hasher(twox_64_concat) Chain => T::AccountId;
@@ -168,7 +168,7 @@ decl_storage! {
 }
 
 decl_module! {
-    pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+    pub struct Module<T: Config> for enum Call where origin: T::Origin {
         type Error = Error<T>;
 
         fn deposit_event() = default;
@@ -179,7 +179,7 @@ decl_module! {
         /// WithdrawalRecord State: `Applying`
         ///
         /// NOTE: `ext` is for the compatibility purpose, e.g., EOS requires a memo when doing the transfer.
-        #[weight = <T as Trait>::WeightInfo::withdraw()]
+        #[weight = <T as Config>::WeightInfo::withdraw()]
         pub fn withdraw(
             origin,
             #[compact] asset_id: AssetId,
@@ -202,14 +202,14 @@ decl_module! {
         /// Cancel the withdrawal by the applicant.
         ///
         /// WithdrawalRecord State: `Applying` ==> `NormalCancel`
-        #[weight = <T as Trait>::WeightInfo::cancel_withdrawal()]
+        #[weight = <T as Config>::WeightInfo::cancel_withdrawal()]
         pub fn cancel_withdrawal(origin, id: WithdrawalRecordId) -> DispatchResult {
             let from = ensure_signed(origin)?;
             xpallet_gateway_records::Module::<T>::cancel_withdrawal(id, &from)
         }
 
         /// Setup the trustee.
-        #[weight = <T as Trait>::WeightInfo::setup_trustee()]
+        #[weight = <T as Config>::WeightInfo::setup_trustee()]
         pub fn setup_trustee(
             origin,
             chain: Chain,
@@ -223,7 +223,7 @@ decl_module! {
         }
 
         /// Transition the trustee session.
-        #[weight = <T as Trait>::WeightInfo::transition_trustee_session(new_trustees.len() as u32)]
+        #[weight = <T as Config>::WeightInfo::transition_trustee_session(new_trustees.len() as u32)]
         pub fn transition_trustee_session(
             origin,
             chain: Chain,
@@ -249,7 +249,7 @@ decl_module! {
         }
 
         /// Set the state of withdraw record by the trustees.
-        #[weight = <T as Trait>::WeightInfo::set_withdrawal_state()]
+        #[weight = <T as Config>::WeightInfo::set_withdrawal_state()]
         pub fn set_withdrawal_state(
             origin,
             #[compact] id: WithdrawalRecordId,
@@ -269,7 +269,7 @@ decl_module! {
         /// Set the config of trustee information.
         ///
         /// This is a root-only operation.
-        #[weight = <T as Trait>::WeightInfo::set_trustee_info_config()]
+        #[weight = <T as Config>::WeightInfo::set_trustee_info_config()]
         pub fn set_trustee_info_config(origin, chain: Chain, config: TrusteeInfoConfig) -> DispatchResult {
             ensure_root(origin)?;
             TrusteeInfoConfigOf::insert(chain, config);
@@ -279,7 +279,7 @@ decl_module! {
         /// Set the referral binding of corresponding chain and account.
         ///
         /// This is a root-only operation.
-        #[weight = <T as Trait>::WeightInfo::force_set_referral_binding()]
+        #[weight = <T as Config>::WeightInfo::force_set_referral_binding()]
         pub fn force_set_referral_binding(
             origin,
             chain: Chain,
@@ -296,7 +296,7 @@ decl_module! {
 }
 
 // withdraw
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     pub fn withdrawal_limit(
         asset_id: &AssetId,
     ) -> Result<WithdrawalLimit<BalanceOf<T>>, DispatchError> {
@@ -334,7 +334,7 @@ impl<T: Trait> Module<T> {
     }
 }
 
-pub fn is_valid_about<T: Trait>(about: &[u8]) -> DispatchResult {
+pub fn is_valid_about<T: Config>(about: &[u8]) -> DispatchResult {
     // TODO
     if about.len() > 128 {
         return Err(Error::<T>::InvalidAboutLen.into());
@@ -344,7 +344,7 @@ pub fn is_valid_about<T: Trait>(about: &[u8]) -> DispatchResult {
 }
 
 // trustees
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     pub fn setup_trustee_impl(
         who: T::AccountId,
         chain: Chain,
@@ -463,7 +463,7 @@ impl<T: Trait> Module<T> {
     }
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     pub fn trustee_multisigs() -> BTreeMap<Chain, T::AccountId> {
         TrusteeMultiSigAddr::<T>::iter().collect()
     }

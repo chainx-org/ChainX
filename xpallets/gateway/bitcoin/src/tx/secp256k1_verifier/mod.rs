@@ -5,12 +5,12 @@ use frame_support::dispatch::DispatchResult;
 use light_bitcoin::{chain::Transaction, primitives::Bytes};
 
 use crate::types::BtcTxVerifier;
-use crate::{Error, Module, Trait};
+use crate::{Config, Error, Module};
 
 mod recover_verifier;
 mod runtime_interface {
     use super::*;
-    pub fn verify_sig_impl<T: Trait>(
+    pub fn verify_sig_impl<T: Config>(
         _sig: &Bytes,
         _pubkey: &Bytes,
         _tx: &Transaction,
@@ -21,7 +21,7 @@ mod runtime_interface {
     }
 }
 
-pub fn verify_sig<T: Trait>(
+pub fn verify_sig<T: Config>(
     sig: &Bytes,
     pubkey: &Bytes,
     tx: &Transaction,

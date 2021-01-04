@@ -32,10 +32,10 @@ pub use self::types::{FeeDetails, InclusionFee};
 
 type BalanceOf<T> = <<T as pallet_transaction_payment::Config>::OnChargeTransaction as pallet_transaction_payment::OnChargeTransaction<T>>::Balance;
 
-pub trait Trait: pallet_transaction_payment::Config {}
+pub trait Config: pallet_transaction_payment::Config {}
 
 decl_module! {
-    pub struct Module<T: Trait> for enum Call where origin: T::Origin {}
+    pub struct Module<T: Config> for enum Call where origin: T::Origin {}
 }
 
 decl_event!(
@@ -51,7 +51,7 @@ decl_event!(
     }
 );
 
-impl<T: Trait> Module<T>
+impl<T: Config> Module<T>
 where
     BalanceOf<T>: FixedPointOperand,
 {

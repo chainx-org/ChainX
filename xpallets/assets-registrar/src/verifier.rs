@@ -5,7 +5,7 @@ use xp_protocol::{ASSET_DESC_MAX_LEN, ASSET_TOKEN_NAME_MAX_LEN, ASSET_TOKEN_SYMB
 use super::*;
 
 /// Token can only use ASCII alphanumeric character or "-.|~".
-pub fn is_valid_token<T: Trait>(token: &[u8]) -> DispatchResult {
+pub fn is_valid_token<T: Config>(token: &[u8]) -> DispatchResult {
     if token.len() > ASSET_TOKEN_SYMBOL_MAX_LEN || token.is_empty() {
         return Err(Error::<T>::InvalidAssetTokenSymbolLength.into());
     }
@@ -19,7 +19,7 @@ pub fn is_valid_token<T: Trait>(token: &[u8]) -> DispatchResult {
 }
 
 /// A valid token name should have a legal length and be visible ASCII chars only.
-pub fn is_valid_token_name<T: Trait>(token_name: &[u8]) -> DispatchResult {
+pub fn is_valid_token_name<T: Config>(token_name: &[u8]) -> DispatchResult {
     if token_name.len() > ASSET_TOKEN_NAME_MAX_LEN || token_name.is_empty() {
         return Err(Error::<T>::InvalidAssetTokenNameLength.into());
     }
@@ -33,7 +33,7 @@ pub fn is_valid_token_name<T: Trait>(token_name: &[u8]) -> DispatchResult {
 }
 
 /// A valid desc should be visible ASCII chars only and not too long.
-pub fn is_valid_desc<T: Trait>(desc: &[u8]) -> DispatchResult {
+pub fn is_valid_desc<T: Config>(desc: &[u8]) -> DispatchResult {
     if desc.len() > ASSET_DESC_MAX_LEN {
         return Err(Error::<T>::InvalidAssetDescLength.into());
     }

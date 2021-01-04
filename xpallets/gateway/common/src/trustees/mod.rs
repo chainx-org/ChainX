@@ -11,14 +11,14 @@ use xpallet_support::traits::MultiSig;
 
 use crate::traits::{BytesLike, ChainProvider, TrusteeSession};
 use crate::types::TrusteeSessionInfo;
-use crate::{Error, Module, Trait};
+use crate::{Config, Error, Module};
 
-pub struct TrusteeSessionManager<T: Trait, TrusteeAddress>(
+pub struct TrusteeSessionManager<T: Config, TrusteeAddress>(
     PhantomData<T>,
     PhantomData<TrusteeAddress>,
 );
 
-impl<T: Trait, TrusteeAddress: BytesLike + ChainProvider>
+impl<T: Config, TrusteeAddress: BytesLike + ChainProvider>
     TrusteeSession<T::AccountId, TrusteeAddress> for TrusteeSessionManager<T, TrusteeAddress>
 {
     fn trustee_session(
@@ -71,20 +71,20 @@ impl<T: Trait, TrusteeAddress: BytesLike + ChainProvider>
     }
 }
 
-pub struct TrusteeMultisigProvider<T: Trait, C: ChainProvider>(PhantomData<T>, PhantomData<C>);
-impl<T: Trait, C: ChainProvider> TrusteeMultisigProvider<T, C> {
+pub struct TrusteeMultisigProvider<T: Config, C: ChainProvider>(PhantomData<T>, PhantomData<C>);
+impl<T: Config, C: ChainProvider> TrusteeMultisigProvider<T, C> {
     pub fn new() -> Self {
         TrusteeMultisigProvider::<_, _>(Default::default(), Default::default())
     }
 }
 
-impl<T: Trait, C: ChainProvider> MultiSig<T::AccountId> for TrusteeMultisigProvider<T, C> {
+impl<T: Config, C: ChainProvider> MultiSig<T::AccountId> for TrusteeMultisigProvider<T, C> {
     fn multisig() -> T::AccountId {
         Module::<T>::trustee_multisig_addr(C::chain())
     }
 }
 
-impl<T: Trait, C: ChainProvider> Contains<T::AccountId> for TrusteeMultisigProvider<T, C> {
+impl<T: Config, C: ChainProvider> Contains<T::AccountId> for TrusteeMultisigProvider<T, C> {
     fn sorted_members() -> Vec<T::AccountId> {
         vec![Self::multisig()]
     }

@@ -6,13 +6,13 @@ use chainx_primitives::AssetId;
 
 use crate::traits::OnAssetChanged;
 use crate::types::{AssetErr, AssetType};
-use crate::{BalanceOf, Event, Module, Trait};
+use crate::{BalanceOf, Config, Event, Module};
 
 impl<AccountId, Balance> OnAssetChanged<AccountId, Balance> for () {}
 
-pub struct AssetChangedTrigger<T: Trait>(sp_std::marker::PhantomData<T>);
+pub struct AssetChangedTrigger<T: Config>(sp_std::marker::PhantomData<T>);
 
-impl<T: Trait> AssetChangedTrigger<T> {
+impl<T: Config> AssetChangedTrigger<T> {
     pub fn on_move_pre(
         id: &AssetId,
         from: &T::AccountId,
