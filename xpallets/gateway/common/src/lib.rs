@@ -45,7 +45,7 @@ use self::types::{
 pub use self::weights::WeightInfo;
 
 pub trait Trait: xpallet_gateway_records::Trait {
-    type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+    type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 
     type Validator: Validator<Self::AccountId>;
 
@@ -64,7 +64,7 @@ pub trait Trait: xpallet_gateway_records::Trait {
 
 decl_event!(
     pub enum Event<T> where
-        <T as frame_system::Trait>::AccountId,
+        <T as frame_system::Config>::AccountId,
     {
         /// A (potential) trustee set the required properties. [who, chain, trustee_props]
         SetTrusteeProps(AccountId, Chain, GenericTrusteeIntentionProps),

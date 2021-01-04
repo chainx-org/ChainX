@@ -36,10 +36,10 @@ pub use xp_assets_registrar::{Chain, RegistrarHandler};
 
 /// The module's config trait.
 ///
-/// `frame_system::Trait` should always be included in our implied traits.
-pub trait Trait: frame_system::Trait {
+/// `frame_system::Config` should always be included in our implied traits.
+pub trait Trait: frame_system::Config {
     /// The overarching event type.
-    type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
+    type Event: From<Event> + Into<<Self as frame_system::Config>::Event>;
 
     /// Native asset Id.
     type NativeAssetId: Get<AssetId>;

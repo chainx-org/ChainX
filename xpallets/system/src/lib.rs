@@ -22,9 +22,9 @@ const ALWAYS_ALLOW: [&str; 1] = ["Sudo"];
 /// The module's config trait.
 ///
 /// `frame_system::Trait` should always be included in our implied traits.
-pub trait Trait: frame_system::Trait {
+pub trait Trait: frame_system::Config {
     /// The overarching event type.
-    type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+    type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 
     /// The currency mechanism.
     type Currency: Currency<Self::AccountId>;
@@ -39,7 +39,7 @@ decl_event!(
     /// Event for the XSystem Module
     pub enum Event<T>
     where
-        <T as frame_system::Trait>::AccountId,
+        <T as frame_system::Config>::AccountId,
     {
         /// An account was added to the blacklist. [who]
         Blacklisted(AccountId),

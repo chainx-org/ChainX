@@ -17,7 +17,7 @@ use xpallet_assets::BalanceOf as AssetBalanceOf;
 use xpallet_mining_staking::BalanceOf as StakingBalanceOf;
 
 pub trait Trait:
-    pallet_balances::Trait + xpallet_mining_asset::Trait + xpallet_mining_staking::Trait
+    pallet_balances::Config + xpallet_mining_asset::Trait + xpallet_mining_staking::Trait
 {
 }
 

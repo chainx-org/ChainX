@@ -270,7 +270,7 @@ where
         let id_hash = T::Hashing::hash(&asset_id.to_le_bytes()[..]);
         let registered_block = <xpallet_assets_registrar::Module<T>>::registered_at(asset_id);
         let registered_block_hash =
-            <T as frame_system::Trait>::Hashing::hash(registered_block.encode().as_ref());
+            <T as frame_system::Config>::Hashing::hash(registered_block.encode().as_ref());
 
         let id_slice = id_hash.as_ref();
         let registered_slice = registered_block_hash.as_ref();

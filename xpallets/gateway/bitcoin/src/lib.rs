@@ -76,7 +76,7 @@ macro_rules! native {
 }
 
 pub trait Trait: xpallet_assets::Trait + xpallet_gateway_records::Trait {
-    type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+    type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
     type UnixTime: UnixTime;
     type AccountExtractor: AccountExtractor<Self::AccountId, ReferralId>;
     type TrusteeSessionProvider: TrusteeSession<Self::AccountId, BtcTrusteeAddrInfo>;
@@ -169,7 +169,7 @@ decl_error! {
 decl_event!(
     pub enum Event<T>
     where
-        <T as frame_system::Trait>::AccountId,
+        <T as frame_system::Config>::AccountId,
         Balance = BalanceOf<T>
     {
         /// A Bitcoin header was validated and inserted. [btc_header_hash]

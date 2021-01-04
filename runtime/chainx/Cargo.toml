@@ -62,11 +62,12 @@ frame-benchmarking = { version = "2.0.0", default-features = false, optional = t
 frame-system-benchmarking = { version = "2.0.0", default-features = false, optional = true }
 
 # Orml
-orml-traits = { version = "0.3", default-features = false }
-orml-currencies = { version = "0.3", default-features = false }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "17eb5a9e4febaaa6bfd6db94d911540e51550e50", default-features = false }
+orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "17eb5a9e4febaaa6bfd6db94d911540e51550e50", default-features = false }
 
 # ChainX primitives
 chainx-primitives = { path = "../../primitives", default-features = false }
+chainx-runtime-common = { path = "../common", default-features = false }
 # we use feature "ss58check" for using local runtime-interface to check address, if in parachain, do not use this feature
 xp-gateway-bitcoin = { path = "../../primitives/gateway/bitcoin", default-features = false,  features = ["ss58check"] }
 xp-logging = { path = "../../primitives/logging", default-features = false }
@@ -150,6 +151,7 @@ std = [
     "orml-currencies/std",
     # ChainX primitives
     "chainx-primitives/std",
+    "chainx-runtime-common/std",
     "xp-gateway-bitcoin/std",
     "xp-logging/std",
     "xp-mining-staking/std",

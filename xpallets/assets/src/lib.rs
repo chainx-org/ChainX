@@ -53,14 +53,14 @@ pub use self::types::{
 pub use self::weights::WeightInfo;
 
 pub type BalanceOf<T> =
-    <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
+    <<T as Trait>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 /// The module's config trait.
 ///
-/// `frame_system::Trait` should always be included in our implied traits.
+/// `frame_system::Config` should always be included in our implied traits.
 pub trait Trait: xpallet_assets_registrar::Trait {
     /// The overarching event type.
-    type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+    type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 
     type Currency: ReservableCurrency<Self::AccountId>
         + LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
@@ -107,13 +107,15 @@ decl_error! {
         DenyNativeAsset,
         /// Action is not allowed.
         ActionNotAllowed,
+        /// Account still has active reserved
+        StillHasActiveReserved
     }
 }
 
 decl_event!(
     pub enum Event<T>
     where
-        <T as frame_system::Trait>::AccountId,
+        <T as frame_system::Config>::AccountId,
         Balance = BalanceOf<T>,
     {
         /// Some balances of an asset was moved from one to another. [asset_id, from, from_type, to, to_type, amount]
@@ -360,11 +362,19 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn usable_balance(who: &T::AccountId, id: &AssetId) -> BalanceOf<T> {
-        Self::asset_typed_balance(&who, &id, AssetType::Usable)
+        Self::asset_typed_balance(who, id, AssetType::Usable)
     }
 
     pub fn locked_balance(who: &T::AccountId, id: &AssetId) -> BalanceOf<T> {
-        Self::asset_typed_balance(&who, &id, AssetType::Locked)
+        Self::asset_typed_balance(who, id, AssetType::Locked)
+    }
+
+    pub fn total_reserved_balance(who: &T::AccountId, id: &AssetId) -> BalanceOf<T> {
+        let total_balances = Self::asset_balance(who, id);
+        let balance_for = |ty: AssetType| total_balances.get(&ty).copied().unwrap_or_default();
+        balance_for(AssetType::Reserved)
+            + balance_for(AssetType::ReservedWithdrawal)
+            + balance_for(AssetType::ReservedDexSpot)
     }
 }
 
@@ -500,7 +510,7 @@ impl<T: Trait> Module<T> {
 
     fn new_account(who: &T::AccountId) {
         info!("[new_account] account:{:?}", who);
-        T::OnCreatedAccount::happened(&who)
+        T::OnCreatedAccount::happened(who)
     }
 
     fn try_new_account(who: &T::AccountId) {

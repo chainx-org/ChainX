@@ -40,10 +40,7 @@ pub fn new_partial(
                 sc_finality_grandpa::LinkHalf<Block, FullClient, FullSelectChain>,
                 sc_consensus_babe::BabeLink<Block>,
             ),
-            (
-                sc_finality_grandpa::SharedVoterState,
-                Arc<GrandpaFinalityProofProvider<FullBackend, Block>>,
-            ),
+            sc_finality_grandpa::SharedVoterState,
         ),
     >,
     ServiceError,
@@ -80,7 +77,6 @@ pub fn new_partial(
         babe_link.clone(),
         block_import.clone(),
         Some(Box::new(justification_import)),
-        None,
         client.clone(),
         select_chain.clone(),
         inherent_data_providers.clone(),
@@ -97,10 +93,10 @@ pub fn new_partial(
         let justification_stream = grandpa_link.justification_stream();
         let shared_authority_set = grandpa_link.shared_authority_set().clone();
         let shared_voter_state = sc_finality_grandpa::SharedVoterState::empty();
+        let rpc_setup = shared_voter_state.clone();
+
         let finality_proof_provider =
             GrandpaFinalityProofProvider::new_for_service(backend.clone(), client.clone());
-
-        let rpc_setup = (shared_voter_state.clone(), finality_proof_provider.clone());
 
         let babe_config = babe_link.config().clone();
         let shared_epoch_changes = babe_link.epoch_changes().clone();
@@ -109,12 +105,14 @@ pub fn new_partial(
         let pool = transaction_pool.clone();
         let select_chain = select_chain.clone();
         let keystore = keystore_container.sync_keystore();
+        let chain_spec = config.chain_spec.cloned_box();
 
         let rpc_extensions_builder = Box::new(move |deny_unsafe, subscription_executor| {
             let deps = chainx_rpc::FullDeps {
                 client: client.clone(),
                 pool: pool.clone(),
                 select_chain: select_chain.clone(),
+                chain_spec: chain_spec.cloned_box(),
                 deny_unsafe,
                 babe: chainx_rpc::BabeDeps {
                     babe_config: babe_config.clone(),
@@ -171,7 +169,7 @@ pub fn new_full_base(config: Configuration) -> Result<NewFullBase, ServiceError>
         other: (rpc_extensions_builder, import_setup, rpc_setup),
     } = new_partial(&config)?;
 
-    let (shared_voter_state, finality_proof_provider) = rpc_setup;
+    let shared_voter_state = rpc_setup;
 
     let (network, network_status_sinks, system_rpc_tx, network_starter) =
         sc_service::build_network(sc_service::BuildNetworkParams {
@@ -182,8 +180,6 @@ pub fn new_full_base(config: Configuration) -> Result<NewFullBase, ServiceError>
             import_queue,
             on_demand: None,
             block_announce_validator_builder: None,
-            finality_proof_request_builder: None,
-            finality_proof_provider: Some(finality_proof_provider),
         })?;
 
     if config.offchain_worker.enabled {
@@ -322,8 +318,6 @@ pub fn new_full_base(config: Configuration) -> Result<NewFullBase, ServiceError>
             "grandpa-voter",
             sc_finality_grandpa::run_grandpa_voter(grandpa_config)?,
         );
-    } else {
-        sc_finality_grandpa::setup_disabled_grandpa(network.clone())?;
     }
 
     network_starter.start_network();
@@ -357,16 +351,12 @@ pub fn new_light(config: Configuration) -> Result<TaskManager, ServiceError> {
         on_demand.clone(),
     ));
 
-    let grandpa_block_import = sc_finality_grandpa::light_block_import(
+    let (grandpa_block_import, _) = sc_finality_grandpa::block_import(
         client.clone(),
-        backend.clone(),
         &(client.clone() as Arc<_>),
-        Arc::new(on_demand.checker().clone()),
+        select_chain.clone()
     )?;
-
-    let finality_proof_import = grandpa_block_import.clone();
-    let finality_proof_request_builder =
-        finality_proof_import.create_finality_proof_request_builder();
+    let justification_import = grandpa_block_import.clone();
 
     let (babe_block_import, babe_link) = sc_consensus_babe::block_import(
         sc_consensus_babe::Config::get_or_compute(&*client)?,
@@ -379,8 +369,7 @@ pub fn new_light(config: Configuration) -> Result<TaskManager, ServiceError> {
     let import_queue = sc_consensus_babe::import_queue(
         babe_link,
         babe_block_import,
-        None,
-        Some(Box::new(finality_proof_import)),
+        Some(Box::new(justification_import)),
         client.clone(),
         select_chain.clone(),
         inherent_data_providers.clone(),
@@ -388,9 +377,6 @@ pub fn new_light(config: Configuration) -> Result<TaskManager, ServiceError> {
         config.prometheus_registry(),
         sp_consensus::NeverCanAuthor,
     )?;
-
-    let finality_proof_provider =
-        GrandpaFinalityProofProvider::new_for_service(backend.clone(), client.clone());
 
     let (network, network_status_sinks, system_rpc_tx, network_starter) =
         sc_service::build_network(sc_service::BuildNetworkParams {
@@ -401,8 +387,6 @@ pub fn new_light(config: Configuration) -> Result<TaskManager, ServiceError> {
             import_queue,
             on_demand: Some(on_demand.clone()),
             block_announce_validator_builder: None,
-            finality_proof_request_builder: Some(finality_proof_request_builder),
-            finality_proof_provider: Some(finality_proof_provider),
         })?;
     network_starter.start_network();
 

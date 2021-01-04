@@ -3,6 +3,7 @@
 use std::fmt;
 use std::sync::Arc;
 
+use sc_client_api::AuxStore;
 use sc_consensus_babe::Epoch;
 use sc_consensus_babe_rpc::BabeRpcHandler;
 use sc_finality_grandpa::{
@@ -68,6 +69,8 @@ pub struct FullDeps<C, P, SC, B> {
     pub pool: Arc<P>,
     /// The SelectionChain Strategy.
     pub select_chain: SC,
+    /// A copy of the chain spec.
+    pub chain_spec: Box<dyn sc_chain_spec::ChainSpec>,
     /// Whether to deny unsafe calls
     pub deny_unsafe: DenyUnsafe,
     /// BABE specific dependencies.
@@ -84,9 +87,13 @@ pub fn create_full<C, P, SC, B>(
     deps: FullDeps<C, P, SC, B>,
 ) -> jsonrpc_core::IoHandler<sc_rpc_api::Metadata>
 where
-    C: ProvideRuntimeApi<Block>,
-    C: HeaderBackend<Block> + HeaderMetadata<Block, Error = BlockChainError> + 'static,
-    C: Send + Sync + 'static,
+    C: ProvideRuntimeApi<Block>
+        + AuxStore
+        + HeaderBackend<Block>
+        + HeaderMetadata<Block, Error = BlockChainError>
+        + Send
+        + Sync
+        + 'static,
     C::Api: BlockBuilder<Block>,
     C::Api: BabeApi<Block>,
     C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>,
@@ -137,6 +144,7 @@ where
         client,
         pool,
         select_chain,
+        chain_spec,
         deny_unsafe,
         grandpa,
         babe,
@@ -165,7 +173,7 @@ where
     io.extend_with(sc_consensus_babe_rpc::BabeApi::to_delegate(
         BabeRpcHandler::new(
             client.clone(),
-            shared_epoch_changes,
+            shared_epoch_changes.clone(),
             keystore,
             babe_config,
             select_chain,
@@ -174,11 +182,20 @@ where
     ));
     io.extend_with(sc_finality_grandpa_rpc::GrandpaApi::to_delegate(
         GrandpaRpcHandler::new(
-            shared_authority_set,
+            shared_authority_set.clone(),
             shared_voter_state,
             justification_stream,
             subscription_executor,
             finality_provider,
+        ),
+    ));
+    io.extend_with(sc_sync_state_rpc::SyncStateRpcApi::to_delegate(
+        sc_sync_state_rpc::SyncStateRpcHandler::new(
+            chain_spec,
+            client.clone(),
+            shared_authority_set,
+            shared_epoch_changes,
+            deny_unsafe,
         ),
     ));
 

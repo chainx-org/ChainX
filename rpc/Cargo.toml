@@ -10,6 +10,7 @@ jsonrpc-core = "15.0.0"
 jsonrpc-pubsub = "15.0.0"
 
 # Substrate client
+sc-chain-spec = "2.0.0"
 sc-client-api = "2.0.0"
 sc-consensus-babe = "0.8.0"
 sc-consensus-babe-rpc = "0.8.0"
@@ -20,6 +21,7 @@ sc-keystore = "2.0.0"
 sc-rpc = "2.0.0"
 sc-rpc-api = "0.8.0"
 sc-service = { version = "0.8.0", features = ["test-helpers"] }
+sc-sync-state-rpc = { git = "https://github.com/paritytech/substrate", rev = "566ad03cf8c07c3c3ab226a724b2dcb4b6dbbc9b" }
 
 # Substrate primitives
 sp-api = "2.0.0"

@@ -104,7 +104,7 @@ type DividendParams<T> = (
     BalanceOf<T>,
     WeightType,
     WeightType,
-    <T as frame_system::Trait>::AccountId,
+    <T as frame_system::Config>::AccountId,
 );
 
 impl<T: Trait> Module<T> {
@@ -367,7 +367,7 @@ impl<T: Trait> pallet_session::SessionManager<T::AccountId> for Module<T> {
 }
 
 /// Validator ID that reported this offence.
-type Reporter<T> = <T as frame_system::Trait>::AccountId;
+type Reporter<T> = <T as frame_system::Config>::AccountId;
 
 /// Substrate:
 /// A tuple of the validator's ID and their full identification.
@@ -375,8 +375,8 @@ type Reporter<T> = <T as frame_system::Trait>::AccountId;
 /// ChainX:
 /// We do not have the FullIdentification info, but the reward pot.
 pub type IdentificationTuple<T> = (
-    <T as frame_system::Trait>::AccountId,
-    <T as frame_system::Trait>::AccountId,
+    <T as frame_system::Config>::AccountId,
+    <T as frame_system::Config>::AccountId,
 );
 
 /// Stable ID of a validator.
@@ -386,12 +386,12 @@ type Offender<T> = IdentificationTuple<T>;
 /// In ChainX, we always apply the slash immediately, no deferred slash.
 impl<T: Trait> OnOffenceHandler<Reporter<T>, IdentificationTuple<T>, Weight> for Module<T>
 where
-    T: pallet_session::Trait<ValidatorId = <T as frame_system::Trait>::AccountId>,
-    T::SessionHandler: pallet_session::SessionHandler<<T as frame_system::Trait>::AccountId>,
-    T::SessionManager: pallet_session::SessionManager<<T as frame_system::Trait>::AccountId>,
+    T: pallet_session::Config<ValidatorId = <T as frame_system::Config>::AccountId>,
+    T::SessionHandler: pallet_session::SessionHandler<<T as frame_system::Config>::AccountId>,
+    T::SessionManager: pallet_session::SessionManager<<T as frame_system::Config>::AccountId>,
     T::ValidatorIdOf: Convert<
-        <T as frame_system::Trait>::AccountId,
-        Option<<T as frame_system::Trait>::AccountId>,
+        <T as frame_system::Config>::AccountId,
+        Option<<T as frame_system::Config>::AccountId>,
     >,
 {
     fn on_offence(
@@ -437,10 +437,10 @@ where
     T::AccountId: UncheckedFrom<T::Hash> + AsRef<[u8]>,
 {
     fn reward_pot_account_for(validator: &T::AccountId) -> T::AccountId {
-        let validator_hash = <T as frame_system::Trait>::Hashing::hash(validator.as_ref());
+        let validator_hash = <T as frame_system::Config>::Hashing::hash(validator.as_ref());
         let registered_at: T::BlockNumber = Validators::<T>::get(validator).registered_at;
         let registered_at_hash =
-            <T as frame_system::Trait>::Hashing::hash(registered_at.encode().as_ref());
+            <T as frame_system::Config>::Hashing::hash(registered_at.encode().as_ref());
 
         let validator_slice = validator_hash.as_ref();
         let registered_at_slice = registered_at_hash.as_ref();

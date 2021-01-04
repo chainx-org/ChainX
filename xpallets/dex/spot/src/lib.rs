@@ -59,22 +59,22 @@ const MAX_BACKLOG_ORDER: usize = 1000;
 const DEFAULT_FLUCTUATION: u32 = 100;
 
 pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
-    <T as frame_system::Trait>::AccountId,
+    <T as frame_system::Config>::AccountId,
 >>::Balance;
 
 pub type OrderInfo<T> = Order<
     TradingPairId,
-    <T as frame_system::Trait>::AccountId,
+    <T as frame_system::Config>::AccountId,
     BalanceOf<T>,
     <T as Trait>::Price,
-    <T as frame_system::Trait>::BlockNumber,
+    <T as frame_system::Config>::BlockNumber,
 >;
 
 pub type HandicapInfo<T> = Handicap<<T as Trait>::Price>;
 
 pub trait Trait: xpallet_assets::Trait {
     /// The overarching event type.
-    type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+    type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 
     /// The price of an order.
     type Price: Parameter
@@ -153,8 +153,8 @@ decl_event!(
     pub enum Event<T>
     where
         Balance = BalanceOf<T>,
-        <T as frame_system::Trait>::AccountId,
-        <T as frame_system::Trait>::BlockNumber,
+        <T as frame_system::Config>::AccountId,
+        <T as frame_system::Config>::BlockNumber,
         <T as Trait>::Price,
     {
         /// A new order was created. [order_info]

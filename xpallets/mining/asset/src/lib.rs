@@ -45,7 +45,7 @@ pub use self::weights::WeightInfo;
 
 pub trait Trait: xpallet_assets::Trait {
     /// The overarching event type.
-    type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+    type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 
     /// Get the staked balances of asset miner.
     type StakingInterface: StakingInterface<Self::AccountId, u128>;
@@ -73,11 +73,11 @@ impl<AccountId, Balance: Default> StakingInterface<AccountId, Balance> for () {
     }
 }
 
-impl<T: Trait> StakingInterface<<T as frame_system::Trait>::AccountId, u128> for T
+impl<T: Trait> StakingInterface<<T as frame_system::Config>::AccountId, u128> for T
 where
     T: xpallet_mining_staking::Trait,
 {
-    fn staked_of(who: &<T as frame_system::Trait>::AccountId) -> u128 {
+    fn staked_of(who: &<T as frame_system::Config>::AccountId) -> u128 {
         xpallet_mining_staking::Module::<T>::staked_of(who).saturated_into()
     }
 }
@@ -139,7 +139,7 @@ decl_event!(
     pub enum Event<T>
     where
         Balance = BalanceOf<T>,
-        <T as frame_system::Trait>::AccountId,
+        <T as frame_system::Config>::AccountId,
     {
         /// An asset miner claimed the mining reward. [claimer, asset_id, amount]
         Claimed(AccountId, AssetId, Balance),

@@ -34,17 +34,17 @@ pub use self::types::{Withdrawal, WithdrawalRecord, WithdrawalRecordId, Withdraw
 pub use self::weights::WeightInfo;
 
 pub type WithdrawalRecordOf<T> = WithdrawalRecord<
-    <T as frame_system::Trait>::AccountId,
+    <T as frame_system::Config>::AccountId,
     BalanceOf<T>,
-    <T as frame_system::Trait>::BlockNumber,
+    <T as frame_system::Config>::BlockNumber,
 >;
 
 /// The module's config trait.
 ///
-/// `frame_system::Trait` should always be included in our implied traits.
+/// `frame_system::Config` should always be included in our implied traits.
 pub trait Trait: xpallet_assets::Trait {
     /// The overarching event type.
-    type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+    type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 
     /// Weight information for extrinsics in this pallet.
     type WeightInfo: WeightInfo;
@@ -72,7 +72,7 @@ decl_event!(
     /// Event for the XGatewayRecords Module
     pub enum Event<T>
     where
-        <T as frame_system::Trait>::AccountId,
+        <T as frame_system::Config>::AccountId,
         Balance = BalanceOf<T>,
         WithdrawalRecord = WithdrawalRecordOf<T>
     {

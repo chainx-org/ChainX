@@ -9,11 +9,12 @@ use sp_std::{convert::TryInto, prelude::*};
 use frame_support::{
     ensure,
     traits::{BalanceStatus, LockIdentifier},
+    transactional, IterableStorageDoubleMap,
 };
 
 use orml_traits::{
-    arithmetic::Signed, MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency,
-    MultiReservableCurrency,
+    account::MergeAccount, arithmetic::Signed, MultiCurrency, MultiCurrencyExtended,
+    MultiLockableCurrency, MultiReservableCurrency,
 };
 
 use chainx_primitives::AssetId;
@@ -21,11 +22,15 @@ use xp_logging::error;
 use xpallet_support::traits::TreasuryAccount;
 
 use crate::types::{AssetType, BalanceLock};
-use crate::{BalanceOf, Error, Module, Trait};
+use crate::{AssetBalance, BalanceOf, Error, Module, Trait};
 
 impl<T: Trait> MultiCurrency<T::AccountId> for Module<T> {
     type CurrencyId = AssetId;
     type Balance = BalanceOf<T>;
+
+    fn minimum_balance(_currency_id: Self::CurrencyId) -> Self::Balance {
+        Zero::zero()
+    }
 
     fn total_issuance(currency_id: Self::CurrencyId) -> Self::Balance {
         Self::total_issuance(&currency_id)
@@ -327,9 +332,9 @@ impl<T: Trait> MultiLockableCurrency<T::AccountId> for Module<T> {
         currency_id: Self::CurrencyId,
         who: &T::AccountId,
         amount: Self::Balance,
-    ) {
+    ) -> DispatchResult {
         if amount.is_zero() {
-            return;
+            return Ok(());
         }
         let mut new_lock = Some(BalanceLock {
             id: lock_id,
@@ -349,6 +354,7 @@ impl<T: Trait> MultiLockableCurrency<T::AccountId> for Module<T> {
             locks.push(lock)
         }
         Self::update_locks(currency_id, who, &locks[..]);
+        Ok(())
     }
 
     fn extend_lock(
@@ -356,9 +362,9 @@ impl<T: Trait> MultiLockableCurrency<T::AccountId> for Module<T> {
         currency_id: Self::CurrencyId,
         who: &T::AccountId,
         amount: Self::Balance,
-    ) {
+    ) -> DispatchResult {
         if amount.is_zero() {
-            return;
+            return Ok(());
         }
         let mut new_lock = Some(BalanceLock {
             id: lock_id,
@@ -381,11 +387,43 @@ impl<T: Trait> MultiLockableCurrency<T::AccountId> for Module<T> {
             locks.push(lock)
         }
         Self::update_locks(currency_id, who, &locks[..]);
+        Ok(())
     }
 
-    fn remove_lock(lock_id: LockIdentifier, currency_id: Self::CurrencyId, who: &T::AccountId) {
+    fn remove_lock(
+        lock_id: LockIdentifier,
+        currency_id: Self::CurrencyId,
+        who: &T::AccountId,
+    ) -> DispatchResult {
         let mut locks = Self::locks(who, currency_id);
         locks.retain(|lock| lock.id != lock_id);
         Self::update_locks(currency_id, who, &locks[..]);
+        Ok(())
+    }
+}
+
+impl<T: Trait> MergeAccount<T::AccountId> for Module<T> {
+    #[transactional]
+    fn merge_account(source: &T::AccountId, dest: &T::AccountId) -> DispatchResult {
+        AssetBalance::<T>::iter_prefix(source).try_for_each(
+            |(currency_id, _account_data)| -> DispatchResult {
+                // ensure the account has no active reserved of non-native token
+                //
+                // TODO: Should use Reserved + ReservedWithdrawal + ReservedWithdrawal?
+                ensure!(
+                    Self::reserved_balance(currency_id, source).is_zero(),
+                    Error::<T>::StillHasActiveReserved
+                );
+
+                // transfer all free to recipient
+                <Self as MultiCurrency<T::AccountId>>::transfer(
+                    currency_id,
+                    source,
+                    dest,
+                    Self::usable_balance(source, &currency_id),
+                )?;
+                Ok(())
+            },
+        )
     }
 }

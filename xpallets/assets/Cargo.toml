@@ -19,7 +19,7 @@ frame-support = { version = "2.0.0", default-features = false }
 frame-system = { version = "2.0.0", default-features = false }
 
 # Orml
-orml-traits = { version = "0.3", default-features = false }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "17eb5a9e4febaaa6bfd6db94d911540e51550e50", default-features = false }
 
 # ChainX primitives
 chainx-primitives = { path = "../../primitives", default-features = false }
