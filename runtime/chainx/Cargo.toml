@@ -1,6 +1,6 @@
 [package]
 name = "chainx-runtime"
-version = "2.0.7-1"
+version = "2.0.8"
 authors = ["The ChainX Authors"]
 edition = "2018"
 
