@@ -70,6 +70,7 @@ frame-executive = { git = "https://github.com/paritytech/substrate", rev = "566a
 frame-support = { git = "https://github.com/paritytech/substrate", rev = "566ad03cf8c07c3c3ab226a724b2dcb4b6dbbc9b" }
 frame-system = { git = "https://github.com/paritytech/substrate", rev = "566ad03cf8c07c3c3ab226a724b2dcb4b6dbbc9b" }
 frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", rev = "566ad03cf8c07c3c3ab226a724b2dcb4b6dbbc9b" }
+frame-system-benchmarking = { git = "https://github.com/paritytech/substrate", rev = "566ad03cf8c07c3c3ab226a724b2dcb4b6dbbc9b" }
 
 substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate", rev = "566ad03cf8c07c3c3ab226a724b2dcb4b6dbbc9b" }
 
