@@ -12,30 +12,30 @@ use chainx_primitives::AssetId;
 use xpallet_assets::{BalanceOf, Chain};
 use xpallet_gateway_records::{Module as XGatewayRecords, WithdrawalRecordId, WithdrawalState};
 
-use crate::{types::*, Call, Module, Trait, TrusteeMultiSigAddr};
+use crate::{types::*, Call, Config, Module, TrusteeMultiSigAddr};
 
 const ASSET_ID: AssetId = xp_protocol::X_BTC;
 
-fn account<T: Trait>(pubkey: &str) -> T::AccountId {
+fn account<T: Config>(pubkey: &str) -> T::AccountId {
     let pubkey = hex::decode(pubkey).unwrap();
     let mut public = [0u8; 32];
     public.copy_from_slice(pubkey.as_slice());
     let account = AccountId32::from(public).encode();
     Decode::decode(&mut account.as_slice()).unwrap()
 }
-fn alice<T: Trait>() -> T::AccountId {
+fn alice<T: Config>() -> T::AccountId {
     // sr25519 Alice
     account::<T>("d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d")
 }
-fn bob<T: Trait>() -> T::AccountId {
+fn bob<T: Config>() -> T::AccountId {
     // sr25519 Bob
     account::<T>("8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48")
 }
-fn charlie<T: Trait>() -> T::AccountId {
+fn charlie<T: Config>() -> T::AccountId {
     // sr25519 Charlie
     account::<T>("90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22")
 }
-fn new_trustees<T: Trait>() -> Vec<(T::AccountId, Vec<u8>, Vec<u8>, Vec<u8>)> {
+fn new_trustees<T: Config>() -> Vec<(T::AccountId, Vec<u8>, Vec<u8>, Vec<u8>)> {
     vec![
         (
             alice::<T>(),

@@ -20,7 +20,7 @@ use light_bitcoin::{
 };
 
 use crate::{
-    types::*, Call, Module, PendingDeposits, Trait, TxState, Verifier, WithdrawalProposal,
+    types::*, Call, Config, Module, PendingDeposits, TxState, Verifier, WithdrawalProposal,
 };
 
 const ASSET_ID: AssetId = xp_protocol::X_BTC;
@@ -30,7 +30,7 @@ fn generate_blocks_576576_578692() -> BTreeMap<u32, BlockHeader> {
     Decode::decode(&mut &bytes[..]).unwrap()
 }
 
-fn account<T: Trait>(pubkey: &str) -> T::AccountId {
+fn account<T: Config>(pubkey: &str) -> T::AccountId {
     let pubkey = hex::decode(pubkey).unwrap();
     let mut public = [0u8; 32];
     public.copy_from_slice(pubkey.as_slice());
@@ -38,12 +38,12 @@ fn account<T: Trait>(pubkey: &str) -> T::AccountId {
     Decode::decode(&mut account.as_slice()).unwrap()
 }
 
-fn alice<T: Trait>() -> T::AccountId {
+fn alice<T: Config>() -> T::AccountId {
     // sr25519 Alice
     account::<T>("d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d")
 }
 
-fn bob<T: Trait>() -> T::AccountId {
+fn bob<T: Config>() -> T::AccountId {
     // sr25519 Bob
     account::<T>("8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48")
 }
@@ -70,7 +70,7 @@ fn withdraw_tx() -> (Transaction, BtcRelayedTxInfo, Transaction) {
     (tx, info, prev_tx)
 }
 
-fn prepare_withdrawal<T: Trait>() -> Transaction {
+fn prepare_withdrawal<T: Config>() -> Transaction {
     // https://blockchain.info/rawtx/62c389f1974b8a44737d76f92da0f5cd7f6f48d065e7af6ba368298361141270?format=hex
     const RAW_TX: &str = "0100000001052ceda6cf9c93012a994f4ffa2a29c9e31ecf96f472b175eb8e602bfa2b2c5100000000fdfd000047304402200e4d732c456f4722d376252be16554edb27fc93c55db97859e16682bc62b014502202b9c4b01ad55daa1f76e6a564b7762cd0a81240c947806ab3f3b056f2e77c1da01483045022100c7cd680992de60da8c33fc3ef7f5ead85b204660822d9fbda2d85f9fadba732a022021fdc49b20a6007ea971a385732a4065d1d7c792ac9dc391034fb78aa9f5034b014c69522102df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6210244d81efeb4171b1a8a433b87dd202117f94e44c909c49e42e77b69b5a6ce7d0d2103a36339f413da869df12b1ab0def91749413a0dee87f0bfa85ba7196e6cdad10253aeffffffff03e0349500000000001976a91413256ff2dee6e80c275ddb877abc1ffe453a731488ace00f9700000000001976a914ea6e8dd56703ace584eb9dff0224629f8486672988acc88a02000000000017a914cb94110435d0635223eebe25ed2aaabc03781c458700000000";
     let old_withdraw = RAW_TX.parse::<Transaction>().unwrap();
@@ -126,7 +126,7 @@ fn create_tx() -> Transaction {
 }
 
 // push header 576577 - 577702 (current confirm height is 577696)
-fn prepare_headers<T: Trait>(caller: &T::AccountId) {
+fn prepare_headers<T: Config>(caller: &T::AccountId) {
     for (height, header) in generate_blocks_576576_578692() {
         if height == 576576 {
             continue;

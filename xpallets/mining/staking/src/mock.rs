@@ -1,8 +1,8 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 use crate::*;
-use crate::{Module, Trait};
-use frame_support::{impl_outer_event, impl_outer_origin, parameter_types, weights::Weight};
+use crate::{Config, Module};
+use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
 use sp_core::H256;
 use sp_runtime::{
     testing::{Header, UintAuthorityId},
@@ -53,13 +53,12 @@ pub struct Test;
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
-    pub const MaximumBlockWeight: Weight = 1024;
-    pub const MaximumBlockLength: u32 = 2 * 1024;
-    pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
 }
 
-impl system::Trait for Test {
+impl system::Config for Test {
     type BaseCallFilter = ();
+    type BlockWeights = ();
+    type BlockLength = ();
     type Origin = Origin;
     type Call = ();
     type Index = AccountIndex;
@@ -71,13 +70,7 @@ impl system::Trait for Test {
     type Header = Header;
     type Event = MetaEvent;
     type BlockHashCount = BlockHashCount;
-    type MaximumBlockWeight = MaximumBlockWeight;
     type DbWeight = ();
-    type BlockExecutionWeight = ();
-    type ExtrinsicBaseWeight = ();
-    type MaximumExtrinsicWeight = MaximumBlockWeight;
-    type MaximumBlockLength = MaximumBlockLength;
-    type AvailableBlockRatio = AvailableBlockRatio;
     type Version = ();
     type PalletInfo = ();
     type AccountData = pallet_balances::AccountData<Balance>;
@@ -93,7 +86,7 @@ impl Get<Balance> for ExistentialDeposit {
     }
 }
 
-impl pallet_balances::Trait for Test {
+impl pallet_balances::Config for Test {
     type MaxLocks = ();
     type Balance = Balance;
     type Event = MetaEvent;
@@ -107,7 +100,7 @@ parameter_types! {
     pub const MinimumPeriod: u64 = 5;
 }
 
-impl pallet_timestamp::Trait for Test {
+impl pallet_timestamp::Config for Test {
     type Moment = u64;
     type OnTimestampSet = ();
     type MinimumPeriod = MinimumPeriod;
@@ -168,7 +161,7 @@ sp_runtime::impl_opaque_keys! {
     }
 }
 
-impl pallet_session::Trait for Test {
+impl pallet_session::Config for Test {
     type SessionManager = XStaking;
     type Keys = SessionKeys;
     type ShouldEndSession = pallet_session::PeriodicSessions<Period, Offset>;
@@ -206,7 +199,7 @@ parameter_types! {
     pub const MaximumReferralId: u32 = 12;
 }
 
-impl Trait for Test {
+impl Config for Test {
     type Currency = Balances;
     type Event = MetaEvent;
     type AssetMining = ();

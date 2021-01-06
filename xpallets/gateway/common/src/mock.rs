@@ -4,14 +4,14 @@ use std::{cell::RefCell, convert::TryFrom, time::Duration};
 
 use codec::{Decode, Encode};
 use frame_support::traits::UnixTime;
-use frame_support::{impl_outer_origin, parameter_types, sp_io, weights::Weight};
+use frame_support::{impl_outer_origin, parameter_types, sp_io};
 use frame_system::EnsureSignedBy;
 use sp_core::{crypto::UncheckedInto, H256};
 use sp_io::hashing::blake2_256;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
-    AccountId32, DispatchError, DispatchResult, Perbill,
+    AccountId32, DispatchError, DispatchResult,
 };
 
 use chainx_primitives::AssetId;
@@ -42,12 +42,11 @@ pub type Balances = pallet_balances::Module<Test>;
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
-    pub const MaximumBlockWeight: Weight = 1024;
-    pub const MaximumBlockLength: u32 = 2 * 1024;
-    pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
 }
-impl frame_system::Trait for Test {
+impl frame_system::Config for Test {
     type BaseCallFilter = ();
+    type BlockWeights = ();
+    type BlockLength = ();
     type Origin = Origin;
     type Call = ();
     type Index = u64;
@@ -59,13 +58,7 @@ impl frame_system::Trait for Test {
     type Header = Header;
     type Event = ();
     type BlockHashCount = BlockHashCount;
-    type MaximumBlockWeight = MaximumBlockWeight;
     type DbWeight = ();
-    type BlockExecutionWeight = ();
-    type ExtrinsicBaseWeight = ();
-    type MaximumExtrinsicWeight = MaximumBlockWeight;
-    type MaximumBlockLength = MaximumBlockLength;
-    type AvailableBlockRatio = AvailableBlockRatio;
     type Version = ();
     type PalletInfo = ();
     type AccountData = pallet_balances::AccountData<Balance>;
@@ -77,7 +70,7 @@ impl frame_system::Trait for Test {
 parameter_types! {
     pub const ExistentialDeposit: u64 = 0;
 }
-impl pallet_balances::Trait for Test {
+impl pallet_balances::Config for Test {
     type MaxLocks = ();
     type Balance = Balance;
     type DustRemoval = ();
@@ -90,13 +83,13 @@ impl pallet_balances::Trait for Test {
 parameter_types! {
     pub const ChainXAssetId: AssetId = 0;
 }
-impl xpallet_assets_registrar::Trait for Test {
+impl xpallet_assets_registrar::Config for Test {
     type Event = ();
     type NativeAssetId = ChainXAssetId;
     type RegistrarHandler = ();
     type WeightInfo = ();
 }
-impl xpallet_assets::Trait for Test {
+impl xpallet_assets::Config for Test {
     type Event = ();
     type Currency = Balances;
     type Amount = Amount;
@@ -106,7 +99,7 @@ impl xpallet_assets::Trait for Test {
     type WeightInfo = ();
 }
 
-impl xpallet_gateway_records::Trait for Test {
+impl xpallet_gateway_records::Config for Test {
     type Event = ();
     type WeightInfo = ();
 }
@@ -129,7 +122,7 @@ impl UnixTime for Timestamp {
         })
     }
 }
-impl xpallet_gateway_bitcoin::Trait for Test {
+impl xpallet_gateway_bitcoin::Config for Test {
     type Event = ();
     type UnixTime = Timestamp;
     type AccountExtractor = ();
@@ -157,8 +150,8 @@ impl Validator<AccountId> for AlwaysValidator {
         None
     }
 }
-pub struct MockBitcoin<T: xpallet_gateway_bitcoin::Trait>(sp_std::marker::PhantomData<T>);
-impl<T: xpallet_gateway_bitcoin::Trait> ChainT<BalanceOf<T>> for MockBitcoin<T> {
+pub struct MockBitcoin<T: xpallet_gateway_bitcoin::Config>(sp_std::marker::PhantomData<T>);
+impl<T: xpallet_gateway_bitcoin::Config> ChainT<BalanceOf<T>> for MockBitcoin<T> {
     const ASSET_ID: u32 = X_BTC;
 
     fn chain() -> Chain {
@@ -173,7 +166,7 @@ impl<T: xpallet_gateway_bitcoin::Trait> ChainT<BalanceOf<T>> for MockBitcoin<T> 
         xpallet_gateway_bitcoin::Module::<T>::withdrawal_limit(asset_id)
     }
 }
-impl<T: xpallet_gateway_bitcoin::Trait>
+impl<T: xpallet_gateway_bitcoin::Config>
     TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo> for MockBitcoin<T>
 {
     fn check_trustee_entity(raw_addr: &[u8]) -> Result<BtcTrusteeType, DispatchError> {
@@ -201,7 +194,7 @@ impl<T: xpallet_gateway_bitcoin::Trait>
         })
     }
 }
-impl crate::Trait for Test {
+impl crate::Config for Test {
     type Event = ();
     type Validator = AlwaysValidator;
     type DetermineMultisigAddress = MultisigAddr;

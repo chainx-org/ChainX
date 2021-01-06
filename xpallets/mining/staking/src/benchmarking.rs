@@ -8,7 +8,7 @@ use frame_system::RawOrigin;
 const SEED: u32 = 0;
 
 /// Grab a funded user.
-pub fn create_funded_user<T: Trait>(string: &'static str, n: u32, value: u32) -> T::AccountId {
+pub fn create_funded_user<T: Config>(string: &'static str, n: u32, value: u32) -> T::AccountId {
     let user = account(string, n, SEED);
     let balance = value.into();
     T::Currency::make_free_balance_be(&user, balance);
@@ -17,7 +17,7 @@ pub fn create_funded_user<T: Trait>(string: &'static str, n: u32, value: u32) ->
     user
 }
 
-fn b_bond<T: Trait>(nominator: T::AccountId, validator: T::AccountId, value: u32) {
+fn b_bond<T: Config>(nominator: T::AccountId, validator: T::AccountId, value: u32) {
     let validator_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(validator);
     assert!(crate::Module::<T>::bond(
         RawOrigin::Signed(nominator).into(),
@@ -27,7 +27,7 @@ fn b_bond<T: Trait>(nominator: T::AccountId, validator: T::AccountId, value: u32
     .is_ok());
 }
 
-pub fn create_validator<T: Trait>(string: &'static str, n: u32, value: u32) -> T::AccountId {
+pub fn create_validator<T: Config>(string: &'static str, n: u32, value: u32) -> T::AccountId {
     let validator = create_funded_user::<T>(string, n, value);
     assert!(crate::Module::<T>::register(
         RawOrigin::Signed(validator.clone()).into(),

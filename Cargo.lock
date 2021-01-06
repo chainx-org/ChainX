@@ -101,17 +101,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "alga"
-version = "0.9.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4f823d037a7ec6ea2197046bafd4ae150e6bc36f9ca347404f46a46823fa84f2"
-dependencies = [
- "approx",
- "num-complex",
- "num-traits",
-]
-
-[[package]]
 name = "ansi_term"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -338,7 +327,7 @@ version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c3410529e8288c463bedb5930f82833bc0c90e5d2fe639a56582a4d09220b281"
 dependencies = [
- "autocfg 1.0.1",
+ "autocfg",
 ]
 
 [[package]]
@@ -357,12 +346,6 @@ dependencies = [
  "libc",
  "winapi 0.3.9",
 ]
-
-[[package]]
-name = "autocfg"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d49d90015b3c36167a20fe2810c5cd875ad504b39cff3d4eae7977e6b7c1cb2"
 
 [[package]]
 name = "autocfg"
@@ -729,7 +712,7 @@ version = "2.0.8"
 dependencies = [
  "chainx-primitives",
  "chainx-runtime-common",
- "frame-benchmarking 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "frame-executive",
  "frame-support",
  "frame-system",
@@ -810,7 +793,7 @@ name = "chainx-executor"
 version = "2.0.8"
 dependencies = [
  "chainx-runtime",
- "frame-benchmarking 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "sc-executor",
  "xp-io",
 ]
@@ -883,7 +866,7 @@ version = "2.0.8"
 dependencies = [
  "chainx-primitives",
  "chainx-runtime-common",
- "frame-benchmarking 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "frame-executive",
  "frame-support",
  "frame-system",
@@ -1211,7 +1194,7 @@ version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "058ed274caafc1f60c4997b5fc07bf7dc7cca454af7c6e81edffe5f33f70dace"
 dependencies = [
- "autocfg 1.0.1",
+ "autocfg",
  "cfg-if 0.1.10",
  "crossbeam-utils 0.7.2",
  "lazy_static",
@@ -1251,7 +1234,7 @@ version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c3c7c73a2d1e9fc0886a08b93e98eb643461230d5f1925e4036204d5f2e261a8"
 dependencies = [
- "autocfg 1.0.1",
+ "autocfg",
  "cfg-if 0.1.10",
  "lazy_static",
 ]
@@ -1262,7 +1245,7 @@ version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "02d96d1e189ef58269ebe5b97953da3274d83a93af647c2ddd6f9dab28cedb8d"
 dependencies = [
- "autocfg 1.0.1",
+ "autocfg",
  "cfg-if 1.0.0",
  "lazy_static",
 ]
@@ -1695,30 +1678,11 @@ dependencies = [
 [[package]]
 name = "frame-benchmarking"
 version = "2.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "66a5e3fe43568300fdca1c1bfd45ea463a12cca8fbe6172a4f6d58cd54e3fbcc"
-dependencies = [
- "frame-support",
- "frame-system",
- "linregress 0.1.7",
- "parity-scale-codec",
- "paste",
- "sp-api",
- "sp-io",
- "sp-runtime",
- "sp-runtime-interface",
- "sp-std",
- "sp-storage",
-]
-
-[[package]]
-name = "frame-benchmarking"
-version = "2.0.0"
 source = "git+https://github.com/paritytech/substrate?rev=566ad03cf8c07c3c3ab226a724b2dcb4b6dbbc9b#566ad03cf8c07c3c3ab226a724b2dcb4b6dbbc9b"
 dependencies = [
  "frame-support",
  "frame-system",
- "linregress 0.4.0",
+ "linregress",
  "parity-scale-codec",
  "paste",
  "sp-api",
@@ -1736,7 +1700,7 @@ source = "git+https://github.com/paritytech/substrate?rev=566ad03cf8c07c3c3ab226
 dependencies = [
  "Inflector",
  "chrono",
- "frame-benchmarking 2.0.0 (git+https://github.com/paritytech/substrate?rev=566ad03cf8c07c3c3ab226a724b2dcb4b6dbbc9b)",
+ "frame-benchmarking",
  "handlebars",
  "parity-scale-codec",
  "sc-cli",
@@ -1859,7 +1823,7 @@ version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "03e3a70ce89455777c5a93c60943e8a404c0be66bd3f53605c4a4e79baa80e91"
 dependencies = [
- "frame-benchmarking 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -2270,7 +2234,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e91b62f79061a0bc2e046024cb7ba44b08419ed238ecbd9adbd787434b9e8c25"
 dependencies = [
  "ahash 0.3.8",
- "autocfg 1.0.1",
+ "autocfg",
 ]
 
 [[package]]
@@ -2580,7 +2544,7 @@ version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4fb1fa934250de4de8aef298d81c729a7d33d8c239daa3a7575e6b92bfc7313b"
 dependencies = [
- "autocfg 1.0.1",
+ "autocfg",
  "hashbrown 0.9.1",
  "serde",
 ]
@@ -3479,23 +3443,12 @@ dependencies = [
 
 [[package]]
 name = "linregress"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9290cf6f928576eeb9c096c6fad9d8d452a0a1a70a2bbffa6e36064eedc0aac9"
-dependencies = [
- "failure",
- "nalgebra 0.18.1",
- "statrs 0.10.0",
-]
-
-[[package]]
-name = "linregress"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0d0ad4b5cc8385a881c561fac3501353d63d2a2b7a357b5064d71815c9a92724"
 dependencies = [
- "nalgebra 0.21.1",
- "statrs 0.12.0",
+ "nalgebra",
+ "statrs",
 ]
 
 [[package]]
@@ -3652,7 +3605,7 @@ version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "043175f069eda7b85febe4a74abbaeff828d9f8b448515d3151a14a3542811aa"
 dependencies = [
- "autocfg 1.0.1",
+ "autocfg",
 ]
 
 [[package]]
@@ -3661,7 +3614,7 @@ version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "157b4208e3059a8f9e78d559edc658e13df41410cb3ae03979c83130067fdd87"
 dependencies = [
- "autocfg 1.0.1",
+ "autocfg",
 ]
 
 [[package]]
@@ -3720,7 +3673,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0f2d26ec3309788e423cfbf68ad1800f061638098d76a83681af979dc4eda19d"
 dependencies = [
  "adler",
- "autocfg 1.0.1",
+ "autocfg",
 ]
 
 [[package]]
@@ -3854,23 +3807,6 @@ dependencies = [
 
 [[package]]
 name = "nalgebra"
-version = "0.18.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aaa9fddbc34c8c35dd2108515587b8ce0cab396f17977b8c738568e4edb521a2"
-dependencies = [
- "alga",
- "approx",
- "generic-array 0.12.3",
- "matrixmultiply",
- "num-complex",
- "num-rational",
- "num-traits",
- "rand 0.6.5",
- "typenum",
-]
-
-[[package]]
-name = "nalgebra"
 version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d6b6147c3d50b4f3cdabfe2ecc94a0191fd3d6ad58aefd9664cf396285883486"
@@ -3945,7 +3881,7 @@ version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "090c7f9998ee0ff65aa5b723e4009f7b217707f1fb5ea551329cc4d6231fb304"
 dependencies = [
- "autocfg 1.0.1",
+ "autocfg",
  "num-integer",
  "num-traits",
 ]
@@ -3956,7 +3892,7 @@ version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6b19411a9719e753aff12e5187b74d60d3dc449ec3f4dc21e3989c3f554bc95"
 dependencies = [
- "autocfg 1.0.1",
+ "autocfg",
  "num-traits",
 ]
 
@@ -3966,7 +3902,7 @@ version = "0.1.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d2cc698a63b549a70bc047073d2949cce27cd1c7b0a4a862d08a8031bc2801db"
 dependencies = [
- "autocfg 1.0.1",
+ "autocfg",
  "num-traits",
 ]
 
@@ -3976,7 +3912,7 @@ version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c000134b5dbf44adc5cb772486d335293351644b801551abe8f75c84cfa4aef"
 dependencies = [
- "autocfg 1.0.1",
+ "autocfg",
  "num-bigint",
  "num-integer",
  "num-traits",
@@ -3988,7 +3924,7 @@ version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9a64b1ec5cda2586e284722486d802acf1f7dbdc623e2bfc57e65ca1cd099290"
 dependencies = [
- "autocfg 1.0.1",
+ "autocfg",
  "libm",
 ]
 
@@ -4165,7 +4101,7 @@ name = "pallet-babe"
 version = "2.0.0"
 source = "git+https://github.com/paritytech/substrate?rev=566ad03cf8c07c3c3ab226a724b2dcb4b6dbbc9b#566ad03cf8c07c3c3ab226a724b2dcb4b6dbbc9b"
 dependencies = [
- "frame-benchmarking 2.0.0 (git+https://github.com/paritytech/substrate?rev=566ad03cf8c07c3c3ab226a724b2dcb4b6dbbc9b)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "pallet-authorship",
@@ -4190,7 +4126,7 @@ name = "pallet-balances"
 version = "2.0.0"
 source = "git+https://github.com/paritytech/substrate?rev=566ad03cf8c07c3c3ab226a724b2dcb4b6dbbc9b#566ad03cf8c07c3c3ab226a724b2dcb4b6dbbc9b"
 dependencies = [
- "frame-benchmarking 2.0.0 (git+https://github.com/paritytech/substrate?rev=566ad03cf8c07c3c3ab226a724b2dcb4b6dbbc9b)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -4204,7 +4140,7 @@ name = "pallet-collective"
 version = "2.0.0"
 source = "git+https://github.com/paritytech/substrate?rev=566ad03cf8c07c3c3ab226a724b2dcb4b6dbbc9b#566ad03cf8c07c3c3ab226a724b2dcb4b6dbbc9b"
 dependencies = [
- "frame-benchmarking 2.0.0 (git+https://github.com/paritytech/substrate?rev=566ad03cf8c07c3c3ab226a724b2dcb4b6dbbc9b)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -4220,7 +4156,7 @@ name = "pallet-democracy"
 version = "2.0.0"
 source = "git+https://github.com/paritytech/substrate?rev=566ad03cf8c07c3c3ab226a724b2dcb4b6dbbc9b#566ad03cf8c07c3c3ab226a724b2dcb4b6dbbc9b"
 dependencies = [
- "frame-benchmarking 2.0.0 (git+https://github.com/paritytech/substrate?rev=566ad03cf8c07c3c3ab226a724b2dcb4b6dbbc9b)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -4249,7 +4185,7 @@ name = "pallet-grandpa"
 version = "2.0.0"
 source = "git+https://github.com/paritytech/substrate?rev=566ad03cf8c07c3c3ab226a724b2dcb4b6dbbc9b#566ad03cf8c07c3c3ab226a724b2dcb4b6dbbc9b"
 dependencies = [
- "frame-benchmarking 2.0.0 (git+https://github.com/paritytech/substrate?rev=566ad03cf8c07c3c3ab226a724b2dcb4b6dbbc9b)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "pallet-authorship",
@@ -4271,7 +4207,7 @@ version = "2.0.0"
 source = "git+https://github.com/paritytech/substrate?rev=566ad03cf8c07c3c3ab226a724b2dcb4b6dbbc9b#566ad03cf8c07c3c3ab226a724b2dcb4b6dbbc9b"
 dependencies = [
  "enumflags2",
- "frame-benchmarking 2.0.0 (git+https://github.com/paritytech/substrate?rev=566ad03cf8c07c3c3ab226a724b2dcb4b6dbbc9b)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -4378,7 +4314,7 @@ name = "pallet-scheduler"
 version = "2.0.0"
 source = "git+https://github.com/paritytech/substrate?rev=566ad03cf8c07c3c3ab226a724b2dcb4b6dbbc9b#566ad03cf8c07c3c3ab226a724b2dcb4b6dbbc9b"
 dependencies = [
- "frame-benchmarking 2.0.0 (git+https://github.com/paritytech/substrate?rev=566ad03cf8c07c3c3ab226a724b2dcb4b6dbbc9b)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -4427,7 +4363,7 @@ name = "pallet-timestamp"
 version = "2.0.0"
 source = "git+https://github.com/paritytech/substrate?rev=566ad03cf8c07c3c3ab226a724b2dcb4b6dbbc9b#566ad03cf8c07c3c3ab226a724b2dcb4b6dbbc9b"
 dependencies = [
- "frame-benchmarking 2.0.0 (git+https://github.com/paritytech/substrate?rev=566ad03cf8c07c3c3ab226a724b2dcb4b6dbbc9b)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "impl-trait-for-tuples",
@@ -5173,45 +5109,16 @@ dependencies = [
 
 [[package]]
 name = "rand"
-version = "0.6.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d71dacdc3c88c1fde3885a3be3fbab9f35724e6ce99467f7d9c5026132184ca"
-dependencies = [
- "autocfg 0.1.7",
- "libc",
- "rand_chacha 0.1.1",
- "rand_core 0.4.2",
- "rand_hc 0.1.0",
- "rand_isaac",
- "rand_jitter",
- "rand_os",
- "rand_pcg 0.1.2",
- "rand_xorshift",
- "winapi 0.3.9",
-]
-
-[[package]]
-name = "rand"
 version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6a6b1679d49b24bbfe0c803429aa1874472f50d9b363131f0e89fc356b544d03"
 dependencies = [
  "getrandom",
  "libc",
- "rand_chacha 0.2.2",
+ "rand_chacha",
  "rand_core 0.5.1",
- "rand_hc 0.2.0",
- "rand_pcg 0.2.1",
-]
-
-[[package]]
-name = "rand_chacha"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "556d3a1ca6600bfcbab7c7c91ccb085ac7fbbcd70e008a98742e7847f4f7bcef"
-dependencies = [
- "autocfg 0.1.7",
- "rand_core 0.3.1",
+ "rand_hc",
+ "rand_pcg",
 ]
 
 [[package]]
@@ -5259,64 +5166,11 @@ dependencies = [
 
 [[package]]
 name = "rand_hc"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b40677c7be09ae76218dc623efbf7b18e34bced3f38883af07bb75630a21bc4"
-dependencies = [
- "rand_core 0.3.1",
-]
-
-[[package]]
-name = "rand_hc"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ca3129af7b92a17112d59ad498c6f81eaf463253766b90396d39ea7a39d6613c"
 dependencies = [
  "rand_core 0.5.1",
-]
-
-[[package]]
-name = "rand_isaac"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ded997c9d5f13925be2a6fd7e66bf1872597f759fd9dd93513dd7e92e5a5ee08"
-dependencies = [
- "rand_core 0.3.1",
-]
-
-[[package]]
-name = "rand_jitter"
-version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1166d5c91dc97b88d1decc3285bb0a99ed84b05cfd0bc2341bdf2d43fc41e39b"
-dependencies = [
- "libc",
- "rand_core 0.4.2",
- "winapi 0.3.9",
-]
-
-[[package]]
-name = "rand_os"
-version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b75f676a1e053fc562eafbb47838d67c84801e38fc1ba459e8f180deabd5071"
-dependencies = [
- "cloudabi",
- "fuchsia-cprng",
- "libc",
- "rand_core 0.4.2",
- "rdrand",
- "winapi 0.3.9",
-]
-
-[[package]]
-name = "rand_pcg"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "abf9b09b01790cfe0364f52bf32995ea3c39f4d2dd011eac241d2914146d0b44"
-dependencies = [
- "autocfg 0.1.7",
- "rand_core 0.4.2",
 ]
 
 [[package]]
@@ -5326,15 +5180,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "16abd0c1b639e9eb4d7c50c0b8100b0d0f849be2349829c740fe8e6eb4816429"
 dependencies = [
  "rand_core 0.5.1",
-]
-
-[[package]]
-name = "rand_xorshift"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cbf7e9e623549b0e21f6e97cf8ecf247c1a8fd2e8a992ae265314300b2455d5c"
-dependencies = [
- "rand_core 0.3.1",
 ]
 
 [[package]]
@@ -5360,7 +5205,7 @@ version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b0d8e0819fadc20c74ea8373106ead0600e3a67ef1fe8da56e39b9ae7275674"
 dependencies = [
- "autocfg 1.0.1",
+ "autocfg",
  "crossbeam-deque 0.8.0",
  "either",
  "rayon-core",
@@ -7642,15 +7487,6 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "statrs"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10102ac8d55e35db2b3fafc26f81ba8647da2e15879ab686a67e6d19af2685e8"
-dependencies = [
- "rand 0.5.6",
-]
-
-[[package]]
-name = "statrs"
 version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cce16f6de653e88beca7bd13780d08e09d4489dbca1f9210e041bc4852481382"
@@ -9114,7 +8950,7 @@ dependencies = [
  "bitflags",
  "chainx-primitives",
  "env_logger",
- "frame-benchmarking 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "orml-traits",
@@ -9136,7 +8972,7 @@ name = "xpallet-assets-registrar"
 version = "2.0.8"
 dependencies = [
  "chainx-primitives",
- "frame-benchmarking 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -9185,7 +9021,7 @@ version = "2.0.8"
 dependencies = [
  "chainx-primitives",
  "env_logger",
- "frame-benchmarking 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "pallet-balances",
@@ -9235,7 +9071,7 @@ version = "2.0.8"
 dependencies = [
  "bs58 0.3.1",
  "chainx-primitives",
- "frame-benchmarking 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "hex",
@@ -9271,7 +9107,7 @@ name = "xpallet-gateway-common"
 version = "2.0.8"
 dependencies = [
  "chainx-primitives",
- "frame-benchmarking 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "hex",
@@ -9332,7 +9168,7 @@ name = "xpallet-gateway-records"
 version = "2.0.8"
 dependencies = [
  "chainx-primitives",
- "frame-benchmarking 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "orml-utilities 0.3.2",
@@ -9406,7 +9242,7 @@ version = "2.0.8"
 dependencies = [
  "chainx-primitives",
  "env_logger",
- "frame-benchmarking 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "pallet-balances",
@@ -9461,7 +9297,7 @@ version = "2.0.8"
 dependencies = [
  "chainx-primitives",
  "env_logger",
- "frame-benchmarking 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "pallet-balances",

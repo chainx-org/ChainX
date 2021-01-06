@@ -6,16 +6,15 @@ use sp_core::H256;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
-    Perbill,
 };
 
-use frame_support::{impl_outer_event, impl_outer_origin, parameter_types, sp_io, weights::Weight};
+use frame_support::{impl_outer_event, impl_outer_origin, parameter_types, sp_io};
 
 use chainx_primitives::AssetId;
 pub use xp_protocol::X_BTC;
 
 use crate::*;
-use crate::{Module, Trait};
+use crate::{Config, Module};
 
 /// The AccountId alias in this test module.
 pub(crate) type AccountId = u64;
@@ -50,13 +49,12 @@ pub struct Test;
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
-    pub const MaximumBlockWeight: Weight = 1024;
-    pub const MaximumBlockLength: u32 = 2 * 1024;
-    pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
 }
 
-impl frame_system::Trait for Test {
+impl frame_system::Config for Test {
     type BaseCallFilter = ();
+    type BlockWeights = ();
+    type BlockLength = ();
     type Origin = Origin;
     type Call = ();
     type Index = u64;
@@ -68,13 +66,7 @@ impl frame_system::Trait for Test {
     type Header = Header;
     type Event = MetaEvent;
     type BlockHashCount = BlockHashCount;
-    type MaximumBlockWeight = MaximumBlockWeight;
     type DbWeight = ();
-    type BlockExecutionWeight = ();
-    type ExtrinsicBaseWeight = ();
-    type MaximumExtrinsicWeight = MaximumBlockWeight;
-    type MaximumBlockLength = MaximumBlockLength;
-    type AvailableBlockRatio = AvailableBlockRatio;
     type Version = ();
     type PalletInfo = ();
     type AccountData = pallet_balances::AccountData<Balance>;
@@ -85,7 +77,7 @@ impl frame_system::Trait for Test {
 parameter_types! {
     pub const ExistentialDeposit: u64 = 1;
 }
-impl pallet_balances::Trait for Test {
+impl pallet_balances::Config for Test {
     type MaxLocks = ();
     type Balance = Balance;
     type DustRemoval = ();
@@ -99,14 +91,14 @@ parameter_types! {
     pub const ChainXAssetId: AssetId = 0;
 }
 
-impl xpallet_assets_registrar::Trait for Test {
+impl xpallet_assets_registrar::Config for Test {
     type Event = MetaEvent;
     type NativeAssetId = ChainXAssetId;
     type RegistrarHandler = ();
     type WeightInfo = ();
 }
 
-impl Trait for Test {
+impl Config for Test {
     type Event = MetaEvent;
     type Currency = Balances;
     type Amount = Amount;
