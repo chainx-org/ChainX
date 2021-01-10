@@ -33,6 +33,7 @@ jobs:
         pwd
         ls -la
         build --json | tee srtool_output.json
+        scripts/ci/extract_spec_version.py
         scripts/ci/generate_release_note.py | tee release_note.md
 
     - name: Upload release note

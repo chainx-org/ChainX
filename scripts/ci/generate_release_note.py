@@ -3,6 +3,7 @@
 if __name__ == '__main__':
     import json
     env = json.load(open('srtool_output.json'))
+    spec_version = json.load(open('spec_version.json'))
     message = f"""
 Upgrade priority:
 
@@ -13,7 +14,7 @@ WASM runtime built with [srtool](https://hub.docker.com/r/chainxorg/srtool) usin
 
 chainx runtime proposal hash: `{env['prop']}`.
 
-Native runtime version: **?**
+Native runtime version: `{spec_version['version']}`
 
 #### Changes
 
