@@ -5,8 +5,12 @@ import os
 import json
 
 def main():
-    # Change the working directory to project root directory.
-    os.chdir("../..")
+    #  Switch the working directory to project root directory.
+    cur_file = os.path.abspath(__file__)
+    ci_dir = os.path.dirname(cur_file)
+    scripts_dir = os.path.dirname(ci_dir)
+    chainx_dir = os.path.dirname(scripts_dir)
+    os.chdir(chainx_dir)
 
     f = open("runtime/chainx/src/lib.rs")
     for line in f.readlines():
