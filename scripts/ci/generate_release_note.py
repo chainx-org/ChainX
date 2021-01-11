@@ -14,7 +14,7 @@ WASM runtime built with [srtool](https://hub.docker.com/r/chainxorg/srtool) usin
 
 chainx runtime proposal hash: `{env['prop']}`.
 
-Native runtime version: `{spec_version['version']}`
+Native runtime version: **{spec_version['version']}**
 
 #### Changes
 
