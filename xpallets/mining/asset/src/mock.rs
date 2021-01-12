@@ -5,9 +5,7 @@ use std::{
     collections::{BTreeMap, HashSet},
 };
 
-use frame_support::{
-    impl_outer_event, impl_outer_origin, parameter_types, traits::Get, weights::Weight,
-};
+use frame_support::{impl_outer_event, impl_outer_origin, parameter_types, traits::Get};
 use sp_core::H256;
 use sp_runtime::{
     testing::{Header, UintAuthorityId},
@@ -20,7 +18,7 @@ use xp_mining_staking::SessionIndex;
 use xpallet_assets::{AssetInfo, AssetRestrictions, Chain};
 
 use crate::*;
-use crate::{Module, Trait};
+use crate::{Config, Module};
 
 pub const INIT_TIMESTAMP: u64 = 30_000;
 
@@ -66,13 +64,12 @@ pub struct Test;
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
-    pub const MaximumBlockWeight: Weight = 1024;
-    pub const MaximumBlockLength: u32 = 2 * 1024;
-    pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
 }
 
-impl frame_system::Trait for Test {
+impl frame_system::Config for Test {
     type BaseCallFilter = ();
+    type BlockWeights = ();
+    type BlockLength = ();
     type Origin = Origin;
     type Call = ();
     type Index = u64;
@@ -84,13 +81,7 @@ impl frame_system::Trait for Test {
     type Header = Header;
     type Event = MetaEvent;
     type BlockHashCount = BlockHashCount;
-    type MaximumBlockWeight = MaximumBlockWeight;
     type DbWeight = ();
-    type BlockExecutionWeight = ();
-    type ExtrinsicBaseWeight = ();
-    type MaximumExtrinsicWeight = MaximumBlockWeight;
-    type MaximumBlockLength = MaximumBlockLength;
-    type AvailableBlockRatio = AvailableBlockRatio;
     type Version = ();
     type PalletInfo = ();
     type AccountData = pallet_balances::AccountData<Balance>;
@@ -103,7 +94,7 @@ parameter_types! {
     pub const MinimumPeriod: u64 = 5;
 }
 
-impl pallet_timestamp::Trait for Test {
+impl pallet_timestamp::Config for Test {
     type Moment = u64;
     type OnTimestampSet = ();
     type MinimumPeriod = MinimumPeriod;
@@ -117,7 +108,7 @@ impl Get<Balance> for ExistentialDeposit {
     }
 }
 
-impl pallet_balances::Trait for Test {
+impl pallet_balances::Config for Test {
     type MaxLocks = ();
     type Balance = Balance;
     type Event = MetaEvent;
@@ -130,14 +121,14 @@ impl pallet_balances::Trait for Test {
 parameter_types! {
     pub const ChainXAssetId: AssetId = 0;
 }
-impl xpallet_assets_registrar::Trait for Test {
+impl xpallet_assets_registrar::Config for Test {
     type Event = MetaEvent;
     type NativeAssetId = ChainXAssetId;
     type RegistrarHandler = XMiningAsset;
     type WeightInfo = ();
 }
 
-impl xpallet_assets::Trait for Test {
+impl xpallet_assets::Config for Test {
     type Event = MetaEvent;
     type Currency = Balances;
     type Amount = Amount;
@@ -216,7 +207,7 @@ sp_runtime::impl_opaque_keys! {
     }
 }
 
-impl pallet_session::Trait for Test {
+impl pallet_session::Config for Test {
     type SessionManager = XStaking;
     type Keys = SessionKeys;
     type ShouldEndSession = pallet_session::PeriodicSessions<Period, Offset>;
@@ -257,7 +248,7 @@ impl xp_mining_common::RewardPotAccountFor<AccountId, AccountId>
     }
 }
 
-impl xpallet_mining_staking::Trait for Test {
+impl xpallet_mining_staking::Config for Test {
     type Currency = Balances;
     type Event = MetaEvent;
     type AssetMining = XMiningAsset;
@@ -289,7 +280,7 @@ impl GatewayInterface<AccountId> for DummyGatewayReferralGetter {
     }
 }
 
-impl Trait for Test {
+impl Config for Test {
     type StakingInterface = Self;
     type GatewayInterface = DummyGatewayReferralGetter;
     type Event = MetaEvent;

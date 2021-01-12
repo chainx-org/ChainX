@@ -2,13 +2,11 @@
 
 use frame_support::{
     assert_noop, assert_ok, impl_outer_event, impl_outer_origin, parameter_types, sp_io,
-    weights::Weight,
 };
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
-    Perbill,
 };
 
 use chainx_primitives::AssetId;
@@ -44,13 +42,12 @@ pub struct Test;
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
-    pub const MaximumBlockWeight: Weight = 1024;
-    pub const MaximumBlockLength: u32 = 2 * 1024;
-    pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
 }
 
-impl frame_system::Trait for Test {
+impl frame_system::Config for Test {
     type BaseCallFilter = ();
+    type BlockWeights = ();
+    type BlockLength = ();
     type Origin = Origin;
     type Call = ();
     type Index = u64;
@@ -62,13 +59,7 @@ impl frame_system::Trait for Test {
     type Header = Header;
     type Event = MetaEvent;
     type BlockHashCount = BlockHashCount;
-    type MaximumBlockWeight = MaximumBlockWeight;
     type DbWeight = ();
-    type BlockExecutionWeight = ();
-    type ExtrinsicBaseWeight = ();
-    type MaximumExtrinsicWeight = MaximumBlockWeight;
-    type MaximumBlockLength = MaximumBlockLength;
-    type AvailableBlockRatio = AvailableBlockRatio;
     type Version = ();
     type PalletInfo = ();
     type AccountData = ();
@@ -81,7 +72,7 @@ parameter_types! {
     pub const ChainXAssetId: AssetId = 0;
 }
 
-impl Trait for Test {
+impl Config for Test {
     type Event = MetaEvent;
     type NativeAssetId = ChainXAssetId;
     type RegistrarHandler = ();

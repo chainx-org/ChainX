@@ -8,7 +8,7 @@ use crate::Module as XGatewayRecords;
 
 const ASSET_ID: AssetId = xp_protocol::X_BTC;
 
-fn deposit<T: Trait>(who: T::AccountId, amount: BalanceOf<T>) {
+fn deposit<T: Config>(who: T::AccountId, amount: BalanceOf<T>) {
     let receiver_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(who);
     // root_deposit
     let _ = XGatewayRecords::<T>::root_deposit(
@@ -19,7 +19,7 @@ fn deposit<T: Trait>(who: T::AccountId, amount: BalanceOf<T>) {
     );
 }
 
-fn deposit_and_withdraw<T: Trait>(who: T::AccountId, amount: BalanceOf<T>) {
+fn deposit_and_withdraw<T: Config>(who: T::AccountId, amount: BalanceOf<T>) {
     deposit::<T>(who.clone(), amount);
     let withdrawal = amount - 500.into();
     let addr = b"3LFSUKkP26hun42J1Dy6RATsbgmBJb27NF".to_vec();

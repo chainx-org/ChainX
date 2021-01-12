@@ -1,11 +1,10 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use frame_support::{impl_outer_origin, parameter_types, sp_io, weights::Weight};
+use frame_support::{impl_outer_origin, parameter_types, sp_io};
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
-    Perbill,
 };
 
 use chainx_primitives::AssetId;
@@ -30,13 +29,12 @@ pub struct Test;
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
-    pub const MaximumBlockWeight: Weight = 1024;
-    pub const MaximumBlockLength: u32 = 2 * 1024;
-    pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
 }
 
-impl frame_system::Trait for Test {
+impl frame_system::Config for Test {
     type BaseCallFilter = ();
+    type BlockWeights = ();
+    type BlockLength = ();
     type Origin = Origin;
     type Call = ();
     type Index = u64;
@@ -48,13 +46,7 @@ impl frame_system::Trait for Test {
     type Header = Header;
     type Event = ();
     type BlockHashCount = BlockHashCount;
-    type MaximumBlockWeight = MaximumBlockWeight;
     type DbWeight = ();
-    type BlockExecutionWeight = ();
-    type ExtrinsicBaseWeight = ();
-    type MaximumExtrinsicWeight = MaximumBlockWeight;
-    type MaximumBlockLength = MaximumBlockLength;
-    type AvailableBlockRatio = AvailableBlockRatio;
     type Version = ();
     type PalletInfo = ();
     type AccountData = pallet_balances::AccountData<Balance>;
@@ -66,7 +58,7 @@ impl frame_system::Trait for Test {
 parameter_types! {
     pub const ExistentialDeposit: u64 = 0;
 }
-impl pallet_balances::Trait for Test {
+impl pallet_balances::Config for Test {
     type MaxLocks = ();
     type Balance = Balance;
     type DustRemoval = ();
@@ -81,14 +73,14 @@ parameter_types! {
     pub const ChainXAssetId: AssetId = 0;
 }
 
-impl xpallet_assets_registrar::Trait for Test {
+impl xpallet_assets_registrar::Config for Test {
     type Event = ();
     type NativeAssetId = ChainXAssetId;
     type RegistrarHandler = ();
     type WeightInfo = ();
 }
 
-impl xpallet_assets::Trait for Test {
+impl xpallet_assets::Config for Test {
     type Event = ();
     type Currency = Balances;
     type Amount = Amount;
@@ -98,7 +90,7 @@ impl xpallet_assets::Trait for Test {
     type WeightInfo = ();
 }
 
-impl Trait for Test {
+impl Config for Test {
     type Event = ();
     type WeightInfo = ();
 }

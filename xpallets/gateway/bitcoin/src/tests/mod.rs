@@ -11,7 +11,7 @@ use xp_gateway_common::AccountExtractor;
 use light_bitcoin::script::Script;
 
 use crate::mock::{Test, XGatewayBitcoin};
-use crate::Trait;
+use crate::Config;
 
 #[test]
 pub fn test_verify_btc_address() {
@@ -28,5 +28,5 @@ fn test_account_ss58_version() {
             .to_vec(),
     );
     let data = script.to_bytes();
-    assert!(<Test as Trait>::AccountExtractor::extract_account(&data).is_some());
+    assert!(<Test as Config>::AccountExtractor::extract_account(&data).is_some());
 }

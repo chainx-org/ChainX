@@ -24,7 +24,7 @@ use crate::{
         BtcDepositCache, BtcRelayedTxInfo, BtcTxResult, BtcTxState, BtcWithdrawalProposal,
         VoteResult,
     },
-    Trait, WithdrawalProposal,
+    Config, WithdrawalProposal,
 };
 
 const DEPOSIT_HOT_ADDR: &str = "3LFSUKkP26hun42J1Dy6RATsbgmBJb27NF";
@@ -95,7 +95,7 @@ lazy_static::lazy_static! {
     static ref withdraw_prev: Transaction = "02000000018554af3a19f2475bb293e81fe123b588a50d7c86ce97ed4f015853b427e45f12040000006a473044022037957f493964792e6bedd37aa5193892bd9fdb5d974d87f5334f36b0d544c7f202203d7bb2ac644204437b77e9c34ea5bf875da41d728ef7352c9d74ff507da64502012102bd47917d4cf403ca8e9cb71c84a127e0451686877fe186614385025ccd1ed9cc000000000260a62f010000000017a914cb94110435d0635223eebe25ed2aaabc03781c45870000000000000000366a343552547a425a4d3274346537414d547442534e3853424c3878316b716e39713769355a75566e3569537876526341326b40484c5400000000".parse().unwrap();
 }
 
-fn mock_detect_transaction_type<T: Trait>(
+fn mock_detect_transaction_type<T: Config>(
     tx: &Transaction,
     prev_tx: Option<&Transaction>,
 ) -> BtcTxMetaType<T::AccountId> {
@@ -215,7 +215,7 @@ fn test_detect_tx_type() {
     }
 }
 
-fn mock_process_tx<T: Trait>(tx: Transaction, prev_tx: Option<Transaction>) -> BtcTxState {
+fn mock_process_tx<T: Config>(tx: Transaction, prev_tx: Option<Transaction>) -> BtcTxState {
     let network = Network::Mainnet;
     let min_deposit = 0;
     let current_trustee_pair = (

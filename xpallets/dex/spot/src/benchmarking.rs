@@ -12,19 +12,19 @@ const ETH: AssetId = 9999;
 const SEED: u32 = 0;
 const PAIR_ID: u32 = 0;
 
-fn b_prepare_put_order<T: Trait>(
+fn b_prepare_put_order<T: Config>(
     user: &T::AccountId,
     pcx_value: u32,
     btc_value: u32,
 ) -> DispatchResult {
-    <T as xpallet_assets::Trait>::Currency::make_free_balance_be(user, pcx_value.into());
-    <T as xpallet_assets::Trait>::Currency::issue(pcx_value.into());
+    <T as xpallet_assets::Config>::Currency::make_free_balance_be(user, pcx_value.into());
+    <T as xpallet_assets::Config>::Currency::issue(pcx_value.into());
 
     <xpallet_assets::Module<T>>::issue(&X_BTC, user, btc_value.into())?;
     Ok(())
 }
 
-fn b_put_order<T: Trait>(
+fn b_put_order<T: Config>(
     user: T::AccountId,
     pcx_value: u32,
     btc_value: u32,

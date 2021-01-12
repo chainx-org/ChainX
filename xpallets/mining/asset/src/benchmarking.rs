@@ -35,8 +35,8 @@ benchmarks! {
         xpallet_assets::Module::<T>::issue(&X_DOT, &miner, 1000.into())?;
 
         let reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(&X_DOT);
-        <T as xpallet_assets::Trait>::Currency::make_free_balance_be(&reward_pot, 100.into());
-        <T as xpallet_assets::Trait>::Currency::issue(100.into());
+        <T as xpallet_assets::Config>::Currency::make_free_balance_be(&reward_pot, 100.into());
+        <T as xpallet_assets::Config>::Currency::issue(100.into());
 
         Module::<T>::set_claim_staking_requirement(RawOrigin::Root.into(), X_DOT, 0)?;
 

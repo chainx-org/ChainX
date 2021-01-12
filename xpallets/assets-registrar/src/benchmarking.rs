@@ -7,7 +7,7 @@ use super::*;
 
 const ASSET_ID: AssetId = 8888;
 
-fn b_asset_info_test_data<T: Trait>() -> AssetInfo {
+fn b_asset_info_test_data<T: Config>() -> AssetInfo {
     AssetInfo::new::<T>(
         b"token".to_vec(),
         b"token_name".to_vec(),

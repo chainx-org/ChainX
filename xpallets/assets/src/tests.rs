@@ -470,8 +470,8 @@ fn test_transfer_not_init() {
         check_only_one_new_account(new_id);
 
         {
-            let _ = <Test as Trait>::Currency::deposit_creating(&a, 1000);
-            let _ = <Test as Trait>::Currency::transfer(Origin::signed(a), new_id, 10);
+            let _ = <Test as Config>::Currency::deposit_creating(&a, 1000);
+            let _ = <Test as Config>::Currency::transfer(Origin::signed(a), new_id, 10);
         }
         check_only_one_new_account(new_id);
 

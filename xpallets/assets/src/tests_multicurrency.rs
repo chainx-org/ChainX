@@ -16,13 +16,13 @@ pub const ID_2: LockIdentifier = *b"2       ";
 #[test]
 fn set_lock_should_work() {
     ExtBuilder::default().build_and_execute(|| {
-        XAssets::set_lock(ID_1, X_BTC, &ALICE, 10);
+        XAssets::set_lock(ID_1, X_BTC, &ALICE, 10).unwrap();
         assert_eq!(XAssets::locked_balance(&ALICE, &X_BTC), 10);
         assert_eq!(XAssets::locks(ALICE, X_BTC).len(), 1);
-        XAssets::set_lock(ID_1, X_BTC, &ALICE, 50);
+        XAssets::set_lock(ID_1, X_BTC, &ALICE, 50).unwrap();
         assert_eq!(XAssets::locked_balance(&ALICE, &X_BTC), 50);
         assert_eq!(XAssets::locks(ALICE, X_BTC).len(), 1);
-        XAssets::set_lock(ID_2, X_BTC, &ALICE, 60);
+        XAssets::set_lock(ID_2, X_BTC, &ALICE, 60).unwrap();
         assert_eq!(XAssets::locked_balance(&ALICE, &X_BTC), 60);
         assert_eq!(XAssets::locks(ALICE, X_BTC).len(), 2);
     });
@@ -31,14 +31,14 @@ fn set_lock_should_work() {
 #[test]
 fn extend_lock_should_work() {
     ExtBuilder::default().build_and_execute(|| {
-        XAssets::set_lock(ID_1, X_BTC, &ALICE, 10);
+        XAssets::set_lock(ID_1, X_BTC, &ALICE, 10).unwrap();
         assert_eq!(XAssets::locks(ALICE, X_BTC).len(), 1);
         assert_eq!(XAssets::locked_balance(&ALICE, &X_BTC), 10);
-        XAssets::extend_lock(ID_1, X_BTC, &ALICE, 20);
+        XAssets::extend_lock(ID_1, X_BTC, &ALICE, 20).unwrap();
         assert_eq!(XAssets::locks(ALICE, X_BTC).len(), 1);
         assert_eq!(XAssets::locked_balance(&ALICE, &X_BTC), 20);
-        XAssets::extend_lock(ID_2, X_BTC, &ALICE, 10);
-        XAssets::extend_lock(ID_1, X_BTC, &ALICE, 20);
+        XAssets::extend_lock(ID_2, X_BTC, &ALICE, 10).unwrap();
+        XAssets::extend_lock(ID_1, X_BTC, &ALICE, 20).unwrap();
         assert_eq!(XAssets::locks(ALICE, X_BTC).len(), 2);
     });
 }
@@ -46,10 +46,10 @@ fn extend_lock_should_work() {
 #[test]
 fn remove_lock_should_work() {
     ExtBuilder::default().build_and_execute(|| {
-        XAssets::set_lock(ID_1, X_BTC, &ALICE, 10);
-        XAssets::set_lock(ID_2, X_BTC, &ALICE, 20);
+        XAssets::set_lock(ID_1, X_BTC, &ALICE, 10).unwrap();
+        XAssets::set_lock(ID_2, X_BTC, &ALICE, 20).unwrap();
         assert_eq!(XAssets::locks(ALICE, X_BTC).len(), 2);
-        XAssets::remove_lock(ID_2, X_BTC, &ALICE);
+        XAssets::remove_lock(ID_2, X_BTC, &ALICE).unwrap();
         assert_eq!(XAssets::locks(ALICE, X_BTC).len(), 1);
     });
 }
@@ -57,12 +57,12 @@ fn remove_lock_should_work() {
 #[test]
 fn frozen_can_limit_liquidity() {
     ExtBuilder::default().build_and_execute(|| {
-        XAssets::set_lock(ID_1, X_BTC, &ALICE, 90);
+        XAssets::set_lock(ID_1, X_BTC, &ALICE, 90).unwrap();
         assert_noop!(
             <XAssets as MultiCurrency<_>>::transfer(X_BTC, &ALICE, &BOB, 11),
             XAssetsErr::LiquidityRestrictions,
         );
-        XAssets::set_lock(ID_1, X_BTC, &ALICE, 10);
+        XAssets::set_lock(ID_1, X_BTC, &ALICE, 10).unwrap();
         assert_ok!(<XAssets as MultiCurrency<_>>::transfer(
             X_BTC, &ALICE, &BOB, 11
         ),);

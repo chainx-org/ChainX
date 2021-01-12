@@ -43,8 +43,10 @@ parameter_types! {
     pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
 }
 
-impl frame_system::Trait for Test {
+impl frame_system::Config for Test {
     type BaseCallFilter = ();
+    type BlockWeights = ();
+    type BlockLength = ();
     type Origin = Origin;
     type Call = ();
     type Index = AccountIndex;
@@ -56,13 +58,7 @@ impl frame_system::Trait for Test {
     type Header = Header;
     type Event = ();
     type BlockHashCount = BlockHashCount;
-    type MaximumBlockWeight = MaximumBlockWeight;
     type DbWeight = ();
-    type BlockExecutionWeight = ();
-    type ExtrinsicBaseWeight = ();
-    type MaximumExtrinsicWeight = MaximumBlockWeight;
-    type MaximumBlockLength = MaximumBlockLength;
-    type AvailableBlockRatio = AvailableBlockRatio;
     type Version = ();
     type PalletInfo = ();
     type AccountData = pallet_balances::AccountData<Balance>;
@@ -78,7 +74,7 @@ impl Get<Balance> for ExistentialDeposit {
     }
 }
 
-impl pallet_balances::Trait for Test {
+impl pallet_balances::Config for Test {
     type MaxLocks = ();
     type Balance = Balance;
     type Event = ();
@@ -88,7 +84,7 @@ impl pallet_balances::Trait for Test {
     type WeightInfo = ();
 }
 
-impl Trait for Test {
+impl Config for Test {
     type Event = ();
     type Price = Price;
     type WeightInfo = ();
@@ -98,14 +94,14 @@ parameter_types! {
     pub const ChainXAssetId: AssetId = 0;
 }
 
-impl xpallet_assets_registrar::Trait for Test {
+impl xpallet_assets_registrar::Config for Test {
     type Event = ();
     type NativeAssetId = ChainXAssetId;
     type RegistrarHandler = XSpot;
     type WeightInfo = ();
 }
 
-impl xpallet_assets::Trait for Test {
+impl xpallet_assets::Config for Test {
     type Event = ();
     type Currency = Balances;
     type Amount = Amount;
