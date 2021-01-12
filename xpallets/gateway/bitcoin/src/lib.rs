@@ -453,7 +453,7 @@ impl<T: Trait> ChainT<BalanceOf<T>> for Module<T> {
         }
         let fee = Self::btc_withdrawal_fee().saturated_into();
         let limit = WithdrawalLimit::<BalanceOf<T>> {
-            minimal_withdrawal: fee * 3.saturated_into() / 2.saturated_into(),
+            minimal_withdrawal: fee * 3u32.saturated_into() / 2u32.saturated_into(),
             fee,
         };
         Ok(limit)

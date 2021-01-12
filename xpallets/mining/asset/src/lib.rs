@@ -96,7 +96,7 @@ impl<AccountId> GatewayInterface<AccountId> for () {
 decl_storage! {
     trait Store for Module<T: Trait> as XMiningAsset {
         /// Possible reward for the new asset owners that does not have native coins yet.
-        pub DepositReward get(fn deposit_reward): BalanceOf<T> = 100_000.into();
+        pub DepositReward get(fn deposit_reward): BalanceOf<T> = 100_000u32.into();
 
         /// Can not claim if the claimer violates the restriction.
         pub ClaimRestrictionOf get(fn claim_restriction_of):
