@@ -14,12 +14,13 @@ mod mock;
 mod tests;
 
 #[cfg(not(feature = "std"))]
-use alloc::{format, string::String};
+use alloc::{format, string::String, string::ToString};
 
 use frame_support::{
-    debug, decl_error, decl_event, decl_module, decl_storage, dispatch::Parameter,
+    debug, decl_error, decl_event, decl_module, decl_storage, dispatch::Parameter, StorageValue,
 };
 use frame_system::offchain::CreateSignedTransaction;
+use frame_system::RawOrigin;
 // use frame_system::{
 //     ensure_signed,
 //     offchain::{
@@ -38,12 +39,19 @@ use sp_std::{collections::btree_set::BTreeSet, marker::PhantomData, str, vec, ve
 use light_bitcoin::{
     chain::{Block as BtcBlock, Transaction as BtcTransaction},
     keys::Network as BtcNetwork,
+    merkle::PartialMerkleTree,
     primitives::{hash_rev, H256 as BtcHash},
-    serialization::{deserialize, Reader},
+    serialization::{deserialize, serialize, Reader},
 };
 
-use xpallet_gateway_bitcoin::Module as XGatewayBitcoin;
-
+use xp_gateway_bitcoin::{
+    AccountExtractor, BtcDepositInfo, BtcTxMetaType, BtcTxTypeDetector, OpReturnExtractor,
+};
+use xpallet_gateway_bitcoin::{
+    trustee,
+    types::{BtcDepositCache, BtcRelayedTxInfo, VoteResult},
+    Module as XGatewayBitcoin,
+};
 /// Defines application identifier for crypto keys of this module.
 ///
 /// Every module that deals with signatures needs to declare its unique identifier for
@@ -138,7 +146,6 @@ impl<T: Trait> From<sp_runtime::offchain::http::Error> for Error<T> {
 
 decl_storage! {
     trait Store for Module<T: Trait> as XGatewayBitcoinOffchain {
-        ///
         Keys get(fn keys): Vec<T::AuthorityId>;
     }
     add_extra_genesis {
@@ -155,15 +162,27 @@ decl_module! {
         fn offchain_worker(block_number: T::BlockNumber) {
             // Consider setting the frequency of requesting btc data based on the `block_number`
             debug::info!("ChainX Bitcoin Offchain Worker, ChainX Block #{:?}", block_number);
-
             let best_index = XGatewayBitcoin::<T>::best_index().height;
             let network = XGatewayBitcoin::<T>::network_id();
-
+            debug::info!("ChainX Bitcoin Offchain Worker, Network: {:?}", network);
             let next_height = best_index + 1;
-            match Self::fetch_block_hash(next_height, network) {
-                Ok(Some(hash)) => debug::info!("₿ Block #{} hash: {}", next_height, hash),
-                Ok(None) => debug::warn!("₿ Block #{} has not been generated yet", next_height),
-                Err(err) => debug::warn!("₿ {:?}", err),
+            // Broadcast raw transactions
+            if let Err(err) = Self::get_withdrawal_proposal_broadcast(network) {
+                debug::error!("Get withdrawal proposal broadcast error: {:?}", err);
+            }
+            // Push transactions to chain
+            if let Some(confirmed_index) = XGatewayBitcoin::<T>::confirmed_index() {
+                if let Ok(Some(hash)) = Self::fetch_block_hash(confirmed_index.height, network) {
+                    if let Ok(confirmed_block) = Self::fetch_block(&hash[..], network) {
+                        Self::push_xbtc_transaction(&confirmed_block, network);
+                    }
+                }
+            }
+            // Push header to chain
+            if Self::push_next_header(best_index, next_height, network){
+                debug::info!("Push new block height #{} successfully.", next_height);
+            } else {
+                debug::warn!("Push new block height #{} failed.", next_height);
             }
         }
     }
@@ -183,6 +202,176 @@ impl<T: Trait> Module<T> {
 /// This greatly helps with error messages, as the ones inside the macro
 /// can sometimes be hard to debug.
 impl<T: Trait> Module<T> {
+    // Submit XBTC deposit/withdraw transaction to the ChainX
+    fn push_xbtc_transaction(confirmed_block: &BtcBlock, network: BtcNetwork) {
+        let mut needed = Vec::new();
+        let mut tx_hashes = Vec::with_capacity(confirmed_block.transactions.len());
+        let mut tx_matches = Vec::with_capacity(confirmed_block.transactions.len());
+
+        for tx in &confirmed_block.transactions {
+            // Prepare for constructing partial merkle tree
+            tx_hashes.push(tx.hash());
+            if tx.is_coinbase() {
+                tx_matches.push(false);
+                continue;
+            }
+            let outpoint = tx.inputs[0].previous_output;
+            let prev_tx_hash = hex::encode(hash_rev(outpoint.txid));
+            let prev_tx = Self::fetch_transaction(&prev_tx_hash[..], network).unwrap();
+
+            // Detect X-BTC transaction type
+            // Withdrawal: must have a previous transaction
+            // Deposit: don't require previous transaction generally,
+            //          but in special cases, a previous transaction needs to be submitted.
+            let btc_min_deposit = XGatewayBitcoin::<T>::btc_min_deposit();
+            let current_trustee_pair = trustee::get_current_trustee_address_pair::<T>().unwrap();
+            let last_trustee_pair = trustee::get_last_trustee_address_pair::<T>().unwrap();
+            let btc_tx_detector = BtcTxTypeDetector::new(
+                network,
+                btc_min_deposit,
+                current_trustee_pair,
+                Some(last_trustee_pair),
+            );
+
+            match btc_tx_detector.detect_transaction_type(
+                &tx,
+                Some(&prev_tx),
+                OpReturnExtractor::extract_account,
+            ) {
+                BtcTxMetaType::Withdrawal => {
+                    debug::info!(
+                        "X-BTC Withdrawal (PrevTx: {:?}, Tx: {:?})",
+                        hash_rev(prev_tx.hash()),
+                        hash_rev(tx.hash())
+                    );
+                    tx_matches.push(true);
+                    needed.push((tx.clone(), Some(prev_tx)));
+                }
+                BtcTxMetaType::Deposit(BtcDepositInfo {
+                    deposit_value,
+                    op_return,
+                    input_addr,
+                }) => {
+                    debug::info!(
+                        "X-BTC Deposit [{}] (Tx: {:?})",
+                        deposit_value,
+                        hash_rev(tx.hash())
+                    );
+                    tx_matches.push(true);
+                    match (input_addr, op_return) {
+                        (_, Some((account, _))) => {
+                            if Self::pending_deposits(account).is_empty() {
+                                needed.push((tx.clone(), None));
+                            } else {
+                                needed.push((tx.clone(), Some(prev_tx)));
+                            }
+                        }
+                        (Some(_), None) => needed.push((tx.clone(), Some(prev_tx))),
+                        (None, None) => {
+                            debug::warn!(
+                                "[Service|push_xbtc_transaction] parsing prev_tx or op_return error, tx {:?}",
+                                hash_rev(tx.hash())
+                            );
+                            needed.push((tx.clone(), Some(prev_tx)));
+                        }
+                    }
+                }
+                BtcTxMetaType::HotAndCold
+                | BtcTxMetaType::TrusteeTransition
+                | BtcTxMetaType::Irrelevance => tx_matches.push(false),
+            }
+        }
+
+        if !needed.is_empty() {
+            debug::info!(
+                "[Service|push_xbtc_transaction] Generate partial merkle tree from the Confirmed Block {:?}",
+                hash_rev(confirmed_block.hash())
+            );
+
+            // Construct partial merkle tree
+            // We can never have zero txs in a merkle block, we always need the coinbase tx.
+            let merkle_proof = PartialMerkleTree::from_txids(&tx_hashes, &tx_matches);
+
+            // Push xbtc relay (withdraw/deposit) transaction
+            for (tx, prev_tx) in needed {
+                let relayed_info = BtcRelayedTxInfo {
+                    block_hash: confirmed_block.hash(),
+                    merkle_proof: merkle_proof.clone(),
+                };
+                let tx = serialize(&tx).take();
+                let prev_tx = prev_tx.unwrap();
+                let prev_tx = serialize(&prev_tx).take();
+                XGatewayBitcoin::<T>::push_transaction(
+                    RawOrigin::Root.clone().into(),
+                    tx,
+                    relayed_info,
+                    Some(prev_tx),
+                )
+                .unwrap();
+            }
+        } else {
+            debug::info!(
+                "[Service|push_xbtc_transaction] No X-BTC Deposit/Withdraw Transactions in th Confirmed Block {:?}",
+                hash_rev(confirmed_block.hash())
+            );
+        }
+    }
+    // help use AccountId
+    fn pending_deposits<A: AsRef<[u8]>>(btc_address: A) -> Vec<BtcDepositCache> {
+        let btc_address = btc_address.as_ref();
+        let deposit_cache: Vec<BtcDepositCache> =
+            XGatewayBitcoin::<T>::pending_deposits(btc_address);
+        deposit_cache
+    }
+    // get withdrawal proposal from chain and broadcast raw transaction
+    fn get_withdrawal_proposal_broadcast(network: BtcNetwork) -> Result<Option<String>, ()> {
+        if let Some(withdrawal_proposal) = XGatewayBitcoin::<T>::withdrawal_proposal() {
+            if withdrawal_proposal.sig_state == VoteResult::Finish {
+                let tx = serialize(&withdrawal_proposal.tx).take();
+                let hex_tx = hex::encode(&tx);
+                debug::info!("send_raw_transaction| Btc Tx Hex: {}", hex_tx);
+                match Self::send_raw_transaction(hex_tx, network) {
+                    Ok(hash) => {
+                        debug::info!("send_raw_transaction| Transaction Hash: {:?}", hash);
+                        return Ok(Some(hash));
+                    }
+                    Err(err) => {
+                        debug::warn!("send_raw_transaction| Error {:?}", err);
+                    }
+                }
+            }
+        }
+        Ok(None)
+    }
+    // push new btc block header to chain
+    fn push_next_header(current_height: u32, next_height: u32, network: BtcNetwork) -> bool {
+        if let Ok(Some(hash)) = Self::fetch_block_hash(next_height, network) {
+            debug::info!("₿ Block #{} hash: {}", next_height, hash);
+            if let Ok(block) = Self::fetch_block(&hash[..], network) {
+                debug::info!("₿ Block {}", hash_rev(block.hash()));
+                let btc_header = block.header;
+                if XGatewayBitcoin::<T>::block_hash_for(current_height).contains(&btc_header.previous_header_hash) {
+                    let header = serialize(&btc_header).take();
+                    match XGatewayBitcoin::<T>::push_header(RawOrigin::Root.into(), header) {
+                        Ok(yes) => {
+                            debug::info!("Push header: {:?}", yes);
+                            return true;
+                        },
+                        Err(err) => {
+                            debug::warn!("Push header err: {:?}", err);
+                            return false;
+                        }
+                    }
+
+                } else {
+                    debug::warn!("Current block #{} may be a fork block", current_height);
+                    return false;
+                }
+            }
+        }
+        false
+    }
+
     fn get<U: AsRef<str>>(url: U) -> Result<Vec<u8>, Error<T>> {
         // We want to keep the offchain worker execution time reasonable, so we set a hard-coded
         // deadline to 2s to complete the external call.
@@ -201,7 +390,7 @@ impl<T: Trait> Module<T> {
         let pending = http::Request::get(url.as_ref())
             .deadline(deadline)
             .send()
-            .map_err(|err| Error::<T>::from(err))?;
+            .map_err(Error::<T>::from)?;
 
         // The request is already being processed by the host, we are free to do anything
         // else in the worker (we can send multiple concurrent requests too).
@@ -248,7 +437,7 @@ impl<T: Trait> Module<T> {
         let pending = http::Request::post(url, req_body)
             .deadline(deadline)
             .send()
-            .map_err(|err| Error::<T>::from(err))?;
+            .map_err(Error::<T>::from)?;
 
         // The request is already being processed by the host, we are free to do anything
         // else in the worker (we can send multiple concurrent requests too).
@@ -390,7 +579,7 @@ impl<T: Trait> Module<T> {
                     (Some(JsonValue::Number(code)), Some(JsonValue::String(msg))) => {
                         Some(SendRawTxError {
                             code: code.integer,
-                            message: msg.into_iter().collect(),
+                            message: msg.iter().collect(),
                         })
                     }
                     _ => None,
@@ -402,6 +591,7 @@ impl<T: Trait> Module<T> {
 }
 
 const SEND_RAW_TX_ERR_PREFIX: &str = "sendrawtransaction RPC error: ";
+
 struct SendRawTxError {
     code: i64,
     message: String,
