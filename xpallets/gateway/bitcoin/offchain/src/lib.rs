@@ -17,9 +17,12 @@ mod tests;
 use alloc::{format, string::String};
 
 use frame_support::{
-    debug, decl_error, decl_event, decl_module, decl_storage, dispatch::Parameter,
+    debug, decl_error, decl_event, decl_module, decl_storage, dispatch::Parameter, traits::Get,
 };
-use frame_system::offchain::CreateSignedTransaction;
+use frame_system::{
+    ensure_none,
+    offchain::{CreateSignedTransaction, SendTransactionTypes, SubmitTransaction},
+};
 // use frame_system::{
 //     ensure_signed,
 //     offchain::{
@@ -29,10 +32,13 @@ use frame_system::offchain::CreateSignedTransaction;
 // };
 use sp_application_crypto::RuntimeAppPublic;
 use sp_core::crypto::KeyTypeId;
-// use sp_runtime::transaction_validity::{
-//     InvalidTransaction, TransactionLongevity, TransactionValidity, ValidTransaction,
-// };
-use sp_runtime::offchain::{http, Duration};
+use sp_runtime::{
+    offchain::{http, Duration},
+    transaction_validity::{
+        InvalidTransaction, TransactionLongevity, TransactionPriority, TransactionSource,
+        TransactionValidity, ValidTransaction,
+    },
+};
 use sp_std::{collections::btree_set::BTreeSet, marker::PhantomData, str, vec, vec::Vec};
 
 use light_bitcoin::{
@@ -74,11 +80,21 @@ pub type AuthorityId = app::Public;
 pub type AuthoritySignature = app::Signature;
 
 /// This pallet's configuration trait
-pub trait Trait: CreateSignedTransaction<Call<Self>> + xpallet_gateway_bitcoin::Trait {
+pub trait Trait:
+    SendTransactionTypes<Call<Self>>
+    + CreateSignedTransaction<Call<Self>>
+    + xpallet_gateway_bitcoin::Trait
+{
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
     /// The overarching dispatch call type.
     type Call: From<Call<Self>>;
+
+    /// A configuration for base priority of unsigned transactions.
+    ///
+    /// This is exposed so that it can be tuned for particular runtime, when
+    /// multiple pallets send unsigned transactions.
+    type UnsignedPriority: Get<TransactionPriority>;
 
     /// The identifier type for an offchain worker.
     type AuthorityId: Parameter + Default + RuntimeAppPublic + Ord; //AppCrypto<Self::Public, Self::Signature>;
@@ -160,11 +176,34 @@ decl_module! {
             let network = XGatewayBitcoin::<T>::network_id();
 
             let next_height = best_index + 1;
-            match Self::fetch_block_hash(next_height, network) {
-                Ok(Some(hash)) => debug::info!("₿ Block #{} hash: {}", next_height, hash),
-                Ok(None) => debug::warn!("₿ Block #{} has not been generated yet", next_height),
-                Err(err) => debug::warn!("₿ {:?}", err),
+            let btc_block_hash = match Self::fetch_block_hash(next_height, network) {
+                Ok(Some(hash)) => {
+                    debug::info!("₿ Block #{} hash: {}", next_height, hash);
+                    hash
+                }
+                Ok(None) => {
+                    debug::warn!("₿ Block #{} has not been generated yet", next_height);
+                    return;
+                }
+                Err(err) => {
+                    debug::warn!("₿ {:?}", err);
+                    return;
+                }
+            };
+
+            let new_header_found = true;
+            if new_header_found {
+                let call = Call::push_header(block_number);
+                if let Err(e) = SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()) {
+                    debug::error!("Failed to submit unsigned transaction: {:?}", e);
+                }
             }
+        }
+
+        #[weight = 100]
+        fn push_header(origin, block_number: T::BlockNumber) {
+            ensure_none(origin)?;
+            debug::info!("--------------- push header from OCW");
         }
     }
 }
@@ -293,7 +332,7 @@ impl<T: Trait> Module<T> {
             debug::info!("₿ Block #{} not found", height);
             Ok(None)
         } else {
-            let hash = resp_body.to_string();
+            let hash: String = resp_body.into();
             debug::info!("₿ Block #{} hash: {:?}", height, hash);
             Ok(Some(hash))
         }
@@ -341,7 +380,7 @@ impl<T: Trait> Module<T> {
         })?;
 
         if resp_body.len() == 2 * BtcHash::len_bytes() {
-            let hash = resp_body.to_string();
+            let hash: String = resp_body.into();
             debug::info!(
                 "₿ Send Transaction successfully, Hash: {}, HexTx: {}",
                 hash,
@@ -436,4 +475,21 @@ impl<T: Trait> pallet_session::OneSessionHandler<T::AccountId> for Module<T> {
     }
 
     fn on_disabled(_validator_index: usize) {}
+}
+
+impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
+    type Call = Call<T>;
+
+    fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
+        if let Call::push_header(..) = call {
+            ValidTransaction::with_tag_prefix("XGatewayBitcoinOffchain")
+                .priority(T::UnsignedPriority::get())
+                // .and_provides((current_session, authority_id)) provide a tag?
+                .longevity(1u64) // FIXME
+                .propagate(true)
+                .build()
+        } else {
+            InvalidTransaction::Call.into()
+        }
+    }
 }

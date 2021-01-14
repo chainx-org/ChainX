@@ -399,6 +399,7 @@ parameter_types! {
     pub const ImOnlineUnsignedPriority: TransactionPriority = TransactionPriority::max_value();
     /// We prioritize im-online heartbeats over election solution submission.
     pub const StakingUnsignedPriority: TransactionPriority = TransactionPriority::max_value() / 2;
+    pub const BtcRelayUnsignedPriority: TransactionPriority = TransactionPriority::max_value() / 4;
 }
 
 impl pallet_im_online::Trait for Runtime {
@@ -841,6 +842,7 @@ impl xpallet_gateway_bitcoin_offchain::Trait for Runtime {
     type Event = Event;
     type Call = Call;
     type AuthorityId = GatewayBitcoinRelayId;
+    type UnsignedPriority = BtcRelayUnsignedPriority;
 }
 
 impl xpallet_dex_spot::Trait for Runtime {
@@ -952,7 +954,7 @@ construct_runtime!(
         XGatewayRecords: xpallet_gateway_records::{Module, Call, Storage, Event<T>},
         XGatewayCommon: xpallet_gateway_common::{Module, Call, Storage, Event<T>, Config<T>},
         XGatewayBitcoin: xpallet_gateway_bitcoin::{Module, Call, Storage, Event<T>, Config<T>},
-        XGatewayBitcoinOffchain: xpallet_gateway_bitcoin_offchain::{Module, Call, Storage, Event<T>, Config<T>},
+        XGatewayBitcoinOffchain: xpallet_gateway_bitcoin_offchain::{Module, Call, Storage, Event<T>, Config<T>, ValidateUnsigned},
 
         // DEX
         XSpot: xpallet_dex_spot::{Module, Call, Storage, Event<T>, Config<T>},
