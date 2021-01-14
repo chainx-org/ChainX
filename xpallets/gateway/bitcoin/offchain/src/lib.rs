@@ -194,6 +194,7 @@ decl_module! {
             let new_header_found = true;
             if new_header_found {
                 let call = Call::push_header(block_number);
+                debug::info!("₿ Submitting unsigned transaction: {:?}", call);
                 if let Err(e) = SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()) {
                     debug::error!("Failed to submit unsigned transaction: {:?}", e);
                 }
@@ -481,11 +482,12 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
     type Call = Call<T>;
 
     fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
-        if let Call::push_header(..) = call {
+        if let Call::push_header(block_number) = call {
             ValidTransaction::with_tag_prefix("XGatewayBitcoinOffchain")
                 .priority(T::UnsignedPriority::get())
+                .and_provides(block_number) // TODO: a tag is required, otherwise the transactions will not be pruned.
                 // .and_provides((current_session, authority_id)) provide a tag?
-                .longevity(1u64) // FIXME
+                .longevity(1u64) // FIXME a proper longevity
                 .propagate(true)
                 .build()
         } else {
