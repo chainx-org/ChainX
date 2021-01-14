@@ -1,6 +1,6 @@
 [package]
 name = "chainx-runtime"
-version = "2.0.7"
+version = "2.0.8"
 authors = ["The ChainX Authors"]
 edition = "2018"
 
@@ -51,7 +51,6 @@ pallet-offences = { version = "2.0.0", default-features = false }
 pallet-randomness-collective-flip = { version = "2.0.0", default-features = false }
 pallet-scheduler = { version = "2.0.0", default-features = false }
 pallet-session = { version = "2.0.0", default-features = false, features = ["historical"] }
-pallet-sudo = { version = "2.0.0", default-features = false }
 pallet-timestamp = { version = "2.0.0", default-features = false }
 pallet-transaction-payment = { version = "2.0.0", default-features = false }
 pallet-transaction-payment-rpc-runtime-api = { version = "2.0.0", default-features = false }
@@ -139,7 +138,6 @@ std = [
     "pallet-randomness-collective-flip/std",
     "pallet-scheduler/std",
     "pallet-session/std",
-    "pallet-sudo/std",
     "pallet-timestamp/std",
     "pallet-transaction-payment/std",
     "pallet-transaction-payment-rpc-runtime-api/std",

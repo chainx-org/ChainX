@@ -104,7 +104,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("chainx"),
     impl_name: create_runtime_str!("chainx-net"),
     authoring_version: 1,
-    spec_version: 8,
+    spec_version: 9,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -514,11 +514,6 @@ impl pallet_multisig::Trait for Runtime {
     type WeightInfo = pallet_multisig::weights::SubstrateWeight<Runtime>;
 }
 
-impl pallet_sudo::Trait for Runtime {
-    type Event = Event;
-    type Call = Call;
-}
-
 parameter_types! {
     pub const LaunchPeriod: BlockNumber = 7 * DAYS;
     pub const VotingPeriod: BlockNumber = 7 * DAYS;
@@ -900,70 +895,67 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic
     {
         // Basic stuff.
-        System: frame_system::{Module, Call, Config, Storage, Event<T>},
-        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
-        Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
+        System: frame_system::{Module, Call, Config, Storage, Event<T>} = 0,
+        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage} = 1,
+        Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>} = 2,
 
         // Must be before session.
-        Babe: pallet_babe::{Module, Call, Storage, Config, Inherent, ValidateUnsigned},
+        Babe: pallet_babe::{Module, Call, Storage, Config, Inherent, ValidateUnsigned} = 3,
 
-        Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
-        Indices: pallet_indices::{Module, Call, Storage, Config<T>, Event<T>},
-        Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-        TransactionPayment: pallet_transaction_payment::{Module, Storage},
+        Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent} = 4,
+        Indices: pallet_indices::{Module, Call, Storage, Config<T>, Event<T>} = 5,
+        Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>} = 6,
+        TransactionPayment: pallet_transaction_payment::{Module, Storage} = 7,
 
         // Consensus support.
-        Authorship: pallet_authorship::{Module, Call, Storage, Inherent},
-        Offences: pallet_offences::{Module, Call, Storage, Event},
-        Historical: pallet_session_historical::{Module},
-        Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
-        Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event},
-        ImOnline: pallet_im_online::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
-        AuthorityDiscovery: pallet_authority_discovery::{Module, Call, Config},
+        Authorship: pallet_authorship::{Module, Call, Storage, Inherent} = 8,
+        Offences: pallet_offences::{Module, Call, Storage, Event} = 9,
+        Historical: pallet_session_historical::{Module} = 10,
+        Session: pallet_session::{Module, Call, Storage, Event, Config<T>} = 11,
+        Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event} = 12,
+        ImOnline: pallet_im_online::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>} = 13,
+        AuthorityDiscovery: pallet_authority_discovery::{Module, Call, Config} = 14,
 
         // Governance stuff.
-        Democracy: pallet_democracy::{Module, Call, Storage, Config, Event<T>},
-        Council: pallet_collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
-        TechnicalCommittee: pallet_collective::<Instance2>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
-        Elections: pallet_elections_phragmen::{Module, Call, Storage, Event<T>, Config<T>},
-        TechnicalMembership: pallet_membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>},
-        Treasury: pallet_treasury::{Module, Call, Storage, Config, Event<T>},
+        Democracy: pallet_democracy::{Module, Call, Storage, Config, Event<T>} = 15,
+        Council: pallet_collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>} = 16,
+        TechnicalCommittee: pallet_collective::<Instance2>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>} = 17,
+        Elections: pallet_elections_phragmen::{Module, Call, Storage, Event<T>, Config<T>} = 18,
+        TechnicalMembership: pallet_membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>} = 19,
+        Treasury: pallet_treasury::{Module, Call, Storage, Config, Event<T>} = 20,
 
-        Identity: pallet_identity::{Module, Call, Storage, Event<T>},
+        Identity: pallet_identity::{Module, Call, Storage, Event<T>} = 21,
 
-        Utility: pallet_utility::{Module, Call, Event},
-        Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
+        Utility: pallet_utility::{Module, Call, Event} = 22,
+        Multisig: pallet_multisig::{Module, Call, Storage, Event<T>} = 23,
 
         // ChainX basics.
-        XSystem: xpallet_system::{Module, Call, Storage, Event<T>, Config},
-        XAssetsRegistrar: xpallet_assets_registrar::{Module, Call, Storage, Event, Config},
-        XAssets: xpallet_assets::{Module, Call, Storage, Event<T>, Config<T>},
+        XSystem: xpallet_system::{Module, Call, Storage, Event<T>, Config} = 24,
+        XAssetsRegistrar: xpallet_assets_registrar::{Module, Call, Storage, Event, Config} = 25,
+        XAssets: xpallet_assets::{Module, Call, Storage, Event<T>, Config<T>} = 26,
 
         // Mining, must be after XAssets.
-        XStaking: xpallet_mining_staking::{Module, Call, Storage, Event<T>, Config<T>},
-        XMiningAsset: xpallet_mining_asset::{Module, Call, Storage, Event<T>, Config<T>},
+        XStaking: xpallet_mining_staking::{Module, Call, Storage, Event<T>, Config<T>} = 27,
+        XMiningAsset: xpallet_mining_asset::{Module, Call, Storage, Event<T>, Config<T>} = 28,
 
         // Crypto gateway stuff.
-        XGatewayRecords: xpallet_gateway_records::{Module, Call, Storage, Event<T>},
-        XGatewayCommon: xpallet_gateway_common::{Module, Call, Storage, Event<T>, Config<T>},
-        XGatewayBitcoin: xpallet_gateway_bitcoin::{Module, Call, Storage, Event<T>, Config<T>},
+        XGatewayRecords: xpallet_gateway_records::{Module, Call, Storage, Event<T>} = 29,
+        XGatewayCommon: xpallet_gateway_common::{Module, Call, Storage, Event<T>, Config<T>} = 30,
+        XGatewayBitcoin: xpallet_gateway_bitcoin::{Module, Call, Storage, Event<T>, Config<T>} = 31,
 
         // DEX
-        XSpot: xpallet_dex_spot::{Module, Call, Storage, Event<T>, Config<T>},
+        XSpot: xpallet_dex_spot::{Module, Call, Storage, Event<T>, Config<T>} = 32,
 
-        XGenesisBuilder: xpallet_genesis_builder::{Module, Config<T>},
+        XGenesisBuilder: xpallet_genesis_builder::{Module, Config<T>} = 33,
 
         // orml
         // we retain Currencies Call for this call may be used in future, but we do not need this now,
         // so that we filter it in BaseFilter.
-        Currencies: orml_currencies::{Module, Call, Event<T>},
+        Currencies: orml_currencies::{Module, Call, Event<T>} = 34,
 
         // It might be possible to merge this module into pallet_transaction_payment in future, thus
         // we put it at the end for keeping the extrinsic ordering.
-        XTransactionFee: xpallet_transaction_fee::{Module, Event<T>},
-
-        // Put Sudo last so that the extrinsic ordering stays the same once it's removed.
-        Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
+        XTransactionFee: xpallet_transaction_fee::{Module, Event<T>} = 35,
     }
 );
 

@@ -42,7 +42,7 @@ impl<T: Trait> Module<T> {
     /// Add the reward to their balance, and their reward pot, pro-rata.
     fn apply_reward_validator(who: &T::AccountId, reward: BalanceOf<T>) {
         // Validator themselves can only directly gain 10%, the rest 90% is for the reward pot.
-        let off_the_table = (reward.saturated_into() / 10).saturated_into();
+        let off_the_table = reward.saturated_into::<BalanceOf<T>>() / 10u32.saturated_into();
         Self::mint(who, off_the_table);
         debug!("💸 Mint validator({:?}):{:?}", who, off_the_table);
 
@@ -68,7 +68,7 @@ impl<T: Trait> Module<T> {
         this_session_reward: BalanceOf<T>,
     ) -> BalanceOf<T> {
         if !Self::first_halving_epoch_arrived(current_index) {
-            let to_vesting = this_session_reward / 5.saturated_into();
+            let to_vesting = this_session_reward / 5u32.saturated_into::<BalanceOf<T>>();
             let vesting_account = Self::vesting_account();
             Self::mint(&vesting_account, to_vesting);
             debug!("💸 Mint vesting({:?}):{:?}", vesting_account, to_vesting);
