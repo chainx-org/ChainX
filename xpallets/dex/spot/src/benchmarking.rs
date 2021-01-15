@@ -43,23 +43,20 @@ fn b_put_order<T: Config>(
 }
 
 benchmarks! {
-    _{
-        // User account seed
-        let u in 0 .. 1000 => ();
-    }
-
     // TODO: put_order with matching.
     put_order {
+        let u in 1 .. 1000;
         let user: T::AccountId = account("user", u, SEED);
 
         b_prepare_put_order::<T>(&user, 1000, 100)?;
 
-    }: put_order(RawOrigin::Signed(user.clone()), PAIR_ID, OrderType::Limit, Side::Buy, 1000.into(), 1_000_200.into())
+    }: put_order(RawOrigin::Signed(user.clone()), PAIR_ID, OrderType::Limit, Side::Buy, 1000u32.into(), 1_000_200u32.into())
     verify {
         assert!(OrderInfoOf::<T>::get(user, 0).is_some());
     }
 
     cancel_order {
+        let u in 1 .. 1000;
         let user: T::AccountId = account("user", u, SEED);
 
         b_put_order::<T>(user.clone(), 1000, 100, 1_000_200)?;
@@ -70,6 +67,7 @@ benchmarks! {
     }
 
     force_cancel_order {
+        let u in 1 .. 1000;
         let user: T::AccountId = account("user", u, SEED);
 
         let user_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(user.clone());
@@ -82,9 +80,9 @@ benchmarks! {
     }
 
     set_handicap {
-    }: _(RawOrigin::Root, PAIR_ID, Handicap::new(100.into(), 110.into()))
+    }: _(RawOrigin::Root, PAIR_ID, Handicap::new(100u32.into(), 110u32.into()))
     verify {
-        assert_eq!(HandicapOf::<T>::get(PAIR_ID), Handicap { highest_bid: 100.into(), lowest_ask: 110.into() });
+        assert_eq!(HandicapOf::<T>::get(PAIR_ID), Handicap { highest_bid: 100u32.into(), lowest_ask: 110u32.into() });
     }
 
     set_price_fluctuation {
@@ -95,7 +93,7 @@ benchmarks! {
 
     add_trading_pair {
         let pair = CurrencyPair::new(EOS, ETH);
-    }: _(RawOrigin::Root, pair.clone(), 2, 1, 100.into(), true)
+    }: _(RawOrigin::Root, pair.clone(), 2, 1, 100u32.into(), true)
     verify {
         #[cfg(test)]
         assert_eq!(Module::<T>::trading_pair_count(), 3);
@@ -111,7 +109,7 @@ benchmarks! {
 
     update_trading_pair {
         let pair = CurrencyPair::new(EOS, ETH);
-        Module::<T>::add_trading_pair(RawOrigin::Root.into(), pair.clone(), 2, 1, 100.into(), true)?;
+        Module::<T>::add_trading_pair(RawOrigin::Root.into(), pair.clone(), 2, 1, 100u32.into(), true)?;
     }: _(RawOrigin::Root, PAIR_ID, 888, false)
     verify {
         assert_eq!(Module::<T>::trading_pair_of(PAIR_ID).unwrap().tick_decimals, 888);

@@ -51,6 +51,7 @@ parameter_types! {
     pub const MaximumBlockWeight: Weight = 1024;
     pub const MaximumBlockLength: u32 = 2 * 1024;
     pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
+    pub const SS58Prefix: u8 = 42;
 }
 
 impl frame_system::Config for Test {
@@ -75,6 +76,7 @@ impl frame_system::Config for Test {
     type OnNewAccount = ();
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
+    type SS58Prefix = SS58Prefix;
 }
 
 parameter_types! {
@@ -360,7 +362,7 @@ pub fn trustees() -> Vec<(AccountId32, Vec<u8>, Vec<u8>, Vec<u8>)> {
     ]
 }
 
-pub fn load_mainnet_btc_genesis_header_info() -> ((BtcHeader, u32), H256, BtcNetwork) {
+pub fn load_mainnet_btc_genesis_header_info() -> ((BtcHeader, u32), crate::H256, BtcNetwork) {
     (
         (
             BtcHeader {
@@ -377,7 +379,9 @@ pub fn load_mainnet_btc_genesis_header_info() -> ((BtcHeader, u32), H256, BtcNet
             },
             576576,
         ),
-        h256_rev("0000000000000000001721f58deb88b0710295a02551f0dde1e2e231a15f1882"),
+        "0000000000000000001721f58deb88b0710295a02551f0dde1e2e231a15f1882"
+            .parse()
+            .unwrap(),
         BtcNetwork::Mainnet,
     )
 }

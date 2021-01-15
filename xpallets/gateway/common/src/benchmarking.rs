@@ -65,11 +65,9 @@ fn new_trustees<T: Config>() -> Vec<(T::AccountId, Vec<u8>, Vec<u8>, Vec<u8>)> {
 }
 
 benchmarks! {
-    _{ }
-
     withdraw {
         let caller: T::AccountId = alice::<T>();
-        let amount: BalanceOf<T> = 10_00000000.into();
+        let amount: BalanceOf<T> = 1_000_000_000u32.into();
         XGatewayRecords::<T>::deposit(&caller, ASSET_ID, amount).unwrap();
 
         let addr = b"3PgYgJA6h5xPEc3HbnZrUZWkpRxuCZVyEP".to_vec();
@@ -85,10 +83,10 @@ benchmarks! {
 
     cancel_withdrawal {
         let caller: T::AccountId = alice::<T>();
-        let amount: BalanceOf<T> = 10_00000000.into();
+        let amount: BalanceOf<T> = 100_000_0000u32.into();
         XGatewayRecords::<T>::deposit(&caller, ASSET_ID, amount).unwrap();
 
-        let withdrawal = amount - 500.into();
+        let withdrawal = amount - 500u32.into();
         let addr = b"3PgYgJA6h5xPEc3HbnZrUZWkpRxuCZVyEP".to_vec();
         let memo = b"".to_vec().into();
         Module::<T>::withdraw(
@@ -146,10 +144,10 @@ benchmarks! {
         let caller: T::AccountId = alice::<T>();
         TrusteeMultiSigAddr::<T>::insert(Chain::Bitcoin, caller.clone());
 
-        let amount: BalanceOf<T> = 10_00000000.into();
+        let amount: BalanceOf<T> = 1_000_000_000u32.into();
         XGatewayRecords::<T>::deposit(&caller, ASSET_ID, amount).unwrap();
 
-        let withdrawal = amount - 500.into();
+        let withdrawal = amount - 500u32.into();
         let addr = b"3PgYgJA6h5xPEc3HbnZrUZWkpRxuCZVyEP".to_vec();
         let memo = b"".to_vec().into();
         Module::<T>::withdraw(

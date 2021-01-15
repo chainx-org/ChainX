@@ -11,8 +11,6 @@ const ASSET_ID: AssetId = xp_protocol::X_BTC;
 const SEED: u32 = 0;
 
 benchmarks! {
-    _{ }
-
     transfer {
         let caller = whitelisted_caller();
         let transfer_amount: BalanceOf<T> = (100000000 * 10_u32).into(); // e.g. 10 btc

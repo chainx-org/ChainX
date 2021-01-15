@@ -19,11 +19,6 @@ fn b_asset_info_test_data<T: Config>() -> AssetInfo {
 }
 
 benchmarks! {
-    _{
-        // User account seed
-        let u in 0 .. 1000 => ();
-    }
-
     register {
         let asset_info = b_asset_info_test_data::<T>();
     }: _(RawOrigin::Root, ASSET_ID, asset_info.clone(), true, true)

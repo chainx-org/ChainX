@@ -42,6 +42,7 @@ pub struct Test;
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
+    pub const SS58Prefix: u8 = 42;
 }
 
 impl frame_system::Config for Test {
@@ -66,6 +67,7 @@ impl frame_system::Config for Test {
     type OnNewAccount = ();
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
+    type SS58Prefix = SS58Prefix;
 }
 
 parameter_types! {

@@ -141,15 +141,13 @@ fn prepare_headers<T: Config>(caller: &T::AccountId) {
 }
 
 benchmarks! {
-    _{ }
-
     push_header {
         let receiver: T::AccountId = whitelisted_caller();
         let insert_height = 576576 + 1;
         let header = generate_blocks_576576_578692()[&insert_height];
         let hash = header.hash();
         let header_raw = serialization::serialize(&header).into();
-        let amount: BalanceOf<T> = 1000.into();
+        let amount: BalanceOf<T> = 1000u32.into();
     }: _(RawOrigin::Signed(receiver), header_raw)
     verify {
         assert!(Module::<T>::headers(&hash).is_some());
@@ -167,10 +165,10 @@ benchmarks! {
         let tx_raw = serialization::serialize(&tx).into();
         let prev_tx_raw = serialization::serialize(&prev_tx).into();
 
-        XGatewayRecords::<T>::deposit(&caller, ASSET_ID, 9778400.into()).unwrap();
-        XGatewayRecords::<T>::deposit(&caller, ASSET_ID, 9900000.into()).unwrap();
-        XGatewayRecords::<T>::withdraw(&caller, ASSET_ID, 9778400.into(), b"".to_vec(), b"".to_vec().into()).unwrap();
-        XGatewayRecords::<T>::withdraw(&caller, ASSET_ID, 9900000.into(), b"".to_vec(), b"".to_vec().into()).unwrap();
+        XGatewayRecords::<T>::deposit(&caller, ASSET_ID, 9778400u32.into()).unwrap();
+        XGatewayRecords::<T>::deposit(&caller, ASSET_ID, 9900000u32.into()).unwrap();
+        XGatewayRecords::<T>::withdraw(&caller, ASSET_ID, 9778400u32.into(), b"".to_vec(), b"".to_vec().into()).unwrap();
+        XGatewayRecords::<T>::withdraw(&caller, ASSET_ID, 9900000u32.into(), b"".to_vec(), b"".to_vec().into()).unwrap();
         xpallet_gateway_records::WithdrawalStateOf::insert(0, WithdrawalState::Processing);
         xpallet_gateway_records::WithdrawalStateOf::insert(1, WithdrawalState::Processing);
 
@@ -282,7 +280,7 @@ benchmarks! {
     }: _(RawOrigin::Root, addr.clone(), Some(receiver.clone()))
     verify {
         assert!(Module::<T>::pending_deposits(&addr).is_empty());
-        assert_eq!(XAssets::<T>::usable_balance(&receiver, &ASSET_ID), (100000000 + 200000000 + 300000000).into());
+        assert_eq!(XAssets::<T>::usable_balance(&receiver, &ASSET_ID), (100000000u32 + 200000000u32 + 300000000u32).into());
     }
 
     remove_proposal {
