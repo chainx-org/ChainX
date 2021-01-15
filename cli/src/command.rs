@@ -98,7 +98,7 @@ pub fn run() -> sc_cli::Result<()> {
                     Role::Light => service::new_light(config),
                     _ => service::new_full(config),
                 }
-            })
+            }).map_err(sc_cli::Error::Service)
         }
         Some(Subcommand::Benchmark(cmd)) => {
             if cfg!(feature = "runtime-benchmarks") {
@@ -118,7 +118,7 @@ pub fn run() -> sc_cli::Result<()> {
                 Ok(())
             }
         }
-        Some(Subcommand::Key(cmd)) => cmd.run(),
+        Some(Subcommand::Key(cmd)) => cmd.run(&cli),
         Some(Subcommand::Sign(cmd)) => cmd.run(),
         Some(Subcommand::Verify(cmd)) => cmd.run(),
         Some(Subcommand::Vanity(cmd)) => cmd.run(),
