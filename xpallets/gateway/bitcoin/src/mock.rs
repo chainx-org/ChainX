@@ -379,9 +379,7 @@ pub fn load_mainnet_btc_genesis_header_info() -> ((BtcHeader, u32), crate::H256,
             },
             576576,
         ),
-        "0000000000000000001721f58deb88b0710295a02551f0dde1e2e231a15f1882"
-            .parse()
-            .unwrap(),
+        h256_rev("0000000000000000001721f58deb88b0710295a02551f0dde1e2e231a15f1882"),
         BtcNetwork::Mainnet,
     )
 }
