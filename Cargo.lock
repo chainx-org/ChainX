@@ -740,6 +740,7 @@ dependencies = [
  "xp-genesis-builder",
  "xp-protocol",
  "xpallet-gateway-bitcoin",
+ "xpallet-gateway-bitcoin-v2",
  "xpallet-gateway-common",
 ]
 
@@ -812,6 +813,7 @@ dependencies = [
  "xpallet-dex-spot",
  "xpallet-dex-spot-rpc-runtime-api",
  "xpallet-gateway-bitcoin",
+ "xpallet-gateway-bitcoin-v2",
  "xpallet-gateway-common",
  "xpallet-gateway-common-rpc-runtime-api",
  "xpallet-gateway-records",
@@ -9308,6 +9310,23 @@ dependencies = [
  "xpallet-gateway-common",
  "xpallet-gateway-records",
  "xpallet-support",
+]
+
+[[package]]
+name = "xpallet-gateway-bitcoin-v2"
+version = "2.0.1"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "impl-trait-for-tuples 0.2.0",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-inherents",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "sp-version",
 ]
 
 [[package]]

@@ -51,6 +51,8 @@ use xpallet_mining_asset::{MinerLedger, MiningAssetInfo, MiningDividendInfo};
 use xpallet_mining_staking::{NominatorInfo, NominatorLedger, ValidatorInfo};
 use xpallet_support::traits::MultisigAddressFor;
 
+use xpallet_gateway_bitcoin_v2::pallet as xpallet_gateway_bitcoin_v2_pallet;
+
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
     construct_runtime, debug, parameter_types,
@@ -404,6 +406,11 @@ impl pallet_session_historical::Config for Runtime {
     /// Substrate: given the stash account ID, find the active exposure of nominators on that account.
     /// ChainX: the full identity is always the validator account itself.
     type FullIdentificationOf = SimpleValidatorIdConverter;
+}
+
+impl xpallet_gateway_bitcoin_v2_pallet::Config for Runtime {
+    type Balance = Balance;
+    type Event = Event;
 }
 
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
@@ -948,6 +955,7 @@ construct_runtime!(
         XGatewayRecords: xpallet_gateway_records::{Module, Call, Storage, Event<T>},
         XGatewayCommon: xpallet_gateway_common::{Module, Call, Storage, Event<T>, Config<T>},
         XGatewayBitcoin: xpallet_gateway_bitcoin::{Module, Call, Storage, Event<T>, Config<T>},
+        XGatewayBitcoinV2: xpallet_gateway_bitcoin_v2_pallet::{Module, Call, Storage, Event<T>, Config},
 
         // DEX
         XSpot: xpallet_dex_spot::{Module, Call, Storage, Event<T>, Config<T>},

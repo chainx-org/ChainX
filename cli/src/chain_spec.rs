@@ -406,6 +406,7 @@ fn build_genesis(
             max_withdrawal_count: 100,
             verifier: BtcTxVerifier::Recover,
         }),
+        xpallet_gateway_bitcoin_v2_pallet: Some(Default::default()),
         xpallet_mining_staking: Some(chainx_dev::XStakingConfig {
             validators,
             validator_count: 50,

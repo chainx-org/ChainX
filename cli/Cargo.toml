@@ -59,6 +59,7 @@ xp-genesis-builder = { path  = "../primitives/genesis-builder" }
 xp-protocol = { path = "../primitives/protocol" }
 
 xpallet-gateway-bitcoin = { path  = "../xpallets/gateway/bitcoin/v1" }
+xpallet-gateway-bitcoin-v2 = { path  = "../xpallets/gateway/bitcoin/v2" }
 xpallet-gateway-common = { path  = "../xpallets/gateway/common" }
 
 [build-dependencies]
