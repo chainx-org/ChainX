@@ -9327,6 +9327,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "sp-version",
+ "xpallet-gateway-bitcoin",
 ]
 
 [[package]]
