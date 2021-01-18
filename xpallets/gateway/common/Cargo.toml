@@ -42,7 +42,7 @@ sp-io = "2.0.1"
 frame-benchmarking = "2.0.1"
 pallet-balances = "2.0.1"
 xp-gateway-bitcoin =  { path = "../../../primitives/gateway/bitcoin" }
-xpallet-gateway-bitcoin = { path = "../bitcoin" }
+xpallet-gateway-bitcoin = { path = "../bitcoin/v1" }
 
 [features]
 default = ["std"]

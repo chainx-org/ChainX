@@ -127,7 +127,7 @@ members = [
     "xpallets/dex/spot",
     "xpallets/dex/spot/rpc",
     "xpallets/dex/spot/rpc/runtime-api",
-    "xpallets/gateway/bitcoin",
+    "xpallets/gateway/bitcoin/v1",
     "xpallets/gateway/common",
     "xpallets/gateway/common/rpc",
     "xpallets/gateway/common/rpc/runtime-api",
