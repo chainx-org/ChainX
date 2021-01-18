@@ -7,7 +7,7 @@
 mod header;
 pub mod trustee;
 mod tx;
-mod types;
+pub mod types;
 pub mod weights;
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
@@ -461,6 +461,17 @@ impl<T: Trait> ChainT<BalanceOf<T>> for Module<T> {
 }
 
 impl<T: Trait> Module<T> {
+    pub fn test_push_header(header: Vec<u8>) -> DispatchResultWithPostInfo {
+        //let from = ensure_signed(origin)?;
+        let header: BtcHeader = deserialize(header.as_slice()).map_err(|_| Error::<T>::DeserializeErr)?;
+        //debug!("[push_header] from:{:?}, header:{:?}", from, header);
+
+        Self::apply_push_header(header)?;
+
+        // Relayer does not pay a fee.
+        Ok(Pays::No.into())
+    }
+
     pub fn verify_btc_address(data: &[u8]) -> Result<Address, DispatchError> {
         let r = bs58::decode(data)
             .into_vec()
