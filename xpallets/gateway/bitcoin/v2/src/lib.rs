@@ -5,6 +5,47 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #[frame_support::pallet]
+pub mod vault {
+    use frame_support::traits::{Currency, LockableCurrency};
+    use frame_support::{pallet_prelude::*, storage::types::ValueQuery};
+    use frame_system::pallet_prelude::*;
+
+    pub type BalanceOf<T> =
+        <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+
+    #[pallet::config]
+    pub trait Config: frame_system::Config {
+        type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
+    }
+
+    #[pallet::pallet]
+    #[pallet::generate_store(pub(super) trait Store)]
+    pub struct Pallet<T>(PhantomData<T>);
+
+    #[pallet::hooks]
+    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
+
+    #[pallet::call]
+    impl<T: Config> Pallet<T> {
+        /// Register a vault.
+        #[pallet::weight(0)]
+        fn register_vault(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+            let sender = ensure_signed(origin);
+            Ok(().into())
+        }
+    }
+
+    #[pallet::type_value]
+    pub(super) fn DefaultCollateral<T: Config>() -> BalanceOf<T> {
+        0.into()
+    }
+
+    #[pallet::storage]
+    pub(super) type TotalCollateral<T: Config> =
+        StorageValue<_, BalanceOf<T>, ValueQuery, DefaultCollateral<T>>;
+}
+
+#[frame_support::pallet]
 // NOTE: Example is name of the pallet, it will be used as unique identifier for storage
 pub mod pallet {
     use frame_support::pallet_prelude::*; // Import various types used in pallet definition
