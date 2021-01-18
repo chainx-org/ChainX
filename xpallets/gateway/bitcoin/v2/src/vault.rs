@@ -2,7 +2,7 @@
 
 #[frame_support::pallet]
 pub mod vault {
-    use frame_support::traits::{Currency, ReservableCurrency};
+    use frame_support::traits::{Currency, GenesisBuild, ReservableCurrency};
     use frame_support::{pallet_prelude::*, storage::types::ValueQuery};
     use frame_system::pallet_prelude::*;
     use sp_runtime::DispatchResult;
@@ -33,23 +33,55 @@ pub mod vault {
             btc_address: BtcAddress,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin);
+            ensure!(
+                collateral >= Self::minimium_vault_collateral(),
+                Error::<T>::InsufficientVaultCollateralAmount
+            );
+            //TODO(wangyafei)
             Ok(().into())
         }
     }
 
     #[pallet::type_value]
-    pub(super) fn DefaultCollateral<T: Config>() -> BalanceOf<T> {
+    pub(super) fn zero_pcx<T: Config>() -> BalanceOf<T> {
         0.into()
     }
 
     #[pallet::storage]
     #[pallet::getter(fn total_collateral)]
     pub(super) type TotalCollateral<T: Config> =
-        StorageValue<_, BalanceOf<T>, ValueQuery, DefaultCollateral<T>>;
+        StorageValue<_, BalanceOf<T>, ValueQuery, zero_pcx<T>>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn minimium_vault_collateral)]
+    pub(super) type MinimiumVaultCollateral<T: Config> =
+        StorageValue<_, BalanceOf<T>, ValueQuery, zero_pcx<T>>;
+
+    #[pallet::genesis_config]
+    pub struct GenesisConfig<T: Config> {
+        _minimium_vault_collateral: BalanceOf<T>,
+    }
+
+    /// Default value for GenesisConfig
+    impl<T: Config> Default for GenesisConfig<T> {
+        fn default() -> Self {
+            Self {
+                _minimium_vault_collateral: 0.into(),
+            }
+        }
+    }
+
+    #[pallet::genesis_build]
+    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+        fn build(&self) {
+            <MinimiumVaultCollateral<T>>::put(self._minimium_vault_collateral);
+        }
+    }
 
     #[pallet::error]
     pub enum Error<T> {
         InsufficientFunds,
+        InsufficientVaultCollateralAmount,
     }
 
     impl<T: Config> Pallet<T> {
