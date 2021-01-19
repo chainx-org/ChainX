@@ -3,7 +3,8 @@
 pub mod types {
     use codec::HasCompact;
     use frame_support::pallet_prelude::{Decode, Encode};
-    use v1::BtcAddress;
+
+    pub type BtcAddress = Vec<u8>;
 
     #[derive(Encode, Decode, Clone, PartialEq)]
     #[cfg_attr(feature = "std", derive(Debug))]
@@ -68,7 +69,6 @@ pub mod pallet {
     use frame_system::pallet_prelude::{ensure_signed, BlockNumberFor, OriginFor};
 
     use sp_runtime::DispatchResult;
-    use v1::BtcAddress;
 
     pub type PCX<T> =
         <<T as Config>::PCX as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -104,6 +104,7 @@ pub mod pallet {
                 collateral >= Self::minimium_vault_collateral(),
                 Error::<T>::InsufficientVaultCollateralAmount
             );
+            ensure!(!Self::vault_exists(&sender), Error::<T>::VaultRegistered);
             Self::lock_collateral(&sender, collateral)?;
             let vault = Vault::new(sender.clone(), btc_address);
             Self::insert_vault(&sender, vault.clone());
@@ -116,6 +117,8 @@ pub mod pallet {
     pub enum Error<T> {
         InsufficientFunds,
         InsufficientVaultCollateralAmount,
+        VaultRegistered,
+        BtcAddressOccupied,
     }
 
     #[pallet::event]
@@ -182,6 +185,10 @@ pub mod pallet {
             vault: Vault<T::AccountId, T::BlockNumber, Token<T>>,
         ) {
             <Vaults<T>>::insert(sender, vault);
+        }
+
+        fn vault_exists(id: &T::AccountId) -> bool {
+            <Vaults<T>>::contains_key(id)
         }
     }
 }
