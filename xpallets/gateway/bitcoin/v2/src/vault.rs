@@ -60,11 +60,14 @@ pub mod pallet {
     use super::types::*;
     #[cfg(feature = "std")]
     pub use frame_support::traits::GenesisBuild;
-    use frame_support::traits::{Currency, ReservableCurrency};
     use frame_support::Blake2_128Concat;
     use frame_support::{
         pallet_prelude::*,
         storage::types::{StorageMap, StorageValue, ValueQuery},
+    };
+    use frame_support::{
+        traits::{Currency, ReservableCurrency},
+        Twox64Concat,
     };
     use frame_system::pallet_prelude::{ensure_signed, BlockNumberFor, OriginFor};
 
@@ -105,7 +108,12 @@ pub mod pallet {
                 Error::<T>::InsufficientVaultCollateralAmount
             );
             ensure!(!Self::vault_exists(&sender), Error::<T>::VaultRegistered);
+            ensure!(
+                !Self::btc_address_exists(&btc_address),
+                Error::<T>::BtcAddressOccupied
+            );
             Self::lock_collateral(&sender, collateral)?;
+            Self::insert_btc_address(&btc_address, sender.clone());
             let vault = Vault::new(sender.clone(), btc_address);
             Self::insert_vault(&sender, vault.clone());
             Self::deposit_event(Event::RegisterVault(vault.id, collateral));
@@ -149,6 +157,9 @@ pub mod pallet {
     >;
 
     #[pallet::storage]
+    pub(super) type BtcAddresses<T: Config> = StorageMap<_, Twox64Concat, BtcAddress, T::AccountId>;
+
+    #[pallet::storage]
     #[pallet::getter(fn minimium_vault_collateral)]
     pub(super) type MinimiumVaultCollateral<T: Config> =
         StorageValue<_, PCX<T>, ValueQuery, zero_pcx<T>>;
@@ -166,7 +177,6 @@ pub mod pallet {
             <MinimiumVaultCollateral<T>>::put(pcx);
         }
     }
-
     impl<T: Config> Pallet<T> {
         /// Lock collateral
         fn lock_collateral(sender: &T::AccountId, amount: PCX<T>) -> DispatchResult {
@@ -187,8 +197,16 @@ pub mod pallet {
             <Vaults<T>>::insert(sender, vault);
         }
 
+        fn insert_btc_address(address: &BtcAddress, vault_id: T::AccountId) {
+            <BtcAddresses<T>>::insert(address, vault_id);
+        }
+
         fn vault_exists(id: &T::AccountId) -> bool {
             <Vaults<T>>::contains_key(id)
+        }
+
+        fn btc_address_exists(address: &BtcAddress) -> bool {
+            <BtcAddresses<T>>::contains_key(address)
         }
     }
 }
