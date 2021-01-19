@@ -47,7 +47,7 @@ jobs:
       run: cargo fmt -- --check
 
     - if: matrix.os == 'ubuntu-latest'
-      run: cargo clippy
+      run: cargo clippy -- -D warnings
 
     - name: Test
       run: cargo test --workspace -- --test-threads 1
