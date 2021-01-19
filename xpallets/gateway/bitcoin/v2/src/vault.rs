@@ -113,6 +113,7 @@ pub mod pallet {
                 Error::<T>::BtcAddressOccupied
             );
             Self::lock_collateral(&sender, collateral)?;
+            Self::increase_total_collateral(collateral);
             Self::insert_btc_address(&btc_address, sender.clone());
             let vault = Vault::new(sender.clone(), btc_address);
             Self::insert_vault(&sender, vault.clone());
