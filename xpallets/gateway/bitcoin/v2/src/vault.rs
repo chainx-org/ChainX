@@ -1,4 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(dead_code)]
 
 pub mod types {
     use codec::HasCompact;
@@ -25,15 +26,15 @@ pub mod types {
 
     #[derive(Encode, Decode, Default, Clone, PartialEq)]
     #[cfg_attr(feature = "std", derive(Debug))]
-    pub struct Vault<AccountId, BlockNumber, XBTC> {
+    pub struct Vault<AccountId, BlockNumber, XBtcToken> {
         // Account identifier of the Vault
         pub id: AccountId,
-        // Number of XBTC tokens pending issue
-        pub to_be_issued_tokens: XBTC,
-        // Number of issued XBTC tokens
-        pub issued_tokens: XBTC,
-        // Number of XBTC tokens pending redeem
-        pub to_be_redeemed_tokens: XBTC,
+        // Number of XBtcToken tokens pending issue
+        pub to_be_issued_tokens: XBtcToken,
+        // Number of issued XBtcToken tokens
+        pub issued_tokens: XBtcToken,
+        // Number of XBtcToken tokens pending redeem
+        pub to_be_redeemed_tokens: XBtcToken,
         // Bitcoin address of this Vault (P2PKH, P2SH, P2PKH, P2WSH)
         pub wallet: BtcAddress,
         // Block height until which this Vault is banned from being
@@ -43,7 +44,9 @@ pub mod types {
         pub status: VaultStatus,
     }
 
-    impl<AccountId, BlockNumber, XBTC: HasCompact + Default> Vault<AccountId, BlockNumber, XBTC> {
+    impl<AccountId, BlockNumber, XBtcToken: HasCompact + Default>
+        Vault<AccountId, BlockNumber, XBtcToken>
+    {
         pub(super) fn new(id: AccountId, address: BtcAddress) -> Self {
             Self {
                 id,
@@ -79,13 +82,13 @@ pub mod pallet {
     pub type PCX<T> =
         <<T as Config>::PCX as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
-    pub type Token<T> =
-        <<T as Config>::Token as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+    pub type XBtcToken<T> =
+        <<T as Config>::XBtcToken as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
         type PCX: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
-        type Token: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
+        type XBtcToken: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
 
@@ -110,7 +113,10 @@ pub mod pallet {
                 collateral >= Self::minimium_vault_collateral(),
                 Error::<T>::InsufficientVaultCollateralAmount
             );
-            ensure!(!Self::vault_exists(&sender), Error::<T>::VaultRegistered);
+            ensure!(
+                !Self::vault_exists(&sender),
+                Error::<T>::VaultAlreadyRegistered
+            );
             ensure!(
                 !Self::btc_address_exists(&btc_address),
                 Error::<T>::BtcAddressOccupied
@@ -120,11 +126,12 @@ pub mod pallet {
             Self::insert_btc_address(&btc_address, sender.clone());
             let vault = Vault::new(sender.clone(), btc_address);
             Self::insert_vault(&sender, vault.clone());
-            Self::deposit_event(Event::RegisterVault(vault.id, collateral));
+            Self::deposit_event(Event::VaultRegistered(vault.id, collateral));
             Ok(().into())
         }
     }
 
+    /// Error during register, withdrawing collateral or adding extra collateral
     #[pallet::error]
     pub enum Error<T> {
         /// Requester doesn't has enough pcx for collateral.
@@ -132,85 +139,89 @@ pub mod pallet {
         /// The amount in request is less than minimium bound.
         InsufficientVaultCollateralAmount,
         /// Requester has been vault.
-        VaultRegistered,
+        VaultAlreadyRegistered,
         /// Btc address in request was occupied by another vault.
         BtcAddressOccupied,
     }
 
+    /// Event during register, withdrawing collateral or adding extra collateral
     #[pallet::event]
-    #[pallet::metadata(BalanceOf<T> = "Balance", u32 = "Other")]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
-        RegisterVault(<T as frame_system::Config>::AccountId, PCX<T>),
-    }
-
-    #[pallet::type_value]
-    pub(super) fn ZeroPcx<T: Config>() -> PCX<T> {
-        0.into()
+        /// When a new vault has been registered.
+        VaultRegistered(<T as frame_system::Config>::AccountId, PCX<T>),
     }
 
     /// Total collateral.
     #[pallet::storage]
     #[pallet::getter(fn total_collateral)]
-    pub(super) type TotalCollateral<T: Config> = StorageValue<_, PCX<T>, ValueQuery, ZeroPcx<T>>;
+    pub(super) type TotalCollateral<T: Config> = StorageValue<_, PCX<T>, ValueQuery>;
 
+    /// Mapping account to vault struct.
     #[pallet::storage]
     pub(super) type Vaults<T: Config> = StorageMap<
         _,
         Blake2_128Concat,
         T::AccountId,
-        Vault<T::AccountId, T::BlockNumber, Token<T>>,
+        Vault<T::AccountId, T::BlockNumber, XBtcToken<T>>,
     >;
 
+    /// Mapping btc address to vault id.
     #[pallet::storage]
     pub(super) type BtcAddresses<T: Config> = StorageMap<_, Twox64Concat, BtcAddress, T::AccountId>;
 
+    /// Lower bound for registering vault or withdrawing collateral.
     #[pallet::storage]
     #[pallet::getter(fn minimium_vault_collateral)]
-    pub(super) type MinimiumVaultCollateral<T: Config> =
-        StorageValue<_, PCX<T>, ValueQuery, ZeroPcx<T>>;
+    pub(super) type MinimiumVaultCollateral<T: Config> = StorageValue<_, PCX<T>, ValueQuery>;
 
     #[pallet::genesis_config]
     #[derive(Default)]
     pub struct GenesisConfig {
-        _minimium_vault_collateral: u32,
+        minimium_vault_collateral: u32,
     }
 
     #[pallet::genesis_build]
     impl<T: Config> GenesisBuild<T> for GenesisConfig {
         fn build(&self) {
-            let pcx: PCX<T> = self._minimium_vault_collateral.into();
+            let pcx: PCX<T> = self.minimium_vault_collateral.into();
             <MinimiumVaultCollateral<T>>::put(pcx);
         }
     }
     impl<T: Config> Pallet<T> {
         /// Lock collateral
+        #[inline]
         fn lock_collateral(sender: &T::AccountId, amount: PCX<T>) -> DispatchResult {
             T::PCX::reserve(sender, amount).map_err(|_| Error::<T>::InsufficientFunds)?;
             Ok(())
         }
 
         /// increase total collateral
+        #[inline]
         fn increase_total_collateral(amount: PCX<T>) {
             let new_collateral = Self::total_collateral() + amount;
             <TotalCollateral<T>>::put(new_collateral);
         }
 
+        #[inline]
         fn insert_vault(
             sender: &T::AccountId,
-            vault: Vault<T::AccountId, T::BlockNumber, Token<T>>,
+            vault: Vault<T::AccountId, T::BlockNumber, XBtcToken<T>>,
         ) {
             <Vaults<T>>::insert(sender, vault);
         }
 
+        #[inline]
         fn insert_btc_address(address: &BtcAddress, vault_id: T::AccountId) {
             <BtcAddresses<T>>::insert(address, vault_id);
         }
 
+        #[inline]
         fn vault_exists(id: &T::AccountId) -> bool {
             <Vaults<T>>::contains_key(id)
         }
 
+        #[inline]
         fn btc_address_exists(address: &BtcAddress) -> bool {
             <BtcAddresses<T>>::contains_key(address)
         }
