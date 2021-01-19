@@ -87,8 +87,8 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        type PCX: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
-        type XBtcToken: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
+        type PCX: ReservableCurrency<Self::AccountId>;
+        type XBtcToken: ReservableCurrency<Self::AccountId>;
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
 
