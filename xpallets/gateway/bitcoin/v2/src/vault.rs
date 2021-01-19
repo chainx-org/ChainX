@@ -9,8 +9,11 @@ pub mod types {
     #[derive(Encode, Decode, Clone, PartialEq)]
     #[cfg_attr(feature = "std", derive(Debug))]
     pub enum VaultStatus {
+        /// Vault is ready to serve issue and redeem request, unless it was banned.
         Active,
+        /// Vault is under Liquidation
         Liquidated,
+        /// Vault was committed has illegal behavior.
         CommittedTheft,
     }
 
@@ -124,30 +127,32 @@ pub mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
+        /// Requester doesn't has enough pcx for collateral.
         InsufficientFunds,
+        /// The amount in request is less than minimium bound.
         InsufficientVaultCollateralAmount,
+        /// Requester has been vault.
         VaultRegistered,
+        /// Btc address in request was occupied by another vault.
         BtcAddressOccupied,
     }
 
     #[pallet::event]
-    // Additional argument to specify the metadata to use for given type.
     #[pallet::metadata(BalanceOf<T> = "Balance", u32 = "Other")]
-    // Generate a funciton on Pallet to deposit an event.
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         RegisterVault(<T as frame_system::Config>::AccountId, PCX<T>),
     }
 
     #[pallet::type_value]
-    pub(super) fn zero_pcx<T: Config>() -> PCX<T> {
+    pub(super) fn ZeroPcx<T: Config>() -> PCX<T> {
         0.into()
     }
 
     /// Total collateral.
     #[pallet::storage]
     #[pallet::getter(fn total_collateral)]
-    pub(super) type TotalCollateral<T: Config> = StorageValue<_, PCX<T>, ValueQuery, zero_pcx<T>>;
+    pub(super) type TotalCollateral<T: Config> = StorageValue<_, PCX<T>, ValueQuery, ZeroPcx<T>>;
 
     #[pallet::storage]
     pub(super) type Vaults<T: Config> = StorageMap<
@@ -163,7 +168,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn minimium_vault_collateral)]
     pub(super) type MinimiumVaultCollateral<T: Config> =
-        StorageValue<_, PCX<T>, ValueQuery, zero_pcx<T>>;
+        StorageValue<_, PCX<T>, ValueQuery, ZeroPcx<T>>;
 
     #[pallet::genesis_config]
     #[derive(Default)]
