@@ -1,17 +1,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#[frame_support::pallet]
-pub mod vault {
+pub mod types {
     use codec::HasCompact;
-    use frame_support::traits::{Currency, GenesisBuild, ReservableCurrency};
-    use frame_support::Blake2_128Concat;
-    use frame_support::{
-        pallet_prelude::*,
-        storage::types::{StorageMap, StorageValue, ValueQuery},
-    };
-    use frame_system::pallet_prelude::{ensure_signed, BlockNumberFor, OriginFor};
-
-    use sp_runtime::DispatchResult;
+    use frame_support::pallet_prelude::{Decode, Encode};
     use v1::BtcAddress;
 
     #[derive(Encode, Decode, Clone, PartialEq)]
@@ -49,7 +40,7 @@ pub mod vault {
     }
 
     impl<AccountId, BlockNumber, XBTC: HasCompact + Default> Vault<AccountId, BlockNumber, XBTC> {
-        fn new(id: AccountId, address: BtcAddress) -> Self {
+        pub(super) fn new(id: AccountId, address: BtcAddress) -> Self {
             Self {
                 id,
                 to_be_issued_tokens: Default::default(),
@@ -61,6 +52,24 @@ pub mod vault {
             }
         }
     }
+}
+
+#[frame_support::pallet]
+pub mod pallet {
+    use super::types::*;
+    #[cfg(feature = "std")]
+    pub use frame_support::traits::GenesisBuild;
+    use frame_support::traits::{Currency, ReservableCurrency};
+    use frame_support::Blake2_128Concat;
+    use frame_support::{
+        pallet_prelude::*,
+        storage::types::{StorageMap, StorageValue, ValueQuery},
+    };
+    use frame_system::pallet_prelude::{ensure_signed, BlockNumberFor, OriginFor};
+
+    use sp_runtime::DispatchResult;
+    use v1::BtcAddress;
+
     pub type PCX<T> =
         <<T as Config>::PCX as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
@@ -71,6 +80,7 @@ pub mod vault {
     pub trait Config: frame_system::Config {
         type PCX: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
         type Token: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
+        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
 
     #[pallet::pallet]
@@ -97,8 +107,7 @@ pub mod vault {
             Self::lock_collateral(&sender, collateral)?;
             let vault = Vault::new(sender.clone(), btc_address);
             Self::insert_vault(&sender, vault.clone());
-            Self::deposit_event(vault.id, collateral);
-            //TODO(wangyafei)
+            Self::deposit_event(Event::RegisterVault(vault.id, collateral));
             Ok(().into())
         }
     }
@@ -129,7 +138,6 @@ pub mod vault {
     pub(super) type TotalCollateral<T: Config> = StorageValue<_, PCX<T>, ValueQuery, zero_pcx<T>>;
 
     #[pallet::storage]
-    #[pallet::getter(fn vaults)]
     pub(super) type Vaults<T: Config> = StorageMap<
         _,
         Blake2_128Concat,
@@ -143,23 +151,16 @@ pub mod vault {
         StorageValue<_, PCX<T>, ValueQuery, zero_pcx<T>>;
 
     #[pallet::genesis_config]
-    pub struct GenesisConfig<T: Config> {
-        _minimium_vault_collateral: PCX<T>,
-    }
-
-    /// Default value for GenesisConfig
-    impl<T: Config> Default for GenesisConfig<T> {
-        fn default() -> Self {
-            Self {
-                _minimium_vault_collateral: 0.into(),
-            }
-        }
+    #[derive(Default)]
+    pub struct GenesisConfig {
+        _minimium_vault_collateral: u32,
     }
 
     #[pallet::genesis_build]
-    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+    impl<T: Config> GenesisBuild<T> for GenesisConfig {
         fn build(&self) {
-            <MinimiumVaultCollateral<T>>::put(self._minimium_vault_collateral);
+            let pcx: PCX<T> = self._minimium_vault_collateral.into();
+            <MinimiumVaultCollateral<T>>::put(pcx);
         }
     }
 

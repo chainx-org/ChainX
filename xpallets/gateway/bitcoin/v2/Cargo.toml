@@ -36,4 +36,5 @@ std = [
   "sp-version/std",
   "frame-support/std",
   "frame-system/std",
+  "v1/std",
 ]
