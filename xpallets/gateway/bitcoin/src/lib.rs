@@ -461,17 +461,6 @@ impl<T: Trait> ChainT<BalanceOf<T>> for Module<T> {
 }
 
 impl<T: Trait> Module<T> {
-    pub fn test_push_header(header: Vec<u8>) -> DispatchResultWithPostInfo {
-        //let from = ensure_signed(origin)?;
-        let header: BtcHeader = deserialize(header.as_slice()).map_err(|_| Error::<T>::DeserializeErr)?;
-        //debug!("[push_header] from:{:?}, header:{:?}", from, header);
-
-        Self::apply_push_header(header)?;
-
-        // Relayer does not pay a fee.
-        Ok(Pays::No.into())
-    }
-
     pub fn verify_btc_address(data: &[u8]) -> Result<Address, DispatchError> {
         let r = bs58::decode(data)
             .into_vec()
@@ -486,7 +475,7 @@ impl<T: Trait> Module<T> {
         deserialize(Reader::new(input)).map_err(|_| Error::<T>::DeserializeErr)
     }
 
-    fn apply_push_header(header: BtcHeader) -> DispatchResult {
+    pub fn apply_push_header(header: BtcHeader) -> DispatchResult {
         // current should not exist
         if Self::headers(&header.hash()).is_some() {
             error!(
@@ -562,7 +551,7 @@ impl<T: Trait> Module<T> {
         })
     }
 
-    fn apply_push_transaction(tx: BtcRelayedTx, prev_tx: Option<Transaction>) -> DispatchResult {
+    pub fn apply_push_transaction(tx: BtcRelayedTx, prev_tx: Option<Transaction>) -> DispatchResult {
         let tx_hash = tx.raw.hash();
         let block_hash = tx.block_hash;
         let header_info = Module::<T>::headers(&tx.block_hash).ok_or_else(|| {
