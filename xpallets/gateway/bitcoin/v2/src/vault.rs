@@ -44,18 +44,14 @@ pub mod types {
         pub status: VaultStatus,
     }
 
-    impl<AccountId, BlockNumber, XBtcToken: HasCompact + Default>
-        Vault<AccountId, BlockNumber, XBtcToken>
+    impl<AccountId: Default, BlockNumber: Default, Balance: Default>
+        Vault<AccountId, BlockNumber, Balance>
     {
         pub(super) fn new(id: AccountId, address: BtcAddress) -> Self {
             Self {
                 id,
-                to_be_issued_tokens: Default::default(),
-                issued_tokens: Default::default(),
-                to_be_redeemed_tokens: Default::default(),
                 wallet: address,
-                banned_until: None,
-                status: VaultStatus::default(),
+                ..Default::default()
             }
         }
     }
@@ -64,11 +60,8 @@ pub mod types {
 #[frame_support::pallet]
 #[allow(dead_code)]
 pub mod pallet {
-    #[cfg(feature = "std")]
-    pub use frame_support::traits::GenesisBuild;
     use frame_support::{
         pallet_prelude::*,
-        storage::types::{StorageMap, StorageValue, ValueQuery},
         traits::{Currency, ReservableCurrency},
         Blake2_128Concat, Twox64Concat,
     };
@@ -182,6 +175,7 @@ pub mod pallet {
             <MinimiumVaultCollateral<T>>::put(pcx);
         }
     }
+
     impl<T: Config> Pallet<T> {
         /// Lock collateral
         #[inline]
