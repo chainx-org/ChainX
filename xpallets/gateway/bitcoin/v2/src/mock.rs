@@ -61,12 +61,12 @@ impl pallet_balances::Config for Test {
 }
 
 impl vault::Config for Test {
-    type PCX = PcxCurrency;
+    type PCX = Balances;
     type Event = ();
 }
 
 pub(crate) type System = frame_system::Module<Test>;
-pub(crate) type PcxCurrency = pallet_balances::Module<Test>;
+pub(crate) type Balances = pallet_balances::Module<Test>;
 
 pub struct ExtBuilder;
 impl ExtBuilder {

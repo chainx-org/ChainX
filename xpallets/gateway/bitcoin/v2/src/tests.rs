@@ -1,34 +1,30 @@
 use frame_support::{assert_err, assert_ok};
 
 use super::mock::{ExtBuilder, Origin, Test};
-use super::vault::pallet as vault;
+use super::vault::pallet::{Error, Pallet};
 
 #[test]
 fn test_register_vault() {
     ExtBuilder::build(100).execute_with(|| {
         let register_vault = |id, collateral, addr: &str| {
-            vault::Pallet::<Test>::register_vault(
-                Origin::signed(id),
-                collateral,
-                addr.as_bytes().to_vec(),
-            )
+            Pallet::<Test>::register_vault(Origin::signed(id), collateral, addr.as_bytes().to_vec())
         };
         assert_err!(
             register_vault(1, 10000, "test"),
-            vault::Error::<Test>::InsufficientFunds
+            Error::<Test>::InsufficientFunds
         );
         assert_err!(
             register_vault(1, 10, "test"),
-            vault::Error::<Test>::InsufficientVaultCollateralAmount
+            Error::<Test>::InsufficientVaultCollateralAmount
         );
         assert_ok!(register_vault(1, 200, "test"));
         assert_err!(
             register_vault(1, 200, "testuu"),
-            vault::Error::<Test>::VaultAlreadyRegistered
+            Error::<Test>::VaultAlreadyRegistered
         );
         assert_err!(
             register_vault(2, 200, "test"),
-            vault::Error::<Test>::BtcAddressOccupied
+            Error::<Test>::BtcAddressOccupied
         );
     })
 }
