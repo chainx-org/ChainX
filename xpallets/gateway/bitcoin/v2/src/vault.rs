@@ -1,8 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub mod types {
-    use codec::HasCompact;
-    use frame_support::pallet_prelude::{Decode, Encode};
+    use codec::{Decode, Encode};
     use sp_std::prelude::Vec;
 
     pub type BtcAddress = Vec<u8>;
@@ -63,7 +62,6 @@ pub mod pallet {
     use frame_support::{
         pallet_prelude::*,
         traits::{Currency, ReservableCurrency},
-        Blake2_128Concat, Twox64Concat,
     };
     use frame_system::pallet_prelude::{ensure_signed, BlockNumberFor, OriginFor};
     use sp_runtime::DispatchResult;
