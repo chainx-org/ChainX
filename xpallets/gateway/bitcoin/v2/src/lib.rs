@@ -6,6 +6,11 @@
 
 mod vault;
 
+#[cfg(test)]
+mod mock;
+#[cfg(test)]
+mod test;
+
 #[frame_support::pallet]
 // NOTE: Example is name of the pallet, it will be used as unique identifier for storage
 pub mod pallet {

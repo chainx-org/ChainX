@@ -21,6 +21,8 @@ sp-version = { version = "2.0.1", default-features = false }
 frame-support = { version = "2.0.1", default-features = false }
 frame-system = { version = "2.0.1", default-features = false }
 
+[dev-dependencies]
+pallet-balances = "2.0.1"
 
 [features]
 default = ["std"]

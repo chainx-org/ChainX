@@ -46,7 +46,7 @@ pub mod types {
     impl<AccountId: Default, BlockNumber: Default, Balance: Default>
         Vault<AccountId, BlockNumber, Balance>
     {
-        pub(super) fn new(id: AccountId, address: BtcAddress) -> Self {
+        pub(crate) fn new(id: AccountId, address: BtcAddress) -> Self {
             Self {
                 id,
                 wallet: address,
@@ -78,7 +78,7 @@ pub mod pallet {
     }
 
     #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
+    #[pallet::generate_store(pub(crate) trait Store)]
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::hooks]
@@ -88,7 +88,7 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         /// Register a vault.
         #[pallet::weight(0)]
-        fn register_vault(
+        pub fn register_vault(
             origin: OriginFor<T>,
             collateral: BalanceOf<T>,
             btc_address: BtcAddress,
@@ -131,7 +131,7 @@ pub mod pallet {
 
     /// Event during register, withdrawing collateral or adding extra collateral
     #[pallet::event]
-    #[pallet::generate_deposit(pub(super) fn deposit_event)]
+    #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T: Config> {
         /// When a new vault has been registered.
         VaultRegistered(<T as frame_system::Config>::AccountId, BalanceOf<T>),
@@ -140,11 +140,11 @@ pub mod pallet {
     /// Total collateral.
     #[pallet::storage]
     #[pallet::getter(fn total_collateral)]
-    pub(super) type TotalCollateral<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
+    pub(crate) type TotalCollateral<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
     /// Mapping account to vault struct.
     #[pallet::storage]
-    pub(super) type Vaults<T: Config> = StorageMap<
+    pub(crate) type Vaults<T: Config> = StorageMap<
         _,
         Blake2_128Concat,
         T::AccountId,
@@ -153,12 +153,12 @@ pub mod pallet {
 
     /// Mapping btc address to vault id.
     #[pallet::storage]
-    pub(super) type BtcAddresses<T: Config> = StorageMap<_, Twox64Concat, BtcAddress, T::AccountId>;
+    pub(crate) type BtcAddresses<T: Config> = StorageMap<_, Twox64Concat, BtcAddress, T::AccountId>;
 
     /// Lower bound for registering vault or withdrawing collateral.
     #[pallet::storage]
     #[pallet::getter(fn minimium_vault_collateral)]
-    pub(super) type MinimiumVaultCollateral<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
+    pub(crate) type MinimiumVaultCollateral<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
     #[pallet::genesis_config]
     #[derive(Default)]
@@ -177,19 +177,19 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         /// Lock collateral
         #[inline]
-        fn lock_collateral(sender: &T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
+        pub fn lock_collateral(sender: &T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
             T::PCX::reserve(sender, amount).map_err(|_| Error::<T>::InsufficientFunds)?;
             Ok(())
         }
 
         /// increase total collateral
         #[inline]
-        fn increase_total_collateral(amount: BalanceOf<T>) {
+        pub fn increase_total_collateral(amount: BalanceOf<T>) {
             <TotalCollateral<T>>::mutate(|c| *c += amount);
         }
 
         #[inline]
-        fn insert_vault(
+        pub fn insert_vault(
             sender: &T::AccountId,
             vault: Vault<T::AccountId, T::BlockNumber, BalanceOf<T>>,
         ) {
@@ -197,17 +197,17 @@ pub mod pallet {
         }
 
         #[inline]
-        fn insert_btc_address(address: &BtcAddress, vault_id: T::AccountId) {
+        pub fn insert_btc_address(address: &BtcAddress, vault_id: T::AccountId) {
             <BtcAddresses<T>>::insert(address, vault_id);
         }
 
         #[inline]
-        fn vault_exists(id: &T::AccountId) -> bool {
+        pub fn vault_exists(id: &T::AccountId) -> bool {
             <Vaults<T>>::contains_key(id)
         }
 
         #[inline]
-        fn btc_address_exists(address: &BtcAddress) -> bool {
+        pub fn btc_address_exists(address: &BtcAddress) -> bool {
             <BtcAddresses<T>>::contains_key(address)
         }
     }
