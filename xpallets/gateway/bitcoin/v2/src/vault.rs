@@ -63,21 +63,18 @@ pub mod types {
 #[frame_support::pallet]
 #[allow(dead_code)]
 pub mod pallet {
-    use super::types::*;
     #[cfg(feature = "std")]
     pub use frame_support::traits::GenesisBuild;
-    use frame_support::Blake2_128Concat;
     use frame_support::{
         pallet_prelude::*,
         storage::types::{StorageMap, StorageValue, ValueQuery},
-    };
-    use frame_support::{
         traits::{Currency, ReservableCurrency},
-        Twox64Concat,
+        Blake2_128Concat, Twox64Concat,
     };
     use frame_system::pallet_prelude::{ensure_signed, BlockNumberFor, OriginFor};
-
     use sp_runtime::DispatchResult;
+
+    use super::types::*;
 
     pub type BalanceOf<T> =
         <<T as Config>::PCX as Currency<<T as frame_system::Config>::AccountId>>::Balance;
