@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::BTreeMap, ops::AddAssign, time::Duration};
 
-use frame_support::{impl_outer_origin, parameter_types, sp_io};
+use frame_support::{impl_outer_origin, parameter_types, sp_io, traits::GenesisBuild};
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
@@ -70,10 +70,21 @@ pub(crate) type PcxCurrency = pallet_balances::Module<Test>;
 
 pub struct ExtBuilder;
 impl ExtBuilder {
-    pub fn build() -> sp_io::TestExternalities {
+    pub fn build(minimium_vault_collateral: u32) -> sp_io::TestExternalities {
         let mut storage = frame_system::GenesisConfig::default()
             .build_storage::<Test>()
             .unwrap();
+        let _ = pallet_balances::GenesisConfig::<Test> {
+            balances: vec![(1, 1000), (2, 2000)],
+        }
+        .assimilate_storage(&mut storage);
+
+        let _ = GenesisBuild::<Test>::assimilate_storage(
+            &vault::GenesisConfig {
+                minimium_vault_collateral,
+            },
+            &mut storage,
+        );
         sp_io::TestExternalities::from(storage)
     }
 }

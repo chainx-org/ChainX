@@ -163,7 +163,7 @@ pub mod pallet {
     #[pallet::genesis_config]
     #[derive(Default)]
     pub struct GenesisConfig {
-        minimium_vault_collateral: u32,
+        pub(crate) minimium_vault_collateral: u32,
     }
 
     #[pallet::genesis_build]
