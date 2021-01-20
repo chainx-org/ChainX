@@ -172,6 +172,7 @@ impl Trait for Test {
     type Event = ();
     type Call = Call<Test>;
     type AuthorityId = AuthorityId;
+    type UnsignedPriority = ();
 }
 
 type System = frame_system::Module<Test>;

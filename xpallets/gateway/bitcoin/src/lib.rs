@@ -551,7 +551,10 @@ impl<T: Trait> Module<T> {
         })
     }
 
-    pub fn apply_push_transaction(tx: BtcRelayedTx, prev_tx: Option<Transaction>) -> DispatchResult {
+    pub fn apply_push_transaction(
+        tx: BtcRelayedTx,
+        prev_tx: Option<Transaction>,
+    ) -> DispatchResult {
         let tx_hash = tx.raw.hash();
         let block_hash = tx.block_hash;
         let header_info = Module::<T>::headers(&tx.block_hash).ok_or_else(|| {

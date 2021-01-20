@@ -28,7 +28,9 @@ xp-gateway-bitcoin = { path = "../../../../primitives/gateway/bitcoin", default-
 xp-logging = { path = "../../../../primitives/logging", default-features = false }
 
 # ChainX pallets
+xpallet-assets = { path = "../../../assets", default-features = false }
 xpallet-gateway-bitcoin = { path = "../", default-features = false }
+xpallet-gateway-common = { path = "../../common", default-features = false }
 
 # light-bitcoin
 light-bitcoin = { git = "https://github.com/chainx-org/light-bitcoin", branch = "master", default-features = false }
@@ -62,7 +64,9 @@ std = [
     "xp-gateway-bitcoin/std",
     "xp-logging/std",
     # ChainX pallets
+    "xpallet-assets/std",
     "xpallet-gateway-bitcoin/std",
+    "xpallet-gateway-common/std",
     # light-bitcoin
     "light-bitcoin/std",
 ]

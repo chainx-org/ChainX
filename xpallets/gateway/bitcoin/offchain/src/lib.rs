@@ -35,24 +35,30 @@ use sp_runtime::{
     },
 };
 
-use sp_std::{collections::btree_set::BTreeSet, marker::PhantomData, str, vec, vec::Vec};
+use sp_std::{
+    collections::btree_set::BTreeSet,
+    convert::{TryFrom, TryInto},
+    marker::PhantomData,
+    str, vec,
+    vec::Vec,
+};
 
 use light_bitcoin::merkle::PartialMerkleTree;
 use light_bitcoin::{
     chain::{Block as BtcBlock, BlockHeader as BtcHeader, Transaction as BtcTransaction},
-    keys::{Network as BtcNetwork, Address},
+    keys::{Address as BtcAddress, Network as BtcNetwork},
     primitives::{hash_rev, H256 as BtcHash},
     serialization::{deserialize, serialize, Reader},
 };
 use xp_gateway_bitcoin::{
     AccountExtractor, BtcDepositInfo, BtcTxMetaType, BtcTxTypeDetector, OpReturnExtractor,
 };
+use xpallet_assets::Chain;
 use xpallet_gateway_bitcoin::{
-    trustee,
     types::{BtcDepositCache, BtcRelayedTxInfo, VoteResult},
     Module as XGatewayBitcoin,
 };
-
+use xpallet_gateway_common::{trustees::bitcoin::BtcTrusteeAddrInfo, Module as XGatewayCommon};
 /// Defines application identifier for crypto keys of this module.
 ///
 /// Every module that deals with signatures needs to declare its unique identifier for
@@ -87,14 +93,13 @@ pub trait Trait:
     SendTransactionTypes<Call<Self>>
     + CreateSignedTransaction<Call<Self>>
     + xpallet_gateway_bitcoin::Trait
+    + xpallet_gateway_common::Trait
 {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
     /// The overarching dispatch call type.
     type Call: From<Call<Self>>;
-
     /// A configuration for base priority of unsigned transactions.
-    ///
     /// This is exposed so that it can be tuned for particular runtime, when
     /// multiple pallets send unsigned transactions.
     type UnsignedPriority: Get<TransactionPriority>;
@@ -158,8 +163,6 @@ impl<T: Trait> From<sp_runtime::offchain::http::Error> for Error<T> {
 decl_storage! {
     trait Store for Module<T: Trait> as XGatewayBitcoinOffchain {
         Keys get(fn keys): Vec<T::AuthorityId>;
-        CurrentTrusteePair get(fn current_trustee_pair): (Address, Address);
-        LastTrusteePair get(fn last_trustee_pair): (Address, Address);
     }
     add_extra_genesis {
         config(keys): Vec<T::AuthorityId>;
@@ -175,86 +178,15 @@ decl_module! {
         fn offchain_worker(block_number: T::BlockNumber) {
             // Consider setting the frequency of requesting btc data based on the `block_number`
             debug::info!("ChainX Bitcoin Offchain Worker, ChainX Block #{:?}", block_number);
-            // Update Trustee Pair
-            let call = Call::update_trustee_pair();
-            if let Err(e) = SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into())
-            {
-                debug::error!("Failed to submit unsigned transaction for updating trustee pair: {:?}", e);
-            }
-
-            let best_index = XGatewayBitcoin::<T>::best_index().height;
-            let network = XGatewayBitcoin::<T>::network_id();
-
-            let next_height = best_index + 1;
-
-            // First, get withdrawal proposal from chain and broadcast to btc network.
-            Self::withdrawal_proposal_broadcast(network);
-
-            // Second, filter transactions from confirmed block and push transactions to chain.
-            if let Some(confirmed_index) = XGatewayBitcoin::<T>::confirmed_index() {
-                let confirm_height = confirmed_index.height;
-                let confirm_hash = match Self::fetch_block_hash(confirm_height, network) {
-                    Ok(Some(hash)) => {
-                        debug::info!("₿ Confirmed Block #{} hash: {}", confirm_height, hash);
-                        hash
-                    }
-                    Ok(None) => {
-                        debug::warn!("₿ Confirmed Block #{} has not been generated yet", confirm_height);
-                        return;
-                    }
-                    Err(err) => {
-                        debug::warn!("₿ Confirmed {:?}", err);
-                        return;
-                    }
-                };
-
-                let btc_confirmed_block = match Self::fetch_block(&confirm_hash[..], network) {
-                    Ok(block) => {
-                        debug::info!("₿ Confirmed Block {}", hash_rev(block.hash()));
-                        block
-                    }
-                    Err(err) => {
-                        debug::warn!("₿ Confirmed {:?}", err);
-                        return;
-                    }
-                };
-
-                Self::push_xbtc_transaction(&btc_confirmed_block, network);
-            }
-            // Third, get new block from btc network and push block header to chain
-            let btc_block_hash = match Self::fetch_block_hash(next_height, network) {
-                Ok(Some(hash)) => {
-                    debug::info!("₿ Block #{} hash: {}", next_height, hash);
-                    hash
-                }
-                Ok(None) => {
-                    debug::warn!("₿ Block #{} has not been generated yet", next_height);
-                    return;
-                }
-                Err(err) => {
-                    debug::warn!("₿ {:?}", err);
-                    return;
-                }
-            };
-
-            let btc_block = match Self::fetch_block(&btc_block_hash[..], network) {
-                Ok(block) => {
-                    debug::info!("₿ Block {}", hash_rev(block.hash()));
-                    block
-                }
-                Err(err) => {
-                    debug::warn!("₿ {:?}", err);
-                    return;
-                }
-            };
-
-            let new_header_found = true;
-            if new_header_found {
-                let call = Call::push_header(btc_block.header);
-                debug::info!("₿ Submitting unsigned transaction for pushing header: {:?}", call);
-                if let Err(e) = SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()) {
-                    debug::error!("Failed to submit unsigned transaction for pushing header: {:?}", e);
-                }
+            let number: u64 = block_number.try_into().unwrap_or(0) as u64;
+            if number % 5 == 0{
+                let network = XGatewayBitcoin::<T>::network_id();
+                // First, get withdrawal proposal from chain and broadcast to btc network.
+                Self::withdrawal_proposal_broadcast(network).unwrap();
+                // Second, filter transactions from confirmed block and push transactions to chain.
+                Self::filter_transactions_and_push(network);
+                // Third, get new block from btc network and push block header to chain
+                Self::get_new_header_and_push(network);
             }
         }
 
@@ -262,7 +194,7 @@ decl_module! {
         fn push_header(origin, header: BtcHeader) {
             ensure_none(origin)?;
             debug::info!("Push Header From OCW");
-            XGatewayBitcoin::<T>::apply_push_header(header);
+            XGatewayBitcoin::<T>::apply_push_header(header).unwrap();
         }
 
         #[weight = 0]
@@ -270,19 +202,7 @@ decl_module! {
             ensure_none(origin)?;
             debug::info!("Push Transaction From OCW");
             let relay_tx = relayed_info.into_relayed_tx(tx);
-            XGatewayBitcoin::<T>::apply_push_transaction(relay_tx, prev_tx);
-        }
-
-        #[weight = 0]
-        fn update_trustee_pair(origin) {
-            ensure_none(origin)?;
-            debug::info!("Update Trustee Pair For OCW");
-            let current_trustee_pair = trustee::get_current_trustee_address_pair::<T>()
-                .expect("Fail to get current trustee pair from chain");
-            // let last_trustee_pair = trustee::get_last_trustee_address_pair::<T>()
-            //     .expect("Fail to get current trustee pair from chain");
-            CurrentTrusteePair::put(current_trustee_pair);
-            LastTrusteePair::put(current_trustee_pair);
+            XGatewayBitcoin::<T>::apply_push_transaction(relay_tx, prev_tx).unwrap();
         }
 
     }
@@ -302,12 +222,151 @@ impl<T: Trait> Module<T> {
 /// This greatly helps with error messages, as the ones inside the macro
 /// can sometimes be hard to debug.
 impl<T: Trait> Module<T> {
+    // get trustee pair
+    fn get_trustee_pair(session_number: u32) -> Result<Option<(BtcAddress, BtcAddress)>, Error<T>> {
+        if let Some(trustee_session_info) =
+            XGatewayCommon::<T>::trustee_session_info_of(Chain::Bitcoin, session_number)
+        {
+            let hot_addr: Vec<u8> = trustee_session_info.0.hot_address;
+            let hot_addr = BtcTrusteeAddrInfo::try_from(hot_addr).unwrap();
+            let hot_addr = String::from_utf8(hot_addr.addr)
+                .unwrap()
+                .parse::<BtcAddress>()
+                .unwrap();
+            let cold_addr: Vec<u8> = trustee_session_info.0.cold_address;
+            let cold_addr = BtcTrusteeAddrInfo::try_from(cold_addr).unwrap();
+            let cold_addr = String::from_utf8(cold_addr.addr)
+                .unwrap()
+                .parse::<BtcAddress>()
+                .unwrap();
+            debug::info!("[ChainX|btc_trustee_pair] ChainX X-BTC Trustee Session Info (session number = {:?}):[Hot Address: {}, Cold Address: {}]",
+                            session_number,
+                            hot_addr,
+                            cold_addr,);
+            Ok(Some((hot_addr, cold_addr)))
+        } else {
+            Ok(None)
+        }
+    }
+    // get new header from btc network and push header to chain
+    fn get_new_header_and_push(network: BtcNetwork) {
+        let best_index = XGatewayBitcoin::<T>::best_index().height;
+        let next_height = best_index + 1;
+        let btc_block_hash = match Self::fetch_block_hash(next_height, network) {
+            Ok(Some(hash)) => {
+                debug::info!("₿ Block #{} hash: {}", next_height, hash);
+                hash
+            }
+            Ok(None) => {
+                debug::warn!("₿ Block #{} has not been generated yet", next_height);
+                return;
+            }
+            Err(err) => {
+                debug::warn!("₿ {:?}", err);
+                return;
+            }
+        };
+
+        let btc_block = match Self::fetch_block(&btc_block_hash[..], network) {
+            Ok(block) => {
+                debug::info!("₿ Block {}", hash_rev(block.hash()));
+                block
+            }
+            Err(err) => {
+                debug::warn!("₿ {:?}", err);
+                return;
+            }
+        };
+        let btc_header = btc_block.header;
+        if XGatewayBitcoin::<T>::block_hash_for(best_index)
+            .contains(&btc_header.previous_header_hash)
+        {
+            let call = Call::push_header(btc_block.header);
+            debug::info!(
+                "₿ Submitting unsigned transaction for pushing header: {:?}",
+                call
+            );
+            if let Err(e) =
+                SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into())
+            {
+                debug::error!(
+                    "Failed to submit unsigned transaction for pushing header: {:?}",
+                    e
+                );
+            }
+        }
+    }
     // filter transactions in confirmed block and push transactions to chain
+    fn filter_transactions_and_push(network: BtcNetwork) {
+        if let Some(confirmed_index) = XGatewayBitcoin::<T>::confirmed_index() {
+            let confirm_height = confirmed_index.height;
+            let confirm_hash = match Self::fetch_block_hash(confirm_height, network) {
+                Ok(Some(hash)) => {
+                    debug::info!("₿ Confirmed Block #{} hash: {}", confirm_height, hash);
+                    hash
+                }
+                Ok(None) => {
+                    debug::warn!(
+                        "₿ Confirmed Block #{} has not been generated yet",
+                        confirm_height
+                    );
+                    return;
+                }
+                Err(err) => {
+                    debug::warn!("₿ Confirmed {:?}", err);
+                    return;
+                }
+            };
+
+            let btc_confirmed_block = match Self::fetch_block(&confirm_hash[..], network) {
+                Ok(block) => {
+                    debug::info!("₿ Confirmed Block {}", hash_rev(block.hash()));
+                    block
+                }
+                Err(err) => {
+                    debug::warn!("₿ Confirmed {:?}", err);
+                    return;
+                }
+            };
+
+            Self::push_xbtc_transaction(&btc_confirmed_block, network);
+        }
+    }
     // Submit XBTC deposit/withdraw transaction to the ChainX
     fn push_xbtc_transaction(confirmed_block: &BtcBlock, network: BtcNetwork) {
         let mut needed = Vec::new();
         let mut tx_hashes = Vec::with_capacity(confirmed_block.transactions.len());
         let mut tx_matches = Vec::with_capacity(confirmed_block.transactions.len());
+
+        // get trustee info
+        let trustee_session_info_len =
+            XGatewayCommon::<T>::trustee_session_info_len(Chain::Bitcoin);
+        debug::info!(
+            "[OCW] trustee_session_info_len: {}",
+            trustee_session_info_len
+        );
+        let current_trustee_session_number = trustee_session_info_len
+            .checked_sub(1)
+            .unwrap_or(u32::max_value());
+        let previous_trustee_session_number = trustee_session_info_len
+            .checked_sub(2)
+            .unwrap_or(u32::max_value());
+        let current_trustee_pair = Self::get_trustee_pair(current_trustee_session_number)
+            .unwrap()
+            .unwrap();
+        let previous_trustee_pair = match Self::get_trustee_pair(previous_trustee_session_number) {
+            Ok(Some((hot, cold))) => (hot, cold),
+            Ok(None) => current_trustee_pair,
+            Err(_e) => current_trustee_pair,
+        };
+        let btc_min_deposit = XGatewayBitcoin::<T>::btc_min_deposit();
+        // construct BtcTxTypeDetector
+        let btc_tx_detector = BtcTxTypeDetector::new(
+            network,
+            btc_min_deposit,
+            current_trustee_pair,
+            Some(previous_trustee_pair),
+        );
 
         for tx in &confirmed_block.transactions {
             // Prepare for constructing partial merkle tree
@@ -325,22 +384,6 @@ impl<T: Trait> Module<T> {
             // Withdrawal: must have a previous transaction
             // Deposit: don't require previous transaction generally,
             //          but in special cases, a previous transaction needs to be submitted.
-            let btc_min_deposit = XGatewayBitcoin::<T>::btc_min_deposit();
-            let current_trustee_pair = Self::current_trustee_pair();
-            // debug::info!("current_trustee_pair: {:?}", current_trustee_pair);
-            let last_trustee_pair = Self::last_trustee_pair();
-            // debug::info!("last_trustee_pair: {:?}", last_trustee_pair);
-            // let current_trustee_pair = trustee::get_current_trustee_address_pair::<T>()
-            //     .expect("Fail to get current trustee pair from chain");
-            // let last_trustee_pair = trustee::get_last_trustee_address_pair::<T>()
-            //     .expect("Fail to get current trustee pair from chain");
-            let btc_tx_detector = BtcTxTypeDetector::new(
-                network,
-                btc_min_deposit,
-                current_trustee_pair,
-                Some(last_trustee_pair),
-            );
-
             match btc_tx_detector.detect_transaction_type(
                 &tx,
                 Some(&prev_tx),
@@ -411,7 +454,10 @@ impl<T: Trait> Module<T> {
                 if let Err(e) =
                     SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into())
                 {
-                    debug::error!("Failed to submit unsigned transaction for pushing transaction: {:?}", e);
+                    debug::error!(
+                        "Failed to submit unsigned transaction for pushing transaction: {:?}",
+                        e
+                    );
                 }
             }
         } else {
@@ -427,22 +473,6 @@ impl<T: Trait> Module<T> {
         let deposit_cache: Vec<BtcDepositCache> =
             XGatewayBitcoin::<T>::pending_deposits(btc_address);
         deposit_cache
-    }
-    // push new btc block header to chain
-    fn push_next_header(current_height: u32, next_height: u32, network: BtcNetwork) {
-        if let Ok(Some(hash)) = Self::fetch_block_hash(next_height, network) {
-            debug::info!("₿ Block #{} Hash: {:?}", next_height, hash);
-            if let Ok(block) = Self::fetch_block(&hash[..], network) {
-                debug::info!("₿ Block {}", hash_rev(block.hash()));
-                let btc_header = block.header;
-                if XGatewayBitcoin::<T>::block_hash_for(current_height)
-                    .contains(&btc_header.previous_header_hash)
-                {
-                } else {
-                    debug::warn!("Current block #{} may be a fork block", current_height);
-                }
-            }
-        }
     }
     // get withdrawal proposal from chain and broadcast raw transaction
     fn withdrawal_proposal_broadcast(network: BtcNetwork) -> Result<Option<String>, ()> {
@@ -483,7 +513,7 @@ impl<T: Trait> Module<T> {
         let pending = http::Request::get(url.as_ref())
             .deadline(deadline)
             .send()
-            .map_err(|err|Error::<T>::from(err))?;
+            .map_err(|err| Error::<T>::from(err))?;
 
         // The request is already being processed by the host, we are free to do anything
         // else in the worker (we can send multiple concurrent requests too).
@@ -530,7 +560,7 @@ impl<T: Trait> Module<T> {
         let pending = http::Request::post(url, req_body)
             .deadline(deadline)
             .send()
-            .map_err(|err|Error::<T>::from(err))?;
+            .map_err(|err| Error::<T>::from(err))?;
 
         // The request is already being processed by the host, we are free to do anything
         // else in the worker (we can send multiple concurrent requests too).
@@ -724,51 +754,26 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
     type Call = Call<T>;
 
     fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
-        // if let Call::push_header(block_number) = call {
-        //     ValidTransaction::with_tag_prefix("XGatewayBitcoinOffchain")
-        //         .priority(T::UnsignedPriority::get())
-        //         .and_provides(block_number) // TODO: a tag is required, otherwise the transactions will not be pruned.
-        //         // .and_provides((current_session, authority_id)) provide a tag?
-        //         .longevity(1u64) // FIXME a proper longevity
-        //         .propagate(true)
-        //         .build()
-        // } else {
-        //     InvalidTransaction::Call.into()
-        // }
-        // if let Call::push_transaction(tx, relayed_info, prev_tx) = call {
-        //     ValidTransaction::with_tag_prefix("XGatewayBitcoinOffchain")
-        //         .priority(T::UnsignedPriority::get())
-        //         .and_provides(tx) // TODO: a tag is required, otherwise the transactions will not be pruned.
-        //         // .and_provides((current_session, authority_id)) provide a tag?
-        //         .longevity(1u64) // FIXME a proper longevity
-        //         .propagate(true)
-        //         .build()
-        // } else {
-        //     InvalidTransaction::Call.into()
-        // }
-        match call{
-            Call::push_header(header) => ValidTransaction::with_tag_prefix("XGatewayBitcoinOffchain")
+        match call {
+            Call::push_header(header) => {
+                ValidTransaction::with_tag_prefix("XGatewayBitcoinOffchain")
                 .priority(T::UnsignedPriority::get())
                 .and_provides(header) // TODO: a tag is required, otherwise the transactions will not be pruned.
                 // .and_provides((current_session, authority_id)) provide a tag?
                 .longevity(1u64) // FIXME a proper longevity
                 .propagate(true)
-                .build(),
-            Call::push_transaction(tx, _relayed_info, _prev_tx) => ValidTransaction::with_tag_prefix("XGatewayBitcoinOffchain")
+                .build()
+            }
+            Call::push_transaction(tx, _relayed_info, _prev_tx) => {
+                ValidTransaction::with_tag_prefix("XGatewayBitcoinOffchain")
                 .priority(T::UnsignedPriority::get())
                 .and_provides(tx) // TODO: a tag is required, otherwise the transactions will not be pruned.
                 // .and_provides((current_session, authority_id)) provide a tag?
                 .longevity(1u64) // FIXME a proper longevity
                 .propagate(true)
-                .build(),
-            Call::update_trustee_pair() => ValidTransaction::with_tag_prefix("XGatewayBitcoinOffchain")
-                .priority(T::UnsignedPriority::get())
-                .and_provides("trustee") // TODO: a tag is required, otherwise the transactions will not be pruned.
-                // .and_provides((current_session, authority_id)) provide a tag?
-                .longevity(1u64) // FIXME a proper longevity
-                .propagate(true)
-                .build(),
-            _ => InvalidTransaction::Call.into()
+                .build()
+            }
+            _ => InvalidTransaction::Call.into(),
         }
     }
 }
