@@ -3,6 +3,7 @@
 pub mod types {
     use codec::HasCompact;
     use frame_support::pallet_prelude::{Decode, Encode};
+    use sp_std::prelude::Vec;
 
     pub type BtcAddress = Vec<u8>;
 
