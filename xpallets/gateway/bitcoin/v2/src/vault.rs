@@ -199,8 +199,7 @@ pub mod pallet {
         /// increase total collateral
         #[inline]
         fn increase_total_collateral(amount: PCX<T>) {
-            let new_collateral = Self::total_collateral() + amount;
-            <TotalCollateral<T>>::put(new_collateral);
+            <TotalCollateral<T>>::mutate(|c| *c += amount);
         }
 
         #[inline]
