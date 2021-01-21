@@ -88,7 +88,7 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         /// Register a vault.
         #[pallet::weight(0)]
-        pub fn register_vault(
+        pub(crate) fn register_vault(
             origin: OriginFor<T>,
             collateral: BalanceOf<T>,
             btc_address: BtcAddress,
@@ -114,6 +114,20 @@ pub mod pallet {
             Self::deposit_event(Event::VaultRegistered(vault.id, collateral));
             Ok(().into())
         }
+
+        /// Add extra collateral for registered vault.
+        #[pallet::weight(0)]
+        pub(crate) fn add_extra_collateral(
+            origin: OriginFor<T>,
+            collateral: BalanceOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            let sender = ensure_signed(origin)?;
+            ensure!(Self::vault_exists(&sender), Error::<T>::VaultNotFound);
+            Self::lock_collateral(&sender, collateral)?;
+            Self::increase_total_collateral(collateral);
+            Self::deposit_event(Event::ExtraCollateralAdded(sender, collateral));
+            Ok(().into())
+        }
     }
 
     /// Error during register, withdrawing collateral or adding extra collateral
@@ -127,14 +141,18 @@ pub mod pallet {
         VaultAlreadyRegistered,
         /// Btc address in request was occupied by another vault.
         BtcAddressOccupied,
+        /// Vault has not been registered yet.
+        VaultNotFound,
     }
 
     /// Event during register, withdrawing collateral or adding extra collateral
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T: Config> {
-        /// When a new vault has been registered.
+        /// New vault has been registered.
         VaultRegistered(<T as frame_system::Config>::AccountId, BalanceOf<T>),
+        /// Extra collateral was added to a vault.
+        ExtraCollateralAdded(<T as frame_system::Config>::AccountId, BalanceOf<T>),
     }
 
     /// Total collateral.
