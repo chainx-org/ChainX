@@ -158,7 +158,7 @@ pub mod pallet {
         }
 
         /// generate secure key from account id
-        pub(crate) fn(crate) gen_secure_key(id: T::AccountId) -> H256 {
+        pub(crate) fn gen_secure_key(id: T::AccountId) -> H256 {
             let nonce = <Nonce<T>>::mutate(|n| {
                 *n += U256::one();
                 *n
