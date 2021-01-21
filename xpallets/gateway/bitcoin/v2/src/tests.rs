@@ -10,9 +10,6 @@ fn register_vault(id: u64, collateral: u128, addr: &str) -> DispatchResultWithPo
 #[test]
 fn test_register_vault() {
     ExtBuilder::build(100).execute_with(|| {
-        // let register_vault = |id, collateral, addr: &str| {
-        //     Pallet::<Test>::register_vault(Origin::signed(id), collateral, addr.as_bytes().to_vec())
-        // };
         assert_err!(
             register_vault(1, 10000, "test"),
             Error::<Test>::InsufficientFunds

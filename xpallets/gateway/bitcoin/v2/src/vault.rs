@@ -60,7 +60,6 @@ pub mod types {
 #[allow(dead_code)]
 pub mod pallet {
     use frame_support::{
-        dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
         traits::{Currency, ReservableCurrency},
     };
