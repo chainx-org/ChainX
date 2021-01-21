@@ -9298,6 +9298,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xp-gateway-bitcoin",
+ "xp-gateway-common",
  "xp-logging",
  "xpallet-assets",
  "xpallet-assets-registrar",

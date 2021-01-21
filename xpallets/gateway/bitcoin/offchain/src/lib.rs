@@ -177,7 +177,7 @@ decl_module! {
         fn offchain_worker(block_number: T::BlockNumber) {
             // Consider setting the frequency of requesting btc data based on the `block_number`
             debug::info!("ChainX Bitcoin Offchain Worker, ChainX Block #{:?}", block_number);
-            let number: u64 = block_number.try_into().unwrap_or(0) as u64;
+            let number: u64 = block_number.try_into().unwrap_or(0u32) as u64;
             //let network = XGatewayBitcoin::<T>::network_id();
             let network = BtcNetwork::Mainnet;
             if number == 2 {

@@ -5,10 +5,10 @@
 use codec::{Decode, Encode};
 
 use sp_core::crypto::AccountId32;
-use sp_runtime::RuntimeDebug;
 use sp_runtime_interface::runtime_interface;
 
-#[derive(Clone, Copy, Eq, PartialEq, Encode, Decode, RuntimeDebug)]
+#[derive(Clone, Copy, Eq, PartialEq, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub enum Ss58CheckError {
     /// Bad alphabet.
     BadBase58,
@@ -24,6 +24,21 @@ pub enum Ss58CheckError {
     InvalidPath,
     /// Mismatch version.
     MismatchVersion,
+}
+
+#[cfg(not(feature = "std"))]
+impl core::fmt::Debug for Ss58CheckError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::BadBase58 => write!(f, "BadBase58"),
+            Self::BadLength => write!(f, "BadLength"),
+            Self::UnknownVersion => write!(f, "UnknonwVersion"),
+            Self::InvalidChecksum => write!(f, "InvalidChecksum"),
+            Self::InvalidFormat => write!(f, "InvalidFormat"),
+            Self::InvalidPath => write!(f, "InvalidPath"),
+            Self::MismatchVersion => write!(f, "MismatchVersion"),
+        }
+    }
 }
 
 #[runtime_interface]
