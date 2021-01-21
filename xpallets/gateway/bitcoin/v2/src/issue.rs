@@ -9,13 +9,21 @@ pub mod types {
     #[derive(Encode, Decode, Default, Clone, PartialEq)]
     #[cfg_attr(feature = "std", derive(Debug))]
     pub struct IssueRequest<AccountId, BlockNumber, XBTC, PCX> {
+        /// Vault id
         pub(crate) vault: AccountId,
+        /// Block height when the issue requested
         pub(crate) opentime: BlockNumber,
+        /// Who requests issue
         pub(crate) requester: AccountId,
+        /// Vault's btc address
         pub(crate) btc_address: BtcAddress,
+        /// Wheather request finished
         pub(crate) completed: bool,
+        /// Wheather request cancelled
         pub(crate) cancelled: bool,
+        /// Amount that user wants to issue
         pub(crate) amount: XBTC,
+        /// Collateral locked to avoid user griefing
         pub(crate) griefing_collateral: PCX,
     }
 }
@@ -46,20 +54,19 @@ pub mod pallet {
 
     use crate::vault::pallet as vault;
 
-    pub type PCX<T> =
+    type PCX<T> =
         <<T as vault::Config>::PCX as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-    pub type XBTC<T> =
+    type XBTC<T> =
         <<T as Config>::XBTC as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-    pub type Inner<T> =
-        <<T as Config>::UnsignedFixedPoint as sp_arithmetic::FixedPointNumber>::Inner;
-    pub type IssueRequest<T> = super::types::IssueRequest<
+    type Inner<T> = <<T as Config>::UnsignedFixedPoint as sp_arithmetic::FixedPointNumber>::Inner;
+    type IssueRequest<T> = super::types::IssueRequest<
         <T as frame_system::Config>::AccountId,
         <T as frame_system::Config>::BlockNumber,
         XBTC<T>,
         PCX<T>,
     >;
 
-    pub type UnsignedFixedPointOf<T> = <T as Config>::UnsignedFixedPoint;
+    type UnsignedFixedPointOf<T> = <T as Config>::UnsignedFixedPoint;
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(crate) trait Store)]
@@ -126,30 +133,36 @@ pub mod pallet {
         ArithmeticUnderflow,
     }
 
+    /// Exchange rate from btc to pcx
     #[pallet::storage]
     #[pallet::getter(fn exchange_rate)]
     pub(crate) type ExchangeRateFromBtcToPcx<T: Config> = StorageValue<_, u128, ValueQuery>;
 
+    /// Percentage to lock, when user requests issue
     #[pallet::storage]
     #[pallet::getter(fn issue_griefing_fee)]
     pub(crate) type IssueGriefingFee<T: Config> =
         StorageValue<_, UnsignedFixedPointOf<T>, ValueQuery>;
 
+    /// Auto-increament id to identity each request
     #[pallet::storage]
     pub(crate) type Nonce<T: Config> = StorageValue<_, U256, ValueQuery>;
 
+    /// Mapping from issue id to `IssueRequest`
     #[pallet::storage]
     pub(crate) type IssueRequests<T: Config> = StorageMap<_, Twox64Concat, H256, IssueRequest<T>>;
 
     impl<T: Config> Pallet<T> {
-        pub fn insert_issue_request(key: H256, value: IssueRequest<T>) {
+        pub(crate) fn insert_issue_request(key: H256, value: IssueRequest<T>) {
             <IssueRequests<T>>::insert(&key, value)
         }
-        fn gen_secure_key(id: T::AccountId) -> H256 {
+
+        /// generate secure key from account id
+        pub(crate) fn(crate) gen_secure_key(id: T::AccountId) -> H256 {
             let nonce = <Nonce<T>>::mutate(|n| {
                 *n += U256::one();
                 *n
-            });
+            }); //auto increament
             let mut hasher = Sha256::default();
             hasher.input(id.encode());
             hasher.input(nonce.encode());
@@ -193,6 +206,7 @@ pub mod pallet {
             TryInto::<PCX<T>>::try_into(y).map_err(|_| Error::<T>::TryIntoError.into())
         }
 
+        /// Calculated minimium required collateral for a `IssueRequest`
         pub fn get_required_collateral_from_btc_amount(
             amount: XBTC<T>,
         ) -> Result<PCX<T>, DispatchError> {
