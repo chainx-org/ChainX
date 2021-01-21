@@ -141,7 +141,7 @@ pub mod pallet {
         VaultAlreadyRegistered,
         /// Btc address in request was occupied by another vault.
         BtcAddressOccupied,
-        /// Vault doesn't register yet.
+        /// Vault has not been registered yet.
         VaultNotFound,
     }
 
@@ -149,9 +149,9 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T: Config> {
-        /// When a new vault has been registered.
+        /// New vault has been registered.
         VaultRegistered(<T as frame_system::Config>::AccountId, BalanceOf<T>),
-        /// When a vault deposit extra collateral
+        /// Extra collateral was added to a vault.
         ExtraCollateralAdded(<T as frame_system::Config>::AccountId, BalanceOf<T>),
     }
 
