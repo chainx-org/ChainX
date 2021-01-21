@@ -6,29 +6,31 @@ pub mod types {
 
     pub type BtcAddress = Vec<u8>;
 
-    // #[derive(Encode, Decode, Default, Clone, PartialEq)]
-    // #[cfg_attr(feature = "std", derive(Debug))]
-    // pub struct IssueRequest<AccountId, BlockNumber, XBTC, PCX> {
-    //     pub(crate) vault: AccountId,
-    //     pub(crate) opentime: BlockNumber,
-    //     pub(crate) requester: AccountId,
-    //     pub(crate) btc_address: BtcAddress,
-    //     pub(crate) completed: bool,
-    //     pub(crate) cancelled: bool,
-    //     pub(crate) amount: XBTC,
-    //     pub(crate) griefing_collateral: PCX,
-    // }
+    #[derive(Encode, Decode, Default, Clone, PartialEq)]
+    #[cfg_attr(feature = "std", derive(Debug))]
+    pub struct IssueRequest<AccountId, BlockNumber, XBTC, PCX> {
+        pub(crate) vault: AccountId,
+        pub(crate) opentime: BlockNumber,
+        pub(crate) requester: AccountId,
+        pub(crate) btc_address: BtcAddress,
+        pub(crate) completed: bool,
+        pub(crate) cancelled: bool,
+        pub(crate) amount: XBTC,
+        pub(crate) griefing_collateral: PCX,
+    }
 }
 
 #[frame_support::pallet]
 #[allow(dead_code)]
 pub mod pallet {
     use codec::{Decode, Encode, EncodeLike};
-    use frame_support::ensure;
-    use frame_support::storage::types::{StorageValue, ValueQuery};
-    use frame_support::traits::{Currency, Hooks, ReservableCurrency};
-    use frame_support::Twox64Concat;
-    use frame_support::{dispatch::DispatchResultWithPostInfo, storage::types::StorageMap};
+    use frame_support::{
+        dispatch::DispatchResultWithPostInfo,
+        ensure,
+        storage::types::{StorageMap, StorageValue, ValueQuery},
+        traits::{Currency, Hooks, ReservableCurrency},
+        Twox64Concat,
+    };
     use frame_system::{
         ensure_signed,
         pallet_prelude::{BlockNumberFor, OriginFor},
@@ -39,9 +41,8 @@ pub mod pallet {
         FixedPointNumber,
     };
     use sp_core::{H256, U256};
-    use sp_runtime::{DispatchError, DispatchResult};
-    use sp_std::convert::TryInto;
-    use sp_std::marker::PhantomData;
+    use sp_runtime::DispatchError;
+    use sp_std::{convert::TryInto, marker::PhantomData};
 
     use crate::vault::pallet as vault;
 
@@ -51,13 +52,12 @@ pub mod pallet {
         <<T as Config>::XBTC as Currency<<T as frame_system::Config>::AccountId>>::Balance;
     pub type Inner<T> =
         <<T as Config>::UnsignedFixedPoint as sp_arithmetic::FixedPointNumber>::Inner;
-
-    // pub type IssueRequest<T: Config> = super::types::IssueRequest<
-    //     T::AccountId,
-    //     T::BlockNumber,
-    //     T::XBTC,
-    //     <T as vault::Config>::PCX,
-    // >;
+    pub type IssueRequest<T> = super::types::IssueRequest<
+        <T as frame_system::Config>::AccountId,
+        <T as frame_system::Config>::BlockNumber,
+        XBTC<T>,
+        PCX<T>,
+    >;
 
     pub type UnsignedFixedPointOf<T> = <T as Config>::UnsignedFixedPoint;
 
@@ -67,7 +67,6 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config + vault::Config {
-        type SecureId;
         type XBTC: ReservableCurrency<Self::AccountId>;
         type UnsignedFixedPoint: FixedPointNumber + Encode + EncodeLike + Decode;
     }
@@ -94,21 +93,23 @@ pub mod pallet {
                 collateral >= required_collateral,
                 Error::<T>::InsufficientGriefingCollateral
             );
-            <T as vault::Config>::PCX::reserve(&sender, collateral)
-                .map_err(|_| Error::<T>::InsufficientFunds)?;
+            <<T as vault::Config>::PCX as ReservableCurrency<
+                <T as frame_system::Config>::AccountId,
+            >>::reserve(&sender, collateral)
+            .map_err(|_| Error::<T>::InsufficientFunds)?;
             let key = Self::gen_secure_key(sender.clone());
-            // Self::insert_issue_request(
-            //     key,
-            //     IssueRequest {
-            //         vault: vault_id.clone(),
-            //         opentime: height,
-            //         requester: sender,
-            //         btc_address: vault.wallet,
-            //         amount,
-            //         griefing_collateral: collateral,
-            //         ..Default::default()
-            //     },
-            // );
+            Self::insert_issue_request(
+                key,
+                IssueRequest::<T> {
+                    vault: vault.id,
+                    opentime: height,
+                    requester: sender,
+                    btc_address: vault.wallet,
+                    amount,
+                    griefing_collateral: collateral,
+                    ..Default::default()
+                },
+            );
             Ok(().into())
         }
     }
@@ -137,13 +138,13 @@ pub mod pallet {
     #[pallet::storage]
     pub(crate) type Nonce<T: Config> = StorageValue<_, U256, ValueQuery>;
 
-    // #[pallet::storage]
-    // pub(crate) type IssueRequests<T: Config> = StorageMap<_, Twox64Concat, H256, IssueRequest<T>>;
+    #[pallet::storage]
+    pub(crate) type IssueRequests<T: Config> = StorageMap<_, Twox64Concat, H256, IssueRequest<T>>;
 
     impl<T: Config> Pallet<T> {
-        // pub fn insert_issue_request(key: H256, value: IssueRequest<T>) {
-        //     <IssueRequests<T>>::insert(&key, value)
-        // }
+        pub fn insert_issue_request(key: H256, value: IssueRequest<T>) {
+            <IssueRequests<T>>::insert(&key, value)
+        }
         fn gen_secure_key(id: T::AccountId) -> H256 {
             let nonce = <Nonce<T>>::mutate(|n| {
                 *n += U256::one();
