@@ -25,6 +25,7 @@ pallet-session = { version = "2.0.0", default-features = false }
 # ChainX primitives
 chainx-primitives = { path = "../../../../primitives", default-features = false }
 xp-gateway-bitcoin = { path = "../../../../primitives/gateway/bitcoin", default-features = false }
+xp-gateway-common = { path = "../../../../primitives/gateway/common", default-features = false }
 xp-logging = { path = "../../../../primitives/logging", default-features = false }
 
 # ChainX pallets
@@ -62,6 +63,7 @@ std = [
     # ChainX primitives
     "chainx-primitives/std",
     "xp-gateway-bitcoin/std",
+    "xp-gateway-common/std",
     "xp-logging/std",
     # ChainX pallets
     "xpallet-assets/std",
