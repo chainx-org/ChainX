@@ -141,8 +141,10 @@ pub mod pallet {
         VaultAlreadyRegistered,
         /// Btc address in request was occupied by another vault.
         BtcAddressOccupied,
-        /// Vault has not been registered yet.
+        /// Vault does not exist.
         VaultNotFound,
+        /// Vault was inactive
+        VaultInactive,
     }
 
     /// Event during register, withdrawing collateral or adding extra collateral
@@ -227,6 +229,26 @@ pub mod pallet {
         #[inline]
         pub fn btc_address_exists(address: &BtcAddress) -> bool {
             <BtcAddresses<T>>::contains_key(address)
+        }
+
+        pub fn get_vault_by_id(
+            id: &T::AccountId,
+        ) -> Result<Vault<T::AccountId, T::BlockNumber, BalanceOf<T>>, DispatchError> {
+            match <Vaults<T>>::get(id) {
+                Some(vault) => Ok(vault),
+                None => Err(Error::<T>::VaultNotFound.into()),
+            }
+        }
+
+        pub fn get_active_vault_by_id(
+            id: &T::AccountId,
+        ) -> Result<Vault<T::AccountId, T::BlockNumber, BalanceOf<T>>, DispatchError> {
+            let vault = Self::get_vault_by_id(id)?;
+            if vault.status == VaultStatus::Active {
+                Ok(vault)
+            } else {
+                Err(Error::<T>::VaultInactive.into())
+            }
         }
     }
 }
