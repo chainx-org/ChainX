@@ -9322,6 +9322,8 @@ dependencies = [
  "pallet-balances",
  "parity-scale-codec",
  "serde",
+ "sha2 0.8.2",
+ "sp-arithmetic",
  "sp-core",
  "sp-inherents",
  "sp-io",
