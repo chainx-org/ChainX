@@ -26,8 +26,7 @@ use frame_system::{
     offchain::{CreateSignedTransaction, SendTransactionTypes, SubmitTransaction},
 };
 use sp_application_crypto::RuntimeAppPublic;
-use sp_core::crypto::KeyTypeId;
-// use sp_core::crypto::{set_default_ss58_version, Ss58AddressFormat};
+use sp_core::crypto::{AccountId32, KeyTypeId};
 use sp_runtime::{
     offchain::{http, Duration},
     transaction_validity::{
@@ -45,15 +44,20 @@ use sp_std::{
 };
 
 use light_bitcoin::chain::Transaction;
+use light_bitcoin::keys::Address;
 use light_bitcoin::merkle::PartialMerkleTree;
+use light_bitcoin::script::Script;
 use light_bitcoin::{
     chain::{Block as BtcBlock, BlockHeader as BtcHeader, Transaction as BtcTransaction},
     keys::{Address as BtcAddress, Network as BtcNetwork},
     primitives::{hash_rev, H256 as BtcHash},
     serialization::{deserialize, serialize, Reader},
 };
-use xp_gateway_bitcoin::{BtcDepositInfo, BtcTxMetaType, BtcTxTypeDetector, OpReturnExtractor};
-use xp_gateway_common::AccountExtractor;
+use sp_std::str::FromStr;
+use xp_gateway_bitcoin::{
+    extract_opreturn_data, BtcDepositInfo, BtcTxMetaType, BtcTxTypeDetector, OpReturnExtractor,
+};
+use xp_gateway_common::{from_ss58_check, AccountExtractor};
 use xpallet_assets::Chain;
 use xpallet_gateway_bitcoin::{
     types::{BtcDepositCache, BtcRelayedTxInfo, VoteResult},
@@ -165,6 +169,7 @@ impl<T: Trait> From<sp_runtime::offchain::http::Error> for Error<T> {
 decl_storage! {
     trait Store for Module<T: Trait> as XGatewayBitcoinOffchain {
         Keys get(fn keys): Vec<T::AuthorityId>;
+        TestAccountId get(fn account_id): AccountId32;
     }
     add_extra_genesis {
         config(keys): Vec<T::AuthorityId>;
@@ -180,10 +185,10 @@ decl_module! {
         fn offchain_worker(block_number: T::BlockNumber) {
             // Consider setting the frequency of requesting btc data based on the `block_number`
             debug::info!("ChainX Bitcoin Offchain Worker, ChainX Block #{:?}", block_number);
-            // set_default_ss58_version(Ss58AddressFormat::ChainXAccount);
             let number: u64 = block_number.try_into().unwrap_or(0usize) as u64;
-            //let network = XGatewayBitcoin::<T>::network_id();
-            let network = BtcNetwork::Mainnet;
+            let network = XGatewayBitcoin::<T>::network_id();
+            // debug::info!("[OCW] network: {:?}", network);
+            // let network = BtcNetwork::Mainnet;
             if number == 2 {
                 Self::filter_transactions_and_push(network);
             }
@@ -307,7 +312,7 @@ impl<T: Trait> Module<T> {
     fn filter_transactions_and_push(network: BtcNetwork) {
         //if let Some(confirmed_index) = XGatewayBitcoin::<T>::confirmed_index() {
         // let confirm_height = confirmed_index.height;
-        let confirm_height = 666814;
+        let confirm_height = 1895123;
         let confirm_hash = match Self::fetch_block_hash(confirm_height, network) {
             Ok(Some(hash)) => {
                 debug::info!("₿ Confirmed Block #{} hash: {}", confirm_height, hash);
@@ -347,39 +352,60 @@ impl<T: Trait> Module<T> {
         let mut tx_matches = Vec::with_capacity(confirmed_block.transactions.len());
 
         // get trustee info
-        let trustee_session_info_len =
-            XGatewayCommon::<T>::trustee_session_info_len(Chain::Bitcoin);
-        debug::info!(
-            "[OCW] trustee_session_info_len: {}",
-            trustee_session_info_len
+        // let trustee_session_info_len =
+        //     XGatewayCommon::<T>::trustee_session_info_len(Chain::Bitcoin);
+        // debug::info!(
+        //     "[OCW] trustee_session_info_len: {}",
+        //     trustee_session_info_len
+        // );
+        // let current_trustee_session_number = trustee_session_info_len
+        //     .checked_sub(1)
+        //     .unwrap_or(u32::max_value());
+        // let previous_trustee_session_number = trustee_session_info_len
+        //     .checked_sub(2)
+        //     .unwrap_or(u32::max_value());
+        // let current_trustee_pair = Self::get_trustee_pair(current_trustee_session_number)
+        //     .unwrap()
+        //     .unwrap();
+        // let previous_trustee_pair = match Self::get_trustee_pair(previous_trustee_session_number) {
+        //     Ok(Some((hot, cold))) => (hot, cold),
+        //     Ok(None) => current_trustee_pair,
+        //     Err(_e) => current_trustee_pair,
+        // };
+
+        // for testing
+        const DEPOSIT_HOT_ADDR: &str = "2N5QAjp4oaUbJCQqhsMiwSK1oYGJNUnAgqM";
+        const DEPOSIT_COLD_ADDR: &str = "2N2AL9SfiGRssLt2bry6fnE4ruStLF7DtHD";
+        let current_trustee_pair = (
+            DEPOSIT_HOT_ADDR.parse::<Address>().unwrap(),
+            DEPOSIT_COLD_ADDR.parse::<Address>().unwrap(),
         );
-        let current_trustee_session_number = trustee_session_info_len
-            .checked_sub(1)
-            .unwrap_or(u32::max_value());
-        let previous_trustee_session_number = trustee_session_info_len
-            .checked_sub(2)
-            .unwrap_or(u32::max_value());
-        let current_trustee_pair = Self::get_trustee_pair(current_trustee_session_number)
-            .unwrap()
-            .unwrap();
-        let previous_trustee_pair = match Self::get_trustee_pair(previous_trustee_session_number) {
-            Ok(Some((hot, cold))) => (hot, cold),
-            Ok(None) => current_trustee_pair,
-            Err(_e) => current_trustee_pair,
-        };
         let btc_min_deposit = XGatewayBitcoin::<T>::btc_min_deposit();
         // construct BtcTxTypeDetector
-        let btc_tx_detector =
-            BtcTxTypeDetector::new(network, btc_min_deposit, current_trustee_pair, None);
+        let btc_tx_detector = BtcTxTypeDetector::new(network, 0, current_trustee_pair, None);
 
-        let tx = Self::fetch_transaction(
-            "b368d3b822ec6656af441ccfa0ea2c846ec445286fd264e94a9a6edf0d7a1108",
-            network,
-        )
-        .unwrap();
+        // let tx = Self::fetch_transaction(
+        //     "5dc4c53053153999f6db9e06cf65b1d2cd0dbed60213e217e9e762f569071de2",
+        //     network,
+        // )
+        // .unwrap();
+        let tx = "01000000021f3ffe48b4259a03792a48393028826fb8e5073bdaa68d9c3bd0b6c2c9bcad30010000006b483045022100b455f93c5b93a80255d4823ad5785b3aa6ab59cce03e045896b73f0f343ae1c702201de5d31272056168d81cf877313b033a5c47d643b38e6f36b4725f35929efa080121032b42f71e3cb7be0f7f8bed0d8c8dd78a85141f268b9435dedb2eb1805b5f006d000000002a4d0feeb9c4a7901b3c0ebceb00f7fdfeba55a4528204deddbda9202bc0d08a010000006a47304402203b17fd6d2ceef10e56e7a28d46ce0937c88cdb8096f9807803199b7185159d4c02202c933afa661e333e5a648a1867b728bf63ee2ee91cc0117ad868ee1984703e710121032b42f71e3cb7be0f7f8bed0d8c8dd78a85141f268b9435dedb2eb1805b5f006d0000000003605fa9000000000017a91485528a5e98cfb732129ff4a6b0d4d398c7be343687d4c91902000000001976a9147e836b50820d909dc10448ba7306a0f5dc6c755188ac0000000000000000326a303545577453636e65347a57734761503467566f38446d4c7043685678334d7a6f5154704b4a434564425459444131447900000000".parse::<Transaction>().unwrap();
         debug::info!("Transaction:{:?}", tx);
-        debug::info!("Transaction Inputs: {:?}", tx.inputs);
+        // debug::info!("Transaction Inputs: {:?}", tx.inputs);
+        let script = Script::from_str("6a303545577453636e65347a57734761503467566f38446d4c7043685678334d7a6f5154704b4a4345644254594441314479").unwrap();
+        let data = extract_opreturn_data(&script).unwrap();
+        let account_and_referral = data
+            .split(|x| *x == b'@')
+            .map(|d| d.to_vec())
+            .collect::<Vec<_>>();
+        debug::info!(
+            "[OCW] account_and_referral: {:?}",
+            str::from_utf8(&account_and_referral[0])
+        );
+        let acc = String::from_utf8_lossy(&data).into_owned();
 
+        let account = from_ss58_check(&account_and_referral[0]).unwrap();
+        debug::info!("[OCW] AcountId32: {:?}", account);
         let (op_return, deposit_value) = btc_tx_detector
             .parse_deposit_transaction_outputs(&tx, OpReturnExtractor::extract_account);
         debug::info!("op_return:{:?} deposit_value:{}", op_return, deposit_value);
@@ -645,17 +671,17 @@ impl<T: Trait> Module<T> {
 
     fn fetch_transaction(hash: &str, network: BtcNetwork) -> Result<BtcTransaction, Error<T>> {
         let url = match network {
-            BtcNetwork::Mainnet => format!("https://blockstream.info/api/tx/{}/hex", hash),
-            BtcNetwork::Testnet => format!("https://blockstream.info/testnet/api/tx/{}/hex", hash),
+            BtcNetwork::Mainnet => format!("https://blockstream.info/api/tx/{}/raw", hash),
+            BtcNetwork::Testnet => format!("https://blockstream.info/testnet/api/tx/{}/raw", hash),
         };
         let body = Self::get(url)?;
-        // let transaction = deserialize::<_, BtcTransaction>(Reader::new(&body))
-        //     .map_err(|_| Error::<T>::BtcSserializationError)?;
-        debug::info!("hex:{:?}", str::from_utf8(&body));
-        let transaction = str::from_utf8(&body)
-            .unwrap()
-            .parse::<Transaction>()
-            .unwrap();
+        let transaction = deserialize::<_, BtcTransaction>(Reader::new(&body))
+            .map_err(|_| Error::<T>::BtcSserializationError)?;
+        // debug::info!("hex:{:?}", str::from_utf8(&body));
+        // let transaction = str::from_utf8(&body)
+        //     .unwrap()
+        //     .parse::<Transaction>()
+        //     .unwrap();
         debug::info!("₿ Transaction {}", hash_rev(transaction.hash()));
         Ok(transaction)
     }
@@ -780,7 +806,7 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
             Call::push_header(header) => {
                 ValidTransaction::with_tag_prefix("XGatewayBitcoinOffchain")
                 .priority(T::UnsignedPriority::get())
-                .and_provides(header) // TODO: a tag is required, otherwise the transactions will not be pruned.
+                .and_provides("push_header") // TODO: a tag is required, otherwise the transactions will not be pruned.
                 // .and_provides((current_session, authority_id)) provide a tag?
                 .longevity(1u64) // FIXME a proper longevity
                 .propagate(true)
@@ -789,7 +815,7 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
             Call::push_transaction(tx, _relayed_info, _prev_tx) => {
                 ValidTransaction::with_tag_prefix("XGatewayBitcoinOffchain")
                 .priority(T::UnsignedPriority::get())
-                .and_provides(tx) // TODO: a tag is required, otherwise the transactions will not be pruned.
+                .and_provides("push_transaction") // TODO: a tag is required, otherwise the transactions will not be pruned.
                 // .and_provides((current_session, authority_id)) provide a tag?
                 .longevity(1u64) // FIXME a proper longevity
                 .propagate(true)
