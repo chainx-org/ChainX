@@ -6,21 +6,14 @@ pub mod pallet {
     use sp_std::{convert::TryInto, marker::PhantomData};
 
     use frame_support::{
-        dispatch::DispatchError,
+        dispatch::{DispatchError, DispatchResult},
         storage::types::{StorageValue, ValueQuery},
-        traits::Currency,
+        traits::{Currency, ReservableCurrency},
         traits::{GenesisBuild, Hooks},
     };
     use frame_system::pallet_prelude::BlockNumberFor;
 
-    use crate::collateral::pallet as collateral;
-    use crate::treasury::pallet as treasury;
-
-    type PCX<T> = <<T as collateral::Config>::Currency as Currency<
-        <T as frame_system::Config>::AccountId,
-    >>::Balance;
-
-    type XBTC<T> = <<T as treasury::Config>::Currency as Currency<
+    pub type BalanceOf<T> = <<T as xpallet_assets::Config>::Currency as Currency<
         <T as frame_system::Config>::AccountId,
     >>::Balance;
 
@@ -29,7 +22,7 @@ pub mod pallet {
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + collateral::Config + treasury::Config {}
+    pub trait Config: frame_system::Config + xpallet_assets::Config {}
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
@@ -39,10 +32,16 @@ pub mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
+        InsufficientFunds,
         ArithmeticOverflow,
         ArithmeticUnderflow,
         TryIntoError,
     }
+
+    /// Total collateral.
+    #[pallet::storage]
+    #[pallet::getter(fn total_collateral)]
+    pub(crate) type TotalCollateral<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn exchange_rate)]
@@ -66,7 +65,7 @@ pub mod pallet {
         fn into_u128<I: TryInto<u128>>(x: I) -> Result<u128, DispatchError> {
             TryInto::<u128>::try_into(x).map_err(|_| Error::<T>::TryIntoError.into())
         }
-        pub fn btc_to_pcx(amount: XBTC<T>) -> Result<PCX<T>, DispatchError> {
+        pub fn btc_to_pcx(amount: BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError> {
             let raw_amount = Self::into_u128(amount)?;
             let rate = Self::exchange_rate()
                 .checked_mul(raw_amount)
@@ -77,7 +76,7 @@ pub mod pallet {
             Ok(result)
         }
 
-        pub fn pcx_to_btc(amount: PCX<T>) -> Result<XBTC<T>, DispatchError> {
+        pub fn pcx_to_btc(amount: BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError> {
             let raw_amount = Self::into_u128(amount)?;
             let rate = raw_amount
                 .checked_mul(100_000u128)
@@ -86,6 +85,22 @@ pub mod pallet {
                 .ok_or(Error::<T>::ArithmeticUnderflow)?;
             let result = rate.try_into().map_err(|_| Error::<T>::TryIntoError)?;
             Ok(result)
+        }
+
+        /// Lock collateral
+        #[inline]
+        pub fn lock_collateral(sender: &T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
+            <<T as xpallet_assets::Config>::Currency as ReservableCurrency<
+                <T as frame_system::Config>::AccountId,
+            >>::reserve(sender, amount)
+            .map_err(|_| Error::<T>::InsufficientFunds)?;
+            Ok(())
+        }
+
+        /// increase total collateral
+        #[inline]
+        pub fn increase_total_collateral(amount: BalanceOf<T>) {
+            <TotalCollateral<T>>::mutate(|c| *c += amount);
         }
     }
 }

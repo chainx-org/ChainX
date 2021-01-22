@@ -59,18 +59,15 @@ pub mod types {
 #[frame_support::pallet]
 #[allow(dead_code)]
 pub mod pallet {
-    use frame_support::{pallet_prelude::*, traits::Currency};
+    use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::{ensure_signed, BlockNumberFor, OriginFor};
 
     use super::types::*;
-    use crate::collateral::pallet as collateral;
-
-    pub type BalanceOf<T> = <<T as collateral::Config>::Currency as Currency<
-        <T as frame_system::Config>::AccountId,
-    >>::Balance;
+    use crate::assets::pallet as assets;
+    use assets::BalanceOf;
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + collateral::Config {
+    pub trait Config: frame_system::Config + assets::Config {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
 
@@ -103,8 +100,8 @@ pub mod pallet {
                 !Self::btc_address_exists(&btc_address),
                 Error::<T>::BtcAddressOccupied
             );
-            <collateral::Pallet<T>>::lock_collateral(&sender, collateral)?;
-            <collateral::Pallet<T>>::increase_total_collateral(collateral);
+            <assets::Pallet<T>>::lock_collateral(&sender, collateral)?;
+            <assets::Pallet<T>>::increase_total_collateral(collateral);
             Self::insert_btc_address(&btc_address, sender.clone());
             let vault = Vault::new(sender.clone(), btc_address);
             Self::insert_vault(&sender, vault.clone());
@@ -120,8 +117,8 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             ensure!(Self::vault_exists(&sender), Error::<T>::VaultNotFound);
-            <collateral::Pallet<T>>::lock_collateral(&sender, collateral)?;
-            <collateral::Pallet<T>>::increase_total_collateral(collateral);
+            <assets::Pallet<T>>::lock_collateral(&sender, collateral)?;
+            <assets::Pallet<T>>::increase_total_collateral(collateral);
             Self::deposit_event(Event::ExtraCollateralAdded(sender, collateral));
             Ok(().into())
         }

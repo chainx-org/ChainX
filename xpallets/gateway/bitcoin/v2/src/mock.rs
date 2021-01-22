@@ -1,5 +1,3 @@
-use std::{cell::RefCell, collections::BTreeMap, ops::AddAssign, time::Duration};
-
 use frame_support::{impl_outer_origin, parameter_types, sp_io, traits::GenesisBuild};
 use sp_core::H256;
 use sp_runtime::{
@@ -7,8 +5,6 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 
-use super::collateral::pallet as collateral;
-use super::treasury::pallet as treasury;
 use super::vault::pallet as vault;
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -63,10 +59,6 @@ impl pallet_balances::Config for Test {
     type WeightInfo = ();
 }
 
-impl collateral::Config for Test {
-    type Currency = PCX;
-}
-
 impl xpallet_assets_registrar::Config for Test {
     type Event = ();
     type NativeAssetId = ChainXAssetId;
@@ -76,7 +68,7 @@ impl xpallet_assets_registrar::Config for Test {
 
 impl xpallet_assets::Config for Test {
     type Event = ();
-    type Currency = PCX;
+    type Currency = Balances;
     type Amount = Amount;
     type TreasuryAccount = ();
     type OnCreatedAccount = frame_system::CallOnCreatedAccount<Test>;
@@ -84,16 +76,14 @@ impl xpallet_assets::Config for Test {
     type WeightInfo = ();
 }
 
-impl treasury::Config for Test {
-    type Currency = PCX;
-}
+impl crate::assets::pallet::Config for Test {}
 
 impl vault::Config for Test {
     type Event = ();
 }
 
 pub(crate) type System = frame_system::Pallet<Test>;
-pub(crate) type PCX = pallet_balances::Module<Test>;
+pub(crate) type Balances = pallet_balances::Module<Test>;
 
 pub struct ExtBuilder;
 impl ExtBuilder {
