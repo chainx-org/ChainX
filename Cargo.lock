@@ -9330,6 +9330,8 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "sp-version",
+ "xpallet-assets",
+ "xpallet-assets-registrar",
 ]
 
 [[package]]

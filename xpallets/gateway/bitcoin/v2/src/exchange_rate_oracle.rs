@@ -13,17 +13,23 @@ pub mod pallet {
     };
     use frame_system::pallet_prelude::BlockNumberFor;
 
-    type BalanceOf<T> =
-        <<T as Config>::Balances as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+    use crate::collateral::pallet as collateral;
+    use crate::treasury::pallet as treasury;
+
+    type PCX<T> = <<T as collateral::Config>::Currency as Currency<
+        <T as frame_system::Config>::AccountId,
+    >>::Balance;
+
+    type XBTC<T> = <<T as treasury::Config>::Currency as Currency<
+        <T as frame_system::Config>::AccountId,
+    >>::Balance;
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(crate) trait Store)]
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::config]
-    pub trait Config: frame_system::Config {
-        type Balances: Currency<Self::AccountId>;
-    }
+    pub trait Config: frame_system::Config + collateral::Config + treasury::Config {}
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
@@ -60,7 +66,7 @@ pub mod pallet {
         fn into_u128<I: TryInto<u128>>(x: I) -> Result<u128, DispatchError> {
             TryInto::<u128>::try_into(x).map_err(|_| Error::<T>::TryIntoError.into())
         }
-        pub fn btc_to_pcx(amount: BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError> {
+        pub fn btc_to_pcx(amount: XBTC<T>) -> Result<PCX<T>, DispatchError> {
             let raw_amount = Self::into_u128(amount)?;
             let rate = Self::exchange_rate()
                 .checked_mul(raw_amount)
@@ -71,7 +77,7 @@ pub mod pallet {
             Ok(result)
         }
 
-        pub fn pcx_to_btc(amount: BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError> {
+        pub fn pcx_to_btc(amount: PCX<T>) -> Result<XBTC<T>, DispatchError> {
             let raw_amount = Self::into_u128(amount)?;
             let rate = raw_amount
                 .checked_mul(100_000u128)

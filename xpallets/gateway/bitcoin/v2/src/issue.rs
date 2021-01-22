@@ -51,21 +51,24 @@ pub mod pallet {
         pallet_prelude::{BlockNumberFor, OriginFor},
     };
 
+    use crate::collateral::pallet as collateral;
     use crate::exchange_rate_oracle::pallet as exchange;
+    use crate::treasury::pallet as treasury;
     use crate::vault::pallet as vault;
 
-    type BalanceOf<T> = <<T as exchange::Config>::Balances as Currency<
+    type XBTC<T> = <<T as treasury::Config>::Currency as Currency<
         <T as frame_system::Config>::AccountId,
     >>::Balance;
 
-    type XBTC<T> =
-        <<T as Config>::XBTC as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+    type PCX<T> = <<T as collateral::Config>::Currency as Currency<
+        <T as frame_system::Config>::AccountId,
+    >>::Balance;
 
     type IssueRequest<T> = super::types::IssueRequest<
         <T as frame_system::Config>::AccountId,
         <T as frame_system::Config>::BlockNumber,
-        BalanceOf<T>,
-        BalanceOf<T>,
+        XBTC<T>,
+        PCX<T>,
     >;
 
     #[pallet::pallet]
@@ -73,8 +76,13 @@ pub mod pallet {
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + vault::Config + exchange::Config {
-        type XBTC: Currency<Self::AccountId>;
+    pub trait Config:
+        frame_system::Config
+        + vault::Config
+        + exchange::Config
+        + collateral::Config
+        + treasury::Config
+    {
     }
 
     #[pallet::hooks]
@@ -87,8 +95,8 @@ pub mod pallet {
         pub fn request_issue(
             origin: OriginFor<T>,
             vault_id: T::AccountId,
-            amount: BalanceOf<T>,
-            collateral: BalanceOf<T>,
+            amount: XBTC<T>,
+            collateral: PCX<T>,
         ) -> DispatchResultWithPostInfo {
             //FIXME(wangyafei): break if bridge in liquidation mode.
             let sender = ensure_signed(origin)?;
@@ -171,8 +179,8 @@ pub mod pallet {
 
         /// Calculated minimium required collateral for a `IssueRequest`
         pub fn get_required_collateral_from_btc_amount(
-            amount: BalanceOf<T>,
-        ) -> Result<BalanceOf<T>, DispatchError> {
+            amount: XBTC<T>,
+        ) -> Result<PCX<T>, DispatchError> {
             let pcx_amount = <exchange::Pallet<T>>::btc_to_pcx(amount)?;
             let percetage = Percent::from_parts(12);
             let collateral = percetage.mul_ceil(pcx_amount);

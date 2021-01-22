@@ -7,9 +7,11 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 
+use super::collateral::pallet as collateral;
+use super::treasury::pallet as treasury;
 use super::vault::pallet as vault;
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Test;
 
 /// The AccountId alias in this test module.
@@ -32,7 +34,7 @@ impl frame_system::Config for Test {
     type BlockNumber = BlockNumber;
     type Hash = H256;
     type Hashing = BlakeTwo256;
-    type AccountId = u64;
+    type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
     type Event = ();
@@ -48,6 +50,7 @@ impl frame_system::Config for Test {
 }
 parameter_types! {
     pub const ExistentialDeposit: u64 = 0;
+    pub const ChainXAssetId: u32 = 0;
 }
 
 impl pallet_balances::Config for Test {
@@ -60,13 +63,37 @@ impl pallet_balances::Config for Test {
     type WeightInfo = ();
 }
 
+impl collateral::Config for Test {
+    type Currency = PCX;
+}
+
+impl xpallet_assets_registrar::Config for Test {
+    type Event = ();
+    type NativeAssetId = ChainXAssetId;
+    type RegistrarHandler = ();
+    type WeightInfo = ();
+}
+
+impl xpallet_assets::Config for Test {
+    type Event = ();
+    type Currency = PCX;
+    type Amount = Amount;
+    type TreasuryAccount = ();
+    type OnCreatedAccount = frame_system::CallOnCreatedAccount<Test>;
+    type OnAssetChanged = ();
+    type WeightInfo = ();
+}
+
+impl treasury::Config for Test {
+    type Currency = PCX;
+}
+
 impl vault::Config for Test {
-    type PCX = Balances;
     type Event = ();
 }
 
-pub(crate) type System = frame_system::Module<Test>;
-pub(crate) type Balances = pallet_balances::Module<Test>;
+pub(crate) type System = frame_system::Pallet<Test>;
+pub(crate) type PCX = pallet_balances::Module<Test>;
 
 pub struct ExtBuilder;
 impl ExtBuilder {

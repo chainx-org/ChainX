@@ -59,21 +59,18 @@ pub mod types {
 #[frame_support::pallet]
 #[allow(dead_code)]
 pub mod pallet {
-    use frame_support::{
-        pallet_prelude::*,
-        traits::{Currency, ReservableCurrency},
-    };
+    use frame_support::{pallet_prelude::*, traits::Currency};
     use frame_system::pallet_prelude::{ensure_signed, BlockNumberFor, OriginFor};
-    use sp_runtime::DispatchResult;
 
     use super::types::*;
+    use crate::collateral::pallet as collateral;
 
-    pub type BalanceOf<T> =
-        <<T as Config>::PCX as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+    pub type BalanceOf<T> = <<T as collateral::Config>::Currency as Currency<
+        <T as frame_system::Config>::AccountId,
+    >>::Balance;
 
     #[pallet::config]
-    pub trait Config: frame_system::Config {
-        type PCX: ReservableCurrency<Self::AccountId>;
+    pub trait Config: frame_system::Config + collateral::Config {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
 
@@ -106,8 +103,8 @@ pub mod pallet {
                 !Self::btc_address_exists(&btc_address),
                 Error::<T>::BtcAddressOccupied
             );
-            Self::lock_collateral(&sender, collateral)?;
-            Self::increase_total_collateral(collateral);
+            <collateral::Pallet<T>>::lock_collateral(&sender, collateral)?;
+            <collateral::Pallet<T>>::increase_total_collateral(collateral);
             Self::insert_btc_address(&btc_address, sender.clone());
             let vault = Vault::new(sender.clone(), btc_address);
             Self::insert_vault(&sender, vault.clone());
@@ -123,8 +120,8 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             ensure!(Self::vault_exists(&sender), Error::<T>::VaultNotFound);
-            Self::lock_collateral(&sender, collateral)?;
-            Self::increase_total_collateral(collateral);
+            <collateral::Pallet<T>>::lock_collateral(&sender, collateral)?;
+            <collateral::Pallet<T>>::increase_total_collateral(collateral);
             Self::deposit_event(Event::ExtraCollateralAdded(sender, collateral));
             Ok(().into())
         }
@@ -160,11 +157,6 @@ pub mod pallet {
         /// Vault released collateral.
         CollateralReleased(<T as frame_system::Config>::AccountId, BalanceOf<T>),
     }
-
-    /// Total collateral.
-    #[pallet::storage]
-    #[pallet::getter(fn total_collateral)]
-    pub(crate) type TotalCollateral<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
     /// Mapping account to vault struct.
     #[pallet::storage]
@@ -223,19 +215,6 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
-        /// Lock collateral
-        #[inline]
-        pub fn lock_collateral(sender: &T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
-            T::PCX::reserve(sender, amount).map_err(|_| Error::<T>::InsufficientFunds)?;
-            Ok(())
-        }
-
-        /// increase total collateral
-        #[inline]
-        pub fn increase_total_collateral(amount: BalanceOf<T>) {
-            <TotalCollateral<T>>::mutate(|c| *c += amount);
-        }
-
         #[inline]
         pub fn insert_vault(
             sender: &T::AccountId,
