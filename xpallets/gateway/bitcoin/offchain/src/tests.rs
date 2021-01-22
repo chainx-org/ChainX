@@ -14,6 +14,10 @@ use light_bitcoin::{
 };
 
 use crate::mock::XGatewayBitcoinRelay;
+use light_bitcoin::chain::Transaction;
+use light_bitcoin::keys::{Address, Network};
+use sp_core::crypto::{set_default_ss58_version, AccountId32, Ss58AddressFormat};
+use xp_gateway_bitcoin::{AccountExtractor, BtcTxTypeDetector, OpReturnExtractor};
 
 #[test]
 fn fetch_block_hash() {
@@ -124,4 +128,37 @@ fn parse_send_raw_tx_err() {
     let err = XGatewayBitcoinRelay::parse_send_raw_tx_error(resp_body).unwrap();
     assert_eq!(err.code, -25);
     assert_eq!(err.message, "bad-txns-inputs-missingorspent");
+}
+
+#[test]
+fn detect_transaction_type() {
+    set_default_ss58_version(Ss58AddressFormat::ChainXAccount);
+
+    const DEPOSIT_HOT_ADDR: &str = "3LFSUKkP26hun42J1Dy6RATsbgmBJb27NF";
+    const DEPOSIT_COLD_ADDR: &str = "3FLBhPfEqmw4Wn5EQMeUzPLrQtJMprgwnw";
+    let btc_tx_detector = BtcTxTypeDetector::new(
+        Network::Mainnet,
+        0,
+        (
+            DEPOSIT_HOT_ADDR.parse::<Address>().unwrap(),
+            DEPOSIT_COLD_ADDR.parse::<Address>().unwrap(),
+        ),
+        None,
+    );
+    let case = (
+                "020000000001012f0f1be54334c36baf9edce4051acfcc4634e27504e39bc6466a1dadd36110e40100000017160014cd286c8c974540b1019e351c33551dc152e7447bffffffff03307500000000000017a914cb94110435d0635223eebe25ed2aaabc03781c4587672400000000000017a9149b995c9fddc8e5086626f7123631891a209d83a4870000000000000000326a3035556a336568616d445a57506667413869415a656e6863416d5044616b6a6634614d626b424234645856766a6f57367802483045022100f27347145406cc9706cd4d83018b07303c30b8d43f935019bf1d3accb38696f70220546db7a30dc8f0c4f02e17460573d009d26d85bd98a32642e88c6f74e76ac7140121037788522b753d5517cd9191c96f741a0d2b479369697d41567b4b418c7979d77300000000".parse::<Transaction>().unwrap(),
+                (
+                    Some((
+                        "5Uj3ehamDZWPfgA8iAZenhcAmPDakjf4aMbkBB4dXVvjoW6x".parse::<AccountId32>().unwrap(),
+                        None
+                    )),
+                    30000
+                )
+            );
+    let (tx, result) = case;
+    let (result, value) = result;
+    let (op_return, deposit_value) =
+        btc_tx_detector.parse_deposit_transaction_outputs(&tx, OpReturnExtractor::extract_account);
+    assert_eq!(op_return, result);
+    assert_eq!(deposit_value, value);
 }

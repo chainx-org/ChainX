@@ -27,6 +27,7 @@ use frame_system::{
 };
 use sp_application_crypto::RuntimeAppPublic;
 use sp_core::crypto::KeyTypeId;
+// use sp_core::crypto::{set_default_ss58_version, Ss58AddressFormat};
 use sp_runtime::{
     offchain::{http, Duration},
     transaction_validity::{
@@ -43,6 +44,7 @@ use sp_std::{
     vec::Vec,
 };
 
+use light_bitcoin::chain::Transaction;
 use light_bitcoin::merkle::PartialMerkleTree;
 use light_bitcoin::{
     chain::{Block as BtcBlock, BlockHeader as BtcHeader, Transaction as BtcTransaction},
@@ -51,13 +53,14 @@ use light_bitcoin::{
     serialization::{deserialize, serialize, Reader},
 };
 use xp_gateway_bitcoin::{BtcDepositInfo, BtcTxMetaType, BtcTxTypeDetector, OpReturnExtractor};
-use xp_gateway_common::{from_ss58_check, AccountExtractor};
+use xp_gateway_common::AccountExtractor;
 use xpallet_assets::Chain;
 use xpallet_gateway_bitcoin::{
     types::{BtcDepositCache, BtcRelayedTxInfo, VoteResult},
     Module as XGatewayBitcoin,
 };
 use xpallet_gateway_common::{trustees::bitcoin::BtcTrusteeAddrInfo, Module as XGatewayCommon};
+
 /// Defines application identifier for crypto keys of this module.
 ///
 /// Every module that deals with signatures needs to declare its unique identifier for
@@ -177,7 +180,8 @@ decl_module! {
         fn offchain_worker(block_number: T::BlockNumber) {
             // Consider setting the frequency of requesting btc data based on the `block_number`
             debug::info!("ChainX Bitcoin Offchain Worker, ChainX Block #{:?}", block_number);
-            let number: u64 = block_number.try_into().unwrap_or(0u32) as u64;
+            // set_default_ss58_version(Ss58AddressFormat::ChainXAccount);
+            let number: u64 = block_number.try_into().unwrap_or(0usize) as u64;
             //let network = XGatewayBitcoin::<T>::network_id();
             let network = BtcNetwork::Mainnet;
             if number == 2 {
@@ -369,10 +373,16 @@ impl<T: Trait> Module<T> {
             BtcTxTypeDetector::new(network, btc_min_deposit, current_trustee_pair, None);
 
         let tx = Self::fetch_transaction(
-            "9d9cad00589d96a65747da6b6a1bf1b99a1e109684934013151bafaeb3b0c994",
+            "b368d3b822ec6656af441ccfa0ea2c846ec445286fd264e94a9a6edf0d7a1108",
             network,
         )
         .unwrap();
+        debug::info!("Transaction:{:?}", tx);
+        debug::info!("Transaction Inputs: {:?}", tx.inputs);
+
+        let (op_return, deposit_value) = btc_tx_detector
+            .parse_deposit_transaction_outputs(&tx, OpReturnExtractor::extract_account);
+        debug::info!("op_return:{:?} deposit_value:{}", op_return, deposit_value);
         //for tx in &confirmed_block.transactions {
         // Prepare for constructing partial merkle tree
         tx_hashes.push(tx.hash());
@@ -409,8 +419,9 @@ impl<T: Trait> Module<T> {
                 input_addr,
             }) => {
                 debug::info!(
-                    "X-BTC Deposit [{}] (Tx: {:?})",
+                    "X-BTC Deposit [{}]:[{:?}] (Tx: {:?})",
                     deposit_value,
+                    input_addr,
                     hash_rev(tx.hash()),
                 );
                 debug::info!("X-BTC Deposit OpReturn:[{:?}]", op_return);
@@ -634,12 +645,17 @@ impl<T: Trait> Module<T> {
 
     fn fetch_transaction(hash: &str, network: BtcNetwork) -> Result<BtcTransaction, Error<T>> {
         let url = match network {
-            BtcNetwork::Mainnet => format!("https://blockstream.info/api/tx/{}/raw", hash),
-            BtcNetwork::Testnet => format!("https://blockstream.info/testnet/api/tx/{}/raw", hash),
+            BtcNetwork::Mainnet => format!("https://blockstream.info/api/tx/{}/hex", hash),
+            BtcNetwork::Testnet => format!("https://blockstream.info/testnet/api/tx/{}/hex", hash),
         };
         let body = Self::get(url)?;
-        let transaction = deserialize::<_, BtcTransaction>(Reader::new(&body))
-            .map_err(|_| Error::<T>::BtcSserializationError)?;
+        // let transaction = deserialize::<_, BtcTransaction>(Reader::new(&body))
+        //     .map_err(|_| Error::<T>::BtcSserializationError)?;
+        debug::info!("hex:{:?}", str::from_utf8(&body));
+        let transaction = str::from_utf8(&body)
+            .unwrap()
+            .parse::<Transaction>()
+            .unwrap();
         debug::info!("₿ Transaction {}", hash_rev(transaction.hash()));
         Ok(transaction)
     }
