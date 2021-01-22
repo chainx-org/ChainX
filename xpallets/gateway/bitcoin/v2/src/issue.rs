@@ -31,9 +31,6 @@ pub mod types {
 #[frame_support::pallet]
 #[allow(dead_code)]
 pub mod pallet {
-    use codec::Encode;
-    use sha2::{Digest, Sha256};
-
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         ensure,
@@ -42,7 +39,7 @@ pub mod pallet {
         Twox64Concat,
     };
     use sp_arithmetic::Percent;
-    use sp_core::{H256, U256};
+    use sp_core::U256;
     use sp_runtime::DispatchError;
     use sp_std::marker::PhantomData;
 
@@ -91,7 +88,7 @@ pub mod pallet {
                 Error::<T>::InsufficientGriefingCollateral
             );
             assets::Pallet::<T>::lock_collateral(&sender, collateral)?;
-            let key = Self::gen_secure_key(sender.clone());
+            let key = Self::get_nonce();
             Self::insert_issue_request(
                 key,
                 IssueRequest::<T> {
@@ -130,25 +127,20 @@ pub mod pallet {
 
     /// Mapping from issue id to `IssueRequest`
     #[pallet::storage]
-    pub(crate) type IssueRequests<T: Config> = StorageMap<_, Twox64Concat, H256, IssueRequest<T>>;
+    pub(crate) type IssueRequests<T: Config> = StorageMap<_, Twox64Concat, U256, IssueRequest<T>>;
 
     impl<T: Config> Pallet<T> {
-        pub(crate) fn insert_issue_request(key: H256, value: IssueRequest<T>) {
+        pub(crate) fn insert_issue_request(key: U256, value: IssueRequest<T>) {
             <IssueRequests<T>>::insert(&key, value)
         }
 
         /// generate secure key from account id
-        pub(crate) fn gen_secure_key(id: T::AccountId) -> H256 {
+        pub(crate) fn get_nonce() -> U256 {
             let nonce = <Nonce<T>>::mutate(|n| {
                 *n += U256::one();
                 *n
             }); //auto increament
-            let mut hasher = Sha256::default();
-            hasher.input(id.encode());
-            hasher.input(nonce.encode());
-            let mut result = [0u8; 32];
-            result.copy_from_slice(&hasher.result()[..]);
-            H256(result)
+            nonce
         }
 
         /// Calculated minimium required collateral for a `IssueRequest`
