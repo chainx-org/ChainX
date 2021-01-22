@@ -127,8 +127,6 @@ pub mod pallet {
     /// Error during register, withdrawing collateral or adding extra collateral
     #[pallet::error]
     pub enum Error<T> {
-        /// Requester doesn't has enough pcx for collateral.
-        InsufficientFunds,
         /// The amount in request is less than lower bound.
         InsufficientVaultCollateralAmount,
         /// Collateral is less than lower bound after extrinsic.

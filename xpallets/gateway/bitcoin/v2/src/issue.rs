@@ -38,7 +38,7 @@ pub mod pallet {
         dispatch::DispatchResultWithPostInfo,
         ensure,
         storage::types::{StorageMap, StorageValue, ValueQuery},
-        traits::{Currency, Hooks},
+        traits::Hooks,
         Twox64Concat,
     };
     use sp_arithmetic::Percent;
@@ -90,10 +90,7 @@ pub mod pallet {
                 collateral >= required_collateral,
                 Error::<T>::InsufficientGriefingCollateral
             );
-            // <<T as vault::Config>::PCX as ReservableCurrency<
-            //     <T as frame_system::Config>::AccountId,
-            // >>::reserve(&sender, collateral)
-            // .map_err(|_| Error::<T>::InsufficientFunds)?;
+            assets::Pallet::<T>::lock_collateral(&sender, collateral)?;
             let key = Self::gen_secure_key(sender.clone());
             Self::insert_issue_request(
                 key,
@@ -115,12 +112,6 @@ pub mod pallet {
     pub enum Error<T> {
         /// Collateral in request is less than griefing collateral.
         InsufficientGriefingCollateral,
-        /// User does not have enough pcx.
-        InsufficientFunds,
-        /// Unable to convert value
-        TryIntoError,
-        ArithmeticOverflow,
-        ArithmeticUnderflow,
     }
 
     /// Exchange rate from btc to pcx

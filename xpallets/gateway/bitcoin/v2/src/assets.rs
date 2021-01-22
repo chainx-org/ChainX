@@ -32,9 +32,13 @@ pub mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
+        /// Requester doesn't has enough pcx for collateral.
         InsufficientFunds,
+        /// Calculation during exchangine was overflow
         ArithmeticOverflow,
+        /// Calculation during exchangine was underflow
         ArithmeticUnderflow,
+        /// Cannot convert into `BalanceOf<T>`
         TryIntoError,
     }
 
