@@ -82,6 +82,9 @@ impl ExtBuilder {
         let _ = GenesisBuild::<Test>::assimilate_storage(
             &vault::GenesisConfig {
                 minimium_vault_collateral,
+                secure_threshold: 300,
+                premium_threshold: 250,
+                liquidation_threshold: 180,
             },
             &mut storage,
         );

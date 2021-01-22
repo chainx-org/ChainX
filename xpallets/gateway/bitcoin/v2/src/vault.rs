@@ -135,8 +135,10 @@ pub mod pallet {
     pub enum Error<T> {
         /// Requester doesn't has enough pcx for collateral.
         InsufficientFunds,
-        /// The amount in request is less than minimium bound.
+        /// The amount in request is less than lower bound.
         InsufficientVaultCollateralAmount,
+        /// Collateral is less than lower bound after extrinsic.
+        InsufficientVaultCollateral,
         /// Requester has been vault.
         VaultAlreadyRegistered,
         /// Btc address in request was occupied by another vault.
@@ -155,6 +157,8 @@ pub mod pallet {
         VaultRegistered(<T as frame_system::Config>::AccountId, BalanceOf<T>),
         /// Extra collateral was added to a vault.
         ExtraCollateralAdded(<T as frame_system::Config>::AccountId, BalanceOf<T>),
+        /// Vault released collateral.
+        CollateralReleased(<T as frame_system::Config>::AccountId, BalanceOf<T>),
     }
 
     /// Total collateral.
@@ -180,10 +184,31 @@ pub mod pallet {
     #[pallet::getter(fn minimium_vault_collateral)]
     pub(crate) type MinimiumVaultCollateral<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
+    /// Secure threshold for vault
+    /// eg, 200 means 200%.
+    #[pallet::storage]
+    #[pallet::getter(fn secure_threshold)]
+    pub(crate) type SecureThreshold<T: Config> = StorageValue<_, u16, ValueQuery>;
+
+    /// Secure threshold for vault
+    /// eg, 150 means 150%.
+    #[pallet::storage]
+    #[pallet::getter(fn premium_threshold)]
+    pub(crate) type PremiumThreshold<T: Config> = StorageValue<_, u16, ValueQuery>;
+
+    /// Secure threshold for vault.
+    /// eg, 100 means 100%.
+    #[pallet::storage]
+    #[pallet::getter(fn liquidation_threshold)]
+    pub(crate) type LiquidationThreshold<T: Config> = StorageValue<_, u16, ValueQuery>;
+
     #[pallet::genesis_config]
     #[derive(Default)]
     pub struct GenesisConfig {
         pub(crate) minimium_vault_collateral: u32,
+        pub(crate) secure_threshold: u16,
+        pub(crate) premium_threshold: u16,
+        pub(crate) liquidation_threshold: u16,
     }
 
     #[pallet::genesis_build]
@@ -191,6 +216,9 @@ pub mod pallet {
         fn build(&self) {
             let pcx: BalanceOf<T> = self.minimium_vault_collateral.into();
             <MinimiumVaultCollateral<T>>::put(pcx);
+            <SecureThreshold<T>>::put(self.secure_threshold);
+            <PremiumThreshold<T>>::put(self.premium_threshold);
+            <LiquidationThreshold<T>>::put(self.liquidation_threshold);
         }
     }
 

@@ -4,6 +4,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+mod exchange_rate_oracle;
 mod issue;
 mod vault;
 
