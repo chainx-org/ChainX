@@ -171,7 +171,7 @@ impl BtcTxTypeDetector {
                 input_addr,
             })
         } else {
-            warn!(
+            debug!(
                 "[detect_deposit_transaction_type] Receive a deposit tx ({:?}), but deposit value ({:}) is too low, drop it",
                 hash_rev(tx.hash()), deposit_value,
             );
@@ -198,7 +198,7 @@ impl BtcTxTypeDetector {
             .map(|output| Script::new(output.script_pubkey.clone()))
             .filter(|script| script.is_null_data_script())
         {
-            debug!(
+            warn!(
                 "[parse_deposit_transaction_outputs] opreturn_script:{:?}",
                 opreturn_script
             );

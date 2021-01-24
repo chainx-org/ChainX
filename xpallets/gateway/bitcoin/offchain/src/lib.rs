@@ -43,24 +43,18 @@ use sp_std::{
     vec::Vec,
 };
 
-use light_bitcoin::chain::Transaction;
-use light_bitcoin::keys::Address;
-use light_bitcoin::merkle::PartialMerkleTree;
-use light_bitcoin::script::Script;
 use light_bitcoin::{
     chain::{Block as BtcBlock, BlockHeader as BtcHeader, Transaction as BtcTransaction},
     keys::{Address as BtcAddress, Network as BtcNetwork},
+    merkle::PartialMerkleTree,
     primitives::{hash_rev, H256 as BtcHash},
     serialization::{deserialize, serialize, Reader},
 };
-use sp_std::str::FromStr;
-use xp_gateway_bitcoin::{
-    extract_opreturn_data, BtcDepositInfo, BtcTxMetaType, BtcTxTypeDetector, OpReturnExtractor,
-};
-use xp_gateway_common::{from_ss58_check, AccountExtractor};
+use xp_gateway_bitcoin::{BtcDepositInfo, BtcTxMetaType, BtcTxTypeDetector, OpReturnExtractor};
+use xp_gateway_common::AccountExtractor;
 use xpallet_assets::Chain;
 use xpallet_gateway_bitcoin::{
-    types::{BtcDepositCache, BtcRelayedTxInfo, VoteResult},
+    types::{BtcRelayedTxInfo, VoteResult},
     Module as XGatewayBitcoin,
 };
 use xpallet_gateway_common::{trustees::bitcoin::BtcTrusteeAddrInfo, Module as XGatewayCommon};
@@ -185,21 +179,16 @@ decl_module! {
         fn offchain_worker(block_number: T::BlockNumber) {
             // Consider setting the frequency of requesting btc data based on the `block_number`
             debug::info!("ChainX Bitcoin Offchain Worker, ChainX Block #{:?}", block_number);
-            let number: u64 = block_number.try_into().unwrap_or(0usize) as u64;
+            let number: u32 = block_number.try_into().unwrap_or(0usize) as u32;
             let network = XGatewayBitcoin::<T>::network_id();
-            // debug::info!("[OCW] network: {:?}", network);
-            // let network = BtcNetwork::Mainnet;
-            if number == 2 {
+            if number % 20 == 0 {
+                // First, get withdrawal proposal from chain and broadcast to btc network.
+                Self::withdrawal_proposal_broadcast(network).unwrap();
+                // Second, filter transactions from confirmed block and push transactions to chain.
                 Self::filter_transactions_and_push(network);
+                // Third, get new block from btc network and push block header to chain
+                Self::get_new_header_and_push(network);
             }
-            // if number % 5 == 0{
-            //     // First, get withdrawal proposal from chain and broadcast to btc network.
-            //     Self::withdrawal_proposal_broadcast(network).unwrap();
-            //     // Second, filter transactions from confirmed block and push transactions to chain.
-            //     Self::filter_transactions_and_push(network);
-            //     // Third, get new block from btc network and push block header to chain
-            //     Self::get_new_header_and_push(network);
-            // }
         }
 
         #[weight = 0]
@@ -216,7 +205,6 @@ decl_module! {
             let relay_tx = relayed_info.into_relayed_tx(tx);
             XGatewayBitcoin::<T>::apply_push_transaction(relay_tx, prev_tx).unwrap();
         }
-
     }
 }
 
@@ -264,86 +252,89 @@ impl<T: Trait> Module<T> {
     fn get_new_header_and_push(network: BtcNetwork) {
         let best_index = XGatewayBitcoin::<T>::best_index().height;
         let next_height = best_index + 1;
-        let btc_block_hash = match Self::fetch_block_hash(next_height, network) {
-            Ok(Some(hash)) => {
-                debug::info!("₿ Block #{} hash: {}", next_height, hash);
-                hash
-            }
-            Ok(None) => {
-                debug::warn!("₿ Block #{} has not been generated yet", next_height);
-                return;
-            }
-            Err(err) => {
-                debug::warn!("₿ {:?}", err);
-                return;
-            }
-        };
+        loop {
+            let btc_block_hash = match Self::fetch_block_hash(next_height, network) {
+                Ok(Some(hash)) => {
+                    debug::info!("₿ Block #{} hash: {}", next_height, hash);
+                    hash
+                }
+                Ok(None) => {
+                    debug::warn!("₿ Block #{} has not been generated yet", next_height);
+                    return;
+                }
+                Err(err) => {
+                    debug::warn!("₿ {:?}", err);
+                    continue;
+                }
+            };
 
-        let btc_block = match Self::fetch_block(&btc_block_hash[..], network) {
-            Ok(block) => {
-                debug::info!("₿ Block {}", hash_rev(block.hash()));
-                block
-            }
-            Err(err) => {
-                debug::warn!("₿ {:?}", err);
-                return;
-            }
-        };
-        let btc_header = btc_block.header;
-        if XGatewayBitcoin::<T>::block_hash_for(best_index)
-            .contains(&btc_header.previous_header_hash)
-        {
-            let call = Call::push_header(btc_block.header);
-            debug::info!(
-                "₿ Submitting unsigned transaction for pushing header: {:?}",
-                call
-            );
-            if let Err(e) =
-                SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into())
+            let btc_block = match Self::fetch_block(&btc_block_hash[..], network) {
+                Ok(block) => {
+                    debug::info!("₿ Block {}", hash_rev(block.hash()));
+                    block
+                }
+                Err(err) => {
+                    debug::warn!("₿ {:?}", err);
+                    continue;
+                }
+            };
+            let btc_header = btc_block.header;
+            if XGatewayBitcoin::<T>::block_hash_for(best_index)
+                .contains(&btc_header.previous_header_hash)
             {
-                debug::error!(
-                    "Failed to submit unsigned transaction for pushing header: {:?}",
-                    e
+                let call = Call::push_header(btc_block.header);
+                debug::info!(
+                    "₿ Submitting unsigned transaction for pushing header: {:?}",
+                    call
                 );
+                if let Err(e) =
+                    SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into())
+                {
+                    debug::error!(
+                        "Failed to submit unsigned transaction for pushing header: {:?}",
+                        e
+                    );
+                }
             }
+            break;
         }
     }
     // filter transactions in confirmed block and push transactions to chain
     fn filter_transactions_and_push(network: BtcNetwork) {
-        //if let Some(confirmed_index) = XGatewayBitcoin::<T>::confirmed_index() {
-        // let confirm_height = confirmed_index.height;
-        let confirm_height = 1895123;
-        let confirm_hash = match Self::fetch_block_hash(confirm_height, network) {
-            Ok(Some(hash)) => {
-                debug::info!("₿ Confirmed Block #{} hash: {}", confirm_height, hash);
-                hash
-            }
-            Ok(None) => {
-                debug::warn!(
-                    "₿ Confirmed Block #{} has not been generated yet",
-                    confirm_height
-                );
-                return;
-            }
-            Err(err) => {
-                debug::warn!("₿ Confirmed {:?}", err);
-                return;
-            }
-        };
+        if let Some(confirmed_index) = XGatewayBitcoin::<T>::confirmed_index() {
+            let confirm_height = confirmed_index.height;
+            loop {
+                let confirm_hash = match Self::fetch_block_hash(confirm_height, network) {
+                    Ok(Some(hash)) => {
+                        debug::info!("₿ Confirmed Block #{} hash: {}", confirm_height, hash);
+                        hash
+                    }
+                    Ok(None) => {
+                        debug::warn!("₿ Confirmed Block #{} Failed", confirm_height);
+                        continue;
+                    }
+                    Err(err) => {
+                        debug::warn!("₿ Confirmed {:?}", err);
+                        continue;
+                    }
+                };
 
-        let btc_confirmed_block = match Self::fetch_block(&confirm_hash[..], network) {
-            Ok(block) => {
-                debug::info!("₿ Confirmed Block {}", hash_rev(block.hash()));
-                block
-            }
-            Err(err) => {
-                debug::warn!("₿ Confirmed {:?}", err);
-                return;
-            }
-        };
+                let btc_confirmed_block = match Self::fetch_block(&confirm_hash[..], network) {
+                    Ok(block) => {
+                        debug::info!("₿ Confirmed Block {}", hash_rev(block.hash()));
+                        block
+                    }
+                    Err(err) => {
+                        debug::warn!("₿ Confirmed {:?}", err);
+                        continue;
+                    }
+                };
 
-        Self::push_xbtc_transaction(&btc_confirmed_block, network);
-        //}
+                Self::push_xbtc_transaction(&btc_confirmed_block, network);
+
+                break;
+            }
+        }
     }
     // Submit XBTC deposit/withdraw transaction to the ChainX
     fn push_xbtc_transaction(confirmed_block: &BtcBlock, network: BtcNetwork) {
@@ -352,129 +343,100 @@ impl<T: Trait> Module<T> {
         let mut tx_matches = Vec::with_capacity(confirmed_block.transactions.len());
 
         // get trustee info
-        // let trustee_session_info_len =
-        //     XGatewayCommon::<T>::trustee_session_info_len(Chain::Bitcoin);
-        // debug::info!(
-        //     "[OCW] trustee_session_info_len: {}",
-        //     trustee_session_info_len
-        // );
-        // let current_trustee_session_number = trustee_session_info_len
-        //     .checked_sub(1)
-        //     .unwrap_or(u32::max_value());
-        // let previous_trustee_session_number = trustee_session_info_len
-        //     .checked_sub(2)
-        //     .unwrap_or(u32::max_value());
-        // let current_trustee_pair = Self::get_trustee_pair(current_trustee_session_number)
-        //     .unwrap()
-        //     .unwrap();
-        // let previous_trustee_pair = match Self::get_trustee_pair(previous_trustee_session_number) {
-        //     Ok(Some((hot, cold))) => (hot, cold),
-        //     Ok(None) => current_trustee_pair,
-        //     Err(_e) => current_trustee_pair,
-        // };
-
-        // for testing
-        const DEPOSIT_HOT_ADDR: &str = "2N5QAjp4oaUbJCQqhsMiwSK1oYGJNUnAgqM";
-        const DEPOSIT_COLD_ADDR: &str = "2N2AL9SfiGRssLt2bry6fnE4ruStLF7DtHD";
-        let current_trustee_pair = (
-            DEPOSIT_HOT_ADDR.parse::<Address>().unwrap(),
-            DEPOSIT_COLD_ADDR.parse::<Address>().unwrap(),
+        let trustee_session_info_len =
+            XGatewayCommon::<T>::trustee_session_info_len(Chain::Bitcoin);
+        debug::info!(
+            "[OCW] trustee_session_info_len: {}",
+            trustee_session_info_len
         );
+        let current_trustee_session_number = trustee_session_info_len
+            .checked_sub(1)
+            .unwrap_or(u32::max_value());
+        let previous_trustee_session_number = trustee_session_info_len
+            .checked_sub(2)
+            .unwrap_or(u32::max_value());
+        let current_trustee_pair = Self::get_trustee_pair(current_trustee_session_number)
+            .unwrap()
+            .unwrap();
+        let previous_trustee_pair = match Self::get_trustee_pair(previous_trustee_session_number) {
+            Ok(Some((hot, cold))) => (hot, cold),
+            _ => current_trustee_pair,
+        };
         let btc_min_deposit = XGatewayBitcoin::<T>::btc_min_deposit();
         // construct BtcTxTypeDetector
-        let btc_tx_detector = BtcTxTypeDetector::new(network, 0, current_trustee_pair, None);
-
-        // let tx = Self::fetch_transaction(
-        //     "5dc4c53053153999f6db9e06cf65b1d2cd0dbed60213e217e9e762f569071de2",
-        //     network,
-        // )
-        // .unwrap();
-        let tx = "01000000021f3ffe48b4259a03792a48393028826fb8e5073bdaa68d9c3bd0b6c2c9bcad30010000006b483045022100b455f93c5b93a80255d4823ad5785b3aa6ab59cce03e045896b73f0f343ae1c702201de5d31272056168d81cf877313b033a5c47d643b38e6f36b4725f35929efa080121032b42f71e3cb7be0f7f8bed0d8c8dd78a85141f268b9435dedb2eb1805b5f006d000000002a4d0feeb9c4a7901b3c0ebceb00f7fdfeba55a4528204deddbda9202bc0d08a010000006a47304402203b17fd6d2ceef10e56e7a28d46ce0937c88cdb8096f9807803199b7185159d4c02202c933afa661e333e5a648a1867b728bf63ee2ee91cc0117ad868ee1984703e710121032b42f71e3cb7be0f7f8bed0d8c8dd78a85141f268b9435dedb2eb1805b5f006d0000000003605fa9000000000017a91485528a5e98cfb732129ff4a6b0d4d398c7be343687d4c91902000000001976a9147e836b50820d909dc10448ba7306a0f5dc6c755188ac0000000000000000326a303545577453636e65347a57734761503467566f38446d4c7043685678334d7a6f5154704b4a434564425459444131447900000000".parse::<Transaction>().unwrap();
-        debug::info!("Transaction:{:?}", tx);
-        // debug::info!("Transaction Inputs: {:?}", tx.inputs);
-        let script = Script::from_str("6a303545577453636e65347a57734761503467566f38446d4c7043685678334d7a6f5154704b4a4345644254594441314479").unwrap();
-        let data = extract_opreturn_data(&script).unwrap();
-        let account_and_referral = data
-            .split(|x| *x == b'@')
-            .map(|d| d.to_vec())
-            .collect::<Vec<_>>();
-        debug::info!(
-            "[OCW] account_and_referral: {:?}",
-            str::from_utf8(&account_and_referral[0])
+        let btc_tx_detector = BtcTxTypeDetector::new(
+            network,
+            btc_min_deposit,
+            current_trustee_pair,
+            Some(previous_trustee_pair),
         );
-        let acc = String::from_utf8_lossy(&data).into_owned();
 
-        let account = from_ss58_check(&account_and_referral[0]).unwrap();
-        debug::info!("[OCW] AcountId32: {:?}", account);
-        let (op_return, deposit_value) = btc_tx_detector
-            .parse_deposit_transaction_outputs(&tx, OpReturnExtractor::extract_account);
-        debug::info!("op_return:{:?} deposit_value:{}", op_return, deposit_value);
-        //for tx in &confirmed_block.transactions {
-        // Prepare for constructing partial merkle tree
-        tx_hashes.push(tx.hash());
-        if tx.is_coinbase() {
-            tx_matches.push(false);
-            //continue;
-        }
-        let outpoint = tx.inputs[0].previous_output;
-        let prev_tx_hash = hex::encode(hash_rev(outpoint.txid));
-        let prev_tx = Self::fetch_transaction(&prev_tx_hash[..], network)
-            .expect("Fail to get prev tx from btc network");
-
-        // Detect X-BTC transaction type
-        // Withdrawal: must have a previous transaction
-        // Deposit: don't require previous transaction generally,
-        //          but in special cases, a previous transaction needs to be submitted.
-        match btc_tx_detector.detect_transaction_type(
-            &tx,
-            Some(&prev_tx),
-            OpReturnExtractor::extract_account,
-        ) {
-            BtcTxMetaType::Withdrawal => {
-                debug::info!(
-                    "X-BTC Withdrawal (PrevTx: {:?}, Tx: {:?})",
-                    hash_rev(prev_tx.hash()),
-                    hash_rev(tx.hash())
-                );
-                tx_matches.push(true);
-                needed.push((tx.clone(), Some(prev_tx)));
+        for tx in &confirmed_block.transactions {
+            // Prepare for constructing partial merkle tree
+            tx_hashes.push(tx.hash());
+            if tx.is_coinbase() {
+                tx_matches.push(false);
+                continue;
             }
-            BtcTxMetaType::Deposit(BtcDepositInfo {
-                deposit_value,
-                op_return,
-                input_addr,
-            }) => {
-                debug::info!(
-                    "X-BTC Deposit [{}]:[{:?}] (Tx: {:?})",
-                    deposit_value,
-                    input_addr,
-                    hash_rev(tx.hash()),
-                );
-                debug::info!("X-BTC Deposit OpReturn:[{:?}]", op_return);
-                tx_matches.push(true);
-                match (input_addr, op_return) {
-                    (_, Some((account, _))) => {
-                        if Self::pending_deposits(account).is_empty() {
-                            needed.push((tx.clone(), None));
-                        } else {
-                            needed.push((tx.clone(), Some(prev_tx)));
+            let outpoint = tx.inputs[0].previous_output;
+            let prev_tx_hash = hex::encode(hash_rev(outpoint.txid));
+            loop {
+                let prev_tx = match Self::fetch_transaction(&prev_tx_hash[..], network) {
+                    Ok(prev) => prev,
+                    _ => continue,
+                };
+                match btc_tx_detector.detect_transaction_type(
+                    &tx,
+                    Some(&prev_tx),
+                    OpReturnExtractor::extract_account,
+                ) {
+                    BtcTxMetaType::Withdrawal => {
+                        debug::info!(
+                            "X-BTC Withdrawal (PrevTx: {:?}, Tx: {:?})",
+                            hash_rev(prev_tx.hash()),
+                            hash_rev(tx.hash())
+                        );
+                        tx_matches.push(true);
+                        needed.push((tx.clone(), Some(prev_tx.clone())));
+                    }
+                    BtcTxMetaType::Deposit(BtcDepositInfo {
+                        deposit_value,
+                        op_return,
+                        input_addr,
+                    }) => {
+                        debug::info!(
+                            "X-BTC Deposit [{}]:[{:?}] (Tx: {:?})",
+                            deposit_value,
+                            input_addr,
+                            hash_rev(tx.hash()),
+                        );
+                        debug::info!("X-BTC Deposit OpReturn:[{:?}]", op_return);
+                        tx_matches.push(true);
+                        match (input_addr, op_return) {
+                            (_, Some((_account, _))) => {
+                                //if Self::pending_deposits(account).is_empty() {
+                                //     needed.push((tx.clone(), None));
+                                //} else {
+                                needed.push((tx.clone(), Some(prev_tx.clone())));
+                                //}
+                            }
+                            (Some(_), None) => needed.push((tx.clone(), Some(prev_tx.clone()))),
+                            (None, None) => {
+                                debug::warn!(
+                                        "[Service|push_xbtc_transaction] parsing prev_tx or op_return error, tx {:?}",
+                                        hash_rev(tx.hash())
+                                    );
+                                needed.push((tx.clone(), Some(prev_tx.clone())));
+                            }
                         }
                     }
-                    (Some(_), None) => needed.push((tx.clone(), Some(prev_tx))),
-                    (None, None) => {
-                        debug::warn!(
-                                "[Service|push_xbtc_transaction] parsing prev_tx or op_return error, tx {:?}",
-                                hash_rev(tx.hash())
-                            );
-                        needed.push((tx.clone(), Some(prev_tx)));
-                    }
+                    BtcTxMetaType::HotAndCold
+                    | BtcTxMetaType::TrusteeTransition
+                    | BtcTxMetaType::Irrelevance => tx_matches.push(false),
                 }
+                break;
             }
-            BtcTxMetaType::HotAndCold
-            | BtcTxMetaType::TrusteeTransition
-            | BtcTxMetaType::Irrelevance => tx_matches.push(false),
         }
-        // }
 
         if !needed.is_empty() {
             debug::info!(
@@ -494,6 +456,10 @@ impl<T: Trait> Module<T> {
                 };
 
                 let call = Call::push_transaction(tx, relayed_info, prev_tx);
+                debug::info!(
+                    "₿ Submitting unsigned transaction for pushing transaction: {:?}",
+                    call
+                );
                 if let Err(e) =
                     SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into())
                 {
@@ -509,13 +475,6 @@ impl<T: Trait> Module<T> {
                 hash_rev(confirmed_block.hash())
             );
         }
-    }
-    // help use AccountId
-    fn pending_deposits<P: AsRef<[u8]>>(btc_address: P) -> Vec<BtcDepositCache> {
-        let btc_address = btc_address.as_ref();
-        let deposit_cache: Vec<BtcDepositCache> =
-            XGatewayBitcoin::<T>::pending_deposits(btc_address);
-        deposit_cache
     }
     // get withdrawal proposal from chain and broadcast raw transaction
     fn withdrawal_proposal_broadcast(network: BtcNetwork) -> Result<Option<String>, ()> {
@@ -803,7 +762,7 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 
     fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
         match call {
-            Call::push_header(header) => {
+            Call::push_header(_header) => {
                 ValidTransaction::with_tag_prefix("XGatewayBitcoinOffchain")
                 .priority(T::UnsignedPriority::get())
                 .and_provides("push_header") // TODO: a tag is required, otherwise the transactions will not be pruned.
@@ -812,7 +771,7 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
                 .propagate(true)
                 .build()
             }
-            Call::push_transaction(tx, _relayed_info, _prev_tx) => {
+            Call::push_transaction(_tx, _relayed_info, _prev_tx) => {
                 ValidTransaction::with_tag_prefix("XGatewayBitcoinOffchain")
                 .priority(T::UnsignedPriority::get())
                 .and_provides("push_transaction") // TODO: a tag is required, otherwise the transactions will not be pruned.
