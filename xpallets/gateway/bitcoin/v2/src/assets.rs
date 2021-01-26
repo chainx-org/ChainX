@@ -44,26 +44,38 @@ pub mod pallet {
         TryIntoError,
     }
 
-    /// Total collateral.
+    /// Total collateral
     #[pallet::storage]
     #[pallet::getter(fn total_collateral)]
     pub(crate) type TotalCollateral<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
+    /// Exchange rate in integer from btc to pcx
     #[pallet::storage]
     #[pallet::getter(fn exchange_rate)]
     pub(crate) type ExchangeRate<T: Config> = StorageValue<_, u128, ValueQuery>;
 
+    /// Exchange rate's decimal
+    #[pallet::storage]
+    #[pallet::getter(fn exchange_rate_decimal)]
+    pub(crate) type ExchangeRateDecimal<T: Config> = StorageValue<_, u8, ValueQuery>;
+
     #[pallet::genesis_config]
     #[derive(Default)]
     pub struct GenesisConfig {
-        /// Exchange rate from btc to pcx
+        /// Exchange rate from btc to pcx. It means how many pcx tokens could 1 btc excahnge.
+        /// For example, suppose 1BTC = 1234.56789123PCX, then
+        /// exchange_rate = 123456789123
+        /// decimal = 8
         pub exchange_rate: u128,
+        /// Exchange rate decimal
+        pub exchange_rate_decimal: u8,
     }
 
     #[pallet::genesis_build]
     impl<T: Config> GenesisBuild<T> for GenesisConfig {
         fn build(&self) {
             <ExchangeRate<T>>::put(self.exchange_rate);
+            <ExchangeRateDecimal<T>>::put(self.exchange_rate_decimal);
         }
     }
 
@@ -73,23 +85,25 @@ pub mod pallet {
         }
         pub fn btc_to_pcx(amount: BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError> {
             let raw_amount = Self::into_u128(amount)?;
-            let rate = Self::exchange_rate()
+            let decimal = 10_u128.pow(u32::from(Self::exchange_rate_decimal()));
+            let raw_pcx = Self::exchange_rate()
                 .checked_mul(raw_amount)
                 .ok_or(Error::<T>::ArithmeticOverflow)?
-                .checked_div(100_000u128)
+                .checked_div(decimal)
                 .ok_or(Error::<T>::ArithmeticUnderflow)?;
-            let result = rate.try_into().map_err(|_| Error::<T>::TryIntoError)?;
+            let result = raw_pcx.try_into().map_err(|_| Error::<T>::TryIntoError)?;
             Ok(result)
         }
 
         pub fn pcx_to_btc(amount: BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError> {
             let raw_amount = Self::into_u128(amount)?;
-            let rate = raw_amount
-                .checked_mul(100_000u128)
+            let decimal = 10_u128.pow(u32::from(Self::exchange_rate_decimal()));
+            let raw_btc = raw_amount
+                .checked_mul(decimal)
                 .ok_or(Error::<T>::ArithmeticOverflow)?
                 .checked_div(Self::exchange_rate())
                 .ok_or(Error::<T>::ArithmeticUnderflow)?;
-            let result = rate.try_into().map_err(|_| Error::<T>::TryIntoError)?;
+            let result = raw_btc.try_into().map_err(|_| Error::<T>::TryIntoError)?;
             Ok(result)
         }
 
