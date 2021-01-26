@@ -11,6 +11,7 @@ use sc_client_api::{ExecutorProvider, RemoteBackend};
 use sc_finality_grandpa::FinalityProofProvider as GrandpaFinalityProofProvider;
 use sc_network::{Event, NetworkService};
 use sc_service::{config::Configuration, error::Error as ServiceError, TaskManager};
+use sc_telemetry::TelemetrySpan;
 use sp_inherents::InherentDataProviders;
 use sp_runtime::traits::Block as BlockT;
 
@@ -41,11 +42,12 @@ pub fn new_partial(
                 sc_consensus_babe::BabeLink<Block>,
             ),
             sc_finality_grandpa::SharedVoterState,
+            Option<TelemetrySpan>
         ),
     >,
     ServiceError,
 > {
-    let (client, backend, keystore_container, task_manager) =
+    let (client, backend, keystore_container, task_manager, telemetry_span) =
         sc_service::new_full_parts::<Block, RuntimeApi, Executor>(&config)?;
     let client = Arc::new(client);
 
@@ -96,7 +98,7 @@ pub fn new_partial(
         let rpc_setup = shared_voter_state.clone();
 
         let finality_proof_provider =
-            GrandpaFinalityProofProvider::new_for_service(backend.clone(), client.clone());
+            GrandpaFinalityProofProvider::new_for_service(backend.clone(), client.clone(), Some(shared_authority_set.clone()));
 
         let babe_config = babe_link.config().clone();
         let shared_epoch_changes = babe_link.epoch_changes().clone();
@@ -142,7 +144,7 @@ pub fn new_partial(
         import_queue,
         transaction_pool,
         inherent_data_providers,
-        other: (rpc_extensions_builder, import_setup, rpc_setup),
+        other: (rpc_extensions_builder, import_setup, rpc_setup, telemetry_span),
     })
 }
 
@@ -156,7 +158,7 @@ pub struct NewFullBase {
 }
 
 /// Creates a full service from the configuration.
-pub fn new_full_base(config: Configuration) -> Result<NewFullBase, ServiceError> {
+pub fn new_full_base(mut config: Configuration) -> Result<NewFullBase, ServiceError> {
     let sc_service::PartialComponents {
         client,
         backend,
@@ -166,10 +168,15 @@ pub fn new_full_base(config: Configuration) -> Result<NewFullBase, ServiceError>
         select_chain,
         transaction_pool,
         inherent_data_providers,
-        other: (rpc_extensions_builder, import_setup, rpc_setup),
+        other: (rpc_extensions_builder, import_setup, rpc_setup, telemetry_span),
     } = new_partial(&config)?;
 
     let shared_voter_state = rpc_setup;
+
+    #[cfg(feature = "cli")]
+    config.network.request_response_protocols.push(sc_finality_grandpa_warp_sync::request_response_config_for_chain(
+            &config, task_manager.spawn_handle(), backend.clone(),
+    ));
 
     let (network, network_status_sinks, system_rpc_tx, network_starter) =
         sc_service::build_network(sc_service::BuildNetworkParams {
@@ -199,9 +206,8 @@ pub fn new_full_base(config: Configuration) -> Result<NewFullBase, ServiceError>
     let name = config.network.node_name.clone();
     let enable_grandpa = !config.disable_grandpa;
     let prometheus_registry = config.prometheus_registry().cloned();
-    let telemetry_connection_sinks = sc_service::TelemetryConnectionSinks::default();
 
-    sc_service::spawn_tasks(sc_service::SpawnTasksParams {
+    let (_rpc_handlers, telemetry_connection_notifier) = sc_service::spawn_tasks(sc_service::SpawnTasksParams {
         config,
         backend: backend.clone(),
         client: client.clone(),
@@ -212,9 +218,9 @@ pub fn new_full_base(config: Configuration) -> Result<NewFullBase, ServiceError>
         task_manager: &mut task_manager,
         on_demand: None,
         remote_blockchain: None,
-        telemetry_connection_sinks: telemetry_connection_sinks.clone(),
         network_status_sinks: network_status_sinks.clone(),
         system_rpc_tx,
+        telemetry_span,
     })?;
 
     let (block_import, grandpa_link, babe_link) = import_setup;
@@ -306,7 +312,7 @@ pub fn new_full_base(config: Configuration) -> Result<NewFullBase, ServiceError>
             config,
             link: grandpa_link,
             network: network.clone(),
-            telemetry_on_connect: Some(telemetry_connection_sinks.on_connect_stream()),
+            telemetry_on_connect: telemetry_connection_notifier.map(|x|x.on_connect_stream()),
             voting_rule: sc_finality_grandpa::VotingRulesBuilder::default().build(),
             prometheus_registry,
             shared_voter_state,
@@ -338,7 +344,7 @@ pub fn new_full(config: Configuration) -> Result<TaskManager, ServiceError> {
 
 /// Builds a new service for a light client.
 pub fn new_light(config: Configuration) -> Result<TaskManager, ServiceError> {
-    let (client, backend, keystore_container, mut task_manager, on_demand) =
+    let (client, backend, keystore_container, mut task_manager, on_demand, telemetry_span) =
         sc_service::new_light_parts::<Block, RuntimeApi, Executor>(&config)?;
 
     let select_chain = sc_consensus::LongestChain::new(backend.clone());
@@ -421,8 +427,8 @@ pub fn new_light(config: Configuration) -> Result<TaskManager, ServiceError> {
         network_status_sinks,
         system_rpc_tx,
         network: network.clone(),
-        telemetry_connection_sinks: sc_service::TelemetryConnectionSinks::default(),
         task_manager: &mut task_manager,
+        telemetry_span
     })?;
 
     Ok(task_manager)
