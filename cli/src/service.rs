@@ -42,7 +42,7 @@ pub fn new_partial(
                 sc_consensus_babe::BabeLink<Block>,
             ),
             sc_finality_grandpa::SharedVoterState,
-            Option<TelemetrySpan>
+            Option<TelemetrySpan>,
         ),
     >,
     ServiceError,
@@ -97,8 +97,11 @@ pub fn new_partial(
         let shared_voter_state = sc_finality_grandpa::SharedVoterState::empty();
         let rpc_setup = shared_voter_state.clone();
 
-        let finality_proof_provider =
-            GrandpaFinalityProofProvider::new_for_service(backend.clone(), client.clone(), Some(shared_authority_set.clone()));
+        let finality_proof_provider = GrandpaFinalityProofProvider::new_for_service(
+            backend.clone(),
+            client.clone(),
+            Some(shared_authority_set.clone()),
+        );
 
         let babe_config = babe_link.config().clone();
         let shared_epoch_changes = babe_link.epoch_changes().clone();
@@ -144,7 +147,12 @@ pub fn new_partial(
         import_queue,
         transaction_pool,
         inherent_data_providers,
-        other: (rpc_extensions_builder, import_setup, rpc_setup, telemetry_span),
+        other: (
+            rpc_extensions_builder,
+            import_setup,
+            rpc_setup,
+            telemetry_span,
+        ),
     })
 }
 
@@ -174,9 +182,13 @@ pub fn new_full_base(mut config: Configuration) -> Result<NewFullBase, ServiceEr
     let shared_voter_state = rpc_setup;
 
     #[cfg(feature = "cli")]
-    config.network.request_response_protocols.push(sc_finality_grandpa_warp_sync::request_response_config_for_chain(
-            &config, task_manager.spawn_handle(), backend.clone(),
-    ));
+    config.network.request_response_protocols.push(
+        sc_finality_grandpa_warp_sync::request_response_config_for_chain(
+            &config,
+            task_manager.spawn_handle(),
+            backend.clone(),
+        ),
+    );
 
     let (network, network_status_sinks, system_rpc_tx, network_starter) =
         sc_service::build_network(sc_service::BuildNetworkParams {
@@ -207,21 +219,22 @@ pub fn new_full_base(mut config: Configuration) -> Result<NewFullBase, ServiceEr
     let enable_grandpa = !config.disable_grandpa;
     let prometheus_registry = config.prometheus_registry().cloned();
 
-    let (_rpc_handlers, telemetry_connection_notifier) = sc_service::spawn_tasks(sc_service::SpawnTasksParams {
-        config,
-        backend: backend.clone(),
-        client: client.clone(),
-        keystore: keystore_container.sync_keystore(),
-        network: network.clone(),
-        rpc_extensions_builder: Box::new(rpc_extensions_builder),
-        transaction_pool: transaction_pool.clone(),
-        task_manager: &mut task_manager,
-        on_demand: None,
-        remote_blockchain: None,
-        network_status_sinks: network_status_sinks.clone(),
-        system_rpc_tx,
-        telemetry_span,
-    })?;
+    let (_rpc_handlers, telemetry_connection_notifier) =
+        sc_service::spawn_tasks(sc_service::SpawnTasksParams {
+            config,
+            backend: backend.clone(),
+            client: client.clone(),
+            keystore: keystore_container.sync_keystore(),
+            network: network.clone(),
+            rpc_extensions_builder: Box::new(rpc_extensions_builder),
+            transaction_pool: transaction_pool.clone(),
+            task_manager: &mut task_manager,
+            on_demand: None,
+            remote_blockchain: None,
+            network_status_sinks: network_status_sinks.clone(),
+            system_rpc_tx,
+            telemetry_span,
+        })?;
 
     let (block_import, grandpa_link, babe_link) = import_setup;
 
@@ -312,7 +325,7 @@ pub fn new_full_base(mut config: Configuration) -> Result<NewFullBase, ServiceEr
             config,
             link: grandpa_link,
             network: network.clone(),
-            telemetry_on_connect: telemetry_connection_notifier.map(|x|x.on_connect_stream()),
+            telemetry_on_connect: telemetry_connection_notifier.map(|x| x.on_connect_stream()),
             voting_rule: sc_finality_grandpa::VotingRulesBuilder::default().build(),
             prometheus_registry,
             shared_voter_state,
@@ -428,7 +441,7 @@ pub fn new_light(config: Configuration) -> Result<TaskManager, ServiceError> {
         system_rpc_tx,
         network: network.clone(),
         task_manager: &mut task_manager,
-        telemetry_span
+        telemetry_span,
     })?;
 
     Ok(task_manager)
