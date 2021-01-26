@@ -3,7 +3,7 @@
 use sp_std::fmt::Debug;
 
 use chainx_primitives::ReferralId;
-use xp_logging::{debug, warn};
+use xp_logging::debug;
 
 use light_bitcoin::{
     chain::Transaction,
@@ -198,7 +198,7 @@ impl BtcTxTypeDetector {
             .map(|output| Script::new(output.script_pubkey.clone()))
             .filter(|script| script.is_null_data_script())
         {
-            warn!(
+            debug!(
                 "[parse_deposit_transaction_outputs] opreturn_script:{:?}",
                 opreturn_script
             );
