@@ -5,11 +5,13 @@
 pub mod pallet {
     use sp_std::{convert::TryInto, marker::PhantomData};
 
+    #[cfg(feature = "std")]
+    use frame_support::traits::GenesisBuild;
+
     use frame_support::{
         dispatch::{DispatchError, DispatchResult},
         storage::types::{StorageValue, ValueQuery},
-        traits::{Currency, ReservableCurrency},
-        traits::{GenesisBuild, Hooks},
+        traits::{Currency, Hooks, ReservableCurrency},
     };
     use frame_system::pallet_prelude::BlockNumberFor;
 

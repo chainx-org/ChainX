@@ -4,9 +4,9 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-mod assets;
-mod issue;
-mod vault;
+pub mod assets;
+pub mod issue;
+pub mod vault;
 
 #[cfg(test)]
 mod mock;
