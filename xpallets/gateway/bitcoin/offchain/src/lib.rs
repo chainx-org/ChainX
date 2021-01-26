@@ -23,7 +23,7 @@ use frame_support::{
 
 use frame_system::{
     ensure_none,
-    offchain::{CreateSignedTransaction, SendTransactionTypes, SubmitTransaction},
+    offchain::{CreateSignedTransaction, SendTransactionTypes, SubmitTransaction, AppCrypto, Signer, SendSignedTransaction},
 };
 use sp_application_crypto::RuntimeAppPublic;
 use sp_core::crypto::KeyTypeId;
@@ -76,10 +76,27 @@ pub const BTC_RELAY: KeyTypeId = KeyTypeId(*b"btcr");
 /// Based on the above `KeyTypeId` we need to generate a pallet-specific crypto type wrappers.
 /// We can use from supported crypto kinds (`sr25519`, `ed25519` and `ecdsa`) and augment
 /// the types with this pallet-specific identifier.
-mod app {
+pub mod app {
     pub use super::BTC_RELAY;
     use sp_runtime::app_crypto::{app_crypto, sr25519};
+    use sp_runtime::{traits::Verify, MultiSignature, MultiSigner};
+    use sp_core::sr25519::Signature as Sr25519Signature;
+
     app_crypto!(sr25519, BTC_RELAY);
+
+    pub struct RelayAuthId;
+
+    impl frame_system::offchain::AppCrypto<MultiSigner, MultiSignature> for RelayAuthId {
+		type RuntimeAppPublic = Public;
+		type GenericSignature = sp_core::sr25519::Signature;
+		type GenericPublic = sp_core::sr25519::Public;
+	}
+
+    impl frame_system::offchain::AppCrypto<<Sr25519Signature as Verify>::Signer, Sr25519Signature> for RelayAuthId{
+        type RuntimeAppPublic = Public;
+        type GenericPublic = sp_core::sr25519::Public;
+        type GenericSignature = sp_core::sr25519::Signature;
+    }
 }
 
 sp_application_crypto::with_pair! {
@@ -110,7 +127,8 @@ pub trait Trait:
     type UnsignedPriority: Get<TransactionPriority>;
 
     /// The identifier type for an offchain worker.
-    type AuthorityId: Parameter + Default + RuntimeAppPublic + Ord; // AppCrypto<Self::Public, Self::Signature>;
+    type AuthorityId: Parameter + Default + RuntimeAppPublic + Ord;// AppCrypto<Self::Public, Self::Signature>;
+    type RelayAuthId: AppCrypto<Self::Public, Self::Signature>;
 }
 
 decl_event!(
@@ -181,6 +199,13 @@ decl_module! {
         fn deposit_event() = default;
 
         fn offchain_worker(block_number: T::BlockNumber) {
+            // Add signature
+            let signer = Signer::<T, T::RelayAuthId>::any_account();
+            if !signer.can_sign(){
+                debug::info!("[OCW] the signer can't sign!");
+            } else{
+                debug::info!("[OCW] the signer can sign!");
+            }
             // Consider setting the frequency of requesting btc data based on the `block_number`
             debug::info!("[OCW] ChainX Bitcoin Offchain Worker, ChainX Block #{:?}", block_number);
             let number: u32 = block_number.try_into().unwrap_or(0usize) as u32;

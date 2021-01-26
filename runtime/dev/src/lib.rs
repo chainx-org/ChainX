@@ -842,6 +842,7 @@ impl xpallet_gateway_bitcoin_offchain::Trait for Runtime {
     type Event = Event;
     type Call = Call;
     type AuthorityId = GatewayBitcoinRelayId;
+    type RelayAuthId = xpallet_gateway_bitcoin_offchain::app::RelayAuthId;
     type UnsignedPriority = BtcRelayUnsignedPriority;
 }
 
