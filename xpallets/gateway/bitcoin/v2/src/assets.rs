@@ -1,19 +1,36 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+pub mod types {
+    use codec::{Decode, Encode};
+    use frame_support::{Deserialize, Serialize};
+
+    /// Exchange rate from btc to pcx. It means how many pcx tokens could 1 btc excahnge.
+    /// For example, suppose 1BTC = 1234.56789123PCX, then
+    /// price = 123456789123
+    /// decimal = 8
+    #[derive(Encode, Decode, Debug, Copy, Clone, Default, Serialize, Deserialize)]
+    pub struct ExchangeRate {
+        pub price: u128,
+        pub decimal: u8,
+    }
+}
+
 #[frame_support::pallet]
 #[allow(dead_code)]
 pub mod pallet {
+    use sp_arithmetic::traits::SaturatedConversion;
     use sp_std::{convert::TryInto, marker::PhantomData};
 
     #[cfg(feature = "std")]
     use frame_support::traits::GenesisBuild;
-
     use frame_support::{
         dispatch::{DispatchError, DispatchResult},
         storage::types::{StorageValue, ValueQuery},
         traits::{Currency, Hooks, ReservableCurrency},
     };
     use frame_system::pallet_prelude::BlockNumberFor;
+
+    use super::types;
 
     pub type BalanceOf<T> = <<T as xpallet_assets::Config>::Currency as Currency<
         <T as frame_system::Config>::AccountId,
@@ -49,15 +66,10 @@ pub mod pallet {
     #[pallet::getter(fn total_collateral)]
     pub(crate) type TotalCollateral<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
-    /// Exchange rate in integer from btc to pcx
+    /// Exchange rate  from btc to pcx
     #[pallet::storage]
     #[pallet::getter(fn exchange_rate)]
-    pub(crate) type ExchangeRate<T: Config> = StorageValue<_, u128, ValueQuery>;
-
-    /// Exchange rate's decimal
-    #[pallet::storage]
-    #[pallet::getter(fn exchange_rate_decimal)]
-    pub(crate) type ExchangeRateDecimal<T: Config> = StorageValue<_, u8, ValueQuery>;
+    pub(crate) type ExchangeRate<T: Config> = StorageValue<_, types::ExchangeRate, ValueQuery>;
 
     #[pallet::genesis_config]
     #[derive(Default)]
@@ -66,27 +78,22 @@ pub mod pallet {
         /// For example, suppose 1BTC = 1234.56789123PCX, then
         /// exchange_rate = 123456789123
         /// decimal = 8
-        pub exchange_rate: u128,
-        /// Exchange rate decimal
-        pub exchange_rate_decimal: u8,
+        pub exchange_rate: types::ExchangeRate,
     }
 
     #[pallet::genesis_build]
     impl<T: Config> GenesisBuild<T> for GenesisConfig {
         fn build(&self) {
             <ExchangeRate<T>>::put(self.exchange_rate);
-            <ExchangeRateDecimal<T>>::put(self.exchange_rate_decimal);
         }
     }
 
     impl<T: Config> Pallet<T> {
-        fn into_u128<I: TryInto<u128>>(x: I) -> Result<u128, DispatchError> {
-            TryInto::<u128>::try_into(x).map_err(|_| Error::<T>::TryIntoError.into())
-        }
         pub fn btc_to_pcx(amount: BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError> {
-            let raw_amount = Self::into_u128(amount)?;
-            let decimal = 10_u128.pow(u32::from(Self::exchange_rate_decimal()));
-            let raw_pcx = Self::exchange_rate()
+            let raw_amount: u128 = amount.saturated_into();
+            let types::ExchangeRate { price, decimal } = Self::exchange_rate();
+            let decimal = 10_u128.pow(u32::from(decimal));
+            let raw_pcx = price
                 .checked_mul(raw_amount)
                 .ok_or(Error::<T>::ArithmeticOverflow)?
                 .checked_div(decimal)
@@ -96,12 +103,13 @@ pub mod pallet {
         }
 
         pub fn pcx_to_btc(amount: BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError> {
-            let raw_amount = Self::into_u128(amount)?;
-            let decimal = 10_u128.pow(u32::from(Self::exchange_rate_decimal()));
+            let raw_amount: u128 = amount.saturated_into();
+            let types::ExchangeRate { price, decimal } = Self::exchange_rate();
+            let decimal = 10_u128.pow(u32::from(decimal));
             let raw_btc = raw_amount
                 .checked_mul(decimal)
                 .ok_or(Error::<T>::ArithmeticOverflow)?
-                .checked_div(Self::exchange_rate())
+                .checked_div(price)
                 .ok_or(Error::<T>::ArithmeticUnderflow)?;
             let result = raw_btc.try_into().map_err(|_| Error::<T>::TryIntoError)?;
             Ok(result)

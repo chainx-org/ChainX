@@ -5,6 +5,7 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 
+use super::assets::pallet as assets;
 use super::vault::pallet as vault;
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -76,7 +77,7 @@ impl xpallet_assets::Config for Test {
     type WeightInfo = ();
 }
 
-impl crate::assets::pallet::Config for Test {}
+impl assets::Config for Test {}
 
 impl vault::Config for Test {
     type Event = ();
@@ -88,9 +89,21 @@ pub(crate) type Balances = pallet_balances::Module<Test>;
 pub struct ExtBuilder;
 impl ExtBuilder {
     pub fn build(minimium_vault_collateral: u32) -> sp_io::TestExternalities {
+        use super::assets::types::ExchangeRate;
         let mut storage = frame_system::GenesisConfig::default()
             .build_storage::<Test>()
             .unwrap();
+
+        let _ = GenesisBuild::<Test>::assimilate_storage(
+            &assets::GenesisConfig {
+                exchange_rate: ExchangeRate {
+                    price: 123123123,
+                    decimal: 6,
+                },
+            },
+            &mut storage,
+        );
+
         let _ = pallet_balances::GenesisConfig::<Test> {
             balances: vec![(1, 1000), (2, 2000)],
         }
