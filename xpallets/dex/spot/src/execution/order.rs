@@ -184,7 +184,6 @@ impl<T: Config> Module<T> {
                     turnover,
                 );
 
-                println!("--- result:{:?}", execution_result);
                 assert!(execution_result.is_ok(), "Match order execution paniced");
 
                 // Remove maker_order if it has been full filled.
