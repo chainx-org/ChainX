@@ -801,7 +801,7 @@ impl xpallet_assets::Config for Runtime {
     type Currency = Balances;
     type Amount = Amount;
     type TreasuryAccount = SimpleTreasuryAccount;
-    type HandleAccountLifeTime = frame_system::Provider<Runtime>;
+    type OnCreatedAccount = frame_system::Provider<Runtime>;
     type OnAssetChanged = XMiningAsset;
     type WeightInfo = xpallet_assets::weights::SubstrateWeight<Runtime>;
 }

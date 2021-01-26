@@ -34,7 +34,7 @@ use frame_support::{
     traits::{Currency, Get, HandleLifetime, LockableCurrency, ReservableCurrency},
     Parameter, StorageDoubleMap,
 };
-use frame_system::{ensure_root, ensure_signed};
+use frame_system::{ensure_root, ensure_signed, AccountInfo};
 use orml_traits::arithmetic::{Signed, SimpleArithmetic};
 use sp_runtime::traits::{
     CheckedAdd, CheckedSub, MaybeSerializeDeserialize, Member, Saturating, StaticLookup, Zero,
@@ -78,7 +78,7 @@ pub trait Config: xpallet_assets_registrar::Config {
 
     type TreasuryAccount: TreasuryAccount<Self::AccountId>;
 
-    type HandleAccountLifeTime: HandleLifetime<Self::AccountId>;
+    type OnCreatedAccount: HandleLifetime<Self::AccountId>;
 
     type OnAssetChanged: OnAssetChanged<Self::AccountId, BalanceOf<Self>>;
 
@@ -511,15 +511,23 @@ impl<T: Config> Module<T> {
     fn new_account(who: &T::AccountId) {
         info!("[new_account] account:{:?}", who);
         // FIXME: handle the result properly.
-        let _ = T::HandleAccountLifeTime::created(who);
+        let _ = T::OnCreatedAccount::created(who);
+    }
+
+    fn is_dead_account(who: &T::AccountId) -> bool {
+        let AccountInfo {
+            providers,
+            consumers,
+            ..
+        } = frame_system::pallet::Account::<T>::get(who);
+        providers.is_zero() && consumers.is_zero()
     }
 
     fn try_new_account(who: &T::AccountId) {
         // lookup chainx balance
-        // if frame_system::Module::<T>::is_dead_account(who) {
-        // Self::new_account(who);
-        // }
-        todo!("Impl is_dead_account alternative")
+        if Self::is_dead_account(who) {
+            Self::new_account(who);
+        }
     }
 
     fn make_type_balance_be(
