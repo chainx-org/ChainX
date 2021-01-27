@@ -127,11 +127,10 @@ pub trait Trait:
     type Call: From<Call<Self>>;
     /// A configuration for base priority of unsigned transactions.
     type UnsignedPriority: Get<TransactionPriority>;
-
     /// The identifier type for an offchain worker.
-    type AuthorityId: Parameter + Default + RuntimeAppPublic + Ord; // AppCrypto<Self::Public, Self::Signature>;
+    type AuthorityId: Parameter + Default + RuntimeAppPublic + Ord;
     type RelayAuthId: AppCrypto<Self::Public, Self::Signature>;
-
+    /// Weight information for extrinsics in this pallet.
     type WeightInfo: WeightInfo;
 }
 
@@ -203,10 +202,8 @@ decl_module! {
         fn deposit_event() = default;
 
         fn offchain_worker(block_number: T::BlockNumber) {
-            // Consider setting the frequency of requesting btc data based on the `block_number`
-            debug::info!("[OCW] ChainX Bitcoin Offchain Worker, ChainX Block #{:?}", block_number);
             let network = XGatewayBitcoin::<T>::network_id();
-            if block_number.saturated_into::<u64>() % 20 == 0 {
+            if block_number.saturated_into::<u64>() % 2 == 0 {
                 // First, get withdrawal proposal from chain and broadcast to btc network.
                 match Self::withdrawal_proposal_broadcast(network) {
                     Ok(Some(hash)) => {
@@ -358,12 +355,20 @@ impl<T: Trait> Module<T> {
             let confirm_height = confirmed_index.height;
             // Get confirmed height from local storage
             let confirmed_info = StorageValueRef::persistent(b"ocw::confirmed");
-            if let Some(Some(confirmed)) = confirmed_info.get::<u32>() {
-                if confirmed == confirm_height {
-                    return true;
+            let mut lock = StorageLock::<'_, Time>::new(b"ocw::lock");
+            // Prevent repeated filtering of transactions
+            if let Ok(_guard) = lock.try_lock() {
+                if let Some(Some(confirmed)) = confirmed_info.get::<u32>() {
+                    if confirmed == confirm_height {
+                        return true;
+                    }
                 }
+            } else {
+                debug::info!("[OCW] Read Lock Can't Be Acquired.");
+                debug::info!("[OCW] There is a worker working here. Please don't take his job. ");
+                return false;
             }
-
+            // Prevent unstable network connections
             for i in 0..=5 {
                 if i == 5 {
                     return false;
@@ -393,16 +398,18 @@ impl<T: Trait> Module<T> {
                         continue;
                     }
                 };
-                if Self::push_xbtc_transaction(&btc_confirmed_block, network) {
-                    let mut lock = StorageLock::<'_, Time>::with_deadline(
-                        b"ocw::lock",
-                        Duration::from_millis(500),
-                    );
-                    if let Ok(_guard) = lock.try_lock() {
+
+                let mut lock = StorageLock::<'_, Time>::new(b"ocw::lock");
+                if let Ok(_guard) = lock.try_lock() {
+                    debug::info!("[OCW] A Worker start to working...");
+                    if Self::push_xbtc_transaction(&btc_confirmed_block, network) {
                         confirmed_info.set(&confirm_height);
+                        return true;
                     }
-                    break;
-                }
+                } else {
+                    debug::info!("[OCW] A worker exists.");
+                    return false;
+                };
             }
         }
         true
@@ -550,7 +557,6 @@ impl<T: Trait> Module<T> {
     {
         // Set timeout
         let deadline = sp_io::offchain::timestamp().add(Duration::from_millis(2_000));
-
         // Http post request
         let pending = http::Request::post(url, req_body)
             .deadline(deadline)
@@ -663,7 +669,7 @@ impl<T: Trait> Module<T> {
             Err(Error::<T>::BtcSendRawTxError)
         }
     }
-    // parse broadcast's error
+    // Parse broadcast's error
     fn parse_send_raw_tx_error(resp_body: &str) -> Option<SendRawTxError> {
         use lite_json::JsonValue;
         let rest_resp = resp_body.trim_start_matches(SEND_RAW_TX_ERR_PREFIX);

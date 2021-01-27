@@ -7,7 +7,7 @@
 
 use sp_core::crypto::AccountId32;
 
-use xp_logging::error;
+use xp_logging::warn;
 
 /// Trait for extracting the account and possible extra data (e.g. referral) from
 /// the external world data (e.g. btc op_return).
@@ -30,7 +30,7 @@ pub fn from_ss58_check(raw_account: &[u8]) -> Option<AccountId32> {
     {
         xp_io::ss_58_codec::from_ss58check(raw_account)
             .map_err(|err| {
-                error!(
+                warn!(
                     "[from_ss58_check] Parse data:{:?} into account error:{:?}",
                     hex::encode(raw_account),
                     err
@@ -50,7 +50,7 @@ pub fn from_ss58_check(raw_account: &[u8]) -> Option<AccountId32> {
         let d = bs58::decode(raw_account)
             .into_vec()
             .map_err(|err| {
-                error!(
+                warn!(
                     "[from_ss58_check] Base58 decode {} error:{}",
                     hex::encode(raw_account),
                     err
@@ -60,7 +60,7 @@ pub fn from_ss58_check(raw_account: &[u8]) -> Option<AccountId32> {
             .ok()?;
         if d.len() != len + 3 {
             // Invalid length.
-            error!(
+            warn!(
                 "[from_ss58_check] Bad length, data len:{}, len:{}",
                 d.len(),
                 len
