@@ -3,19 +3,48 @@
 /// Types used by pallet
 pub mod types {
     use codec::{Decode, Encode};
+    use sp_runtime::RuntimeDebug;
 
     #[cfg(feature = "std")]
     use serde::{Deserialize, Serialize};
 
-    /// Exchange rate from btc to pcx. It means how many pcx tokens could 1 btc excahnge.
-    /// For example, suppose 1BTC = 1234.56789123PCX, then
-    /// price = 123456789123
-    /// decimal = 8
-    #[derive(Encode, Decode, Debug, Copy, Clone, Default)]
+    /// This struct represents the price of trading pair PCX/BTC.
+    ///
+    /// For example, the current price of PCX/BTC in some
+    /// exchange is 0.0001779 which will be represented as
+    /// `ExchangeRate { price: 1779, decimal: 7 }`.
+    #[derive(Encode, Decode, RuntimeDebug, Clone, Default, Eq, PartialEq)]
     #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
     pub struct ExchangeRate {
+        /// Price with decimals.
         pub price: u128,
+        /// How many decimals of the exchange price.
         pub decimal: u8,
+    }
+
+    impl ExchangeRate {
+        /// Returns the converted amount of BTC given the `pcx_amount`.
+        pub fn convert_to_btc(&self, pcx_amount: u128) -> Option<u128> {
+            self.price
+                .checked_mul(pcx_amount)
+                .and_then(|c| c.checked_div(10_u128.pow(u32::from(self.decimal))))
+        }
+
+        /// Returns the converted amount of PCX given the `btc_amount`.
+        pub fn convert_to_pcx(&self, btc_amount: u128) -> Option<u128> {
+            btc_amount
+                .checked_mul(10_u128.pow(u32::from(self.decimal)))
+                .and_then(|c| c.checked_div(self.price))
+        }
+    }
+
+    #[test]
+    mod tests {
+        #[test]
+        fn test_btc_conversion() {}
+
+        #[test]
+        fn test_pcx_conversion() {}
     }
 }
 
@@ -24,16 +53,19 @@ pub mod types {
 #[allow(dead_code)]
 pub mod pallet {
     use sp_arithmetic::traits::SaturatedConversion;
-    use sp_std::{convert::TryInto, marker::PhantomData};
+    use sp_std::marker::PhantomData;
 
     #[cfg(feature = "std")]
     use frame_support::traits::GenesisBuild;
     use frame_support::{
-        dispatch::{DispatchError, DispatchResult},
+        dispatch::{DispatchError, DispatchResult, DispatchResultWithPostInfo},
         storage::types::{StorageValue, ValueQuery},
         traits::{Currency, Hooks, ReservableCurrency},
     };
-    use frame_system::pallet_prelude::BlockNumberFor;
+    use frame_system::{
+        ensure_root,
+        pallet_prelude::{BlockNumberFor, OriginFor},
+    };
 
     use super::types;
 
@@ -52,19 +84,28 @@ pub mod pallet {
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
     #[pallet::call]
-    impl<T: Config> Pallet<T> {}
+    impl<T: Config> Pallet<T> {
+        /// Sets the exchange rate.
+        #[pallet::weight(0)]
+        pub(crate) fn set_exchange_rate(
+            origin: OriginFor<T>,
+            exchange_rate: types::ExchangeRate,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            // TODO: sanity check?
+            ExchangeRate::<T>::put(exchange_rate);
+            // Self::deposit_event(Event::ExchangeRateSet(exchange_rate));
+            Ok(().into())
+        }
+    }
 
     /// Errors for assets module
     #[pallet::error]
     pub enum Error<T> {
         /// Requester doesn't has enough pcx for collateral.
         InsufficientFunds,
-        /// Calculation during exchangine was overflow
-        ArithmeticOverflow,
-        /// Calculation during exchangine was underflow
-        ArithmeticUnderflow,
-        /// Cannot convert into `BalanceOf<T>`
-        TryIntoError,
+        /// Arithmetic underflow/overflow.
+        ArithmeticError,
     }
 
     /// Total collateral
@@ -72,58 +113,25 @@ pub mod pallet {
     #[pallet::getter(fn total_collateral)]
     pub(crate) type TotalCollateral<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
-    /// Exchange rate  from btc to pcx
+    /// Exchange rate from btc to pcx
     #[pallet::storage]
     #[pallet::getter(fn exchange_rate)]
     pub(crate) type ExchangeRate<T: Config> = StorageValue<_, types::ExchangeRate, ValueQuery>;
 
-    /// Genesis configure
     #[pallet::genesis_config]
     #[derive(Default)]
     pub struct GenesisConfig {
-        /// Exchange rate from btc to pcx. It means how many pcx tokens could 1 btc excahnge.
-        /// For example, suppose 1BTC = 1234.56789123PCX, then
-        /// exchange_rate = 123456789123
-        /// decimal = 8
         pub exchange_rate: types::ExchangeRate,
     }
 
     #[pallet::genesis_build]
     impl<T: Config> GenesisBuild<T> for GenesisConfig {
         fn build(&self) {
-            <ExchangeRate<T>>::put(self.exchange_rate);
+            <ExchangeRate<T>>::put(self.exchange_rate.clone());
         }
     }
 
     impl<T: Config> Pallet<T> {
-        /// Converting btc to pcx with current exchange rate.
-        pub fn btc_to_pcx(amount: BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError> {
-            let raw_amount: u128 = amount.saturated_into();
-            let types::ExchangeRate { price, decimal } = Self::exchange_rate();
-            let decimal = 10_u128.pow(u32::from(decimal));
-            let raw_pcx = price
-                .checked_mul(raw_amount)
-                .ok_or(Error::<T>::ArithmeticOverflow)?
-                .checked_div(decimal)
-                .ok_or(Error::<T>::ArithmeticUnderflow)?;
-            let result = raw_pcx.try_into().map_err(|_| Error::<T>::TryIntoError)?;
-            Ok(result)
-        }
-
-        /// Converting pcx to btc with current exchange rate.
-        pub fn pcx_to_btc(amount: BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError> {
-            let raw_amount: u128 = amount.saturated_into();
-            let types::ExchangeRate { price, decimal } = Self::exchange_rate();
-            let decimal = 10_u128.pow(u32::from(decimal));
-            let raw_btc = raw_amount
-                .checked_mul(decimal)
-                .ok_or(Error::<T>::ArithmeticOverflow)?
-                .checked_div(price)
-                .ok_or(Error::<T>::ArithmeticUnderflow)?;
-            let result = raw_btc.try_into().map_err(|_| Error::<T>::TryIntoError)?;
-            Ok(result)
-        }
-
         /// Lock collateral
         #[inline]
         pub fn lock_collateral(sender: &T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
