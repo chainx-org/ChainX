@@ -16,7 +16,7 @@ use sp_runtime::{
 
 use chainx_primitives::AssetId;
 
-use crate::{AuthorityId, Call, Module, Trait};
+use crate::{app::RelayAuthId, AuthorityId, Call, Module, Trait};
 
 impl_outer_origin! {
     pub enum Origin for Test where system = frame_system {}
@@ -172,6 +172,8 @@ impl Trait for Test {
     type Event = ();
     type Call = Call<Test>;
     type AuthorityId = AuthorityId;
+    type RelayAuthId = RelayAuthId;
+    type WeightInfo = ();
     type UnsignedPriority = ();
 }
 

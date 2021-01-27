@@ -17,13 +17,18 @@ mod tests;
 use alloc::{format, string::String};
 
 use frame_support::{
-    debug, decl_error, decl_event, decl_module, decl_storage, dispatch::Parameter, traits::Get,
+    debug, decl_error, decl_event, decl_module, decl_storage,
+    dispatch::{DispatchResultWithPostInfo, Parameter},
+    traits::Get,
+    weights::Pays,
     StorageValue,
 };
 
 use frame_system::{
-    ensure_none,
-    offchain::{CreateSignedTransaction, SendTransactionTypes, SubmitTransaction, AppCrypto, Signer, SendSignedTransaction},
+    ensure_signed,
+    offchain::{
+        AppCrypto, CreateSignedTransaction, SendSignedTransaction, SendTransactionTypes, Signer,
+    },
 };
 use sp_application_crypto::RuntimeAppPublic;
 use sp_core::crypto::KeyTypeId;
@@ -38,14 +43,11 @@ use sp_runtime::{
         InvalidTransaction, TransactionPriority, TransactionSource, TransactionValidity,
         ValidTransaction,
     },
+    SaturatedConversion,
 };
 
 use sp_std::{
-    collections::btree_set::BTreeSet,
-    convert::{TryFrom, TryInto},
-    marker::PhantomData,
-    str, vec,
-    vec::Vec,
+    collections::btree_set::BTreeSet, convert::TryFrom, marker::PhantomData, str, vec, vec::Vec,
 };
 
 use light_bitcoin::{
@@ -60,7 +62,7 @@ use xp_gateway_common::AccountExtractor;
 use xpallet_assets::Chain;
 use xpallet_gateway_bitcoin::{
     types::{BtcRelayedTxInfo, VoteResult},
-    Module as XGatewayBitcoin,
+    Module as XGatewayBitcoin, WeightInfo,
 };
 use xpallet_gateway_common::{trustees::bitcoin::BtcTrusteeAddrInfo, Module as XGatewayCommon};
 
@@ -78,21 +80,23 @@ pub const BTC_RELAY: KeyTypeId = KeyTypeId(*b"btcr");
 /// the types with this pallet-specific identifier.
 pub mod app {
     pub use super::BTC_RELAY;
+    use sp_core::sr25519::Signature as Sr25519Signature;
     use sp_runtime::app_crypto::{app_crypto, sr25519};
     use sp_runtime::{traits::Verify, MultiSignature, MultiSigner};
-    use sp_core::sr25519::Signature as Sr25519Signature;
 
     app_crypto!(sr25519, BTC_RELAY);
 
     pub struct RelayAuthId;
 
     impl frame_system::offchain::AppCrypto<MultiSigner, MultiSignature> for RelayAuthId {
-		type RuntimeAppPublic = Public;
-		type GenericSignature = sp_core::sr25519::Signature;
-		type GenericPublic = sp_core::sr25519::Public;
-	}
+        type RuntimeAppPublic = Public;
+        type GenericSignature = sp_core::sr25519::Signature;
+        type GenericPublic = sp_core::sr25519::Public;
+    }
 
-    impl frame_system::offchain::AppCrypto<<Sr25519Signature as Verify>::Signer, Sr25519Signature> for RelayAuthId{
+    impl frame_system::offchain::AppCrypto<<Sr25519Signature as Verify>::Signer, Sr25519Signature>
+        for RelayAuthId
+    {
         type RuntimeAppPublic = Public;
         type GenericPublic = sp_core::sr25519::Public;
         type GenericSignature = sp_core::sr25519::Signature;
@@ -122,13 +126,13 @@ pub trait Trait:
     /// The overarching dispatch call type.
     type Call: From<Call<Self>>;
     /// A configuration for base priority of unsigned transactions.
-    /// This is exposed so that it can be tuned for particular runtime, when
-    /// multiple pallets send unsigned transactions.
     type UnsignedPriority: Get<TransactionPriority>;
 
     /// The identifier type for an offchain worker.
-    type AuthorityId: Parameter + Default + RuntimeAppPublic + Ord;// AppCrypto<Self::Public, Self::Signature>;
+    type AuthorityId: Parameter + Default + RuntimeAppPublic + Ord; // AppCrypto<Self::Public, Self::Signature>;
     type RelayAuthId: AppCrypto<Self::Public, Self::Signature>;
+
+    type WeightInfo: WeightInfo;
 }
 
 decl_event!(
@@ -199,18 +203,10 @@ decl_module! {
         fn deposit_event() = default;
 
         fn offchain_worker(block_number: T::BlockNumber) {
-            // Add signature
-            let signer = Signer::<T, T::RelayAuthId>::any_account();
-            if !signer.can_sign(){
-                debug::info!("[OCW] the signer can't sign!");
-            } else{
-                debug::info!("[OCW] the signer can sign!");
-            }
             // Consider setting the frequency of requesting btc data based on the `block_number`
             debug::info!("[OCW] ChainX Bitcoin Offchain Worker, ChainX Block #{:?}", block_number);
-            let number: u32 = block_number.try_into().unwrap_or(0usize) as u32;
             let network = XGatewayBitcoin::<T>::network_id();
-            if number % 20 == 0 {
+            if block_number.saturated_into::<u64>() % 20 == 0 {
                 // First, get withdrawal proposal from chain and broadcast to btc network.
                 match Self::withdrawal_proposal_broadcast(network) {
                     Ok(Some(hash)) => {
@@ -235,19 +231,23 @@ decl_module! {
             }
         }
 
-        #[weight = 0]
-        fn push_header(origin, header: BtcHeader) {
-            ensure_none(origin)?;
-            debug::info!("Push Header From OCW");
-            XGatewayBitcoin::<T>::apply_push_header(header).unwrap();
+        #[weight = <T as Trait>::WeightInfo::push_header()]
+        fn push_header(origin, height: u32, header: BtcHeader) -> DispatchResultWithPostInfo {
+            let worker = ensure_signed(origin)?;
+            debug::info!("[OCW] Worker:{:?} Push Header: {:?}", worker, header);
+            XGatewayBitcoin::<T>::apply_push_header(header)?;
+            Self::deposit_event(Event::<T>::NewBtcBlock(height, header.hash()));
+            Ok(Pays::No.into())
         }
 
-        #[weight = 0]
-        fn push_transaction(origin, tx: BtcTransaction, relayed_info: BtcRelayedTxInfo, prev_tx: Option<BtcTransaction>) {
-            ensure_none(origin)?;
-            debug::info!("Push Transaction From OCW");
-            let relay_tx = relayed_info.into_relayed_tx(tx);
-            XGatewayBitcoin::<T>::apply_push_transaction(relay_tx, prev_tx).unwrap();
+        #[weight = <T as Trait>::WeightInfo::push_transaction()]
+        fn push_transaction(origin, tx: BtcTransaction, relayed_info: BtcRelayedTxInfo, prev_tx: Option<BtcTransaction>)  -> DispatchResultWithPostInfo {
+            let worker = ensure_signed(origin)?;
+            debug::info!("[OCW] Worker:{:?} Push Transaction: {:?}", worker, tx.hash());
+            let relay_tx = relayed_info.into_relayed_tx(tx.clone());
+            XGatewayBitcoin::<T>::apply_push_transaction(relay_tx, prev_tx)?;
+            Self::deposit_event(Event::<T>::NewBtcTransaction(tx.hash()));
+            Ok(Pays::No.into())
         }
     }
 }
@@ -295,7 +295,7 @@ impl<T: Trait> Module<T> {
     // Get new header from btc network and push header to chain
     fn get_new_header_and_push(network: BtcNetwork) {
         let best_index = XGatewayBitcoin::<T>::best_index().height;
-        let next_height = best_index + 1;
+        let mut next_height = best_index + 1;
         for _ in 0..=5 {
             let btc_block_hash = match Self::fetch_block_hash(next_height, network) {
                 Ok(Some(hash)) => {
@@ -328,19 +328,26 @@ impl<T: Trait> Module<T> {
             if XGatewayBitcoin::<T>::block_hash_for(best_index)
                 .contains(&btc_header.previous_header_hash)
             {
-                let call = Call::push_header(btc_block.header);
-                debug::info!(
-                    "[OCW] ₿ Submitting unsigned transaction for pushing header: {:?}",
-                    call
-                );
-                if let Err(e) =
-                    SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into())
-                {
-                    debug::error!(
-                        "[OCW] Failed to submit unsigned transaction for pushing header: {:?}",
-                        e
-                    );
+                let signer = Signer::<T, T::RelayAuthId>::any_account();
+                let result = signer.send_signed_transaction(|_acct| {
+                    Call::push_header(next_height, btc_block.header)
+                });
+                if let Some((_acct, res)) = result {
+                    if res.is_err() {
+                        debug::error!(
+                            "[OCW] Failed to submit unsigned transaction for pushing header: {:?}",
+                            res
+                        );
+                    } else {
+                        debug::info!(
+                            "[OCW] ₿ Submitting signed transaction for pushing header: #{}",
+                            next_height
+                        );
+                    }
                 }
+            } else {
+                next_height -= 1;
+                continue;
             }
             break;
         }
@@ -419,9 +426,10 @@ impl<T: Trait> Module<T> {
                 return false;
             }
         };
-        let _btc_min_deposit = XGatewayBitcoin::<T>::btc_min_deposit();
+        let btc_min_deposit = XGatewayBitcoin::<T>::btc_min_deposit();
         // Construct BtcTxTypeDetector
-        let btc_tx_detector = BtcTxTypeDetector::new(network, 1, current_trustee_pair, None);
+        let btc_tx_detector =
+            BtcTxTypeDetector::new(network, btc_min_deposit, current_trustee_pair, None);
         // Filter transaction type (only deposit and withdrawal)
         for tx in &confirmed_block.transactions {
             // Prepare for constructing partial merkle tree
@@ -461,19 +469,24 @@ impl<T: Trait> Module<T> {
             // Construct partial merkle tree
             let merkle_proof = PartialMerkleTree::from_txids(&tx_hashes, &tx_matches);
             // Push xbtc relay (withdraw/deposit) transaction
+            let signer = Signer::<T, T::RelayAuthId>::any_account();
             for (tx, prev_tx) in needed {
                 let relayed_info = BtcRelayedTxInfo {
                     block_hash: confirmed_block.hash(),
                     merkle_proof: merkle_proof.clone(),
                 };
-                let call = Call::push_transaction(tx, relayed_info, prev_tx);
-                if let Err(e) =
-                    SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into())
-                {
-                    debug::error!(
-                        "[OCW] Failed to submit unsigned transaction for pushing transaction: {:?}",
-                        e
-                    );
+                let result = signer.send_signed_transaction(|_acct| {
+                    Call::push_transaction(tx.clone(), relayed_info.clone(), prev_tx.clone())
+                });
+                if let Some((_acct, res)) = result {
+                    if res.is_err() {
+                        debug::error!("[OCW] Failed to submit signed transaction for pushing transaction: {:?}",res);
+                    } else {
+                        debug::info!(
+                            "[OCW] Submitting signed transaction for pushing transaction: #{:?}",
+                            tx.hash()
+                        );
+                    }
                 }
             }
         } else {
@@ -491,7 +504,7 @@ impl<T: Trait> Module<T> {
                 let tx = serialize(&withdrawal_proposal.tx).take();
                 let hex_tx = hex::encode(&tx);
                 debug::info!("[OCW|send_raw_transaction] Btc Tx Hex: {}", hex_tx);
-                match Self::send_raw_transaction(hex_tx.clone(), network) {
+                match Self::send_raw_transaction(hex_tx, network) {
                     Ok(hash) => {
                         debug::info!(
                             "[OCW|withdrawal_proposal_broadcast] Transaction Hash: {:?}",
@@ -515,7 +528,7 @@ impl<T: Trait> Module<T> {
         let pending = http::Request::get(url.as_ref())
             .deadline(deadline)
             .send()
-            .map_err(|err| Error::<T>::from(err))?;
+            .map_err(Error::<T>::from)?;
         // Http response
         let response = pending
             .try_wait(deadline)
@@ -542,7 +555,7 @@ impl<T: Trait> Module<T> {
         let pending = http::Request::post(url, req_body)
             .deadline(deadline)
             .send()
-            .map_err(|err| Error::<T>::from(err))?;
+            .map_err(Error::<T>::from)?;
         // Http response
         let response = pending
             .try_wait(deadline)
@@ -722,7 +735,7 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 
     fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
         match call {
-            Call::push_header(_header) => {
+            Call::push_header(_height, _header) => {
                 ValidTransaction::with_tag_prefix("XGatewayBitcoinOffchain")
                 .priority(T::UnsignedPriority::get())
                 .and_provides("push_header") // TODO: a tag is required, otherwise the transactions will not be pruned.
