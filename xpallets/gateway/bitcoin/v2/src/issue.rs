@@ -64,6 +64,8 @@ pub mod pallet {
         BalanceOf<T>,
     >;
 
+    type RequestId = u128;
+
     #[pallet::pallet]
     #[pallet::generate_store(pub(crate) trait Store)]
     pub struct Pallet<T>(PhantomData<T>);
@@ -88,15 +90,15 @@ pub mod pallet {
             let sender = ensure_signed(origin)?;
             let height = <frame_system::Pallet<T>>::block_number();
             let vault = vault::Pallet::<T>::get_active_vault_by_id(&vault_id)?;
-            let required_collateral = Self::get_required_collateral_from_btc_amount(amount)?;
+            let required_collateral = Self::calculate_required_collateral(amount)?;
             ensure!(
                 collateral >= required_collateral,
                 Error::<T>::InsufficientGriefingCollateral
             );
             assets::Pallet::<T>::lock_collateral(&sender, collateral)?;
-            let key = Self::get_request_id();
+            let request_id = Self::get_next_request_id();
             Self::insert_issue_request(
-                key,
+                request_id,
                 IssueRequest::<T> {
                     vault: vault.id,
                     opentime: height,
@@ -123,13 +125,15 @@ pub mod pallet {
     #[pallet::getter(fn issue_griefing_fee)]
     pub(crate) type IssueGriefingFee<T: Config> = StorageValue<_, u8, ValueQuery>;
 
-    /// Auto-increament id to identity each request
+    /// Auto-increament id to identity each request.
+    /// Also presents total amount of created requests.
     #[pallet::storage]
-    pub(crate) type RequestId<T: Config> = StorageValue<_, u128, ValueQuery>;
+    pub(crate) type RequestCount<T: Config> = StorageValue<_, RequestId, ValueQuery>;
 
     /// Mapping from issue id to `IssueRequest`
     #[pallet::storage]
-    pub(crate) type IssueRequests<T: Config> = StorageMap<_, Twox64Concat, u128, IssueRequest<T>>;
+    pub(crate) type IssueRequests<T: Config> =
+        StorageMap<_, Twox64Concat, RequestId, IssueRequest<T>>;
 
     /// Genesis configure
     #[pallet::genesis_config]
@@ -152,8 +156,8 @@ pub mod pallet {
         }
 
         /// generate secure key from account id
-        pub(crate) fn get_request_id() -> u128 {
-            let nonce = <RequestId<T>>::mutate(|n| {
+        pub(crate) fn get_next_request_id() -> RequestId {
+            let nonce = <RequestCount<T>>::mutate(|n| {
                 *n += 1;
                 *n
             }); //auto increament
@@ -161,10 +165,10 @@ pub mod pallet {
         }
 
         /// Calculated minimium required collateral for a `IssueRequest`
-        pub(crate) fn get_required_collateral_from_btc_amount(
-            amount: BalanceOf<T>,
+        pub(crate) fn calculate_required_collateral(
+            btc_amount: BalanceOf<T>,
         ) -> Result<BalanceOf<T>, DispatchError> {
-            let raw_amount = <assets::Pallet<T>>::convert_to_pcx(amount)?;
+            let raw_amount = <assets::Pallet<T>>::convert_to_pcx(btc_amount)?;
             let percentage = Self::issue_griefing_fee();
             let griefing_fee = Percent::from_parts(percentage).mul_ceil(raw_amount);
             Ok(griefing_fee)

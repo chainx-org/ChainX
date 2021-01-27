@@ -151,11 +151,11 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
-        pub fn convert_to_pcx(amount: BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError> {
+        pub fn convert_to_pcx(btc_amount: BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError> {
             //TODO(wangyafei): add lower bound?
             let exchange_rate = Self::exchange_rate();
             let result = exchange_rate
-                .convert_to_pcx(amount.saturated_into())
+                .convert_to_pcx(btc_amount.saturated_into())
                 .ok_or(Error::<T>::ArithmeticError)?;
             Ok(result.saturated_into())
         }
