@@ -38,13 +38,32 @@ pub mod types {
         }
     }
 
-    #[test]
+    #[cfg(test)]
     mod tests {
+        use super::ExchangeRate;
         #[test]
-        fn test_btc_conversion() {}
+        fn test_btc_conversion() {
+            let exchange_rate = ExchangeRate {
+                price: 1,
+                decimal: 4,
+            };
+            assert_eq!(exchange_rate.convert_to_btc(10000), Some(1));
+        }
 
         #[test]
-        fn test_pcx_conversion() {}
+        fn test_pcx_conversion() {
+            let exchange_rate = ExchangeRate {
+                price: 1,
+                decimal: 4,
+            };
+            assert_eq!(exchange_rate.convert_to_pcx(1), Some(10000));
+
+            let exchange_rate = ExchangeRate {
+                price: 1,
+                decimal: 38,
+            };
+            assert_eq!(exchange_rate.convert_to_pcx(1_000_000), None);
+        }
     }
 }
 
@@ -52,13 +71,12 @@ pub mod types {
 #[frame_support::pallet]
 #[allow(dead_code)]
 pub mod pallet {
-    use sp_arithmetic::traits::SaturatedConversion;
     use sp_std::marker::PhantomData;
 
     #[cfg(feature = "std")]
     use frame_support::traits::GenesisBuild;
     use frame_support::{
-        dispatch::{DispatchError, DispatchResult, DispatchResultWithPostInfo},
+        dispatch::{DispatchResult, DispatchResultWithPostInfo},
         storage::types::{StorageValue, ValueQuery},
         traits::{Currency, Hooks, ReservableCurrency},
     };

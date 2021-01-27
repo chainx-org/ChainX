@@ -59,22 +59,3 @@ fn test_add_extra_collateral() {
         assert_eq!(free_balance, 700);
     })
 }
-
-#[test]
-fn test_btc_to_pcx() {
-    ExtBuilder::build(BuildConfig {
-        exchange_price: 123123123,
-        exchange_decimal: 6,
-        ..Default::default()
-    })
-    .execute_with(|| {
-        assert_eq!(
-            assets::Pallet::<Test>::btc_to_pcx(100_000_000).unwrap(),
-            12_312_312_300
-        );
-        assert_eq!(
-            assets::Pallet::<Test>::pcx_to_btc(12_312_312_300).unwrap(),
-            100_000_000
-        );
-    })
-}
