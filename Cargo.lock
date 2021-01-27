@@ -9322,12 +9322,16 @@ dependencies = [
  "pallet-balances",
  "parity-scale-codec",
  "serde",
+ "sha2 0.8.2",
+ "sp-arithmetic",
  "sp-core",
  "sp-inherents",
  "sp-io",
  "sp-runtime",
  "sp-std",
  "sp-version",
+ "xpallet-assets",
+ "xpallet-assets-registrar",
 ]
 
 [[package]]
