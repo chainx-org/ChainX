@@ -86,9 +86,22 @@ impl vault::Config for Test {
 pub(crate) type System = frame_system::Pallet<Test>;
 pub(crate) type Balances = pallet_balances::Module<Test>;
 
+#[derive(Default)]
+pub struct BuildConfig {
+    pub(crate) minimium_vault_collateral: u32,
+    pub(crate) exchange_price: u128,
+    pub(crate) exchange_decimal: u8,
+}
+
 pub struct ExtBuilder;
 impl ExtBuilder {
-    pub fn build(minimium_vault_collateral: u32) -> sp_io::TestExternalities {
+    pub fn build(
+        BuildConfig {
+            minimium_vault_collateral,
+            exchange_price,
+            exchange_decimal,
+        }: BuildConfig,
+    ) -> sp_io::TestExternalities {
         use super::assets::types::ExchangeRate;
         let mut storage = frame_system::GenesisConfig::default()
             .build_storage::<Test>()
@@ -97,8 +110,8 @@ impl ExtBuilder {
         let _ = GenesisBuild::<Test>::assimilate_storage(
             &assets::GenesisConfig {
                 exchange_rate: ExchangeRate {
-                    price: 123123123,
-                    decimal: 6,
+                    price: exchange_price,
+                    decimal: exchange_decimal,
                 },
             },
             &mut storage,

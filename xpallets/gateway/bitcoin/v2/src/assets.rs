@@ -1,20 +1,25 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+/// Types used by pallet
 pub mod types {
     use codec::{Decode, Encode};
-    use frame_support::{Deserialize, Serialize};
+
+    #[cfg(feature = "std")]
+    use serde::{Deserialize, Serialize};
 
     /// Exchange rate from btc to pcx. It means how many pcx tokens could 1 btc excahnge.
     /// For example, suppose 1BTC = 1234.56789123PCX, then
     /// price = 123456789123
     /// decimal = 8
-    #[derive(Encode, Decode, Debug, Copy, Clone, Default, Serialize, Deserialize)]
+    #[derive(Encode, Decode, Debug, Copy, Clone, Default)]
+    #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
     pub struct ExchangeRate {
         pub price: u128,
         pub decimal: u8,
     }
 }
 
+/// Manage exchanging between assets
 #[frame_support::pallet]
 #[allow(dead_code)]
 pub mod pallet {
@@ -49,6 +54,7 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {}
 
+    /// Errors for assets module
     #[pallet::error]
     pub enum Error<T> {
         /// Requester doesn't has enough pcx for collateral.
@@ -71,6 +77,7 @@ pub mod pallet {
     #[pallet::getter(fn exchange_rate)]
     pub(crate) type ExchangeRate<T: Config> = StorageValue<_, types::ExchangeRate, ValueQuery>;
 
+    /// Genesis configure
     #[pallet::genesis_config]
     #[derive(Default)]
     pub struct GenesisConfig {
@@ -89,6 +96,7 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
+        /// Converting btc to pcx with current exchange rate.
         pub fn btc_to_pcx(amount: BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError> {
             let raw_amount: u128 = amount.saturated_into();
             let types::ExchangeRate { price, decimal } = Self::exchange_rate();
@@ -102,6 +110,7 @@ pub mod pallet {
             Ok(result)
         }
 
+        /// Converting pcx to btc with current exchange rate.
         pub fn pcx_to_btc(amount: BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError> {
             let raw_amount: u128 = amount.saturated_into();
             let types::ExchangeRate { price, decimal } = Self::exchange_rate();

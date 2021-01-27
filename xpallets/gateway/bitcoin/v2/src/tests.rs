@@ -1,7 +1,7 @@
 use frame_support::{assert_err, assert_ok, dispatch::DispatchResultWithPostInfo};
 
 use super::assets::pallet as assets;
-use super::mock::{ExtBuilder, Origin, Test};
+use super::mock::{BuildConfig, ExtBuilder, Origin, Test};
 use super::vault::pallet as vault;
 
 fn register_vault(id: u64, collateral: u128, addr: &str) -> DispatchResultWithPostInfo {
@@ -10,7 +10,11 @@ fn register_vault(id: u64, collateral: u128, addr: &str) -> DispatchResultWithPo
 
 #[test]
 fn test_register_vault() {
-    ExtBuilder::build(100).execute_with(|| {
+    ExtBuilder::build(BuildConfig {
+        minimium_vault_collateral: 100,
+        ..Default::default()
+    })
+    .execute_with(|| {
         assert_err!(
             register_vault(1, 10000, "test"),
             assets::Error::<Test>::InsufficientFunds
@@ -33,7 +37,11 @@ fn test_register_vault() {
 
 #[test]
 fn test_add_extra_collateral() {
-    ExtBuilder::build(100).execute_with(|| {
+    ExtBuilder::build(BuildConfig {
+        minimium_vault_collateral: 100,
+        ..Default::default()
+    })
+    .execute_with(|| {
         assert_err!(
             vault::Pallet::<Test>::add_extra_collateral(Origin::signed(1), 100),
             vault::Error::<Test>::VaultNotFound
@@ -54,7 +62,12 @@ fn test_add_extra_collateral() {
 
 #[test]
 fn test_btc_to_pcx() {
-    ExtBuilder::build(100).execute_with(|| {
+    ExtBuilder::build(BuildConfig {
+        exchange_price: 123123123,
+        exchange_decimal: 6,
+        ..Default::default()
+    })
+    .execute_with(|| {
         assert_eq!(
             assets::Pallet::<Test>::btc_to_pcx(100_000_000).unwrap(),
             12_312_312_300
