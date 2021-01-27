@@ -5,6 +5,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 mod assets;
+mod issue;
 mod vault;
 
 #[cfg(test)]

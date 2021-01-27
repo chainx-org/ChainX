@@ -64,17 +64,12 @@ pub mod pallet {
         BalanceOf<T>,
     >;
 
-    type BalanceOf<T> =
-        <<T as Config>::Balances as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-
     #[pallet::pallet]
     #[pallet::generate_store(pub(crate) trait Store)]
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + vault::Config {
-        type Balances: ReservableCurrency<<Self as frame_system::Config>::AccountId>;
-    }
+    pub trait Config: frame_system::Config + vault::Config {}
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
@@ -99,7 +94,7 @@ pub mod pallet {
                 Error::<T>::InsufficientGriefingCollateral
             );
             assets::Pallet::<T>::lock_collateral(&sender, collateral)?;
-            let key = Self::get_nonce();
+            let key = Self::get_request_id();
             Self::insert_issue_request(
                 key,
                 IssueRequest::<T> {
@@ -130,7 +125,7 @@ pub mod pallet {
 
     /// Auto-increament id to identity each request
     #[pallet::storage]
-    pub(crate) type Nonce<T: Config> = StorageValue<_, u128, ValueQuery>;
+    pub(crate) type RequestId<T: Config> = StorageValue<_, u128, ValueQuery>;
 
     /// Mapping from issue id to `IssueRequest`
     #[pallet::storage]
@@ -157,8 +152,8 @@ pub mod pallet {
         }
 
         /// generate secure key from account id
-        pub(crate) fn get_nonce() -> u128 {
-            let nonce = <Nonce<T>>::mutate(|n| {
+        pub(crate) fn get_request_id() -> u128 {
+            let nonce = <RequestId<T>>::mutate(|n| {
                 *n += 1;
                 *n
             }); //auto increament
@@ -169,8 +164,10 @@ pub mod pallet {
         pub(crate) fn get_required_collateral_from_btc_amount(
             amount: BalanceOf<T>,
         ) -> Result<BalanceOf<T>, DispatchError> {
-            //TODO(wangyafe): temporary value
-            Ok(amount)
+            let raw_amount = <assets::Pallet<T>>::convert_to_pcx(amount)?;
+            let percentage = Self::issue_griefing_fee();
+            let griefing_fee = Percent::from_parts(percentage).mul_ceil(raw_amount);
+            Ok(griefing_fee)
         }
     }
 }

@@ -71,12 +71,13 @@ pub mod types {
 #[frame_support::pallet]
 #[allow(dead_code)]
 pub mod pallet {
+    use sp_arithmetic::traits::SaturatedConversion;
     use sp_std::marker::PhantomData;
 
     #[cfg(feature = "std")]
     use frame_support::traits::GenesisBuild;
     use frame_support::{
-        dispatch::{DispatchResult, DispatchResultWithPostInfo},
+        dispatch::{DispatchError, DispatchResult, DispatchResultWithPostInfo},
         storage::types::{StorageValue, ValueQuery},
         traits::{Currency, Hooks, ReservableCurrency},
     };
@@ -150,6 +151,14 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
+        pub fn convert_to_pcx(amount: BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError> {
+            //TODO(wangyafei): add lower bound?
+            let exchange_rate = Self::exchange_rate();
+            let result = exchange_rate
+                .convert_to_pcx(amount.saturated_into())
+                .ok_or(Error::<T>::ArithmeticError)?;
+            Ok(result.saturated_into())
+        }
         /// Lock collateral
         #[inline]
         pub fn lock_collateral(sender: &T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
