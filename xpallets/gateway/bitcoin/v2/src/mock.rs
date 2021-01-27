@@ -1,11 +1,14 @@
-use frame_support::{impl_outer_origin, parameter_types, sp_io, traits::GenesisBuild};
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
 
+use frame_support::{impl_outer_origin, parameter_types, sp_io, traits::GenesisBuild};
+
 use super::assets::pallet as assets;
+use super::issue::pallet as issue;
+use super::issue::types as issue_types;
 use super::vault::pallet as vault;
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -83,6 +86,8 @@ impl vault::Config for Test {
     type Event = ();
 }
 
+impl issue::Config for Test {}
+
 pub(crate) type System = frame_system::Pallet<Test>;
 pub(crate) type Balances = pallet_balances::Module<Test>;
 
@@ -91,6 +96,7 @@ pub struct BuildConfig {
     pub(crate) minimium_vault_collateral: u32,
     pub(crate) exchange_price: u128,
     pub(crate) exchange_decimal: u8,
+    pub(crate) issue_griefing_fee: u8,
 }
 
 pub struct ExtBuilder;
@@ -100,9 +106,11 @@ impl ExtBuilder {
             minimium_vault_collateral,
             exchange_price,
             exchange_decimal,
+            issue_griefing_fee,
         }: BuildConfig,
     ) -> sp_io::TestExternalities {
         use super::assets::types::ExchangeRate;
+
         let mut storage = frame_system::GenesisConfig::default()
             .build_storage::<Test>()
             .unwrap();
@@ -117,8 +125,13 @@ impl ExtBuilder {
             &mut storage,
         );
 
+        let _ = GenesisBuild::<Test>::assimilate_storage(
+            &issue::GenesisConfig { issue_griefing_fee },
+            &mut storage,
+        );
+
         let _ = pallet_balances::GenesisConfig::<Test> {
-            balances: vec![(1, 1000), (2, 2000)],
+            balances: vec![(1, 1000), (2, 2000), (3, 3000)],
         }
         .assimilate_storage(&mut storage);
 

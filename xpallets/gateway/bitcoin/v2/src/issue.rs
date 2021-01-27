@@ -1,13 +1,17 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub mod types {
-    use codec::{Decode, Encode};
     use sp_std::vec::Vec;
+
+    use codec::{Decode, Encode};
+
+    #[cfg(feature = "std")]
+    use frame_support::{Deserialize, Serialize};
 
     pub type BtcAddress = Vec<u8>;
 
     #[derive(Encode, Decode, Default, Clone, PartialEq)]
-    #[cfg_attr(feature = "std", derive(Debug))]
+    #[cfg_attr(feature = "std", derive(Debug, Deserialize, Serialize))]
     pub struct IssueRequest<AccountId, BlockNumber, XBTC, PCX> {
         /// Vault id
         pub(crate) vault: AccountId,
@@ -31,6 +35,13 @@ pub mod types {
 #[frame_support::pallet]
 #[allow(dead_code)]
 pub mod pallet {
+    use sp_arithmetic::Percent;
+    use sp_core::U256;
+    use sp_runtime::DispatchError;
+    use sp_std::marker::PhantomData;
+
+    #[cfg(feature = "std")]
+    use frame_support::traits::GenesisBuild;
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         ensure,
@@ -38,11 +49,6 @@ pub mod pallet {
         traits::Hooks,
         Twox64Concat,
     };
-    use sp_arithmetic::Percent;
-    use sp_core::U256;
-    use sp_runtime::DispatchError;
-    use sp_std::marker::PhantomData;
-
     use frame_system::{
         ensure_signed,
         pallet_prelude::{BlockNumberFor, OriginFor},
@@ -111,11 +117,6 @@ pub mod pallet {
         InsufficientGriefingCollateral,
     }
 
-    /// Exchange rate from btc to pcx
-    #[pallet::storage]
-    #[pallet::getter(fn exchange_rate)]
-    pub(crate) type ExchangeRateFromBtcToPcx<T: Config> = StorageValue<_, u128, ValueQuery>;
-
     /// Percentage to lock, when user requests issue
     #[pallet::storage]
     #[pallet::getter(fn issue_griefing_fee)]
@@ -128,6 +129,24 @@ pub mod pallet {
     /// Mapping from issue id to `IssueRequest`
     #[pallet::storage]
     pub(crate) type IssueRequests<T: Config> = StorageMap<_, Twox64Concat, U256, IssueRequest<T>>;
+
+    /// Genesis configure
+    #[pallet::genesis_config]
+    #[derive(Default)]
+    pub struct GenesisConfig {
+        /// Exchange rate from btc to pcx. It means how many pcx tokens could 1 btc excahnge.
+        /// For example, suppose 1BTC = 1234.56789123PCX, then
+        /// exchange_rate = 123456789123
+        /// decimal = 8
+        pub issue_griefing_fee: u8,
+    }
+
+    #[pallet::genesis_build]
+    impl<T: Config> GenesisBuild<T> for GenesisConfig {
+        fn build(&self) {
+            <IssueGriefingFee<T>>::put(self.issue_griefing_fee);
+        }
+    }
 
     impl<T: Config> Pallet<T> {
         pub(crate) fn insert_issue_request(key: U256, value: IssueRequest<T>) {

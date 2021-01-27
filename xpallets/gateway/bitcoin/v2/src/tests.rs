@@ -1,6 +1,7 @@
 use frame_support::{assert_err, assert_ok, dispatch::DispatchResultWithPostInfo};
 
 use super::assets::pallet as assets;
+use super::issue::pallet as issue;
 use super::mock::{BuildConfig, ExtBuilder, Origin, Test};
 use super::vault::pallet as vault;
 
@@ -76,5 +77,44 @@ fn test_btc_to_pcx() {
             assets::Pallet::<Test>::pcx_to_btc(12_312_312_300).unwrap(),
             100_000_000
         );
+    })
+}
+
+#[test]
+fn test_issue() {
+    use sp_core::U256;
+    ExtBuilder::build(BuildConfig {
+        exchange_price: 1000,
+        exchange_decimal: 0,
+        minimium_vault_collateral: 100,
+        issue_griefing_fee: 10,
+    })
+    .execute_with(|| {
+        assert_ok!(register_vault(3, 3000, "test"));
+
+        assert_err!(
+            issue::Pallet::<Test>::request_issue(Origin::signed(2), 1, 1, 200),
+            vault::Error::<Test>::VaultNotFound
+        );
+        assert_err!(
+            issue::Pallet::<Test>::request_issue(Origin::signed(2), 3, 1, 80),
+            issue::Error::<Test>::InsufficientGriefingCollateral
+        );
+
+        assert_ok!(issue::Pallet::<Test>::request_issue(
+            Origin::signed(2),
+            3,
+            1,
+            200
+        ));
+
+        let issue_request = <issue::IssueRequests<Test>>::get(U256::one()).unwrap();
+        assert_eq!(issue_request.vault, 3);
+        assert_eq!(issue_request.griefing_collateral, 200);
+        assert_eq!(issue_request.btc_address, "test".as_bytes().to_vec());
+        assert_eq!(issue_request.requester, 2);
+
+        let free_balance = pallet_balances::Module::<Test>::free_balance(2);
+        assert_eq!(free_balance, 1800);
     })
 }
