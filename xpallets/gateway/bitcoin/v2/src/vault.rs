@@ -59,21 +59,15 @@ pub mod types {
 #[frame_support::pallet]
 #[allow(dead_code)]
 pub mod pallet {
-    use frame_support::{
-        pallet_prelude::*,
-        traits::{Currency, ReservableCurrency},
-    };
+    use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::{ensure_signed, BlockNumberFor, OriginFor};
-    use sp_runtime::DispatchResult;
 
     use super::types::*;
-
-    pub type BalanceOf<T> =
-        <<T as Config>::PCX as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+    use crate::assets::pallet as assets;
+    use assets::BalanceOf;
 
     #[pallet::config]
-    pub trait Config: frame_system::Config {
-        type PCX: ReservableCurrency<Self::AccountId>;
+    pub trait Config: frame_system::Config + assets::Config {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
 
@@ -106,8 +100,8 @@ pub mod pallet {
                 !Self::btc_address_exists(&btc_address),
                 Error::<T>::BtcAddressOccupied
             );
-            Self::lock_collateral(&sender, collateral)?;
-            Self::increase_total_collateral(collateral);
+            <assets::Pallet<T>>::lock_collateral(&sender, collateral)?;
+            <assets::Pallet<T>>::increase_total_collateral(collateral);
             Self::insert_btc_address(&btc_address, sender.clone());
             let vault = Vault::new(sender.clone(), btc_address);
             Self::insert_vault(&sender, vault.clone());
@@ -123,8 +117,8 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             ensure!(Self::vault_exists(&sender), Error::<T>::VaultNotFound);
-            Self::lock_collateral(&sender, collateral)?;
-            Self::increase_total_collateral(collateral);
+            <assets::Pallet<T>>::lock_collateral(&sender, collateral)?;
+            <assets::Pallet<T>>::increase_total_collateral(collateral);
             Self::deposit_event(Event::ExtraCollateralAdded(sender, collateral));
             Ok(().into())
         }
@@ -133,16 +127,18 @@ pub mod pallet {
     /// Error during register, withdrawing collateral or adding extra collateral
     #[pallet::error]
     pub enum Error<T> {
-        /// Requester doesn't has enough pcx for collateral.
-        InsufficientFunds,
-        /// The amount in request is less than minimium bound.
+        /// The amount in request is less than lower bound.
         InsufficientVaultCollateralAmount,
+        /// Collateral is less than lower bound after extrinsic.
+        InsufficientVaultCollateral,
         /// Requester has been vault.
         VaultAlreadyRegistered,
         /// Btc address in request was occupied by another vault.
         BtcAddressOccupied,
-        /// Vault has not been registered yet.
+        /// Vault does not exist.
         VaultNotFound,
+        /// Vault was inactive
+        VaultInactive,
     }
 
     /// Event during register, withdrawing collateral or adding extra collateral
@@ -153,12 +149,9 @@ pub mod pallet {
         VaultRegistered(<T as frame_system::Config>::AccountId, BalanceOf<T>),
         /// Extra collateral was added to a vault.
         ExtraCollateralAdded(<T as frame_system::Config>::AccountId, BalanceOf<T>),
+        /// Vault released collateral.
+        CollateralReleased(<T as frame_system::Config>::AccountId, BalanceOf<T>),
     }
-
-    /// Total collateral.
-    #[pallet::storage]
-    #[pallet::getter(fn total_collateral)]
-    pub(crate) type TotalCollateral<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
     /// Mapping account to vault struct.
     #[pallet::storage]
@@ -178,10 +171,31 @@ pub mod pallet {
     #[pallet::getter(fn minimium_vault_collateral)]
     pub(crate) type MinimiumVaultCollateral<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
+    /// Secure threshold for vault
+    /// eg, 200 means 200%.
+    #[pallet::storage]
+    #[pallet::getter(fn secure_threshold)]
+    pub(crate) type SecureThreshold<T: Config> = StorageValue<_, u16, ValueQuery>;
+
+    /// Secure threshold for vault
+    /// eg, 150 means 150%.
+    #[pallet::storage]
+    #[pallet::getter(fn premium_threshold)]
+    pub(crate) type PremiumThreshold<T: Config> = StorageValue<_, u16, ValueQuery>;
+
+    /// Secure threshold for vault.
+    /// eg, 100 means 100%.
+    #[pallet::storage]
+    #[pallet::getter(fn liquidation_threshold)]
+    pub(crate) type LiquidationThreshold<T: Config> = StorageValue<_, u16, ValueQuery>;
+
     #[pallet::genesis_config]
     #[derive(Default)]
     pub struct GenesisConfig {
         pub(crate) minimium_vault_collateral: u32,
+        pub(crate) secure_threshold: u16,
+        pub(crate) premium_threshold: u16,
+        pub(crate) liquidation_threshold: u16,
     }
 
     #[pallet::genesis_build]
@@ -189,23 +203,13 @@ pub mod pallet {
         fn build(&self) {
             let pcx: BalanceOf<T> = self.minimium_vault_collateral.into();
             <MinimiumVaultCollateral<T>>::put(pcx);
+            <SecureThreshold<T>>::put(self.secure_threshold);
+            <PremiumThreshold<T>>::put(self.premium_threshold);
+            <LiquidationThreshold<T>>::put(self.liquidation_threshold);
         }
     }
 
     impl<T: Config> Pallet<T> {
-        /// Lock collateral
-        #[inline]
-        pub fn lock_collateral(sender: &T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
-            T::PCX::reserve(sender, amount).map_err(|_| Error::<T>::InsufficientFunds)?;
-            Ok(())
-        }
-
-        /// increase total collateral
-        #[inline]
-        pub fn increase_total_collateral(amount: BalanceOf<T>) {
-            <TotalCollateral<T>>::mutate(|c| *c += amount);
-        }
-
         #[inline]
         pub fn insert_vault(
             sender: &T::AccountId,
@@ -227,6 +231,26 @@ pub mod pallet {
         #[inline]
         pub fn btc_address_exists(address: &BtcAddress) -> bool {
             <BtcAddresses<T>>::contains_key(address)
+        }
+
+        pub fn get_vault_by_id(
+            id: &T::AccountId,
+        ) -> Result<Vault<T::AccountId, T::BlockNumber, BalanceOf<T>>, DispatchError> {
+            match <Vaults<T>>::get(id) {
+                Some(vault) => Ok(vault),
+                None => Err(Error::<T>::VaultNotFound.into()),
+            }
+        }
+
+        pub fn get_active_vault_by_id(
+            id: &T::AccountId,
+        ) -> Result<Vault<T::AccountId, T::BlockNumber, BalanceOf<T>>, DispatchError> {
+            let vault = Self::get_vault_by_id(id)?;
+            if vault.status == VaultStatus::Active {
+                Ok(vault)
+            } else {
+                Err(Error::<T>::VaultInactive.into())
+            }
         }
     }
 }
