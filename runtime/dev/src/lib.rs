@@ -51,7 +51,9 @@ use xpallet_mining_asset::{MinerLedger, MiningAssetInfo, MiningDividendInfo};
 use xpallet_mining_staking::{NominatorInfo, NominatorLedger, ValidatorInfo};
 use xpallet_support::traits::MultisigAddressFor;
 
-use xpallet_gateway_bitcoin_v2::pallet as xpallet_gateway_bitcoin_v2_pallet;
+use xpallet_gateway_bitcoin_v2::assets::pallet as xpallet_gateway_bitcoin_v2_assets;
+use xpallet_gateway_bitcoin_v2::issue::pallet as xpallet_gateway_bitcoin_v2_issue;
+use xpallet_gateway_bitcoin_v2::vault::pallet as xpallet_gateway_bitcoin_v2_vault;
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
@@ -408,10 +410,11 @@ impl pallet_session_historical::Config for Runtime {
     type FullIdentificationOf = SimpleValidatorIdConverter;
 }
 
-impl xpallet_gateway_bitcoin_v2_pallet::Config for Runtime {
-    type Balance = Balance;
+impl xpallet_gateway_bitcoin_v2_issue::Config for Runtime {}
+impl xpallet_gateway_bitcoin_v2_vault::Config for Runtime {
     type Event = Event;
 }
+impl xpallet_gateway_bitcoin_v2_assets::Config for Runtime {}
 
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
 where
@@ -955,7 +958,9 @@ construct_runtime!(
         XGatewayRecords: xpallet_gateway_records::{Module, Call, Storage, Event<T>},
         XGatewayCommon: xpallet_gateway_common::{Module, Call, Storage, Event<T>, Config<T>},
         XGatewayBitcoin: xpallet_gateway_bitcoin::{Module, Call, Storage, Event<T>, Config<T>},
-        XGatewayBitcoinV2: xpallet_gateway_bitcoin_v2_pallet::{Module, Call, Storage, Event<T>, Config},
+        XGatewayBitcoinV2Issue: xpallet_gateway_bitcoin_v2_issue::{Module, Call, Storage},
+        XGatewayBitcoinV2Vault: xpallet_gateway_bitcoin_v2_vault::{Module, Call, Storage, Event<T>, Config},
+        XGatewayBitcoinV2Assets: xpallet_gateway_bitcoin_v2_assets::{Module, Call, Storage},
 
         // DEX
         XSpot: xpallet_dex_spot::{Module, Call, Storage, Event<T>, Config<T>},
