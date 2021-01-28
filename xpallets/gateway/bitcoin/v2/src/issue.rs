@@ -117,7 +117,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             request_id: RequestId,
         ) -> DispatchResultWithPostInfo {
-            ensure_none(origin)?;
+            let _ = ensure_signed(origin)?;
             let request = Self::get_issue_request_by_id(request_id)
                 .ok_or(Error::<T>::IssueRequestNotFound)?;
             let height = <frame_system::Pallet<T>>::block_number();
