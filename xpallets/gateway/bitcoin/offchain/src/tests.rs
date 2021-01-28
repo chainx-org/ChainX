@@ -1,19 +1,5 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-// use frame_support::assert_ok;
-use sp_core::offchain::{testing, OffchainExt};
-use sp_io::TestExternalities;
-// use sp_keystore::{
-//     testing::KeyStore,
-//     {KeystoreExt, SyncCryptoStore},
-// };
-
-use light_bitcoin::{
-    keys::Network as BtcNetwork,
-    primitives::{h256, hash_rev},
-};
-
-use crate::mock::XGatewayBitcoinRelay;
 use light_bitcoin::chain::Transaction;
 use light_bitcoin::keys::{Address, Network};
 use light_bitcoin::script::Script;
@@ -57,7 +43,6 @@ fn extract_account() {
     assert_eq!(op_return, result);
     assert_eq!(deposit_value, value);
 
-    let mut account_info = None;
     for opreturn_script in tx
         .outputs
         .iter()
@@ -68,7 +53,7 @@ fn extract_account() {
         if let Some(info) = extract_opreturn_data(&opreturn_script)
             .and_then(|opreturn| OpReturnExtractor::extract_account(&opreturn))
         {
-            account_info = Some(info);
+            let account_info = Some(info);
             assert_eq!(account_info, op_return);
             break;
         }

@@ -36,10 +36,8 @@ use sp_application_crypto::RuntimeAppPublic;
 use sp_core::crypto::KeyTypeId;
 use sp_runtime::{
     offchain::{
-        http,
         storage::StorageValueRef,
         storage_lock::{StorageLock, Time},
-        Duration,
     },
     transaction_validity::{
         InvalidTransaction, TransactionPriority, TransactionSource, TransactionValidity,
@@ -49,7 +47,7 @@ use sp_runtime::{
 };
 
 use sp_std::{
-    collections::btree_set::BTreeSet, convert::TryFrom, marker::PhantomData, str, vec, vec::Vec,
+    collections::btree_set::BTreeSet, convert::TryFrom, marker::PhantomData, str, vec::Vec,
 };
 
 use light_bitcoin::{
@@ -57,8 +55,10 @@ use light_bitcoin::{
     keys::{Address as BtcAddress, Network as BtcNetwork},
     merkle::PartialMerkleTree,
     primitives::{hash_rev, H256 as BtcHash},
-    serialization::{deserialize, serialize, Reader},
+    serialization::serialize,
 };
+use request::{MAX_RETRY_NUM, RETRY_NUM};
+use sp_runtime::offchain::storage_lock::StorageLockGuard;
 use xp_gateway_bitcoin::{BtcTxMetaType, BtcTxTypeDetector, OpReturnExtractor};
 use xp_gateway_common::AccountExtractor;
 use xpallet_assets::Chain;
@@ -207,26 +207,31 @@ decl_module! {
             let network = XGatewayBitcoin::<T>::network_id();
             if block_number.saturated_into::<u64>() % 2 == 0 {
                 // First, get withdrawal proposal from chain and broadcast to btc network.
-                match Self::withdrawal_proposal_broadcast(network) {
+                match Self::broadcast_withdrawal_proposal(network) {
                     Ok(Some(hash)) => {
                         debug::info!(
-                                "[OCW|withdrawal_proposal_broadcast] Succeed! Transaction Hash: {:?}",
+                                "[OCW|broadcast_withdrawal_proposal] Succeed! Transaction Hash: {:?}",
                                 hash
                             );
                     }
                     Ok(None) => {
-                        debug::info!("[OCW|withdrawal_proposal_broadcast] No Withdrawal Proposal");
+                        debug::info!("[OCW|broadcast_withdrawal_proposal] No Withdrawal Proposal");
                     }
                     _ => {
-                        debug::error!("[OCW|withdrawal_proposal_broadcast] Failed!");
-                        return;
+                        debug::warn!("[OCW|broadcast_withdrawal_proposal] Failed! Maybe the transaction has been broadcast.");
                     }
                 }
-                // Second, filter transactions from confirmed block and push transactions to chain.
-                if Self::filter_transactions_and_push(network) {
-                    // Third, get new block from btc network and push block header to chain
-                    Self::get_new_header_and_push(network);
+                // Let worker do it alone
+                let mut lock = StorageLock::<'_, Time>::new(b"ocw::worker::lock");
+                if let Ok(mut guard) = lock.try_lock() {
+                    debug::info!("[OCW] Worker[{:?}] Start To Working...", block_number);
+                    // Second, filter transactions from confirmed block and push transactions to chain.
+                    if Self::get_transactions_and_push(&mut guard, network) {
+                        // Third, get new block from btc network and push block header to chain
+                        Self::get_new_header_and_push(&mut guard, network);
+                    }
                 }
+                debug::info!("[OCW] Worker[{:?}] Exit.", block_number);
             }
         }
 
@@ -265,40 +270,35 @@ impl<T: Trait> Module<T> {
 /// This greatly helps with error messages, as the ones inside the macro
 /// can sometimes be hard to debug.
 impl<T: Trait> Module<T> {
-    /// Get trustee pair
-    fn get_trustee_pair(session_number: u32) -> Result<Option<(BtcAddress, BtcAddress)>, Error<T>> {
-        if let Some(trustee_session_info) =
-            XGatewayCommon::<T>::trustee_session_info_of(Chain::Bitcoin, session_number)
-        {
-            let hot_addr: Vec<u8> = trustee_session_info.0.hot_address;
-            let hot_addr = BtcTrusteeAddrInfo::try_from(hot_addr).unwrap();
-            let hot_addr = String::from_utf8(hot_addr.addr)
-                .unwrap()
-                .parse::<BtcAddress>()
-                .unwrap();
-
-            let cold_addr: Vec<u8> = trustee_session_info.0.cold_address;
-            let cold_addr = BtcTrusteeAddrInfo::try_from(cold_addr).unwrap();
-            let cold_addr = String::from_utf8(cold_addr.addr)
-                .unwrap()
-                .parse::<BtcAddress>()
-                .unwrap();
-
-            debug::info!("[OCW|get_trustee_pair] ChainX X-BTC Trustee Session Info (session number = {:?}):[Hot Address: {}, Cold Address: {}]",
-                            session_number,
-                            hot_addr,
-                            cold_addr,);
-            Ok(Some((hot_addr, cold_addr)))
-        } else {
-            Ok(None)
+    /// Get withdrawal proposal from chain and broadcast raw transaction
+    fn broadcast_withdrawal_proposal(network: BtcNetwork) -> Result<Option<String>, ()> {
+        if let Some(withdrawal_proposal) = XGatewayBitcoin::<T>::withdrawal_proposal() {
+            if withdrawal_proposal.sig_state == VoteResult::Finish {
+                let tx = serialize(&withdrawal_proposal.tx).take();
+                let hex_tx = hex::encode(&tx);
+                debug::info!("[OCW|send_raw_transaction] Btc Tx Hex: {}", hex_tx);
+                match Self::send_raw_transaction(hex_tx, network) {
+                    Ok(hash) => {
+                        debug::info!(
+                            "[OCW|broadcast_withdrawal_proposal] Transaction Hash: {:?}",
+                            hash
+                        );
+                        return Ok(Some(hash));
+                    }
+                    Err(err) => {
+                        debug::warn!("[OCW|broadcast_withdrawal_proposal] Error {:?}", err);
+                    }
+                }
+            }
         }
+        Ok(None)
     }
 
     /// Get new header from btc network and push header to chain
-    fn get_new_header_and_push(network: BtcNetwork) {
+    fn get_new_header_and_push(guard: &mut StorageLockGuard<Time>, network: BtcNetwork) {
         let best_index = XGatewayBitcoin::<T>::best_index().height;
         let mut next_height = best_index + 1;
-        for _ in 0..=5 {
+        for _ in 0..=MAX_RETRY_NUM {
             let btc_block_hash = match Self::fetch_block_hash(next_height, network) {
                 Ok(Some(hash)) => {
                     debug::info!("[OCW] ₿ Block #{} hash: {}", next_height, hash);
@@ -313,6 +313,11 @@ impl<T: Trait> Module<T> {
                     continue;
                 }
             };
+            // Reset the running time of the lock
+            match guard.extend_lock() {
+                Ok(_result) => {}
+                Err(_e) => debug::warn!("[OCW|guard] The lock has expired, failed to extend it."),
+            }
 
             let btc_block = match Self::fetch_block(&btc_block_hash[..], network) {
                 Ok(block) => {
@@ -337,12 +342,12 @@ impl<T: Trait> Module<T> {
                 if let Some((_acct, res)) = result {
                     if res.is_err() {
                         debug::error!(
-                            "[OCW] Failed to submit unsigned transaction for pushing header: {:?}",
+                            "[OCW|push_header] Failed to submit unsigned transaction for pushing header: {:?}",
                             res
                         );
                     } else {
                         debug::info!(
-                            "[OCW] ₿ Submitting signed transaction for pushing header: #{}",
+                            "[OCW|push_header] ₿ Submitting signed transaction for pushing header: #{}",
                             next_height
                         );
                     }
@@ -355,28 +360,21 @@ impl<T: Trait> Module<T> {
         }
     }
 
-    /// Filter transactions in confirmed block and push transactions to chain
-    fn filter_transactions_and_push(network: BtcNetwork) -> bool {
+    /// Get transactions in confirmed block and push withdrawal/deposit transactions to chain
+    fn get_transactions_and_push(guard: &mut StorageLockGuard<Time>, network: BtcNetwork) -> bool {
         if let Some(confirmed_index) = XGatewayBitcoin::<T>::confirmed_index() {
             let confirm_height = confirmed_index.height;
             // Get confirmed height from local storage
             let confirmed_info = StorageValueRef::persistent(b"ocw::confirmed");
-            let mut lock = StorageLock::<'_, Time>::new(b"ocw::lock");
             // Prevent repeated filtering of transactions
-            if let Ok(_guard) = lock.try_lock() {
-                if let Some(Some(confirmed)) = confirmed_info.get::<u32>() {
-                    if confirmed == confirm_height {
-                        return true;
-                    }
+            if let Some(Some(confirmed)) = confirmed_info.get::<u32>() {
+                if confirmed == confirm_height {
+                    return true;
                 }
-            } else {
-                debug::info!("[OCW] Read Lock Can't Be Acquired.");
-                debug::info!("[OCW] There is a worker working here. Please don't take his job. ");
-                return false;
             }
             // Prevent unstable network connections
-            for i in 0..=5 {
-                if i == 5 {
+            for num in 0..=RETRY_NUM {
+                if num == MAX_RETRY_NUM {
                     return false;
                 }
                 let confirm_hash = match Self::fetch_block_hash(confirm_height, network) {
@@ -405,35 +403,28 @@ impl<T: Trait> Module<T> {
                     }
                 };
 
-                let mut lock = StorageLock::<'_, Time>::new(b"ocw::lock");
-                if let Ok(_guard) = lock.try_lock() {
-                    debug::info!("[OCW] A Worker start to working...");
-                    if Self::push_xbtc_transaction(&btc_confirmed_block, network) {
-                        confirmed_info.set(&confirm_height);
-                        return true;
-                    }
-                } else {
-                    debug::info!("[OCW] A worker exists.");
-                    return false;
-                };
+                if Self::push_xbtc_transaction(guard, &btc_confirmed_block, network) {
+                    // Set confirmed height to local storage
+                    confirmed_info.set(&confirm_height);
+                }
+                break;
             }
         }
         true
     }
 
-    // Submit XBTC deposit/withdraw transaction to the ChainX
-    fn push_xbtc_transaction(confirmed_block: &BtcBlock, network: BtcNetwork) -> bool {
+    /// Filter x-btc deposit/withdraw transactions and push to the chain
+    fn push_xbtc_transaction(
+        guard: &mut StorageLockGuard<Time>,
+        confirmed_block: &BtcBlock,
+        network: BtcNetwork,
+    ) -> bool {
         let mut needed = Vec::new();
         let mut tx_hashes = Vec::with_capacity(confirmed_block.transactions.len());
         let mut tx_matches = Vec::with_capacity(confirmed_block.transactions.len());
 
-        // Get trustee info
-        let trustee_session_info_len =
-            XGatewayCommon::<T>::trustee_session_info_len(Chain::Bitcoin);
-        let current_trustee_session_number = trustee_session_info_len
-            .checked_sub(1)
-            .unwrap_or(u32::max_value());
-        let current_trustee_pair = match Self::get_trustee_pair(current_trustee_session_number) {
+        // Get current trustee info
+        let current_trustee_pair = match Self::get_current_trustee_pair() {
             Ok(Some((hot, cold))) => (hot, cold),
             _ => {
                 debug::warn!("[OCW] Can't get current trustee pair!");
@@ -447,6 +438,11 @@ impl<T: Trait> Module<T> {
             BtcTxTypeDetector::new(network, btc_min_deposit, current_trustee_pair, None);
         // Filter transaction type (only deposit and withdrawal)
         for tx in &confirmed_block.transactions {
+            // Reset the running time of the lock
+            match guard.extend_lock() {
+                Ok(_result) => {}
+                Err(_e) => debug::warn!("[OCW|guard] The lock has expired, failed to extend it."),
+            }
             // Prepare for constructing partial merkle tree
             tx_hashes.push(tx.hash());
             if tx.is_coinbase() {
@@ -455,14 +451,15 @@ impl<T: Trait> Module<T> {
             }
             let outpoint = tx.inputs[0].previous_output;
             let prev_tx_hash = hex::encode(hash_rev(outpoint.txid));
-            for i in 0..=5 {
-                if i == 5 {
+            for num in 0..=RETRY_NUM {
+                if num == MAX_RETRY_NUM {
                     return false;
                 }
                 let prev_tx = match Self::fetch_transaction(&prev_tx_hash[..], network) {
                     Ok(prev) => prev,
                     _ => continue,
                 };
+                // Detect transaction type
                 match btc_tx_detector.detect_transaction_type(
                     &tx,
                     Some(&prev_tx),
@@ -486,6 +483,13 @@ impl<T: Trait> Module<T> {
             // Push xbtc relay (withdraw/deposit) transaction
             let signer = Signer::<T, T::RelayAuthId>::any_account();
             for (tx, prev_tx) in needed {
+                // Reset the running time of the lock
+                match guard.extend_lock() {
+                    Ok(_result) => {}
+                    Err(_e) => {
+                        debug::warn!("[OCW|guard] The lock has expired, failed to extend it.");
+                    }
+                }
                 let relayed_info = BtcRelayedTxInfo {
                     block_hash: confirmed_block.hash(),
                     merkle_proof: merkle_proof.clone(),
@@ -495,10 +499,10 @@ impl<T: Trait> Module<T> {
                 });
                 if let Some((_acct, res)) = result {
                     if res.is_err() {
-                        debug::error!("[OCW] Failed to submit signed transaction for pushing transaction: {:?}",res);
+                        debug::error!("[OCW|push_transaction] Failed to submit signed transaction for pushing transaction: {:?}",res);
                     } else {
                         debug::info!(
-                            "[OCW] Submitting signed transaction for pushing transaction: #{:?}",
+                            "[OCW|push_transaction] Submitting signed transaction for pushing transaction: #{:?}",
                             tx.hash()
                         );
                     }
@@ -510,31 +514,47 @@ impl<T: Trait> Module<T> {
                 hash_rev(confirmed_block.hash())
             );
         }
+        // Reset the running time of the lock
+        match guard.extend_lock() {
+            Ok(_result) => {}
+            Err(_e) => debug::warn!("[OCW|guard] The lock has expired, failed to extend it."),
+        }
         true
     }
 
-    // Get withdrawal proposal from chain and broadcast raw transaction
-    fn withdrawal_proposal_broadcast(network: BtcNetwork) -> Result<Option<String>, ()> {
-        if let Some(withdrawal_proposal) = XGatewayBitcoin::<T>::withdrawal_proposal() {
-            if withdrawal_proposal.sig_state == VoteResult::Finish {
-                let tx = serialize(&withdrawal_proposal.tx).take();
-                let hex_tx = hex::encode(&tx);
-                debug::info!("[OCW|send_raw_transaction] Btc Tx Hex: {}", hex_tx);
-                match Self::send_raw_transaction(hex_tx, network) {
-                    Ok(hash) => {
-                        debug::info!(
-                            "[OCW|withdrawal_proposal_broadcast] Transaction Hash: {:?}",
-                            hash
-                        );
-                        return Ok(Some(hash));
-                    }
-                    Err(err) => {
-                        debug::warn!("[OCW|withdrawal_proposal_broadcast] Error {:?}", err);
-                    }
-                }
-            }
+    /// Get current trustee pair (hot addr and cold addr)
+    fn get_current_trustee_pair() -> Result<Option<(BtcAddress, BtcAddress)>, Error<T>> {
+        let trustee_session_info_len =
+            XGatewayCommon::<T>::trustee_session_info_len(Chain::Bitcoin);
+        let current_trustee_session_number = trustee_session_info_len
+            .checked_sub(1)
+            .unwrap_or(u32::max_value());
+        if let Some(trustee_session_info) = XGatewayCommon::<T>::trustee_session_info_of(
+            Chain::Bitcoin,
+            current_trustee_session_number,
+        ) {
+            let hot_addr =
+                Self::extract_trustee_address(trustee_session_info.0.hot_address).unwrap();
+            let cold_addr =
+                Self::extract_trustee_address(trustee_session_info.0.cold_address).unwrap();
+            debug::info!("[OCW|get_trustee_pair] ChainX X-BTC Trustee Session Info (session number = {:?}):[Hot Address: {}, Cold Address: {}]",
+                            current_trustee_session_number,
+                            hot_addr,
+                            cold_addr,);
+            Ok(Some((hot_addr, cold_addr)))
+        } else {
+            Ok(None)
         }
-        Ok(None)
+    }
+
+    /// Extract trustee address
+    fn extract_trustee_address(address: Vec<u8>) -> Result<BtcAddress, Error<T>> {
+        let address = BtcTrusteeAddrInfo::try_from(address).unwrap();
+        let address = String::from_utf8(address.addr)
+            .unwrap()
+            .parse::<BtcAddress>()
+            .unwrap();
+        Ok(address)
     }
 }
 

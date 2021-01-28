@@ -2,33 +2,21 @@
 use alloc::{format, string::String};
 
 use light_bitcoin::{
-    chain::{Block as BtcBlock, BlockHeader as BtcHeader, Transaction as BtcTransaction},
-    keys::{Address as BtcAddress, Network as BtcNetwork},
-    merkle::PartialMerkleTree,
+    chain::{Block as BtcBlock, Transaction as BtcTransaction},
+    keys::Network as BtcNetwork,
     primitives::{hash_rev, H256 as BtcHash},
-    serialization::{deserialize, serialize, Reader},
+    serialization::{deserialize, Reader},
 };
 
-use sp_runtime::offchain::{
-    http,
-    storage::StorageValueRef,
-    storage_lock::{StorageLock, Time},
-    Duration,
-};
-use sp_std::{
-    collections::btree_set::BTreeSet, convert::TryFrom, marker::PhantomData, str, vec, vec::Vec,
-};
+use sp_runtime::offchain::{http, Duration};
+use sp_std::{str, vec, vec::Vec};
 
-use frame_support::{
-    debug, decl_error, decl_event, decl_module, decl_storage,
-    dispatch::{DispatchResultWithPostInfo, Parameter},
-    traits::Get,
-    weights::Pays,
-    StorageValue,
-};
+use frame_support::debug;
 
 use crate::{Error, Module, Trait};
 
+pub const RETRY_NUM: u32 = 5;
+pub const MAX_RETRY_NUM: u32 = 5;
 const SEND_RAW_TX_ERR_PREFIX: &str = "send raw transaction RPC error: ";
 
 struct SendRawTxError {
@@ -232,12 +220,6 @@ mod tests {
     };
 
     use crate::mock::XGatewayBitcoinRelay;
-    use sp_core::crypto::{set_default_ss58_version, AccountId32, Ss58AddressFormat};
-    use sp_std::str::FromStr;
-    use xp_gateway_bitcoin::{
-        extract_opreturn_data, AccountExtractor, BtcTxTypeDetector, OpReturnExtractor,
-    };
-    use xp_gateway_common::from_ss58_check;
 
     #[test]
     fn fetch_block_hash() {
