@@ -1,15 +1,11 @@
-# Official language image. Look for the different tagged releases at:
-# https://hub.docker.com/r/library/rust/tags/
-image: "rust:latest"
+stages:
+  - test
 
-# Optional: Install a C compiler, cmake and git into the container.
-# You will often need this when you (or any of your dependencies) depends on C code.
-# before_script:
-#   - apt-get update -yqq
-#   - apt-get install -yqq --no-install-recommends build-essential
-
-# Use cargo to test the project
-test:cargo:
+test-linux:
+  stage: test
+  image: paritytech/ci-linux:production
   script:
-    - rustc --version && cargo --version  # Print version info for debugging
-    - cargo test --workspace --verbose
+    - rustup show
+    - cargo --version
+    - sccache -s
+    - time cargo test --workspace --locked --release --verbose --features runtime-benchmarks
