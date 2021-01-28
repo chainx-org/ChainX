@@ -63,10 +63,7 @@ fn test_add_extra_collateral() {
 #[test]
 fn test_update_exchange_rate() {
     use super::assets::types::TradingPrice;
-    ExtBuilder::build(BuildConfig {
-        ..Default::default()
-    })
-    .execute_with(|| {
+    ExtBuilder::build(BuildConfig::default()).execute_with(|| {
         let exchange_rate = assets::Pallet::<Test>::exchange_rate();
         assert_eq!(exchange_rate.price, 0);
         assert_eq!(exchange_rate.decimal, 0);
@@ -94,4 +91,30 @@ fn test_update_exchange_rate() {
         let exchange_rate = assets::Pallet::<Test>::exchange_rate();
         assert_eq!(exchange_rate, new_exchange_rate);
     })
+}
+
+#[test]
+fn test_lock_collateral() {
+    ExtBuilder::build(BuildConfig::default()).execute_with(|| {
+        assert_ok!(assets::Pallet::<Test>::lock_collateral(&1, 200));
+        assert_eq!(<assets::CurrencyOf<Test>>::reserved_balance(1), 200);
+        assert_err!(
+            assets::Pallet::<Test>::lock_collateral(&1, 1000),
+            assets::Error::<Test>::InsufficientFunds
+        );
+    });
+}
+
+#[test]
+fn test_slash_collateral() {
+    ExtBuilder::build(BuildConfig::default()).execute_with(|| {
+        assets::Pallet::<Test>::lock_collateral(&1, 200).unwrap();
+        assert_err!(
+            assets::Pallet::<Test>::slash_collateral(&1, &2, 300),
+            assets::Error::<Test>::InsufficientCollateral
+        );
+        assert_ok!(assets::Pallet::<Test>::slash_collateral(&1, &2, 200));
+        assert_eq!(<assets::CurrencyOf<Test>>::reserved_balance(1), 0);
+        assert_eq!(<assets::CurrencyOf<Test>>::reserved_balance(2), 200);
+    });
 }
