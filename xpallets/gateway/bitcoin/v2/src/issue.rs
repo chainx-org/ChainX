@@ -192,12 +192,10 @@ pub mod pallet {
     pub(crate) type IssueRequestExpiredTime<T: Config> =
         StorageValue<_, BlockNumberFor<T>, ValueQuery>;
 
-    /// Genesis configure
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
-        /// fee rate for user to request issue. It's locked till the request done or cancelled.
-        pub issue_griefing_fee: Percent,
-        pub expired_time: BlockNumberFor<T>,
+        pub(crate) issue_griefing_fee: Percent,
+        pub(crate) expired_time: BlockNumberFor<T>,
     }
 
     #[cfg(feature = "std")]
