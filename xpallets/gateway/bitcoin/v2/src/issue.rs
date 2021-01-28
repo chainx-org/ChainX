@@ -50,7 +50,7 @@ pub mod pallet {
         Twox64Concat,
     };
     use frame_system::{
-        ensure_signed,
+        ensure_none, ensure_signed,
         pallet_prelude::{BlockNumberFor, OriginFor},
     };
 
@@ -111,6 +111,25 @@ pub mod pallet {
             );
             Ok(().into())
         }
+
+        #[pallet::weight(0)]
+        pub fn cancel_issue(
+            origin: OriginFor<T>,
+            request_id: RequestId,
+        ) -> DispatchResultWithPostInfo {
+            let _ = ensure_signed(origin)?;
+            let request = Self::get_issue_request_by_id(request_id)
+                .ok_or(Error::<T>::IssueRequestNotFound)?;
+            let height = <frame_system::Pallet<T>>::block_number();
+            //TODO(wangyafei): move it to genesis_config
+            let expired_time = 10;
+            ensure!(
+                height - request.opentime > expired_time.into(),
+                Error::<T>::IssueRequestNotExpired
+            );
+            // <assets::Pallet<T>>::slash_collateral(issue.requester, issue.vault)?
+            Ok(().into())
+        }
     }
 
     /// Error for issue module
@@ -118,6 +137,10 @@ pub mod pallet {
     pub enum Error<T> {
         /// Collateral in request is less than griefing collateral.
         InsufficientGriefingCollateral,
+        /// No such `IssueRequest`
+        IssueRequestNotFound,
+        /// `IssueRequest` cancelled when it's not expired.
+        IssueRequestNotExpired,
     }
 
     /// Percentage to lock, when user requests issue
@@ -171,6 +194,11 @@ pub mod pallet {
             let percentage = Self::issue_griefing_fee();
             let griefing_fee = Percent::from_parts(percentage).mul_ceil(pcx_amount);
             Ok(griefing_fee)
+        }
+
+        /// Get `IssueRequest` from id
+        pub(crate) fn get_issue_request_by_id(request_id: RequestId) -> Option<IssueRequest<T>> {
+            <IssueRequests<T>>::get(request_id)
         }
     }
 }
