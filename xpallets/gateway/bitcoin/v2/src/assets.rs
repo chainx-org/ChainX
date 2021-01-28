@@ -250,10 +250,6 @@ pub mod pallet {
             receiver: &T::AccountId,
             amount: BalanceOf<T>,
         ) -> DispatchResult {
-            // let reserved_collateral =
-            //     <<T as xpallet_assets::Config>::Currency as ReservableCurrency<
-            //         <T as frame_system::Config>::AccountId,
-            //     >>::reserved_balance(sender);
             let reserved_collateral = <CurrencyOf<T>>::reserved_balance(sender);
             ensure!(
                 reserved_collateral >= amount,
