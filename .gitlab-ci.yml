@@ -5,6 +5,7 @@ test-linux:
   stage: test
   image: paritytech/ci-linux:production
   script:
+    - rustup target add wasm32-unknown-unknown +nightly-2020-09-30
     - rustup show
     - cargo --version
     - sccache -s
