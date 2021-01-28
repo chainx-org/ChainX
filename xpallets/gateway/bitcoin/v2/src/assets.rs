@@ -15,14 +15,14 @@ pub mod types {
     /// `ExchangeRate { price: 1779, decimal: 7 }`.
     #[derive(Encode, Decode, RuntimeDebug, Clone, Default, Eq, PartialEq)]
     #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-    pub struct ExchangeRate {
+    pub struct TradingPrice {
         /// Price with decimals.
         pub price: u128,
         /// How many decimals of the exchange price.
         pub decimal: u8,
     }
 
-    impl ExchangeRate {
+    impl TradingPrice {
         /// Returns the converted amount of BTC given the `pcx_amount`.
         pub fn convert_to_btc(&self, pcx_amount: u128) -> Option<u128> {
             self.price
@@ -40,29 +40,29 @@ pub mod types {
 
     #[cfg(test)]
     mod tests {
-        use super::ExchangeRate;
+        use super::TradingPrice;
         #[test]
         fn test_btc_conversion() {
-            let exchange_rate = ExchangeRate {
+            let trading_price = TradingPrice {
                 price: 1,
                 decimal: 4,
             };
-            assert_eq!(exchange_rate.convert_to_btc(10000), Some(1));
+            assert_eq!(trading_price.convert_to_btc(10000), Some(1));
         }
 
         #[test]
         fn test_pcx_conversion() {
-            let exchange_rate = ExchangeRate {
+            let trading_price = TradingPrice {
                 price: 1,
                 decimal: 4,
             };
-            assert_eq!(exchange_rate.convert_to_pcx(1), Some(10000));
+            assert_eq!(trading_price.convert_to_pcx(1), Some(10000));
 
-            let exchange_rate = ExchangeRate {
+            let trading_price = TradingPrice {
                 price: 1,
                 decimal: 38,
             };
-            assert_eq!(exchange_rate.convert_to_pcx(1_000_000), None);
+            assert_eq!(trading_price.convert_to_pcx(1_000_000), None);
         }
     }
 }
@@ -87,7 +87,7 @@ pub mod pallet {
         pallet_prelude::{BlockNumberFor, OriginFor},
     };
 
-    use super::types;
+    use super::types::TradingPrice;
 
     pub type BalanceOf<T> = <<T as xpallet_assets::Config>::Currency as Currency<
         <T as frame_system::Config>::AccountId,
@@ -111,7 +111,7 @@ pub mod pallet {
         #[pallet::weight(0)]
         pub(crate) fn force_update_exchange_rate(
             origin: OriginFor<T>,
-            exchange_rate: types::ExchangeRate,
+            exchange_rate: TradingPrice,
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
             // TODO: sanity check?
@@ -135,7 +135,7 @@ pub mod pallet {
         #[pallet::weight(0)]
         pub(crate) fn update_exchange_rate(
             origin: OriginFor<T>,
-            exchange_rate: types::ExchangeRate,
+            exchange_rate: TradingPrice,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             ensure!(Self::is_oracle(&sender), Error::<T>::OperationForbidden);
@@ -162,9 +162,9 @@ pub mod pallet {
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T: Config> {
         /// Update exchange rate by oracle
-        ExchangeRateUpdated(T::AccountId, types::ExchangeRate),
+        ExchangeRateUpdated(T::AccountId, TradingPrice),
         /// Update exchange rate by root
-        ExchangeRateForceUpdated(types::ExchangeRate),
+        ExchangeRateForceUpdated(TradingPrice),
         /// Update oracles by root
         OracleForceUpdated(Vec<T::AccountId>),
     }
@@ -177,7 +177,7 @@ pub mod pallet {
     /// Exchange rate from btc to pcx
     #[pallet::storage]
     #[pallet::getter(fn exchange_rate)]
-    pub(crate) type ExchangeRate<T: Config> = StorageValue<_, types::ExchangeRate, ValueQuery>;
+    pub(crate) type ExchangeRate<T: Config> = StorageValue<_, TradingPrice, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn oracle_accounts)]
@@ -186,7 +186,7 @@ pub mod pallet {
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         /// pcx/btc trading pair
-        pub exchange_rate: types::ExchangeRate,
+        pub exchange_rate: TradingPrice,
         /// oracles allowed to update exchange_rate
         pub oracle_accounts: Vec<T::AccountId>,
     }

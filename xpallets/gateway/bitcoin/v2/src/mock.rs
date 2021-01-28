@@ -105,7 +105,7 @@ impl ExtBuilder {
             exchange_decimal,
         }: BuildConfig,
     ) -> sp_io::TestExternalities {
-        use super::assets::types::ExchangeRate;
+        use super::assets::types::TradingPrice;
 
         let mut storage = frame_system::GenesisConfig::default()
             .build_storage::<Test>()
@@ -113,7 +113,7 @@ impl ExtBuilder {
 
         let _ = GenesisBuild::<Test>::assimilate_storage(
             &assets::GenesisConfig {
-                exchange_rate: ExchangeRate {
+                exchange_rate: TradingPrice {
                     price: exchange_price,
                     decimal: exchange_decimal,
                 },

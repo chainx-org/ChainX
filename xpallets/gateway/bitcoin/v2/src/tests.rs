@@ -62,7 +62,7 @@ fn test_add_extra_collateral() {
 
 #[test]
 fn test_update_exchange_rate() {
-    use super::assets::types::ExchangeRate;
+    use super::assets::types::TradingPrice;
     ExtBuilder::build(BuildConfig {
         ..Default::default()
     })
@@ -71,7 +71,7 @@ fn test_update_exchange_rate() {
         assert_eq!(exchange_rate.price, 0);
         assert_eq!(exchange_rate.decimal, 0);
 
-        let new_exchange_rate = ExchangeRate {
+        let new_exchange_rate = TradingPrice {
             price: 100,
             decimal: 10,
         };
