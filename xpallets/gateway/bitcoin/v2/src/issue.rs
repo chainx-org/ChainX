@@ -27,7 +27,7 @@ pub mod types {
         /// Wheather request cancelled
         pub(crate) cancelled: bool,
         /// Amount that user wants to issue
-        pub(crate) amount: XBTC,
+        pub(crate) btc_amount: XBTC,
         /// Collateral locked to avoid user griefing
         pub(crate) griefing_collateral: PCX,
     }
@@ -83,14 +83,14 @@ pub mod pallet {
         pub fn request_issue(
             origin: OriginFor<T>,
             vault_id: T::AccountId,
-            amount: BalanceOf<T>,
+            btc_amount: BalanceOf<T>,
             collateral: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             //FIXME(wangyafei): break if bridge in liquidation mode.
             let sender = ensure_signed(origin)?;
             let height = <frame_system::Pallet<T>>::block_number();
             let vault = vault::Pallet::<T>::get_active_vault_by_id(&vault_id)?;
-            let required_collateral = Self::calculate_required_collateral(amount)?;
+            let required_collateral = Self::calculate_required_collateral(btc_amount)?;
             ensure!(
                 collateral >= required_collateral,
                 Error::<T>::InsufficientGriefingCollateral
@@ -104,7 +104,7 @@ pub mod pallet {
                     opentime: height,
                     requester: sender,
                     btc_address: vault.wallet,
-                    amount,
+                    btc_amount,
                     griefing_collateral: collateral,
                     ..Default::default()
                 },
@@ -125,7 +125,7 @@ pub mod pallet {
     #[pallet::getter(fn issue_griefing_fee)]
     pub(crate) type IssueGriefingFee<T: Config> = StorageValue<_, u8, ValueQuery>;
 
-    /// Auto-increament id to identity each request.
+    /// Auto-increament id to identify each issue request.
     /// Also presents total amount of created requests.
     #[pallet::storage]
     pub(crate) type RequestCount<T: Config> = StorageValue<_, RequestId, ValueQuery>;
@@ -157,20 +157,19 @@ pub mod pallet {
 
         /// generate secure key from account id
         pub(crate) fn get_next_request_id() -> RequestId {
-            let nonce = <RequestCount<T>>::mutate(|n| {
+            <RequestCount<T>>::mutate(|n| {
                 *n += 1;
                 *n
-            }); //auto increament
-            nonce
+            })
         }
 
         /// Calculated minimium required collateral for a `IssueRequest`
         pub(crate) fn calculate_required_collateral(
             btc_amount: BalanceOf<T>,
         ) -> Result<BalanceOf<T>, DispatchError> {
-            let raw_amount = <assets::Pallet<T>>::convert_to_pcx(btc_amount)?;
+            let pcx_amount = <assets::Pallet<T>>::convert_to_pcx(btc_amount)?;
             let percentage = Self::issue_griefing_fee();
-            let griefing_fee = Percent::from_parts(percentage).mul_ceil(raw_amount);
+            let griefing_fee = Percent::from_parts(percentage).mul_ceil(pcx_amount);
             Ok(griefing_fee)
         }
     }
