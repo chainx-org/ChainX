@@ -1866,10 +1866,9 @@ dependencies = [
 [[package]]
 name = "frame-system-benchmarking"
 version = "2.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "03e3a70ce89455777c5a93c60943e8a404c0be66bd3f53605c4a4e79baa80e91"
+source = "git+https://github.com/paritytech/substrate?rev=11ace4ef8b2ad176293ad6db2b3dd795befd2c79#11ace4ef8b2ad176293ad6db2b3dd795befd2c79"
 dependencies = [
- "frame-benchmarking 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking 2.0.0 (git+https://github.com/paritytech/substrate?rev=11ace4ef8b2ad176293ad6db2b3dd795befd2c79)",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
