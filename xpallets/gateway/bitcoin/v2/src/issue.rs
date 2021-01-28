@@ -17,7 +17,7 @@ pub mod types {
         /// Vault id
         pub(crate) vault: AccountId,
         /// Block height when the issue requested
-        pub(crate) opentime: BlockNumber,
+        pub(crate) open_time: BlockNumber,
         /// Who requests issue
         pub(crate) requester: AccountId,
         /// Vault's btc address
@@ -101,7 +101,7 @@ pub mod pallet {
                 request_id,
                 IssueRequest::<T> {
                     vault: vault.id,
-                    opentime: height,
+                    open_time: height,
                     requester: sender,
                     btc_address: vault.wallet,
                     btc_amount,
@@ -123,7 +123,7 @@ pub mod pallet {
             let height = <frame_system::Pallet<T>>::block_number();
             let expired_time = <IssueRequestExpiredTime<T>>::get();
             ensure!(
-                height - request.opentime > expired_time,
+                height - request.open_time > expired_time,
                 Error::<T>::IssueRequestNotExpired
             );
             // TODO:
@@ -149,10 +149,9 @@ pub mod pallet {
         #[pallet::weight(0)]
         pub fn update_griefing_fee(
             origin: OriginFor<T>,
-            griefing_fee: u8,
+            griefing_fee: Percent,
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
-            ensure!(griefing_fee < 100, Error::<T>::InvalidConfigValue);
             <IssueGriefingFee<T>>::put(griefing_fee);
             // TODO:
             // Self::deposit_event(...);
@@ -176,7 +175,7 @@ pub mod pallet {
     /// Percentage to lock, when user requests issue
     #[pallet::storage]
     #[pallet::getter(fn issue_griefing_fee)]
-    pub(crate) type IssueGriefingFee<T: Config> = StorageValue<_, u8, ValueQuery>;
+    pub(crate) type IssueGriefingFee<T: Config> = StorageValue<_, Percent, ValueQuery>;
 
     /// Auto-increament id to identify each issue request.
     /// Also presents total amount of created requests.
@@ -197,7 +196,7 @@ pub mod pallet {
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         /// fee rate for user to request issue. It's locked till the request done or cancelled.
-        pub issue_griefing_fee: u8,
+        pub issue_griefing_fee: Percent,
         pub expired_time: BlockNumberFor<T>,
     }
 
@@ -237,7 +236,7 @@ pub mod pallet {
         ) -> Result<BalanceOf<T>, DispatchError> {
             let pcx_amount = <assets::Pallet<T>>::convert_to_pcx(btc_amount)?;
             let percentage = Self::issue_griefing_fee();
-            let griefing_fee = Percent::from_parts(percentage).mul_ceil(pcx_amount);
+            let griefing_fee = percentage.mul_ceil(pcx_amount);
             Ok(griefing_fee)
         }
 
