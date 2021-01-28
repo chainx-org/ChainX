@@ -36,9 +36,9 @@ pub mod types {
 #[frame_support::pallet]
 #[allow(dead_code)]
 pub mod pallet {
-    use sp_arithmetic::{traits::SaturatedConversion, Percent};
+    use sp_arithmetic::Percent;
     use sp_runtime::DispatchError;
-    use sp_std::{convert::TryInto, marker::PhantomData};
+    use sp_std::marker::PhantomData;
 
     #[cfg(feature = "std")]
     use frame_support::traits::GenesisBuild;
@@ -46,7 +46,7 @@ pub mod pallet {
         dispatch::DispatchResultWithPostInfo,
         ensure,
         storage::types::{StorageMap, StorageValue, ValueQuery},
-        traits::{Currency, Hooks, ReservableCurrency},
+        traits::Hooks,
         Twox64Concat,
     };
     use frame_system::{
