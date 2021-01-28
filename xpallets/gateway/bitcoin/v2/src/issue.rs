@@ -115,16 +115,16 @@ pub mod pallet {
         #[pallet::weight(0)]
         pub fn cancel_issue(
             origin: OriginFor<T>,
-            issue_id: RequestId,
+            request_id: RequestId,
         ) -> DispatchResultWithPostInfo {
             ensure_none(origin)?;
-            let issue =
-                Self::get_issue_request_by_id(issue_id).ok_or(Error::<T>::IssueRequestNotFound)?;
+            let request = Self::get_issue_request_by_id(request_id)
+                .ok_or(Error::<T>::IssueRequestNotFound)?;
             let height = <frame_system::Pallet<T>>::block_number();
             //TODO(wangyafei): move it to genesis_config
             let expired_time = 10;
             ensure!(
-                height - issue.opentime > expired_time.into(),
+                height - request.opentime > expired_time.into(),
                 Error::<T>::IssueRequestNotExpired
             );
             // <assets::Pallet<T>>::slash_collateral(issue.requester, issue.vault)?
@@ -197,8 +197,8 @@ pub mod pallet {
         }
 
         /// Get `IssueRequest` from id
-        pub(crate) fn get_issue_request_by_id(issue_id: RequestId) -> Option<IssueRequest<T>> {
-            <IssueRequests<T>>::get(issue_id)
+        pub(crate) fn get_issue_request_by_id(request_id: RequestId) -> Option<IssueRequest<T>> {
+            <IssueRequests<T>>::get(request_id)
         }
     }
 }
