@@ -8,4 +8,4 @@ test-linux:
     - rustup show
     - cargo --version
     - sccache -s
-    - time cargo test --workspace --locked --release --verbose
+    - time cargo test --workspace --locked --verbose
