@@ -414,7 +414,9 @@ impl xpallet_gateway_bitcoin_v2_issue::Config for Runtime {}
 impl xpallet_gateway_bitcoin_v2_vault::Config for Runtime {
     type Event = Event;
 }
-impl xpallet_gateway_bitcoin_v2_assets::Config for Runtime {}
+impl xpallet_gateway_bitcoin_v2_assets::Config for Runtime {
+    type Event = Event;
+}
 
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
 where
@@ -960,7 +962,7 @@ construct_runtime!(
         XGatewayBitcoin: xpallet_gateway_bitcoin::{Module, Call, Storage, Event<T>, Config<T>},
         XGatewayBitcoinV2Issue: xpallet_gateway_bitcoin_v2_issue::{Module, Call, Storage},
         XGatewayBitcoinV2Vault: xpallet_gateway_bitcoin_v2_vault::{Module, Call, Storage, Event<T>, Config},
-        XGatewayBitcoinV2Assets: xpallet_gateway_bitcoin_v2_assets::{Module, Call, Storage},
+        XGatewayBitcoinV2Assets: xpallet_gateway_bitcoin_v2_assets::{Module, Call, Storage, Event<T>},
 
         // DEX
         XSpot: xpallet_dex_spot::{Module, Call, Storage, Event<T>, Config<T>},

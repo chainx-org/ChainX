@@ -72,7 +72,7 @@ pub mod types {
 #[allow(dead_code)]
 pub mod pallet {
     use sp_arithmetic::traits::SaturatedConversion;
-    use sp_std::{marker::PhantomData, vec::Vec};
+    use sp_std::{default::Default, marker::PhantomData, vec::Vec};
 
     #[cfg(feature = "std")]
     use frame_support::traits::GenesisBuild;
@@ -191,6 +191,7 @@ pub mod pallet {
         pub oracle_accounts: Vec<T::AccountId>,
     }
 
+    #[cfg(feature = "std")]
     impl<T: Config> Default for GenesisConfig<T> {
         fn default() -> Self {
             Self {
