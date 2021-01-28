@@ -15,14 +15,14 @@ pub mod types {
     /// `ExchangeRate { price: 1779, decimal: 7 }`.
     #[derive(Encode, Decode, RuntimeDebug, Clone, Default, Eq, PartialEq)]
     #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-    pub struct ExchangeRate {
+    pub struct TradingPrice {
         /// Price with decimals.
         pub price: u128,
         /// How many decimals of the exchange price.
         pub decimal: u8,
     }
 
-    impl ExchangeRate {
+    impl TradingPrice {
         /// Returns the converted amount of BTC given the `pcx_amount`.
         pub fn convert_to_btc(&self, pcx_amount: u128) -> Option<u128> {
             self.price
@@ -40,29 +40,29 @@ pub mod types {
 
     #[cfg(test)]
     mod tests {
-        use super::ExchangeRate;
+        use super::TradingPrice;
         #[test]
         fn test_btc_conversion() {
-            let exchange_rate = ExchangeRate {
+            let trading_price = TradingPrice {
                 price: 1,
                 decimal: 4,
             };
-            assert_eq!(exchange_rate.convert_to_btc(10000), Some(1));
+            assert_eq!(trading_price.convert_to_btc(10000), Some(1));
         }
 
         #[test]
         fn test_pcx_conversion() {
-            let exchange_rate = ExchangeRate {
+            let trading_price = TradingPrice {
                 price: 1,
                 decimal: 4,
             };
-            assert_eq!(exchange_rate.convert_to_pcx(1), Some(10000));
+            assert_eq!(trading_price.convert_to_pcx(1), Some(10000));
 
-            let exchange_rate = ExchangeRate {
+            let trading_price = TradingPrice {
                 price: 1,
                 decimal: 38,
             };
-            assert_eq!(exchange_rate.convert_to_pcx(1_000_000), None);
+            assert_eq!(trading_price.convert_to_pcx(1_000_000), None);
         }
     }
 }
@@ -72,21 +72,22 @@ pub mod types {
 #[allow(dead_code)]
 pub mod pallet {
     use sp_arithmetic::traits::SaturatedConversion;
-    use sp_std::marker::PhantomData;
+    use sp_std::{default::Default, marker::PhantomData, vec::Vec};
 
     #[cfg(feature = "std")]
     use frame_support::traits::GenesisBuild;
     use frame_support::{
         dispatch::{DispatchError, DispatchResult, DispatchResultWithPostInfo},
+        ensure,
         storage::types::{StorageValue, ValueQuery},
-        traits::{Currency, Hooks, ReservableCurrency},
+        traits::{Currency, Hooks, IsType, ReservableCurrency},
     };
     use frame_system::{
-        ensure_root,
+        ensure_root, ensure_signed,
         pallet_prelude::{BlockNumberFor, OriginFor},
     };
 
-    use super::types;
+    use super::types::TradingPrice;
 
     pub type BalanceOf<T> = <<T as xpallet_assets::Config>::Currency as Currency<
         <T as frame_system::Config>::AccountId,
@@ -97,23 +98,50 @@ pub mod pallet {
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + xpallet_assets::Config {}
+    pub trait Config: frame_system::Config + xpallet_assets::Config {
+        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+    }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Sets the exchange rate.
+        /// Force update the exchange rate.
         #[pallet::weight(0)]
-        pub(crate) fn set_exchange_rate(
+        pub(crate) fn force_update_exchange_rate(
             origin: OriginFor<T>,
-            exchange_rate: types::ExchangeRate,
+            exchange_rate: TradingPrice,
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
             // TODO: sanity check?
-            ExchangeRate::<T>::put(exchange_rate);
-            // Self::deposit_event(Event::ExchangeRateSet(exchange_rate));
+            ExchangeRate::<T>::put(exchange_rate.clone());
+            Self::deposit_event(Event::<T>::ExchangeRateForceUpdated(exchange_rate));
+            Ok(().into())
+        }
+
+        /// Force update oracles.
+        #[pallet::weight(0)]
+        pub(crate) fn force_update_oracles(
+            origin: OriginFor<T>,
+            oracles: Vec<T::AccountId>,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            OracleAccounts::<T>::put(oracles.clone());
+            Self::deposit_event(Event::<T>::OracleForceUpdated(oracles));
+            Ok(().into())
+        }
+
+        #[pallet::weight(0)]
+        pub(crate) fn update_exchange_rate(
+            origin: OriginFor<T>,
+            exchange_rate: TradingPrice,
+        ) -> DispatchResultWithPostInfo {
+            let sender = ensure_signed(origin)?;
+            ensure!(Self::is_oracle(&sender), Error::<T>::OperationForbidden);
+            // TODO: sanity check?
+            ExchangeRate::<T>::put(exchange_rate.clone());
+            Self::deposit_event(Event::<T>::ExchangeRateUpdated(sender, exchange_rate));
             Ok(().into())
         }
     }
@@ -121,10 +149,24 @@ pub mod pallet {
     /// Errors for assets module
     #[pallet::error]
     pub enum Error<T> {
+        /// Permission denied.
+        OperationForbidden,
         /// Requester doesn't has enough pcx for collateral.
         InsufficientFunds,
         /// Arithmetic underflow/overflow.
         ArithmeticError,
+    }
+
+    /// Events for assets module
+    #[pallet::event]
+    #[pallet::generate_deposit(pub(crate) fn deposit_event)]
+    pub enum Event<T: Config> {
+        /// Update exchange rate by oracle
+        ExchangeRateUpdated(T::AccountId, TradingPrice),
+        /// Update exchange rate by root
+        ExchangeRateForceUpdated(TradingPrice),
+        /// Update oracles by root
+        OracleForceUpdated(Vec<T::AccountId>),
     }
 
     /// Total collateral
@@ -135,18 +177,35 @@ pub mod pallet {
     /// Exchange rate from btc to pcx
     #[pallet::storage]
     #[pallet::getter(fn exchange_rate)]
-    pub(crate) type ExchangeRate<T: Config> = StorageValue<_, types::ExchangeRate, ValueQuery>;
+    pub(crate) type ExchangeRate<T: Config> = StorageValue<_, TradingPrice, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn oracle_accounts)]
+    pub(crate) type OracleAccounts<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
 
     #[pallet::genesis_config]
-    #[derive(Default)]
-    pub struct GenesisConfig {
-        pub exchange_rate: types::ExchangeRate,
+    pub struct GenesisConfig<T: Config> {
+        /// pcx/btc trading pair
+        pub exchange_rate: TradingPrice,
+        /// oracles allowed to update exchange_rate
+        pub oracle_accounts: Vec<T::AccountId>,
+    }
+
+    #[cfg(feature = "std")]
+    impl<T: Config> Default for GenesisConfig<T> {
+        fn default() -> Self {
+            Self {
+                exchange_rate: Default::default(),
+                oracle_accounts: Default::default(),
+            }
+        }
     }
 
     #[pallet::genesis_build]
-    impl<T: Config> GenesisBuild<T> for GenesisConfig {
+    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
         fn build(&self) {
             <ExchangeRate<T>>::put(self.exchange_rate.clone());
+            <OracleAccounts<T>>::put(self.oracle_accounts.clone());
         }
     }
 
@@ -173,6 +232,12 @@ pub mod pallet {
         #[inline]
         pub fn increase_total_collateral(amount: BalanceOf<T>) {
             <TotalCollateral<T>>::mutate(|c| *c += amount);
+        }
+
+        #[inline]
+        pub(crate) fn is_oracle(account: &T::AccountId) -> bool {
+            let oracles: Vec<T::AccountId> = Self::oracle_accounts();
+            oracles.contains(account)
         }
     }
 }

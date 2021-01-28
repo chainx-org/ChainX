@@ -59,3 +59,39 @@ fn test_add_extra_collateral() {
         assert_eq!(free_balance, 700);
     })
 }
+
+#[test]
+fn test_update_exchange_rate() {
+    use super::assets::types::TradingPrice;
+    ExtBuilder::build(BuildConfig {
+        ..Default::default()
+    })
+    .execute_with(|| {
+        let exchange_rate = assets::Pallet::<Test>::exchange_rate();
+        assert_eq!(exchange_rate.price, 0);
+        assert_eq!(exchange_rate.decimal, 0);
+
+        let new_exchange_rate = TradingPrice {
+            price: 100,
+            decimal: 10,
+        };
+
+        assert_err!(
+            assets::Pallet::<Test>::update_exchange_rate(
+                Origin::signed(2),
+                new_exchange_rate.clone()
+            ),
+            assets::Error::<Test>::OperationForbidden
+        );
+        assert_ok!(assets::Pallet::<Test>::force_update_oracles(
+            Origin::root(),
+            vec![0]
+        ));
+        assert_ok!(assets::Pallet::<Test>::update_exchange_rate(
+            Origin::signed(0),
+            new_exchange_rate.clone()
+        ));
+        let exchange_rate = assets::Pallet::<Test>::exchange_rate();
+        assert_eq!(exchange_rate, new_exchange_rate);
+    })
+}

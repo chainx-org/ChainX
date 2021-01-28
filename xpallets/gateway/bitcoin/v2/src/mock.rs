@@ -78,7 +78,9 @@ impl xpallet_assets::Config for Test {
     type WeightInfo = ();
 }
 
-impl assets::Config for Test {}
+impl assets::Config for Test {
+    type Event = ();
+}
 
 impl vault::Config for Test {
     type Event = ();
@@ -103,7 +105,7 @@ impl ExtBuilder {
             exchange_decimal,
         }: BuildConfig,
     ) -> sp_io::TestExternalities {
-        use super::assets::types::ExchangeRate;
+        use super::assets::types::TradingPrice;
 
         let mut storage = frame_system::GenesisConfig::default()
             .build_storage::<Test>()
@@ -111,16 +113,17 @@ impl ExtBuilder {
 
         let _ = GenesisBuild::<Test>::assimilate_storage(
             &assets::GenesisConfig {
-                exchange_rate: ExchangeRate {
+                exchange_rate: TradingPrice {
                     price: exchange_price,
                     decimal: exchange_decimal,
                 },
+                oracle_accounts: Default::default(),
             },
             &mut storage,
         );
 
         let _ = pallet_balances::GenesisConfig::<Test> {
-            balances: vec![(1, 1000), (2, 2000), (3, 3000)],
+            balances: vec![(0, 100_000), (1, 1000), (2, 2000), (3, 3000)],
         }
         .assimilate_storage(&mut storage);
 
