@@ -78,7 +78,9 @@ impl xpallet_assets::Config for Test {
     type WeightInfo = ();
 }
 
-impl assets::Config for Test {}
+impl assets::Config for Test {
+    type Event = ();
+}
 
 impl vault::Config for Test {
     type Event = ();
@@ -115,7 +117,7 @@ impl ExtBuilder {
                     price: exchange_price,
                     decimal: exchange_decimal,
                 },
-                oracle_accounts: vec![0],
+                oracle_accounts: Default::default(),
             },
             &mut storage,
         );

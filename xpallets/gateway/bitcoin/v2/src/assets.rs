@@ -72,7 +72,7 @@ pub mod types {
 #[allow(dead_code)]
 pub mod pallet {
     use sp_arithmetic::traits::SaturatedConversion;
-    use sp_std::marker::PhantomData;
+    use sp_std::{marker::PhantomData, vec::Vec};
 
     #[cfg(feature = "std")]
     use frame_support::traits::GenesisBuild;
@@ -80,7 +80,7 @@ pub mod pallet {
         dispatch::{DispatchError, DispatchResult, DispatchResultWithPostInfo},
         ensure,
         storage::types::{StorageValue, ValueQuery},
-        traits::{Currency, Hooks, ReservableCurrency},
+        traits::{Currency, Hooks, IsType, ReservableCurrency},
     };
     use frame_system::{
         ensure_root, ensure_signed,
@@ -98,7 +98,9 @@ pub mod pallet {
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + xpallet_assets::Config {}
+    pub trait Config: frame_system::Config + xpallet_assets::Config {
+        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+    }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
@@ -113,8 +115,20 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
             // TODO: sanity check?
-            ExchangeRate::<T>::put(exchange_rate);
-            // Self::deposit_event(Event::ExchangeRateSet(exchange_rate));
+            ExchangeRate::<T>::put(exchange_rate.clone());
+            Self::deposit_event(Event::<T>::ExchangeRateForceUpdated(exchange_rate));
+            Ok(().into())
+        }
+
+        /// Force update oracles.
+        #[pallet::weight(0)]
+        pub(crate) fn force_update_oracles(
+            origin: OriginFor<T>,
+            oracles: Vec<T::AccountId>,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            OracleAccounts::<T>::put(oracles.clone());
+            Self::deposit_event(Event::<T>::OracleForceUpdated(oracles));
             Ok(().into())
         }
 
@@ -126,8 +140,8 @@ pub mod pallet {
             let sender = ensure_signed(origin)?;
             ensure!(Self::is_oracle(&sender), Error::<T>::OperationForbidden);
             // TODO: sanity check?
-            ExchangeRate::<T>::put(exchange_rate);
-            // Self::deposit_event(Event::ExchangeRateSet(exchange_rate));
+            ExchangeRate::<T>::put(exchange_rate.clone());
+            Self::deposit_event(Event::<T>::ExchangeRateUpdated(sender, exchange_rate));
             Ok(().into())
         }
     }
@@ -141,6 +155,18 @@ pub mod pallet {
         InsufficientFunds,
         /// Arithmetic underflow/overflow.
         ArithmeticError,
+    }
+
+    /// Events for assets module
+    #[pallet::event]
+    #[pallet::generate_deposit(pub(crate) fn deposit_event)]
+    pub enum Event<T: Config> {
+        /// Update exchange rate by oracle
+        ExchangeRateUpdated(T::AccountId, types::ExchangeRate),
+        /// Update exchange rate by root
+        ExchangeRateForceUpdated(types::ExchangeRate),
+        /// Update oracles by root
+        OracleForceUpdated(Vec<T::AccountId>),
     }
 
     /// Total collateral

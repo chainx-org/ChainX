@@ -83,6 +83,10 @@ fn test_update_exchange_rate() {
             ),
             assets::Error::<Test>::OperationForbidden
         );
+        assert_ok!(assets::Pallet::<Test>::force_update_oracles(
+            Origin::root(),
+            vec![0]
+        ));
         assert_ok!(assets::Pallet::<Test>::update_exchange_rate(
             Origin::signed(0),
             new_exchange_rate.clone()
