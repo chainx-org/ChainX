@@ -93,6 +93,8 @@ pub mod pallet {
         <T as frame_system::Config>::AccountId,
     >>::Balance;
 
+    pub type CurrencyOf<T> = <T as xpallet_assets::Config>::Currency;
+
     #[pallet::pallet]
     #[pallet::generate_store(pub(crate) trait Store)]
     pub struct Pallet<T>(PhantomData<T>);
@@ -151,10 +153,12 @@ pub mod pallet {
     pub enum Error<T> {
         /// Permission denied.
         OperationForbidden,
-        /// Requester doesn't has enough pcx for collateral.
+        /// Requester doesn't have enough pcx for collateral.
         InsufficientFunds,
         /// Arithmetic underflow/overflow.
         ArithmeticError,
+        /// Account doesn't have enough collateral to be slashed.
+        InsufficientCollateral,
     }
 
     /// Events for assets module
@@ -238,6 +242,26 @@ pub mod pallet {
         pub(crate) fn is_oracle(account: &T::AccountId) -> bool {
             let oracles: Vec<T::AccountId> = Self::oracle_accounts();
             oracles.contains(account)
+        }
+
+        /// Slash collateral to receiver
+        pub fn slash_collateral(
+            sender: &T::AccountId,
+            receiver: &T::AccountId,
+            amount: BalanceOf<T>,
+        ) -> DispatchResult {
+            let reserved_collateral = <CurrencyOf<T>>::reserved_balance(sender);
+            ensure!(
+                reserved_collateral >= amount,
+                Error::<T>::InsufficientCollateral
+            );
+            let (slashed, _) = <CurrencyOf<T>>::slash_reserved(sender, amount);
+
+            <CurrencyOf<T>>::resolve_creating(receiver, slashed);
+            <CurrencyOf<T>>::reserve(receiver, amount)
+                .map_err(|_| Error::<T>::InsufficientFunds)?;
+            // Self::deposit_event(...);
+            Ok(().into())
         }
     }
 }
