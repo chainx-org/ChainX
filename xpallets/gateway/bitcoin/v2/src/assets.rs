@@ -78,11 +78,12 @@ pub mod pallet {
     use frame_support::traits::GenesisBuild;
     use frame_support::{
         dispatch::{DispatchError, DispatchResult, DispatchResultWithPostInfo},
+        ensure,
         storage::types::{StorageValue, ValueQuery},
         traits::{Currency, Hooks, ReservableCurrency},
     };
     use frame_system::{
-        ensure_root,
+        ensure_root, ensure_signed,
         pallet_prelude::{BlockNumberFor, OriginFor},
     };
 
@@ -104,13 +105,26 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Sets the exchange rate.
+        /// Force update the exchange rate.
         #[pallet::weight(0)]
-        pub(crate) fn set_exchange_rate(
+        pub(crate) fn force_update_exchange_rate(
             origin: OriginFor<T>,
             exchange_rate: types::ExchangeRate,
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
+            // TODO: sanity check?
+            ExchangeRate::<T>::put(exchange_rate);
+            // Self::deposit_event(Event::ExchangeRateSet(exchange_rate));
+            Ok(().into())
+        }
+
+        #[pallet::weight(0)]
+        pub(crate) fn update_exchange_rate(
+            origin: OriginFor<T>,
+            exchange_rate: types::ExchangeRate,
+        ) -> DispatchResultWithPostInfo {
+            let sender = ensure_signed(origin)?;
+            ensure!(Self::is_oracle(&sender), Error::<T>::OperationForbidden);
             // TODO: sanity check?
             ExchangeRate::<T>::put(exchange_rate);
             // Self::deposit_event(Event::ExchangeRateSet(exchange_rate));
@@ -121,6 +135,8 @@ pub mod pallet {
     /// Errors for assets module
     #[pallet::error]
     pub enum Error<T> {
+        /// Permission denied.
+        OperationForbidden,
         /// Requester doesn't has enough pcx for collateral.
         InsufficientFunds,
         /// Arithmetic underflow/overflow.
@@ -137,16 +153,32 @@ pub mod pallet {
     #[pallet::getter(fn exchange_rate)]
     pub(crate) type ExchangeRate<T: Config> = StorageValue<_, types::ExchangeRate, ValueQuery>;
 
+    #[pallet::storage]
+    #[pallet::getter(fn oracle_accounts)]
+    pub(crate) type OracleAccounts<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
+
     #[pallet::genesis_config]
-    #[derive(Default)]
-    pub struct GenesisConfig {
+    pub struct GenesisConfig<T: Config> {
+        /// pcx/btc trading pair
         pub exchange_rate: types::ExchangeRate,
+        /// oracles allowed to update exchange_rate
+        pub oracle_accounts: Vec<T::AccountId>,
+    }
+
+    impl<T: Config> Default for GenesisConfig<T> {
+        fn default() -> Self {
+            Self {
+                exchange_rate: Default::default(),
+                oracle_accounts: Default::default(),
+            }
+        }
     }
 
     #[pallet::genesis_build]
-    impl<T: Config> GenesisBuild<T> for GenesisConfig {
+    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
         fn build(&self) {
             <ExchangeRate<T>>::put(self.exchange_rate.clone());
+            <OracleAccounts<T>>::put(self.oracle_accounts.clone());
         }
     }
 
@@ -173,6 +205,12 @@ pub mod pallet {
         #[inline]
         pub fn increase_total_collateral(amount: BalanceOf<T>) {
             <TotalCollateral<T>>::mutate(|c| *c += amount);
+        }
+
+        #[inline]
+        pub(crate) fn is_oracle(account: &T::AccountId) -> bool {
+            let oracles: Vec<T::AccountId> = Self::oracle_accounts();
+            oracles.contains(account)
         }
     }
 }

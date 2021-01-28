@@ -115,12 +115,13 @@ impl ExtBuilder {
                     price: exchange_price,
                     decimal: exchange_decimal,
                 },
+                oracle_accounts: vec![0],
             },
             &mut storage,
         );
 
         let _ = pallet_balances::GenesisConfig::<Test> {
-            balances: vec![(1, 1000), (2, 2000), (3, 3000)],
+            balances: vec![(0, 100_000), (1, 1000), (2, 2000), (3, 3000)],
         }
         .assimilate_storage(&mut storage);
 
