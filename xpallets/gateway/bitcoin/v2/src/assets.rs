@@ -8,6 +8,34 @@ pub mod types {
     #[cfg(feature = "std")]
     use serde::{Deserialize, Serialize};
 
+    /// Bridge status
+    #[derive(Encode, Decode, RuntimeDebug, Clone, Eq, PartialEq)]
+    #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+    pub enum Status {
+        /// `Running` means bridge runs normally.
+        Running,
+        /// `Error` means bridge has errors need to be solved.
+        Error,
+        /// `Shutdown` means bridge is closed, and all feature are unavailable.
+        Shutdown,
+    }
+
+    impl Default for Status {
+        fn default() -> Self {
+            Status::Running
+        }
+    }
+
+    /// Bridge errors
+    #[derive(Encode, Decode, RuntimeDebug, Clone, Eq, PartialEq)]
+    #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+    pub enum ErrorCode {
+        /// bridge during liquidation
+        Liquidating,
+        /// Oracle doesn't update exchange rate in time
+        ExchangeRateExpired,
+    }
+
     /// This struct represents the price of trading pair PCX/BTC.
     ///
     /// For example, the current price of PCX/BTC in some
@@ -87,11 +115,13 @@ pub mod pallet {
         pallet_prelude::{BlockNumberFor, OriginFor},
     };
 
-    use super::types::TradingPrice;
+    use super::types::{ErrorCode, Status, TradingPrice};
 
     pub type BalanceOf<T> = <<T as xpallet_assets::Config>::Currency as Currency<
         <T as frame_system::Config>::AccountId,
     >>::Balance;
+
+    pub type CurrencyOf<T> = <T as xpallet_assets::Config>::Currency;
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(crate) trait Store)]
@@ -103,7 +133,11 @@ pub mod pallet {
     }
 
     #[pallet::hooks]
-    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
+    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+        fn on_finalize(_n: BlockNumberFor<T>) {
+            todo!("Check if exchange rate expired.")
+        }
+    }
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -114,8 +148,7 @@ pub mod pallet {
             exchange_rate: TradingPrice,
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
-            // TODO: sanity check?
-            ExchangeRate::<T>::put(exchange_rate.clone());
+            Self::_update_exchange_rate(exchange_rate.clone())?;
             Self::deposit_event(Event::<T>::ExchangeRateForceUpdated(exchange_rate));
             Ok(().into())
         }
@@ -139,8 +172,7 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             ensure!(Self::is_oracle(&sender), Error::<T>::OperationForbidden);
-            // TODO: sanity check?
-            ExchangeRate::<T>::put(exchange_rate.clone());
+            Self::_update_exchange_rate(exchange_rate.clone())?;
             Self::deposit_event(Event::<T>::ExchangeRateUpdated(sender, exchange_rate));
             Ok(().into())
         }
@@ -151,10 +183,12 @@ pub mod pallet {
     pub enum Error<T> {
         /// Permission denied.
         OperationForbidden,
-        /// Requester doesn't has enough pcx for collateral.
+        /// Requester doesn't have enough pcx for collateral.
         InsufficientFunds,
         /// Arithmetic underflow/overflow.
         ArithmeticError,
+        /// Account doesn't have enough collateral to be slashed.
+        InsufficientCollateral,
     }
 
     /// Events for assets module
@@ -182,6 +216,24 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn oracle_accounts)]
     pub(crate) type OracleAccounts<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn bridge_status)]
+    pub(crate) type BridgeStatus<T: Config> = StorageValue<_, Status, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn exchange_rate_update_time)]
+    pub(crate) type ExchangeRateUpdateTime<T: Config> =
+        StorageValue<_, BlockNumberFor<T>, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn exchange_rate_expired_period)]
+    pub(crate) type ExchangeRateExpiredPeriod<T: Config> =
+        StorageValue<_, BlockNumberFor<T>, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn bridge_error_codes)]
+    pub(crate) type BridgeErrorCodes<T: Config> = StorageValue<_, Vec<ErrorCode>, ValueQuery>;
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
@@ -238,6 +290,34 @@ pub mod pallet {
         pub(crate) fn is_oracle(account: &T::AccountId) -> bool {
             let oracles: Vec<T::AccountId> = Self::oracle_accounts();
             oracles.contains(account)
+        }
+
+        pub(crate) fn _update_exchange_rate(exchange_rate: TradingPrice) -> DispatchResult {
+            // TODO: sanity check?
+            <ExchangeRate<T>>::put(exchange_rate);
+            let height = <frame_system::Pallet<T>>::block_number();
+            <ExchangeRateUpdateTime<T>>::put(height);
+            Ok(())
+        }
+
+        /// Slash collateral to receiver
+        pub fn slash_collateral(
+            sender: &T::AccountId,
+            receiver: &T::AccountId,
+            amount: BalanceOf<T>,
+        ) -> DispatchResult {
+            let reserved_collateral = <CurrencyOf<T>>::reserved_balance(sender);
+            ensure!(
+                reserved_collateral >= amount,
+                Error::<T>::InsufficientCollateral
+            );
+            let (slashed, _) = <CurrencyOf<T>>::slash_reserved(sender, amount);
+
+            <CurrencyOf<T>>::resolve_creating(receiver, slashed);
+            <CurrencyOf<T>>::reserve(receiver, amount)
+                .map_err(|_| Error::<T>::InsufficientFunds)?;
+            // Self::deposit_event(...);
+            Ok(().into())
         }
     }
 }

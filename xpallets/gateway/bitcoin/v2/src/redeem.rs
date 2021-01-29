@@ -48,7 +48,6 @@ pub mod types {
 #[allow(dead_code)]
 pub mod pallet {
 
-    use codec::{Decode, Encode, EncodeLike};
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         ensure,
@@ -60,12 +59,6 @@ pub mod pallet {
         ensure_signed,
         pallet_prelude::{BlockNumberFor, OriginFor},
     };
-    use sha2::{Digest, Sha256};
-    use sp_arithmetic::{
-        traits::{CheckedDiv, CheckedMul, UniqueSaturatedInto},
-        FixedPointNumber,
-    };
-    use sp_core::{H256, U256};
     use sp_runtime::DispatchError;
     use sp_std::{convert::TryInto, marker::PhantomData};
 
@@ -103,7 +96,6 @@ pub mod pallet {
         ForceRedeemIsAccepted,
     }
 
-
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
@@ -138,7 +130,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        // User request redeem
+        /// User request redeem
         #[pallet::weight(0)]
         pub fn request_redeem(
             origin: OriginFor<T>,
