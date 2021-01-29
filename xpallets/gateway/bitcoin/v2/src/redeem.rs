@@ -48,11 +48,12 @@ pub mod types {
 #[allow(dead_code)]
 pub mod pallet {
 
+    use assets::BridgeStatus;
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         ensure,
         storage::types::{StorageMap, StorageValue, ValueQuery},
-        traits::{Currency, Hooks,IsType, ReservableCurrency},
+        traits::{Currency, Hooks, IsType, ReservableCurrency},
         Twox64Concat,
     };
     use frame_system::{
@@ -63,10 +64,10 @@ pub mod pallet {
     use sp_std::{convert::TryInto, marker::PhantomData};
 
     // import vault,issue,assets code.
+    use crate::assets::pallet as assetspallet;
     use crate::assets::{pallet as assets, pallet::BalanceOf};
     use crate::issue::pallet as issuepallet;
     use crate::vault::pallet as vaultpallet;
-    use crate::assets::pallet as assetspallet;
 
     type RedeemRequest<T> = super::types::RedeemRequest<
         <T as frame_system::Config>::AccountId,
@@ -144,18 +145,18 @@ pub mod pallet {
             // let vault_id: T::AccountId = Self::get_vaultid_by_redeem(&sender, redeem_amount);
             // let vault = vaultpallet::Pallet::<T>::get_active_vault_by_id(&vault_id)?;
 
-            //check if exist one valt is Liquidated
-            let mut exsit_vault_liquidated = false;
-            for vt in <vaultpallet::Vaults<T>>::iter() {
-                if vt.1.status == crate::vault::types::VaultStatus::Liquidated {
-                    exsit_vault_liquidated = true;
-                    break;
+            //check current bridge if is Liquidated
+            let bridge_status = <BridgeStatus<T>>::get();
+            match bridge_status {
+                crate::assets::types::Status::Running => {
+                    // to od ..
                 }
-            }
-            if exsit_vault_liquidated == true {
-                // to do ...
-            } else {
-                // to do ...
+                crate::assets::types::Status::Error => {
+                    // to od ..
+                }
+                crate::assets::types::Status::Shutdown => {
+                    // to od ..
+                }
             }
 
             // add the vault xbtc count
@@ -197,26 +198,26 @@ pub mod pallet {
                     match re.status {
                         WaitForGetBtc => {
                             // redeem can be cancled.
-        
+
                             // subtract the vault xbtc count.
-        
+
                             // tell vault do not transfer btc to user btc addr
                         }
                         Cancled => {
                             // redeem is already cancled. can not be cancled twice
-        
+
                             // to do...
                         }
                         completed => {
                             // redeem is already completed. vault has given btc to user`s btc address.
-        
+
                             // to do...
                         }
                     }
-                },
+                }
                 None => (),
             }
-            
+
             // send msg to user
             Self::deposit_event(Event::<T>::CancleRedeemIsAccepted);
 
@@ -252,7 +253,7 @@ pub mod pallet {
                             // to do...
                         }
                     }
-                },
+                }
                 None => (),
             }
 
@@ -264,7 +265,6 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
-
         /// get correct vault to serve redeem request
         // fn get_vaultid_by_redeem(user: &T::AccountId, redeem_amount: BalanceOf<T>) -> Result<vaultpallet::Vault<T::AccountId, T::BlockNumber, BalanceOf<T>>, DispatchError> {
         //     /// to do ...

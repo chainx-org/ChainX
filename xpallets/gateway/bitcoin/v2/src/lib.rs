@@ -7,6 +7,7 @@
 pub mod assets;
 pub mod issue;
 pub mod vault;
+pub mod redeem;
 
 #[cfg(test)]
 mod mock;
