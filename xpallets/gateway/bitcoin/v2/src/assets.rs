@@ -320,4 +320,8 @@ pub mod pallet {
             Ok(().into())
         }
     }
+
+    pub(crate) trait CollateralLender<T: Config> {
+        fn get_collateral(&self) -> BalanceOf<T>;
+    }
 }
