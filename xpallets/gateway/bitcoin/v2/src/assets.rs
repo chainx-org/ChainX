@@ -14,8 +14,8 @@ pub mod types {
     pub enum Status {
         /// `Running` means bridge runs normally.
         Running,
-        /// `Liquidating` means bridge in liquidation.
-        Liquidating,
+        /// `Error` means bridge has errors need to be solved.
+        Error,
         /// `Shutdown` means bridge is closed, and all feature are unavailable.
         Shutdown,
     }
