@@ -167,7 +167,7 @@ pub fn development_config() -> Result<DevChainSpec, String> {
 #[cfg(feature = "runtime-benchmarks")]
 pub fn benchmarks_config() -> Result<DevChainSpec, String> {
     let wasm_binary =
-        dev::WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
+        dev::WASM_BINARY.ok_or_else(|| "Development wasm binary not available".to_string())?;
 
     let endowed_balance = 50 * DEV_DOLLARS;
     let constructor = move || {
