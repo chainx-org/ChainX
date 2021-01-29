@@ -38,6 +38,7 @@ use sp_runtime::{
     offchain::{
         storage::StorageValueRef,
         storage_lock::{StorageLock, Time},
+        Duration,
     },
     transaction_validity::{
         InvalidTransaction, TransactionPriority, TransactionSource, TransactionValidity,
@@ -58,7 +59,6 @@ use light_bitcoin::{
     serialization::serialize,
 };
 use request::{MAX_RETRY_NUM, RETRY_NUM};
-use sp_runtime::offchain::storage_lock::StorageLockGuard;
 use xp_gateway_bitcoin::{BtcTxMetaType, BtcTxTypeDetector, OpReturnExtractor};
 use xp_gateway_common::AccountExtractor;
 use xpallet_assets::Chain;
@@ -205,7 +205,7 @@ decl_module! {
 
         fn offchain_worker(block_number: T::BlockNumber) {
             let network = XGatewayBitcoin::<T>::network_id();
-            if block_number.saturated_into::<u64>() % 2 == 0 {
+            if block_number.saturated_into::<u32>() % 5 == 0 {
                 // First, get withdrawal proposal from chain and broadcast to btc network.
                 match Self::broadcast_withdrawal_proposal(network) {
                     Ok(Some(hash)) => {
@@ -222,15 +222,15 @@ decl_module! {
                     }
                 }
                 // Let worker do it alone
-                let mut lock = StorageLock::<'_, Time>::new(b"ocw::worker::lock");
-                if let Ok(mut guard) = lock.try_lock() {
-                    debug::info!("[OCW] Worker[{:?}] Start To Working...", block_number);
+                // let mut lock = StorageLock::with_deadline(b"ocw::worker::lock", Duration::from_millis(6000 * 1000));
+                // if let Ok(_guard) = lock.try_lock() {
+                debug::info!("[OCW] Worker[{:?}] Start To Working...", block_number);
                     // Second, filter transactions from confirmed block and push withdrawal/deposit transactions to chain.
-                    if Self::get_transactions_and_push(&mut guard, network) {
+                    if Self::get_transactions_and_push(network) {
                         // Third, get new block from btc network and push block header to chain
-                        Self::get_new_header_and_push(&mut guard, network);
+                        Self::get_new_header_and_push(network);
                     }
-                }
+                // }
                 debug::info!("[OCW] Worker[{:?}] Exit.", block_number);
             }
         }
@@ -238,9 +238,8 @@ decl_module! {
         #[weight = <T as Trait>::WeightInfo::push_header()]
         fn push_header(origin, height: u32, header: BtcHeader) -> DispatchResultWithPostInfo {
             let worker = ensure_signed(origin)?;
-            debug::info!("[OCW] Worker:{:?} Push Header: {:?}", worker, header);
+            debug::info!("[OCW] Worker:{:?} Push Header: {:?}, #Height{}", worker, header, height);
             XGatewayBitcoin::<T>::apply_push_header(header)?;
-            Self::deposit_event(Event::<T>::NewBtcBlock(height, header.hash()));
             Ok(Pays::No.into())
         }
 
@@ -250,7 +249,6 @@ decl_module! {
             debug::info!("[OCW] Worker:{:?} Push Transaction: {:?}", worker, tx.hash());
             let relay_tx = relayed_info.into_relayed_tx(tx.clone());
             XGatewayBitcoin::<T>::apply_push_transaction(relay_tx, prev_tx)?;
-            Self::deposit_event(Event::<T>::NewBtcTransaction(tx.hash()));
             Ok(Pays::No.into())
         }
     }
@@ -295,7 +293,7 @@ impl<T: Trait> Module<T> {
     }
 
     /// Get new header from btc network and push header to chain
-    fn get_new_header_and_push(guard: &mut StorageLockGuard<Time>, network: BtcNetwork) {
+    fn get_new_header_and_push(network: BtcNetwork) {
         let best_index = XGatewayBitcoin::<T>::best_index().height;
         let mut next_height = best_index + 1;
         for _ in 0..=MAX_RETRY_NUM {
@@ -313,11 +311,6 @@ impl<T: Trait> Module<T> {
                     continue;
                 }
             };
-            // Reset the running time of the lock
-            match guard.extend_lock() {
-                Ok(_result) => {}
-                Err(_e) => debug::warn!("[OCW|guard] The lock has expired, failed to extend it."),
-            }
 
             let btc_block = match Self::fetch_block(&btc_block_hash[..], network) {
                 Ok(block) => {
@@ -361,17 +354,17 @@ impl<T: Trait> Module<T> {
     }
 
     /// Get transactions in confirmed block and push withdrawal/deposit transactions to chain
-    fn get_transactions_and_push(guard: &mut StorageLockGuard<Time>, network: BtcNetwork) -> bool {
+    fn get_transactions_and_push(network: BtcNetwork) -> bool {
         if let Some(confirmed_index) = XGatewayBitcoin::<T>::confirmed_index() {
             let confirm_height = confirmed_index.height;
             // Get confirmed height from local storage
             let confirmed_info = StorageValueRef::persistent(b"ocw::confirmed");
             // Prevent repeated filtering of transactions
-            if let Some(Some(confirmed)) = confirmed_info.get::<u32>() {
-                if confirmed == confirm_height {
-                    return true;
-                }
-            }
+            // if let Some(Some(confirmed)) = confirmed_info.get::<u32>() {
+            //     if confirmed == confirm_height {
+            //         return true;
+            //     }
+            // }
             // Prevent unstable network connections
             for num in 0..=RETRY_NUM {
                 if num == MAX_RETRY_NUM {
@@ -402,10 +395,19 @@ impl<T: Trait> Module<T> {
                         continue;
                     }
                 };
-
-                if Self::push_xbtc_transaction(guard, &btc_confirmed_block, network) {
-                    // Set confirmed height to local storage
-                    confirmed_info.set(&confirm_height);
+                let mut lock = StorageLock::<'_, Time>::new(b"ocw::confirmed::lock");
+                if Self::push_xbtc_transaction(&btc_confirmed_block, network) {
+                    if let Some(Some(confirmed)) = confirmed_info.get::<u32>() {
+                        if confirmed == confirm_height {
+                            return false;
+                        }
+                    }
+                    if let Ok(_guard) = lock.try_lock() {
+                        // Set confirmed height to local storage
+                        confirmed_info.set(&confirm_height);
+                    } else {
+                        return false;
+                    }
                 }
                 break;
             }
@@ -414,11 +416,7 @@ impl<T: Trait> Module<T> {
     }
 
     /// Filter x-btc deposit/withdraw transactions and push to the chain
-    fn push_xbtc_transaction(
-        guard: &mut StorageLockGuard<Time>,
-        confirmed_block: &BtcBlock,
-        network: BtcNetwork,
-    ) -> bool {
+    fn push_xbtc_transaction(confirmed_block: &BtcBlock, network: BtcNetwork) -> bool {
         let mut needed = Vec::new();
         let mut tx_hashes = Vec::with_capacity(confirmed_block.transactions.len());
         let mut tx_matches = Vec::with_capacity(confirmed_block.transactions.len());
@@ -437,12 +435,25 @@ impl<T: Trait> Module<T> {
         let btc_tx_detector =
             BtcTxTypeDetector::new(network, btc_min_deposit, current_trustee_pair, None);
         // Filter transaction type (only deposit and withdrawal)
-        for tx in &confirmed_block.transactions {
-            // Reset the running time of the lock
-            match guard.extend_lock() {
-                Ok(_result) => {}
-                Err(_e) => debug::warn!("[OCW|guard] The lock has expired, failed to extend it."),
+        let mut local_tx_num = StorageValueRef::persistent(b"ocw::tx::num");
+        let mut tx_lock = StorageLock::<'_, Time>::new(b"ocw::tx::lock");
+        for (tx_num, tx) in confirmed_block.transactions.iter().enumerate() {
+            {
+                let _guard = tx_lock.lock();
+                let num = match local_tx_num.get::<u16>() {
+                    Some(Some(num)) => num,
+                    _ => 0,
+                };
+                if tx_num as u16 > num {
+                    local_tx_num.set(&(tx_num as u16));
+                } else {
+                    local_tx_num.set(&(num));
+                    tx_hashes.push(tx.hash());
+                    tx_matches.push(false);
+                    continue;
+                }
             }
+            debug::info!("[OCW] transaction number: {}", tx_num);
             // Prepare for constructing partial merkle tree
             tx_hashes.push(tx.hash());
             if tx.is_coinbase() {
@@ -467,7 +478,7 @@ impl<T: Trait> Module<T> {
                 ) {
                     BtcTxMetaType::Withdrawal | BtcTxMetaType::Deposit(..) => {
                         tx_matches.push(true);
-                        needed.push((tx.clone(), Some(prev_tx.clone())));
+                        needed.push((tx, Some(prev_tx)));
                     }
                     BtcTxMetaType::HotAndCold
                     | BtcTxMetaType::TrusteeTransition
@@ -476,6 +487,7 @@ impl<T: Trait> Module<T> {
                 break;
             }
         }
+        local_tx_num.clear();
         // Push x-btc withdraw/deposit transactions if they exist
         if !needed.is_empty() {
             // Construct partial merkle tree
@@ -483,13 +495,6 @@ impl<T: Trait> Module<T> {
             // Push xbtc relay (withdraw/deposit) transaction
             let signer = Signer::<T, T::RelayAuthId>::any_account();
             for (tx, prev_tx) in needed {
-                // Reset the running time of the lock
-                match guard.extend_lock() {
-                    Ok(_result) => {}
-                    Err(_e) => {
-                        debug::warn!("[OCW|guard] The lock has expired, failed to extend it.");
-                    }
-                }
                 let relayed_info = BtcRelayedTxInfo {
                     block_hash: confirmed_block.hash(),
                     merkle_proof: merkle_proof.clone(),
@@ -513,11 +518,6 @@ impl<T: Trait> Module<T> {
                 "[OCW|push_x-btc_transaction] No X-BTC Deposit/Withdraw Transactions in th Confirmed Block {:?}",
                 hash_rev(confirmed_block.hash())
             );
-        }
-        // Reset the running time of the lock
-        match guard.extend_lock() {
-            Ok(_result) => {}
-            Err(_e) => debug::warn!("[OCW|guard] The lock has expired, failed to extend it."),
         }
         true
     }
