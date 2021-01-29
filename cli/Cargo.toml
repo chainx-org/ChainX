@@ -53,6 +53,7 @@ chainx-dev-runtime = { path = "../runtime/dev" }
 chainx-primitives = { path = "../primitives" }
 chainx-rpc = { path = "../rpc" }
 chainx-runtime = { path = "../runtime/chainx" }
+malan-runtime = { path = "../runtime/malan" }
 
 xp-assets-registrar = { path  = "../primitives/assets-registrar" }
 xp-genesis-builder = { path  = "../primitives/genesis-builder" }
@@ -80,4 +81,5 @@ wasmtime = [
 runtime-benchmarks = [
     "chainx-runtime/runtime-benchmarks",
     "chainx-dev-runtime/runtime-benchmarks",
+    "malan-runtime/runtime-benchmarks",
 ]

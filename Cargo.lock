@@ -705,6 +705,7 @@ dependencies = [
  "jsonrpc-pubsub",
  "log",
  "log4rs",
+ "malan-runtime",
  "pallet-im-online",
  "parking_lot 0.11.0",
  "sc-authority-discovery",

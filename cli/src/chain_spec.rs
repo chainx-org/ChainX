@@ -29,6 +29,7 @@ use crate::genesis::bitcoin::{btc_genesis_params, BtcGenesisParams, BtcTrusteePa
 
 use chainx_dev_runtime as chainx_dev;
 use chainx_runtime as chainx;
+use malan_runtime as malan;
 
 // Note this is the URL for the telemetry server
 #[allow(unused)]
@@ -53,6 +54,7 @@ pub struct Extensions {
 // pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
 
 pub type ChainXChainSpec = sc_service::GenericChainSpec<chainx::GenesisConfig, Extensions>;
+pub type MalanChainSpec = sc_service::GenericChainSpec<malan::GenesisConfig, Extensions>;
 pub type ChainXDevChainSpec = sc_service::GenericChainSpec<chainx_dev::GenesisConfig, Extensions>;
 
 type AccountPublic = <Signature as Verify>::Signer;
@@ -248,140 +250,8 @@ pub fn mainnet_config() -> Result<ChainXChainSpec, String> {
     ChainXChainSpec::from_json_bytes(&include_bytes!("./res/chainx.json")[..])
 }
 
-pub fn testnet_config() -> Result<ChainXChainSpec, String> {
-    let wasm_binary =
-        chainx::WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
-
-    // 5EWtScne4zWsGaP4gVo8DmLpChVx3MzoQTpKJCEdBTYDA1Dy
-    let root_key: AccountId =
-        hex!["6c707b1690a6b0e01b5dea252fe1887930a5afc0ec203f96705331749c37ae4a"].into();
-
-    // 5HGZzRCfvLM7LSdkPZF5SzD4tj9BKvCTQuGkJd1jedrcCKFc
-    let vesting_key: AccountId =
-        hex!["e639a1a8ff3bd1fe15faa922ef2b772b9ee1c8d9cdc63ad36af12ab5ca155d4a"].into();
-
-    let initial_authorities: Vec<AuthorityKeysTuple> = vec![(
-        (
-            // 5EvXt55kDmAXbBPqrzvNZcbE6bvZ8eWBThxJptoDkwAAyEkw
-            hex!["7e7927d030d89585cd66f0d44313de41f4c697da387159786f8b3ed5cd081d4f"].into(),
-            b"Validator5".to_vec(),
-        ),
-        // 5D83WrH4h4rPFxe4m4xGMuC8XuR9jqWHggHBriZQELJ3JneN
-        hex!["2ec8253a23695069619df42213106402cffb217bb02c653c11e3435eb047e60d"].unchecked_into(),
-        // 5GpHoku58fumTfn9pQZxKFxASvMw6JNTqmFDQw92g7LV1gwj
-        hex!["d22ec57d5cdb6f80f0df82590f9999b88e936e9f8c93d9c05cd87dba1b4567ae"].unchecked_into(),
-        // 5HCBmPYr7AsXDp4VLu7qh6HRExjy2Nx33YLHqLeQ6i7yFjHt
-        hex!["e2e1d5c8eb42aa6b37f71cbdc8e73b67b385e7841d98bbaef3492252a4f3e605"].unchecked_into(),
-        // 5HQYBwyf2787MCMhZNBEpswHJcJnXVVNxjrdTa6cVjUf29jy
-        hex!["ec4d8806b85969a29214c00ae70b5d239dc65daebf2ea4a43fd47a77e16d9c7c"].unchecked_into(),
-    )];
-
-    let constructor = move || {
-        // TODO: use mainnet_genesis() or create a new testnet_genesis()?
-        testnet_genesis(
-            &wasm_binary[..],
-            initial_authorities.clone(),
-            root_key.clone(),
-            vesting_key.clone(),
-            genesis_assets(),
-            btc_genesis_params(include_str!("res/btc_genesis_params_testnet.json")),
-            crate::genesis::bitcoin::mainnet_trustees(),
-        )
-    };
-
-    Ok(ChainXChainSpec::from_genesis(
-        "ChainX TC0",
-        "chainx_tc0",
-        ChainType::Live,
-        constructor,
-        bootnodes![
-            "/dns/p2p.3.chainx.org/tcp/20223/p2p/12D3KooWRcmKCa1Uo54UNV6umzvVnWAx7TZNFibbZfP87zqPs1DP",
-        ],
-        Some(
-            TelemetryEndpoints::new(vec![
-                (CHAINX_TELEMETRY_URL.to_string(), 0),
-                (POLKADOT_TELEMETRY_URL.to_string(), 0),
-            ])
-            .expect("ChainX telemetry url is valid; qed"),
-        ),
-        Some("pcx-tc0"),
-        Some(as_properties(NetworkType::Testnet)),
-        Default::default(),
-    ))
-}
-
-pub fn private_testnet_config() -> Result<ChainXChainSpec, String> {
-    let wasm_binary =
-        chainx::WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
-
-    // 5EWtScne4zWsGaP4gVo8DmLpChVx3MzoQTpKJCEdBTYDA1Dy
-    let root_key: AccountId =
-        hex!["6c707b1690a6b0e01b5dea252fe1887930a5afc0ec203f96705331749c37ae4a"].into();
-
-    // 5HGZzRCfvLM7LSdkPZF5SzD4tj9BKvCTQuGkJd1jedrcCKFc
-    let vesting_key: AccountId =
-        hex!["e639a1a8ff3bd1fe15faa922ef2b772b9ee1c8d9cdc63ad36af12ab5ca155d4a"].into();
-
-    let initial_authorities: Vec<AuthorityKeysTuple> = vec![(
-        (
-            // 5DPgEmPRBhXj8fpsHm3aXrNtjXNVv7MHnUYQVLFhzMyzabaN
-            hex!["3ab47230dff92003f6f4f79cf7930cfe3f3fd77eedfea55acfde77223ac1a47a"].into(),
-            b"Validator1".to_vec(),
-        ),
-        // 5EPgwcbLknydnWGmHem3rmwhdjk55e9HfoqjF5A5zRQDkWxj
-        hex!["66f30ce2de3f23c2383c0ecea1e2a2e0520c18931d3a9bca64be78e3f9f7b62f"].unchecked_into(),
-        // 5FTYv429Xnkmn7HR4FCWPxnTpvveqpqjVKng3H6ypaBpXeVN
-        hex!["96213e8f2f57edfec52b6ffc260d4e8257e8addabe7797fa197f0aa8f6b7e748"].unchecked_into(),
-        // 5G4KNiQahHTY1LSafhfZnwGLtAnB39TMuc9nhpWMerE98RYQ
-        hex!["b0a540b56805d5b14df2787360728d72197bec577601ad49e274d3914f8b407a"].unchecked_into(),
-        // 5HNR82T2juJY6hx48ExdwUBQcpHQvHc5QPCcEzusdHMtLfMZ
-        hex!["eaaf3faeb72a15004fb5f9c68de188310b8cf3fbbbd8e8eb4db8aa9e95c40966"].unchecked_into(),
-    )];
-
-    let constructor = move || {
-        // TODO: use mainnet_genesis() or create a new testnet_genesis()?
-        testnet_genesis(
-            &wasm_binary[..],
-            initial_authorities.clone(),
-            root_key.clone(),
-            vesting_key.clone(),
-            genesis_assets(),
-            btc_genesis_params(include_str!("res/btc_genesis_params_testnet.json")),
-            crate::genesis::bitcoin::local_testnet_trustees(),
-        )
-    };
-
-    Ok(ChainXChainSpec::from_genesis(
-        "ChainX PTC0",
-        "chainx_ptc0",
-        ChainType::Live,
-        constructor,
-        bootnodes![],
-        Some(
-            TelemetryEndpoints::new(vec![
-                (CHAINX_TELEMETRY_URL.to_string(), 0),
-                (POLKADOT_TELEMETRY_URL.to_string(), 0),
-            ])
-            .expect("ChainX telemetry url is valid; qed"),
-        ),
-        Some("pcx-ptc0"),
-        Some(as_properties(NetworkType::Testnet)),
-        Default::default(),
-    ))
-}
-
-fn chainx_session_keys(
-    babe: BabeId,
-    grandpa: GrandpaId,
-    im_online: ImOnlineId,
-    authority_discovery: AuthorityDiscoveryId,
-) -> chainx::SessionKeys {
-    chainx::SessionKeys {
-        grandpa,
-        babe,
-        im_online,
-        authority_discovery,
-    }
+pub fn malan_config() -> Result<MalanChainSpec, String> {
+    MalanChainSpec::from_json_bytes(&include_bytes!("./res/malan.json")[..])
 }
 
 fn chainx_dev_session_keys(
@@ -563,154 +433,6 @@ fn build_genesis(
             params: crate::genesis::genesis_builder_params(),
             initial_authorities_endowed,
             root_endowed: 0,
-        }),
-    }
-}
-
-fn testnet_genesis(
-    wasm_binary: &[u8],
-    initial_authorities: Vec<AuthorityKeysTuple>,
-    root_key: AccountId,
-    vesting_account: AccountId,
-    assets: Vec<AssetParams>,
-    bitcoin: BtcGenesisParams,
-    trustees: Vec<(Chain, TrusteeInfoConfig, Vec<BtcTrusteeParams>)>,
-) -> chainx::GenesisConfig {
-    // 1000 PCX
-    const STAKING_LOCKED: Balance = 100_000 * DOLLARS;
-    // 100 PCX
-    const ROOT_ENDOWED: Balance = 10_000 * DOLLARS;
-
-    let (assets, assets_restrictions) = init_assets(assets);
-
-    let initial_authorities_len = initial_authorities.len();
-
-    let tech_comm_members: Vec<AccountId> = vec![
-        // 5C7VzhPqJsLXcyJmX71ZEt7GdkAMTxHNPwh6BSb8thgBbQU1
-        hex!["0221ce7c4a0b771faaf0bbae23c3a1965348cb5257611313a73c3d4a53599509"].into(),
-        // 5D7F1AJoDwuCvZZKEggeGk2brxYty9mkamUcFHyshYBnbWs3
-        hex!["2e2b928d39b7a9c8688509927e17031001fab604557db093ead5069474e0584e"].into(),
-        // 5HG5CswZ6X39BYqt8Dc8e4Cn2HieGnnUiG39ddGn2oq5G36W
-        hex!["e5d8bb656b124beb40990ef9346c441f888981ec7e0d4c55c9c72c176aec5290"].into(),
-    ];
-
-    let mut balances = initial_authorities
-        .iter()
-        .map(|((validator, _), _, _, _, _)| validator)
-        .cloned()
-        .map(|validator| (validator, STAKING_LOCKED))
-        .collect::<Vec<_>>();
-
-    // 100 PCX to root account for paying the transaction fee.
-    balances.push((root_key.clone(), ROOT_ENDOWED));
-
-    let initial_authorities_endowed = initial_authorities_len as Balance * STAKING_LOCKED;
-
-    let validators = initial_authorities
-        .clone()
-        .into_iter()
-        .map(|((validator, referral_id), _, _, _, _)| (validator, referral_id, STAKING_LOCKED))
-        .collect::<Vec<_>>();
-
-    let btc_genesis_trustees = trustees
-        .iter()
-        .find_map(|(chain, _, trustee_params)| {
-            if *chain == Chain::Bitcoin {
-                Some(
-                    trustee_params
-                        .iter()
-                        .map(|i| (i.0).clone())
-                        .collect::<Vec<_>>(),
-                )
-            } else {
-                None
-            }
-        })
-        .expect("bitcoin trustees generation can not fail; qed");
-
-    chainx::GenesisConfig {
-        frame_system: Some(chainx::SystemConfig {
-            code: wasm_binary.to_vec(),
-            changes_trie_config: Default::default(),
-        }),
-        pallet_babe: Some(Default::default()),
-        pallet_grandpa: Some(chainx::GrandpaConfig {
-            authorities: vec![],
-        }),
-        pallet_collective_Instance1: Some(chainx::CouncilConfig::default()),
-        pallet_collective_Instance2: Some(chainx::TechnicalCommitteeConfig {
-            members: tech_comm_members,
-            phantom: Default::default(),
-        }),
-        pallet_membership_Instance1: Some(Default::default()),
-        pallet_democracy: Some(chainx::DemocracyConfig::default()),
-        pallet_treasury: Some(Default::default()),
-        pallet_elections_phragmen: Some(chainx::ElectionsConfig::default()),
-        pallet_im_online: Some(chainx::ImOnlineConfig { keys: vec![] }),
-        pallet_authority_discovery: Some(chainx::AuthorityDiscoveryConfig { keys: vec![] }),
-        pallet_session: Some(chainx::SessionConfig {
-            keys: initial_authorities
-                .iter()
-                .map(|x| {
-                    (
-                        (x.0).0.clone(),
-                        (x.0).0.clone(),
-                        chainx_session_keys(x.1.clone(), x.2.clone(), x.3.clone(), x.4.clone()),
-                    )
-                })
-                .collect::<Vec<_>>(),
-        }),
-        pallet_balances: Some(chainx::BalancesConfig { balances }),
-        pallet_indices: Some(chainx::IndicesConfig { indices: vec![] }),
-        pallet_sudo: Some(chainx::SudoConfig { key: root_key }),
-        xpallet_system: Some(chainx::XSystemConfig {
-            network_props: NetworkType::Testnet,
-        }),
-        xpallet_assets_registrar: Some(chainx::XAssetsRegistrarConfig { assets }),
-        xpallet_assets: Some(chainx::XAssetsConfig {
-            assets_restrictions,
-            endowed: Default::default(),
-        }),
-        xpallet_gateway_common: Some(chainx::XGatewayCommonConfig { trustees }),
-        xpallet_gateway_bitcoin: Some(chainx::XGatewayBitcoinConfig {
-            genesis_trustees: btc_genesis_trustees,
-            network_id: bitcoin.network,
-            confirmation_number: bitcoin.confirmation_number,
-            genesis_hash: bitcoin.hash(),
-            genesis_info: (bitcoin.header(), bitcoin.height),
-            params_info: BtcParams::new(
-                486604799,            // max_bits
-                2 * 60 * 60,          // block_max_future
-                2 * 7 * 24 * 60 * 60, // target_timespan_seconds
-                10 * 60,              // target_spacing_seconds
-                4,                    // retargeting_factor
-            ), // retargeting_factor
-            btc_withdrawal_fee: 500000,
-            max_withdrawal_count: 100,
-            verifier: BtcTxVerifier::Recover,
-        }),
-        xpallet_mining_staking: Some(chainx::XStakingConfig {
-            validators,
-            validator_count: initial_authorities_len as u32, // Start mainnet in PoA
-            sessions_per_era: 12,
-            vesting_account,
-            glob_dist_ratio: (12, 88), // (Treasury, X-type Asset and Staking) = (12, 88)
-            mining_ratio: (10, 90),    // (Asset Mining, Staking) = (10, 90)
-            minimum_penalty: 100 * DOLLARS,
-            candidate_requirement: (100 * DOLLARS, 1_000 * DOLLARS), // Minimum value (self_bonded, total_bonded) to be a validator candidate
-            ..Default::default()
-        }),
-        xpallet_mining_asset: Some(chainx::XMiningAssetConfig {
-            claim_restrictions: vec![(X_BTC, (10, DAYS * 7))],
-            mining_power_map: vec![(X_BTC, 400)],
-        }),
-        xpallet_dex_spot: Some(chainx::XSpotConfig {
-            trading_pairs: vec![(PCX, X_BTC, 9, 2, 100000, true)],
-        }),
-        xpallet_genesis_builder: Some(chainx::XGenesisBuilderConfig {
-            params: crate::genesis::genesis_builder_params(),
-            root_endowed: ROOT_ENDOWED,
-            initial_authorities_endowed,
         }),
     }
 }
