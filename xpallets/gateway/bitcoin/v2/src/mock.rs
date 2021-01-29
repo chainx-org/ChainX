@@ -7,6 +7,7 @@ use sp_runtime::{
 use frame_support::{impl_outer_origin, parameter_types, sp_io, traits::GenesisBuild};
 
 use super::assets::pallet as assets;
+use super::issue::pallet as issue;
 use super::vault::pallet as vault;
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -85,6 +86,8 @@ impl assets::Config for Test {
 impl vault::Config for Test {
     type Event = ();
 }
+
+impl issue::Config for Test {}
 
 pub(crate) type System = frame_system::Pallet<Test>;
 pub(crate) type Balances = pallet_balances::Module<Test>;
