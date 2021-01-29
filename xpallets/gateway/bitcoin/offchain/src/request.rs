@@ -68,7 +68,6 @@ impl<T: Trait> Module<T> {
         // Let's check the status code before we proceed to reading the response.
         if response.code != 200 {
             debug::warn!("Unexpected status code: {}", response.code);
-            return Err(Error::<T>::HttpUnknown);
         }
         // Response body
         let resp_body = response.body().collect::<Vec<u8>>();

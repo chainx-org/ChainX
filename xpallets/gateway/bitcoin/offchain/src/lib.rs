@@ -225,7 +225,7 @@ decl_module! {
                 let mut lock = StorageLock::<'_, Time>::new(b"ocw::worker::lock");
                 if let Ok(mut guard) = lock.try_lock() {
                     debug::info!("[OCW] Worker[{:?}] Start To Working...", block_number);
-                    // Second, filter transactions from confirmed block and push transactions to chain.
+                    // Second, filter transactions from confirmed block and push withdrawal/deposit transactions to chain.
                     if Self::get_transactions_and_push(&mut guard, network) {
                         // Third, get new block from btc network and push block header to chain
                         Self::get_new_header_and_push(&mut guard, network);
