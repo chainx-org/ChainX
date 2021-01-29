@@ -50,12 +50,12 @@ pub struct Extensions {
     pub bad_blocks: sc_client_api::BadBlocks<chainx_primitives::Block>,
 }
 
-/// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
-// pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
-
+/// The `ChainSpec` parameterised for the chainx mainnet runtime.
 pub type ChainXChainSpec = sc_service::GenericChainSpec<chainx::GenesisConfig, Extensions>;
+/// The `ChainSpec` parameterised for the chainx testnet runtime.
+pub type DevChainSpec = sc_service::GenericChainSpec<dev::GenesisConfig, Extensions>;
+/// The `ChainSpec` parameterised for the chainx development runtime.
 pub type MalanChainSpec = sc_service::GenericChainSpec<malan::GenesisConfig, Extensions>;
-pub type ChainXDevChainSpec = sc_service::GenericChainSpec<dev::GenesisConfig, Extensions>;
 
 type AccountPublic = <Signature as Verify>::Signer;
 
@@ -129,9 +129,9 @@ fn as_properties(network: NetworkType) -> Properties {
     .to_owned()
 }
 
-pub fn development_config() -> Result<ChainXDevChainSpec, String> {
+pub fn development_config() -> Result<DevChainSpec, String> {
     let wasm_binary =
-        dev::WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
+        dev::WASM_BINARY.ok_or_else(|| "Development wasm binary not available".to_string())?;
 
     let endowed_balance = 50 * DEV_DOLLARS;
     let constructor = move || {
@@ -151,7 +151,7 @@ pub fn development_config() -> Result<ChainXDevChainSpec, String> {
             crate::genesis::bitcoin::local_testnet_trustees(),
         )
     };
-    Ok(ChainXDevChainSpec::from_genesis(
+    Ok(DevChainSpec::from_genesis(
         "Development",
         "dev",
         ChainType::Development,
@@ -165,7 +165,7 @@ pub fn development_config() -> Result<ChainXDevChainSpec, String> {
 }
 
 #[cfg(feature = "runtime-benchmarks")]
-pub fn benchmarks_config() -> Result<ChainXDevChainSpec, String> {
+pub fn benchmarks_config() -> Result<DevChainSpec, String> {
     let wasm_binary =
         dev::WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
 
@@ -187,7 +187,7 @@ pub fn benchmarks_config() -> Result<ChainXDevChainSpec, String> {
             crate::genesis::bitcoin::benchmarks_trustees(),
         )
     };
-    Ok(ChainXDevChainSpec::from_genesis(
+    Ok(DevChainSpec::from_genesis(
         "Benchmarks",
         "dev",
         ChainType::Development,
@@ -200,7 +200,7 @@ pub fn benchmarks_config() -> Result<ChainXDevChainSpec, String> {
     ))
 }
 
-pub fn local_testnet_config() -> Result<ChainXDevChainSpec, String> {
+pub fn local_testnet_config() -> Result<DevChainSpec, String> {
     let wasm_binary =
         dev::WASM_BINARY.ok_or_else(|| "Development wasm binary not available".to_string())?;
 
@@ -233,7 +233,7 @@ pub fn local_testnet_config() -> Result<ChainXDevChainSpec, String> {
             crate::genesis::bitcoin::local_testnet_trustees(),
         )
     };
-    Ok(ChainXDevChainSpec::from_genesis(
+    Ok(DevChainSpec::from_genesis(
         "Local Testnet",
         "local_testnet",
         ChainType::Local,
