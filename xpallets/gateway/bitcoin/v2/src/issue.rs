@@ -50,7 +50,7 @@ pub mod pallet {
         Twox64Concat,
     };
     use frame_system::{
-        ensure_none, ensure_signed,
+        ensure_signed,
         pallet_prelude::{BlockNumberFor, OriginFor},
     };
 
