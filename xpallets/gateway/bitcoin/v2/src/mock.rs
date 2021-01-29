@@ -132,6 +132,7 @@ impl ExtBuilder {
 
         let _ = GenesisBuild::<Test>::assimilate_storage(
             &vault::GenesisConfig {
+                liquidate_vault_id: 100,
                 minimium_vault_collateral,
                 secure_threshold: 300,
                 premium_threshold: 250,

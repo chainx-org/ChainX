@@ -2,7 +2,7 @@
 
 pub mod types {
     use codec::{Decode, Encode};
-    use sp_std::prelude::Vec;
+    use sp_std::{default::Default, prelude::Vec};
 
     pub type BtcAddress = Vec<u8>;
 
@@ -21,6 +21,15 @@ pub mod types {
         fn default() -> Self {
             VaultStatus::Active
         }
+    }
+
+    #[derive(Encode, Decode, Default, Clone, PartialEq)]
+    #[cfg_attr(feature = "std", derive(Debug))]
+    pub struct SystemVault<AccountId, Balance> {
+        pub(crate) id: AccountId,
+        pub(crate) to_be_issued_tokens: Balance,
+        pub(crate) issued_tokens: Balance,
+        pub(crate) to_be_redeemed_tokens: Balance,
     }
 
     #[derive(Encode, Decode, Default, Clone, PartialEq)]
@@ -59,6 +68,8 @@ pub mod types {
 #[frame_support::pallet]
 #[allow(dead_code)]
 pub mod pallet {
+    use sp_std::default::Default;
+
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::{ensure_signed, BlockNumberFor, OriginFor};
 
@@ -189,23 +200,52 @@ pub mod pallet {
     #[pallet::getter(fn liquidation_threshold)]
     pub(crate) type LiquidationThreshold<T: Config> = StorageValue<_, u16, ValueQuery>;
 
+    /// Specicial `LiquidateVault`
+    #[pallet::storage]
+    #[pallet::getter(fn liquidate_vault)]
+    pub(crate) type LiquidateVault<T: Config> =
+        StorageValue<_, SystemVault<T::AccountId, BalanceOf<T>>, ValueQuery>;
+
+    /// `LiquidateVault` account id
+    #[pallet::storage]
+    #[pallet::getter(fn liquidate_vault_id)]
+    pub(crate) type LiquidateVaultId<T: Config> = StorageValue<_, T::AccountId, ValueQuery>;
+
     #[pallet::genesis_config]
-    #[derive(Default)]
-    pub struct GenesisConfig {
+    pub struct GenesisConfig<T: Config> {
         pub(crate) minimium_vault_collateral: u32,
         pub(crate) secure_threshold: u16,
         pub(crate) premium_threshold: u16,
         pub(crate) liquidation_threshold: u16,
+        pub(crate) liquidate_vault_id: T::AccountId,
+    }
+
+    #[cfg(feature = "std")]
+    impl<T: Config> Default for GenesisConfig<T> {
+        fn default() -> Self {
+            Self {
+                minimium_vault_collateral: Default::default(),
+                secure_threshold: 180,
+                premium_threshold: 250,
+                liquidation_threshold: 300,
+                liquidate_vault_id: Default::default(),
+            }
+        }
     }
 
     #[pallet::genesis_build]
-    impl<T: Config> GenesisBuild<T> for GenesisConfig {
+    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
         fn build(&self) {
             let pcx: BalanceOf<T> = self.minimium_vault_collateral.into();
             <MinimiumVaultCollateral<T>>::put(pcx);
             <SecureThreshold<T>>::put(self.secure_threshold);
             <PremiumThreshold<T>>::put(self.premium_threshold);
             <LiquidationThreshold<T>>::put(self.liquidation_threshold);
+            <LiquidateVault<T>>::put(SystemVault {
+                id: self.liquidate_vault_id.clone(),
+                ..Default::default()
+            });
+            <LiquidateVaultId<T>>::put(self.liquidate_vault_id.clone());
         }
     }
 
