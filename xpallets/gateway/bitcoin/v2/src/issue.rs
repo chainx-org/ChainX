@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub mod types {
-    use sp_std::vec::Vec;
+    use sp_std::{default::Default, vec::Vec};
 
     use codec::{Decode, Encode};
 
@@ -17,7 +17,7 @@ pub mod types {
         /// Vault id
         pub(crate) vault: AccountId,
         /// Block height when the issue requested
-        pub(crate) opentime: BlockNumber,
+        pub(crate) open_time: BlockNumber,
         /// Who requests issue
         pub(crate) requester: AccountId,
         /// Vault's btc address
@@ -38,7 +38,7 @@ pub mod types {
 pub mod pallet {
     use sp_arithmetic::Percent;
     use sp_runtime::DispatchError;
-    use sp_std::marker::PhantomData;
+    use sp_std::{default::Default, marker::PhantomData};
 
     #[cfg(feature = "std")]
     use frame_support::traits::GenesisBuild;
@@ -50,7 +50,7 @@ pub mod pallet {
         Twox64Concat,
     };
     use frame_system::{
-        ensure_none, ensure_signed,
+        ensure_root, ensure_signed,
         pallet_prelude::{BlockNumberFor, OriginFor},
     };
 
@@ -101,7 +101,7 @@ pub mod pallet {
                 request_id,
                 IssueRequest::<T> {
                     vault: vault.id,
-                    opentime: height,
+                    open_time: height,
                     requester: sender,
                     btc_address: vault.wallet,
                     btc_amount,
@@ -121,13 +121,40 @@ pub mod pallet {
             let request = Self::get_issue_request_by_id(request_id)
                 .ok_or(Error::<T>::IssueRequestNotFound)?;
             let height = <frame_system::Pallet<T>>::block_number();
-            //TODO(wangyafei): move it to genesis_config
-            let expired_time = 10;
+            let expired_time = <IssueRequestExpiredTime<T>>::get();
             ensure!(
-                height - request.opentime > expired_time.into(),
+                height - request.open_time > expired_time,
                 Error::<T>::IssueRequestNotExpired
             );
-            // <assets::Pallet<T>>::slash_collateral(issue.requester, issue.vault)?
+            // TODO:
+            // <assets::Pallet<T>>::slash_collateral(issue.requester, issue.vault)?;
+            // Self::deposit_event(...);
+            Ok(().into())
+        }
+
+        /// Update expired time for requesting issue
+        #[pallet::weight(0)]
+        pub fn update_expired_time(
+            origin: OriginFor<T>,
+            expired_time: BlockNumberFor<T>,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            <IssueRequestExpiredTime<T>>::put(expired_time);
+            // TODO:
+            // Self::deposit_event(...);
+            Ok(().into())
+        }
+
+        /// Update griefing fee for requesting issue
+        #[pallet::weight(0)]
+        pub fn update_griefing_fee(
+            origin: OriginFor<T>,
+            griefing_fee: Percent,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            <IssueGriefingFee<T>>::put(griefing_fee);
+            // TODO:
+            // Self::deposit_event(...);
             Ok(().into())
         }
     }
@@ -141,12 +168,14 @@ pub mod pallet {
         IssueRequestNotFound,
         /// `IssueRequest` cancelled when it's not expired.
         IssueRequestNotExpired,
+        /// Value to be set is invalid.
+        InvalidConfigValue,
     }
 
     /// Percentage to lock, when user requests issue
     #[pallet::storage]
     #[pallet::getter(fn issue_griefing_fee)]
-    pub(crate) type IssueGriefingFee<T: Config> = StorageValue<_, u8, ValueQuery>;
+    pub(crate) type IssueGriefingFee<T: Config> = StorageValue<_, Percent, ValueQuery>;
 
     /// Auto-increament id to identify each issue request.
     /// Also presents total amount of created requests.
@@ -158,16 +187,29 @@ pub mod pallet {
     pub(crate) type IssueRequests<T: Config> =
         StorageMap<_, Twox64Concat, RequestId, IssueRequest<T>>;
 
-    /// Genesis configure
+    /// Expired time for an `IssueRequest`
+    #[pallet::storage]
+    pub(crate) type IssueRequestExpiredTime<T: Config> =
+        StorageValue<_, BlockNumberFor<T>, ValueQuery>;
+
     #[pallet::genesis_config]
-    #[derive(Default)]
-    pub struct GenesisConfig {
-        /// fee rate for user to request issue. It's locked till the request done or cancelled.
-        pub issue_griefing_fee: u8,
+    pub struct GenesisConfig<T: Config> {
+        pub(crate) issue_griefing_fee: Percent,
+        pub(crate) expired_time: BlockNumberFor<T>,
+    }
+
+    #[cfg(feature = "std")]
+    impl<T: Config> Default for GenesisConfig<T> {
+        fn default() -> Self {
+            Self {
+                issue_griefing_fee: Default::default(),
+                expired_time: Default::default(),
+            }
+        }
     }
 
     #[pallet::genesis_build]
-    impl<T: Config> GenesisBuild<T> for GenesisConfig {
+    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
         fn build(&self) {
             <IssueGriefingFee<T>>::put(self.issue_griefing_fee);
         }
@@ -192,7 +234,7 @@ pub mod pallet {
         ) -> Result<BalanceOf<T>, DispatchError> {
             let pcx_amount = <assets::Pallet<T>>::convert_to_pcx(btc_amount)?;
             let percentage = Self::issue_griefing_fee();
-            let griefing_fee = Percent::from_parts(percentage).mul_ceil(pcx_amount);
+            let griefing_fee = percentage.mul_ceil(pcx_amount);
             Ok(griefing_fee)
         }
 

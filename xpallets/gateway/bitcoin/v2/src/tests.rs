@@ -1,6 +1,11 @@
+use sp_arithmetic::Percent;
+
 use frame_support::{assert_err, assert_ok, dispatch::DispatchResultWithPostInfo};
 
+use crate::assets::types::TradingPrice;
+
 use super::assets::pallet as assets;
+use super::issue::pallet as issue;
 use super::mock::{BuildConfig, ExtBuilder, Origin, Test};
 use super::vault::pallet as vault;
 
@@ -90,6 +95,42 @@ fn test_update_exchange_rate() {
         ));
         let exchange_rate = assets::Pallet::<Test>::exchange_rate();
         assert_eq!(exchange_rate, new_exchange_rate);
+    })
+}
+
+#[test]
+fn test_issue_request() {
+    use super::assets::types::TradingPrice;
+    ExtBuilder::build(BuildConfig::default()).execute_with(|| {
+        register_vault(1, 800, "test").unwrap();
+        issue::Pallet::<Test>::update_expired_time(Origin::root(), 10u64).unwrap();
+        issue::Pallet::<Test>::update_griefing_fee(Origin::root(), Percent::from_parts(10))
+            .unwrap();
+        assets::Pallet::<Test>::force_update_exchange_rate(
+            Origin::root(),
+            TradingPrice {
+                price: 1,
+                decimal: 2,
+            },
+        )
+        .unwrap();
+        assert_err!(
+            issue::Pallet::<Test>::request_issue(Origin::signed(2), 1, 1, 2),
+            issue::Error::<Test>::InsufficientGriefingCollateral
+        );
+        assert_ok!(issue::Pallet::<Test>::request_issue(
+            Origin::signed(2),
+            1,
+            1,
+            100
+        ));
+        let reserved_balance = <<Test as xpallet_assets::Config>::Currency>::reserved_balance(2);
+        assert_eq!(reserved_balance, 100);
+        let issue_request = issue::Pallet::<Test>::get_issue_request_by_id(1).unwrap();
+        assert_eq!(issue_request.griefing_collateral, 100);
+        assert_eq!(issue_request.requester, 2);
+        assert_eq!(issue_request.vault, 1);
+        assert_eq!(issue_request.open_time, 0);
     })
 }
 
