@@ -101,10 +101,10 @@ use self::impls::{ChargeExtraFee, DealWithFees, SlowAdjustingFeeUpdate};
 
 /// This runtime version.
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-    spec_name: create_runtime_str!("chainx"),
-    impl_name: create_runtime_str!("chainx-net"),
+    spec_name: create_runtime_str!("malan"),
+    impl_name: create_runtime_str!("chainx-malan"),
     authoring_version: 1,
-    spec_version: 9,
+    spec_version: 8,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -515,13 +515,13 @@ impl pallet_multisig::Trait for Runtime {
 }
 
 parameter_types! {
-    pub const LaunchPeriod: BlockNumber = 7 * DAYS;
-    pub const VotingPeriod: BlockNumber = 7 * DAYS;
+    pub const LaunchPeriod: BlockNumber = 1 * HOURS;
+    pub const VotingPeriod: BlockNumber = 1 * HOURS;
     pub const FastTrackVotingPeriod: BlockNumber = 3 * HOURS;
     pub const InstantAllowed: bool = true;
     // 10 PCX
     pub const MinimumDeposit: Balance = 1000 * DOLLARS;
-    pub const EnactmentPeriod: BlockNumber = 8 * DAYS;
+    pub const EnactmentPeriod: BlockNumber = 1 * HOURS;
     pub const CooloffPeriod: BlockNumber = 7 * DAYS;
     // One cent: $10,000 / MB
     pub const PreimageByteDeposit: Balance = 1 * CENTS;
