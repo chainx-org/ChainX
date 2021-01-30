@@ -451,7 +451,7 @@ macro_rules! bootnodes {
 
 pub fn malan_config_raw() -> Result<MalanChainSpec, String> {
     let wasm_binary =
-        chainx::WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
+        malan::WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
 
     // 5EWtScne4zWsGaP4gVo8DmLpChVx3MzoQTpKJCEdBTYDA1Dy
     let root_key: AccountId =

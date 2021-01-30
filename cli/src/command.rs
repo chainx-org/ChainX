@@ -50,7 +50,7 @@ fn load_spec(id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
     Ok(match id {
         "" | "mainnet" => Box::new(chain_spec::mainnet_config()?),
         "dev" => Box::new(chain_spec::development_config()?),
-        "malan" | "testnet" => Box::new(chain_spec::malan_config()?),
+        "malan" | "testnet" => Box::new(chain_spec::malan_config_raw()?),
         "local" => Box::new(chain_spec::local_testnet_config()?),
         "benchmarks" => {
             #[cfg(feature = "runtime-benchmarks")]
