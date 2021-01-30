@@ -141,6 +141,19 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        /// Update exchange rate by oracle.
+        #[pallet::weight(0)]
+        pub(crate) fn update_exchange_rate(
+            origin: OriginFor<T>,
+            exchange_rate: TradingPrice,
+        ) -> DispatchResultWithPostInfo {
+            let sender = ensure_signed(origin)?;
+            ensure!(Self::is_oracle(&sender), Error::<T>::OperationForbidden);
+            Self::_update_exchange_rate(exchange_rate.clone())?;
+            Self::deposit_event(Event::<T>::ExchangeRateUpdated(sender, exchange_rate));
+            Ok(().into())
+        }
+
         /// Force update the exchange rate.
         #[pallet::weight(0)]
         pub(crate) fn force_update_exchange_rate(
@@ -162,18 +175,6 @@ pub mod pallet {
             ensure_root(origin)?;
             OracleAccounts::<T>::put(oracles.clone());
             Self::deposit_event(Event::<T>::OracleForceUpdated(oracles));
-            Ok(().into())
-        }
-
-        #[pallet::weight(0)]
-        pub(crate) fn update_exchange_rate(
-            origin: OriginFor<T>,
-            exchange_rate: TradingPrice,
-        ) -> DispatchResultWithPostInfo {
-            let sender = ensure_signed(origin)?;
-            ensure!(Self::is_oracle(&sender), Error::<T>::OperationForbidden);
-            Self::_update_exchange_rate(exchange_rate.clone())?;
-            Self::deposit_event(Event::<T>::ExchangeRateUpdated(sender, exchange_rate));
             Ok(().into())
         }
     }
