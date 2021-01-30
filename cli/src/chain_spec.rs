@@ -16,9 +16,9 @@ use sp_runtime::traits::{IdentifyAccount, Verify};
 
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 
-use chainx_dev_runtime::constants::{currency::DOLLARS as DEV_DOLLARS, time::DAYS as DEV_DAYS};
 use chainx_primitives::{AccountId, AssetId, Balance, ReferralId, Signature};
 use chainx_runtime::constants::currency::DOLLARS;
+use dev_runtime::constants::{currency::DOLLARS as DEV_DOLLARS, time::DAYS as DEV_DAYS};
 use xp_assets_registrar::Chain;
 use xp_protocol::{NetworkType, PCX, PCX_DECIMALS, X_BTC};
 use xpallet_gateway_bitcoin::{BtcParams, BtcTxVerifier};
@@ -27,8 +27,9 @@ use xpallet_gateway_common::types::TrusteeInfoConfig;
 use crate::genesis::assets::{genesis_assets, init_assets, pcx, AssetParams};
 use crate::genesis::bitcoin::{btc_genesis_params, BtcGenesisParams, BtcTrusteeParams};
 
-use chainx_dev_runtime as chainx_dev;
 use chainx_runtime as chainx;
+use dev_runtime as dev;
+use malan_runtime as malan;
 
 // Note this is the URL for the telemetry server
 #[allow(unused)]
@@ -49,11 +50,12 @@ pub struct Extensions {
     pub bad_blocks: sc_client_api::BadBlocks<chainx_primitives::Block>,
 }
 
-/// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
-// pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
-
+/// The `ChainSpec` parameterised for the chainx mainnet runtime.
 pub type ChainXChainSpec = sc_service::GenericChainSpec<chainx::GenesisConfig, Extensions>;
-pub type ChainXDevChainSpec = sc_service::GenericChainSpec<chainx_dev::GenesisConfig, Extensions>;
+/// The `ChainSpec` parameterised for the chainx testnet runtime.
+pub type DevChainSpec = sc_service::GenericChainSpec<dev::GenesisConfig, Extensions>;
+/// The `ChainSpec` parameterised for the chainx development runtime.
+pub type MalanChainSpec = sc_service::GenericChainSpec<malan::GenesisConfig, Extensions>;
 
 type AccountPublic = <Signature as Verify>::Signer;
 
@@ -127,9 +129,9 @@ fn as_properties(network: NetworkType) -> Properties {
     .to_owned()
 }
 
-pub fn development_config() -> Result<ChainXDevChainSpec, String> {
+pub fn development_config() -> Result<DevChainSpec, String> {
     let wasm_binary =
-        chainx_dev::WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
+        dev::WASM_BINARY.ok_or_else(|| "Development wasm binary not available".to_string())?;
 
     let endowed_balance = 50 * DEV_DOLLARS;
     let constructor = move || {
@@ -149,7 +151,7 @@ pub fn development_config() -> Result<ChainXDevChainSpec, String> {
             crate::genesis::bitcoin::local_testnet_trustees(),
         )
     };
-    Ok(ChainXDevChainSpec::from_genesis(
+    Ok(DevChainSpec::from_genesis(
         "Development",
         "dev",
         ChainType::Development,
@@ -163,9 +165,9 @@ pub fn development_config() -> Result<ChainXDevChainSpec, String> {
 }
 
 #[cfg(feature = "runtime-benchmarks")]
-pub fn benchmarks_config() -> Result<ChainXDevChainSpec, String> {
+pub fn benchmarks_config() -> Result<DevChainSpec, String> {
     let wasm_binary =
-        chainx_dev::WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
+        dev::WASM_BINARY.ok_or_else(|| "Development wasm binary not available".to_string())?;
 
     let endowed_balance = 50 * DEV_DOLLARS;
     let constructor = move || {
@@ -185,7 +187,7 @@ pub fn benchmarks_config() -> Result<ChainXDevChainSpec, String> {
             crate::genesis::bitcoin::benchmarks_trustees(),
         )
     };
-    Ok(ChainXDevChainSpec::from_genesis(
+    Ok(DevChainSpec::from_genesis(
         "Benchmarks",
         "dev",
         ChainType::Development,
@@ -198,9 +200,9 @@ pub fn benchmarks_config() -> Result<ChainXDevChainSpec, String> {
     ))
 }
 
-pub fn local_testnet_config() -> Result<ChainXDevChainSpec, String> {
-    let wasm_binary = chainx_dev::WASM_BINARY
-        .ok_or_else(|| "Development wasm binary not available".to_string())?;
+pub fn local_testnet_config() -> Result<DevChainSpec, String> {
+    let wasm_binary =
+        dev::WASM_BINARY.ok_or_else(|| "Development wasm binary not available".to_string())?;
 
     let endowed_balance = 50 * DEV_DOLLARS;
     let constructor = move || {
@@ -231,7 +233,7 @@ pub fn local_testnet_config() -> Result<ChainXDevChainSpec, String> {
             crate::genesis::bitcoin::local_testnet_trustees(),
         )
     };
-    Ok(ChainXDevChainSpec::from_genesis(
+    Ok(DevChainSpec::from_genesis(
         "Local Testnet",
         "local_testnet",
         ChainType::Local,
@@ -248,13 +250,17 @@ pub fn mainnet_config() -> Result<ChainXChainSpec, String> {
     ChainXChainSpec::from_json_bytes(&include_bytes!("./res/chainx.json")[..])
 }
 
-fn chainx_dev_session_keys(
+pub fn malan_config() -> Result<MalanChainSpec, String> {
+    MalanChainSpec::from_json_bytes(&include_bytes!("./res/malan.json")[..])
+}
+
+fn dev_session_keys(
     babe: BabeId,
     grandpa: GrandpaId,
     im_online: ImOnlineId,
     authority_discovery: AuthorityDiscoveryId,
-) -> chainx_dev::SessionKeys {
-    chainx_dev::SessionKeys {
+) -> dev::SessionKeys {
+    dev::SessionKeys {
         grandpa,
         babe,
         im_online,
@@ -271,7 +277,7 @@ fn build_genesis(
     endowed: BTreeMap<AssetId, Vec<(AccountId, Balance)>>,
     bitcoin: BtcGenesisParams,
     trustees: Vec<(Chain, TrusteeInfoConfig, Vec<BtcTrusteeParams>)>,
-) -> chainx_dev::GenesisConfig {
+) -> dev::GenesisConfig {
     const ENDOWMENT: Balance = 10_000_000 * DEV_DOLLARS;
     const STASH: Balance = 100 * DEV_DOLLARS;
     const STAKING_LOCKED: Balance = 1_000 * DEV_DOLLARS;
@@ -343,53 +349,53 @@ fn build_genesis(
         })
         .expect("bitcoin trustees generation can not fail; qed");
 
-    chainx_dev::GenesisConfig {
-        frame_system: Some(chainx_dev::SystemConfig {
+    dev::GenesisConfig {
+        frame_system: Some(dev::SystemConfig {
             code: wasm_binary.to_vec(),
             changes_trie_config: Default::default(),
         }),
         pallet_babe: Some(Default::default()),
-        pallet_grandpa: Some(chainx_dev::GrandpaConfig {
+        pallet_grandpa: Some(dev::GrandpaConfig {
             authorities: vec![],
         }),
-        pallet_collective_Instance1: Some(chainx_dev::CouncilConfig::default()),
-        pallet_collective_Instance2: Some(chainx_dev::TechnicalCommitteeConfig {
+        pallet_collective_Instance1: Some(dev::CouncilConfig::default()),
+        pallet_collective_Instance2: Some(dev::TechnicalCommitteeConfig {
             members: tech_comm_members,
             phantom: Default::default(),
         }),
         pallet_membership_Instance1: Some(Default::default()),
-        pallet_democracy: Some(chainx_dev::DemocracyConfig::default()),
+        pallet_democracy: Some(dev::DemocracyConfig::default()),
         pallet_treasury: Some(Default::default()),
-        pallet_elections_phragmen: Some(chainx_dev::ElectionsConfig {
+        pallet_elections_phragmen: Some(dev::ElectionsConfig {
             members: phragmen_members,
         }),
-        pallet_im_online: Some(chainx_dev::ImOnlineConfig { keys: vec![] }),
-        pallet_authority_discovery: Some(chainx_dev::AuthorityDiscoveryConfig { keys: vec![] }),
-        pallet_session: Some(chainx_dev::SessionConfig {
+        pallet_im_online: Some(dev::ImOnlineConfig { keys: vec![] }),
+        pallet_authority_discovery: Some(dev::AuthorityDiscoveryConfig { keys: vec![] }),
+        pallet_session: Some(dev::SessionConfig {
             keys: initial_authorities
                 .iter()
                 .map(|x| {
                     (
                         (x.0).0.clone(),
                         (x.0).0.clone(),
-                        chainx_dev_session_keys(x.1.clone(), x.2.clone(), x.3.clone(), x.4.clone()),
+                        dev_session_keys(x.1.clone(), x.2.clone(), x.3.clone(), x.4.clone()),
                     )
                 })
                 .collect::<Vec<_>>(),
         }),
-        pallet_balances: Some(chainx_dev::BalancesConfig { balances }),
-        pallet_indices: Some(chainx_dev::IndicesConfig { indices: vec![] }),
-        pallet_sudo: Some(chainx_dev::SudoConfig { key: root_key }),
-        xpallet_system: Some(chainx_dev::XSystemConfig {
+        pallet_balances: Some(dev::BalancesConfig { balances }),
+        pallet_indices: Some(dev::IndicesConfig { indices: vec![] }),
+        pallet_sudo: Some(dev::SudoConfig { key: root_key }),
+        xpallet_system: Some(dev::XSystemConfig {
             network_props: NetworkType::Testnet,
         }),
-        xpallet_assets_registrar: Some(chainx_dev::XAssetsRegistrarConfig { assets }),
-        xpallet_assets: Some(chainx_dev::XAssetsConfig {
+        xpallet_assets_registrar: Some(dev::XAssetsRegistrarConfig { assets }),
+        xpallet_assets: Some(dev::XAssetsConfig {
             assets_restrictions,
             endowed: assets_endowed,
         }),
-        xpallet_gateway_common: Some(chainx_dev::XGatewayCommonConfig { trustees }),
-        xpallet_gateway_bitcoin: Some(chainx_dev::XGatewayBitcoinConfig {
+        xpallet_gateway_common: Some(dev::XGatewayCommonConfig { trustees }),
+        xpallet_gateway_bitcoin: Some(dev::XGatewayBitcoinConfig {
             genesis_trustees: btc_genesis_trustees,
             network_id: bitcoin.network,
             confirmation_number: bitcoin.confirmation_number,
@@ -406,7 +412,7 @@ fn build_genesis(
             max_withdrawal_count: 100,
             verifier: BtcTxVerifier::Recover,
         }),
-        xpallet_mining_staking: Some(chainx_dev::XStakingConfig {
+        xpallet_mining_staking: Some(dev::XStakingConfig {
             validators,
             validator_count: 50,
             sessions_per_era: 12,
@@ -416,14 +422,14 @@ fn build_genesis(
             minimum_penalty: 2 * DOLLARS,
             ..Default::default()
         }),
-        xpallet_mining_asset: Some(chainx_dev::XMiningAssetConfig {
+        xpallet_mining_asset: Some(dev::XMiningAssetConfig {
             claim_restrictions: vec![(X_BTC, (10, DEV_DAYS * 7))],
             mining_power_map: vec![(X_BTC, 400)],
         }),
-        xpallet_dex_spot: Some(chainx_dev::XSpotConfig {
+        xpallet_dex_spot: Some(dev::XSpotConfig {
             trading_pairs: vec![(PCX, X_BTC, 9, 2, 100000, true)],
         }),
-        xpallet_genesis_builder: Some(chainx_dev::XGenesisBuilderConfig {
+        xpallet_genesis_builder: Some(dev::XGenesisBuilderConfig {
             params: crate::genesis::genesis_builder_params(),
             initial_authorities_endowed,
             root_endowed: 0,

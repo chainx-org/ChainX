@@ -1,5 +1,5 @@
 [package]
-name = "chainx-dev-runtime"
+name = "dev-runtime"
 version = "2.0.8-1"
 authors = ["The ChainX Authors"]
 edition = "2018"
