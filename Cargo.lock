@@ -684,20 +684,20 @@ dependencies = [
 
 [[package]]
 name = "chainx"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-cli",
 ]
 
 [[package]]
 name = "chainx-cli"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
- "chainx-dev-runtime",
  "chainx-executor",
  "chainx-primitives",
  "chainx-rpc",
  "chainx-runtime",
+ "dev-runtime",
  "frame-benchmarking-cli",
  "futures 0.3.8",
  "hex",
@@ -705,6 +705,7 @@ dependencies = [
  "jsonrpc-pubsub",
  "log",
  "log4rs",
+ "malan-runtime",
  "pallet-im-online",
  "parking_lot 0.11.0",
  "sc-authority-discovery",
@@ -742,90 +743,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "chainx-dev-runtime"
-version = "2.0.8"
-dependencies = [
- "chainx-primitives",
- "frame-benchmarking 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "frame-executive",
- "frame-support",
- "frame-system",
- "frame-system-benchmarking",
- "frame-system-rpc-runtime-api",
- "hex-literal",
- "orml-currencies",
- "orml-traits",
- "pallet-authority-discovery",
- "pallet-authorship",
- "pallet-babe",
- "pallet-balances",
- "pallet-collective",
- "pallet-democracy",
- "pallet-elections-phragmen",
- "pallet-grandpa",
- "pallet-identity",
- "pallet-im-online",
- "pallet-indices",
- "pallet-membership",
- "pallet-multisig",
- "pallet-offences",
- "pallet-randomness-collective-flip",
- "pallet-scheduler",
- "pallet-session",
- "pallet-sudo",
- "pallet-timestamp",
- "pallet-transaction-payment",
- "pallet-transaction-payment-rpc-runtime-api",
- "pallet-treasury",
- "pallet-utility",
- "parity-scale-codec",
- "serde",
- "smallvec 1.4.2",
- "sp-api",
- "sp-authority-discovery",
- "sp-block-builder",
- "sp-consensus-babe",
- "sp-core",
- "sp-inherents",
- "sp-io",
- "sp-offchain",
- "sp-runtime",
- "sp-session",
- "sp-std",
- "sp-transaction-pool",
- "sp-version",
- "static_assertions",
- "substrate-wasm-builder-runner",
- "xp-gateway-bitcoin",
- "xp-logging",
- "xp-mining-staking",
- "xp-protocol",
- "xp-runtime",
- "xpallet-assets",
- "xpallet-assets-registrar",
- "xpallet-assets-rpc-runtime-api",
- "xpallet-dex-spot",
- "xpallet-dex-spot-rpc-runtime-api",
- "xpallet-gateway-bitcoin",
- "xpallet-gateway-bitcoin-offchain",
- "xpallet-gateway-common",
- "xpallet-gateway-common-rpc-runtime-api",
- "xpallet-gateway-records",
- "xpallet-gateway-records-rpc-runtime-api",
- "xpallet-genesis-builder",
- "xpallet-mining-asset",
- "xpallet-mining-asset-rpc-runtime-api",
- "xpallet-mining-staking",
- "xpallet-mining-staking-rpc-runtime-api",
- "xpallet-support",
- "xpallet-system",
- "xpallet-transaction-fee",
- "xpallet-transaction-fee-rpc-runtime-api",
-]
-
-[[package]]
 name = "chainx-executor"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-runtime",
  "frame-benchmarking 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -835,7 +754,7 @@ dependencies = [
 
 [[package]]
 name = "chainx-primitives"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -848,7 +767,7 @@ dependencies = [
 
 [[package]]
 name = "chainx-rpc"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "chainx-runtime",
@@ -895,7 +814,7 @@ dependencies = [
 
 [[package]]
 name = "chainx-runtime"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "frame-benchmarking 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1376,6 +1295,88 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "dev-runtime"
+version = "2.0.8-1"
+dependencies = [
+ "chainx-primitives",
+ "frame-benchmarking 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-executive",
+ "frame-support",
+ "frame-system",
+ "frame-system-benchmarking",
+ "frame-system-rpc-runtime-api",
+ "hex-literal",
+ "orml-currencies",
+ "orml-traits",
+ "pallet-authority-discovery",
+ "pallet-authorship",
+ "pallet-babe",
+ "pallet-balances",
+ "pallet-collective",
+ "pallet-democracy",
+ "pallet-elections-phragmen",
+ "pallet-grandpa",
+ "pallet-identity",
+ "pallet-im-online",
+ "pallet-indices",
+ "pallet-membership",
+ "pallet-multisig",
+ "pallet-offences",
+ "pallet-randomness-collective-flip",
+ "pallet-scheduler",
+ "pallet-session",
+ "pallet-sudo",
+ "pallet-timestamp",
+ "pallet-transaction-payment",
+ "pallet-transaction-payment-rpc-runtime-api",
+ "pallet-treasury",
+ "pallet-utility",
+ "parity-scale-codec",
+ "serde",
+ "smallvec 1.4.2",
+ "sp-api",
+ "sp-authority-discovery",
+ "sp-block-builder",
+ "sp-consensus-babe",
+ "sp-core",
+ "sp-inherents",
+ "sp-io",
+ "sp-offchain",
+ "sp-runtime",
+ "sp-session",
+ "sp-std",
+ "sp-transaction-pool",
+ "sp-version",
+ "static_assertions",
+ "substrate-wasm-builder-runner",
+ "xp-gateway-bitcoin",
+ "xp-logging",
+ "xp-mining-staking",
+ "xp-protocol",
+ "xp-runtime",
+ "xpallet-assets",
+ "xpallet-assets-registrar",
+ "xpallet-assets-rpc-runtime-api",
+ "xpallet-dex-spot",
+ "xpallet-dex-spot-rpc-runtime-api",
+ "xpallet-gateway-bitcoin",
+ "xpallet-gateway-bitcoin-offchain",
+ "xpallet-gateway-common",
+ "xpallet-gateway-common-rpc-runtime-api",
+ "xpallet-gateway-records",
+ "xpallet-gateway-records-rpc-runtime-api",
+ "xpallet-genesis-builder",
+ "xpallet-mining-asset",
+ "xpallet-mining-asset-rpc-runtime-api",
+ "xpallet-mining-staking",
+ "xpallet-mining-staking-rpc-runtime-api",
+ "xpallet-support",
+ "xpallet-system",
+ "xpallet-transaction-fee",
+ "xpallet-transaction-fee-rpc-runtime-api",
 ]
 
 [[package]]
@@ -3664,6 +3665,87 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b823e83b2affd8f40a9ee8c29dbc56404c1e34cd2710921f2801e2cf29527afa"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "malan-runtime"
+version = "2.0.8-1"
+dependencies = [
+ "chainx-primitives",
+ "frame-benchmarking 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-executive",
+ "frame-support",
+ "frame-system",
+ "frame-system-benchmarking",
+ "frame-system-rpc-runtime-api",
+ "hex-literal",
+ "orml-currencies",
+ "orml-traits",
+ "pallet-authority-discovery",
+ "pallet-authorship",
+ "pallet-babe",
+ "pallet-balances",
+ "pallet-collective",
+ "pallet-democracy",
+ "pallet-elections-phragmen",
+ "pallet-grandpa",
+ "pallet-identity",
+ "pallet-im-online",
+ "pallet-indices",
+ "pallet-membership",
+ "pallet-multisig",
+ "pallet-offences",
+ "pallet-randomness-collective-flip",
+ "pallet-scheduler",
+ "pallet-session",
+ "pallet-sudo",
+ "pallet-timestamp",
+ "pallet-transaction-payment",
+ "pallet-transaction-payment-rpc-runtime-api",
+ "pallet-treasury",
+ "pallet-utility",
+ "parity-scale-codec",
+ "serde",
+ "smallvec 1.4.2",
+ "sp-api",
+ "sp-authority-discovery",
+ "sp-block-builder",
+ "sp-consensus-babe",
+ "sp-core",
+ "sp-inherents",
+ "sp-io",
+ "sp-offchain",
+ "sp-runtime",
+ "sp-session",
+ "sp-std",
+ "sp-transaction-pool",
+ "sp-version",
+ "static_assertions",
+ "substrate-wasm-builder-runner",
+ "xp-gateway-bitcoin",
+ "xp-logging",
+ "xp-mining-staking",
+ "xp-protocol",
+ "xp-runtime",
+ "xpallet-assets",
+ "xpallet-assets-registrar",
+ "xpallet-assets-rpc-runtime-api",
+ "xpallet-dex-spot",
+ "xpallet-dex-spot-rpc-runtime-api",
+ "xpallet-gateway-bitcoin",
+ "xpallet-gateway-common",
+ "xpallet-gateway-common-rpc-runtime-api",
+ "xpallet-gateway-records",
+ "xpallet-gateway-records-rpc-runtime-api",
+ "xpallet-genesis-builder",
+ "xpallet-mining-asset",
+ "xpallet-mining-asset-rpc-runtime-api",
+ "xpallet-mining-staking",
+ "xpallet-mining-staking-rpc-runtime-api",
+ "xpallet-support",
+ "xpallet-system",
+ "xpallet-transaction-fee",
+ "xpallet-transaction-fee-rpc-runtime-api",
 ]
 
 [[package]]
@@ -9004,7 +9086,7 @@ dependencies = [
 
 [[package]]
 name = "xp-assets-registrar"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "impl-trait-for-tuples",
@@ -9016,7 +9098,7 @@ dependencies = [
 
 [[package]]
 name = "xp-gateway-bitcoin"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "frame-support",
@@ -9033,7 +9115,7 @@ dependencies = [
 
 [[package]]
 name = "xp-gateway-common"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "bs58 0.3.1",
  "frame-support",
@@ -9045,7 +9127,7 @@ dependencies = [
 
 [[package]]
 name = "xp-genesis-builder"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "serde",
@@ -9054,7 +9136,7 @@ dependencies = [
 
 [[package]]
 name = "xp-io"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "hex",
  "parity-scale-codec",
@@ -9065,11 +9147,11 @@ dependencies = [
 
 [[package]]
 name = "xp-logging"
-version = "2.0.8"
+version = "2.0.8-1"
 
 [[package]]
 name = "xp-mining-common"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "sp-arithmetic",
@@ -9078,7 +9160,7 @@ dependencies = [
 
 [[package]]
 name = "xp-mining-staking"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "sp-runtime",
@@ -9088,7 +9170,7 @@ dependencies = [
 
 [[package]]
 name = "xp-protocol"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "parity-scale-codec",
@@ -9098,7 +9180,7 @@ dependencies = [
 
 [[package]]
 name = "xp-rpc"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "hex",
  "jsonrpc-core",
@@ -9108,7 +9190,7 @@ dependencies = [
 
 [[package]]
 name = "xp-runtime"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "hex",
  "parity-scale-codec",
@@ -9120,7 +9202,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-assets"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "bitflags",
  "chainx-primitives",
@@ -9144,7 +9226,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-assets-registrar"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "frame-benchmarking 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -9166,7 +9248,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-assets-rpc"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -9181,7 +9263,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-assets-rpc-runtime-api"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "parity-scale-codec",
@@ -9192,7 +9274,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-dex-spot"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "env_logger",
@@ -9216,7 +9298,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-dex-spot-rpc"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -9232,7 +9314,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-dex-spot-rpc-runtime-api"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
@@ -9242,7 +9324,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-gateway-bitcoin"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "bs58 0.3.1",
  "chainx-primitives",
@@ -9309,7 +9391,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-gateway-common"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "frame-benchmarking 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -9340,7 +9422,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-gateway-common-rpc"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "hex",
  "jsonrpc-core",
@@ -9356,7 +9438,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-gateway-common-rpc-runtime-api"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "parity-scale-codec",
@@ -9370,7 +9452,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-gateway-records"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "frame-benchmarking 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -9394,7 +9476,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-gateway-records-rpc"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -9410,7 +9492,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-gateway-records-rpc-runtime-api"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "parity-scale-codec",
@@ -9422,7 +9504,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-genesis-builder"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "frame-support",
@@ -9443,7 +9525,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-mining-asset"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "env_logger",
@@ -9472,7 +9554,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-mining-asset-rpc"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -9487,7 +9569,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-mining-asset-rpc-runtime-api"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "parity-scale-codec",
@@ -9498,7 +9580,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-mining-staking"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "env_logger",
@@ -9528,7 +9610,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-mining-staking-rpc"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -9543,7 +9625,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-mining-staking-rpc-runtime-api"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
@@ -9553,7 +9635,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-support"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "hex",
  "sp-std",
@@ -9561,7 +9643,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-system"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -9574,7 +9656,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-transaction-fee"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -9587,7 +9669,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-transaction-fee-rpc"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -9605,7 +9687,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-transaction-fee-rpc-runtime-api"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "parity-scale-codec",
  "sp-api",

@@ -1,6 +1,6 @@
 [package]
 name = "chainx"
-version = "2.0.8"
+version = "2.0.8-1"
 authors = ["The ChainX Authors"]
 edition = "2018"
 description = "Fully Decentralized Interchain Crypto Asset Management on Polkadot"
@@ -115,6 +115,7 @@ members = [
     "rpc",
     "runtime/chainx",
     "runtime/dev",
+    "runtime/malan",
 
     "xpallets/assets",
     "xpallets/assets/rpc",

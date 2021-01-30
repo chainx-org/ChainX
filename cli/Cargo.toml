@@ -1,6 +1,6 @@
 [package]
 name = "chainx-cli"
-version = "2.0.8"
+version = "2.0.8-1"
 authors = ["The ChainX Authors"]
 description = "Implementation of protocol https://chainx.org in Rust based on the Substrate framework."
 edition = "2018"
@@ -49,10 +49,11 @@ sp-authority-discovery = "2.0.0"
 pallet-im-online = "2.0.0"
 
 chainx-executor = { path = "../executor" }
-chainx-dev-runtime = { path = "../runtime/dev" }
 chainx-primitives = { path = "../primitives" }
 chainx-rpc = { path = "../rpc" }
 chainx-runtime = { path = "../runtime/chainx" }
+dev-runtime = { path = "../runtime/dev" }
+malan-runtime = { path = "../runtime/malan" }
 
 xp-assets-registrar = { path  = "../primitives/assets-registrar" }
 xp-genesis-builder = { path  = "../primitives/genesis-builder" }
@@ -80,5 +81,6 @@ wasmtime = [
 ]
 runtime-benchmarks = [
     "chainx-runtime/runtime-benchmarks",
-    "chainx-dev-runtime/runtime-benchmarks",
+    "dev-runtime/runtime-benchmarks",
+    "malan-runtime/runtime-benchmarks",
 ]
