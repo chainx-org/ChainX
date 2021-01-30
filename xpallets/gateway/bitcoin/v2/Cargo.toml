@@ -49,4 +49,6 @@ std = [
   "frame-system/std",
   "xpallet-assets/std",
   "xpallet-assets-registrar/std",
+  # light-bitcoin
+  "light-bitcoin/std",
 ]
