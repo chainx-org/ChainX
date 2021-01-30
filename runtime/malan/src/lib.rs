@@ -758,6 +758,11 @@ impl pallet_identity::Trait for Runtime {
     type WeightInfo = pallet_identity::weights::SubstrateWeight<Runtime>;
 }
 
+impl pallet_sudo::Trait for Runtime {
+    type Event = Event;
+    type Call = Call;
+}
+
 ///////////////////////////////////////////
 // orml
 ///////////////////////////////////////////
@@ -956,6 +961,8 @@ construct_runtime!(
         // It might be possible to merge this module into pallet_transaction_payment in future, thus
         // we put it at the end for keeping the extrinsic ordering.
         XTransactionFee: xpallet_transaction_fee::{Module, Event<T>} = 35,
+
+        Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
     }
 );
 
