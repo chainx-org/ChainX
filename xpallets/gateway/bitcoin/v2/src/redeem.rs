@@ -5,6 +5,7 @@ pub mod types {
     use sp_std::vec::Vec;
 
     pub type BtcAddress = Vec<u8>;
+    pub type RedeemRequestIdentify = Vec<u8>;
 
     /// redeem request status
     #[derive(Encode, Decode, PartialEq, Eq)]
@@ -29,8 +30,10 @@ pub mod types {
     #[derive(Encode, Decode, Default, PartialEq, Eq)]
     #[cfg_attr(feature = "std", derive(Debug))]
     pub struct RedeemRequest<AccountId, BlockNumber, XBTC, PCX> {
+        /// Vault id
+        pub(crate) vault: AccountId,
         /// Block height when the redeem requested
-        pub(crate) opentime: BlockNumber,
+        pub(crate) open_time: BlockNumber,
         /// Who requests redeem
         pub(crate) requester: AccountId,
         /// Vault's btc address
@@ -48,7 +51,6 @@ pub mod types {
 #[allow(dead_code)]
 pub mod pallet {
 
-    use assets::BridgeStatus;
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         ensure,
@@ -61,11 +63,10 @@ pub mod pallet {
         pallet_prelude::{BlockNumberFor, OriginFor},
     };
     use sp_runtime::DispatchError;
-    use sp_std::{convert::TryInto, marker::PhantomData};
+    use sp_std::{convert::TryInto, marker::PhantomData, vec::Vec};
 
     // import vault,issue,assets code.
-    use crate::assets::pallet as assetspallet;
-    use crate::assets::{pallet as assets, pallet::BalanceOf};
+    use crate::assets::{pallet as assetspallet, pallet::BalanceOf, pallet::BridgeStatus};
     use crate::issue::pallet as issuepallet;
     use crate::vault::pallet as vaultpallet;
 
@@ -81,7 +82,7 @@ pub mod pallet {
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + issuepallet::Config {
+    pub trait Config: frame_system::Config + issuepallet::Config + xpallet_assets::Config {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
 
@@ -89,6 +90,8 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T: Config> {
+        /// current chain status is not right
+        ChainStatusErro,
         /// redeem request is accepted
         RedeemRequestIsAccepted,
         /// cancle redeem is accepted
@@ -102,6 +105,12 @@ pub mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
+        /// redeem request id is not exsit
+        RedeemNotExist,
+
+        /// `RedeemRequest` cancelled for forced redeem when it's not expired.
+        RedeemRequestNotExpired,
+
         /// Vault is under Liquidation
         ValtLiquidated,
 
@@ -127,7 +136,12 @@ pub mod pallet {
     /// Mapping from redeem id to `RedeemRequest`
     #[pallet::storage]
     pub(crate) type RedeemRequests<T: Config> =
-        StorageMap<_, Twox64Concat, T::AccountId, RedeemRequest<T>>;
+        StorageMap<_, Twox64Concat, super::types::RedeemRequestIdentify, RedeemRequest<T>>;
+
+    /// Expired time for an `RedeemRequest`
+    #[pallet::storage]
+    pub(crate) type RedeemRequestExpiredTime<T: Config> =
+        StorageValue<_, BlockNumberFor<T>, ValueQuery>;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -135,42 +149,49 @@ pub mod pallet {
         #[pallet::weight(0)]
         pub fn request_redeem(
             origin: OriginFor<T>,
+            vault_id: T::AccountId,
             redeem_amount: BalanceOf<T>,
             btc_addr: super::types::BtcAddress,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             let height = <frame_system::Pallet<T>>::block_number();
+            let vault = vaultpallet::Pallet::<T>::get_active_vault_by_id(&vault_id)?;
 
-            // Assign valt id by random
-            // let vault_id: T::AccountId = Self::get_vaultid_by_redeem(&sender, redeem_amount);
-            // let vault = vaultpallet::Pallet::<T>::get_active_vault_by_id(&vault_id)?;
-
-            //check current bridge if is Liquidated
+            //check current bridge status
             let bridge_status = <BridgeStatus<T>>::get();
             match bridge_status {
-                crate::assets::types::Status::Running => {
-                    // to od ..
-                }
+                crate::assets::types::Status::Running => {}
                 crate::assets::types::Status::Error => {
-                    // to od ..
+                    Self::deposit_event(Event::<T>::ChainStatusErro);
+                    return Ok(().into());
                 }
                 crate::assets::types::Status::Shutdown => {
-                    // to od ..
+                    Self::deposit_event(Event::<T>::ChainStatusErro);
+                    return Ok(().into());
                 }
             }
 
-            // add the vault xbtc count
+            // decrase user's XBTC amount
+
+            // decrese vault's lock collateral.
+            let worth_pcx = assetspallet::Pallet::<T>::convert_to_pcx(redeem_amount)?;
+            assetspallet::Pallet::<T>::lock_collateral(&vault_id, worth_pcx)?;
 
             // tell vault to transfer btc to this btc_addr
 
+            // generate redeem request identify
+            let redeemid: super::types::RedeemRequestIdentify = Vec::new();
+            let redeemidentify: super::types::RedeemRequestIdentify = redeemid;
+
             // insert RedeemRequest into map
             <RedeemRequests<T>>::insert(
-                sender.clone(),
+                redeemidentify,
                 RedeemRequest::<T> {
-                    opentime: height,
+                    vault: vault_id,
+                    open_time: height,
                     requester: sender,
                     btc_address: btc_addr,
-                    amount: Default::default(),
+                    amount: redeem_amount,
                     redeem_fee: Default::default(),
                     status: super::types::RedeemRequestStatus::WaitForGetBtc,
                 },
@@ -187,36 +208,28 @@ pub mod pallet {
 
         /// user cancle redeem
         #[pallet::weight(0)]
-        pub fn cancle_redeem(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+        pub fn cancle_redeem(
+            origin: OriginFor<T>,
+            redeemid: super::types::RedeemRequestIdentify,
+        ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             let height = <frame_system::Pallet<T>>::block_number();
+            let request = <RedeemRequests<T>>::get(redeemid).ok_or(Error::<T>::RedeemNotExist)?;
+            let expired_time = <RedeemRequestExpiredTime<T>>::get();
+            ensure!(
+                height - request.open_time > expired_time,
+                Error::<T>::RedeemRequestNotExpired
+            );
+            ensure!(
+                request.status != super::types::RedeemRequestStatus::Cancled,
+                Error::<T>::CancleRedeemErrOfCancled
+            );
+            ensure!(
+                request.status != super::types::RedeemRequestStatus::Completed,
+                Error::<T>::CancleRedeemErrOfCompleted
+            );
 
-            // check user`s redeem status
-            let user_redeem = <RedeemRequests<T>>::get(&sender);
-            match user_redeem {
-                Some(re) => {
-                    match re.status {
-                        WaitForGetBtc => {
-                            // redeem can be cancled.
-
-                            // subtract the vault xbtc count.
-
-                            // tell vault do not transfer btc to user btc addr
-                        }
-                        Cancled => {
-                            // redeem is already cancled. can not be cancled twice
-
-                            // to do...
-                        }
-                        completed => {
-                            // redeem is already completed. vault has given btc to user`s btc address.
-
-                            // to do...
-                        }
-                    }
-                }
-                None => (),
-            }
+            // add user'XBTC amount
 
             // send msg to user
             Self::deposit_event(Event::<T>::CancleRedeemIsAccepted);
@@ -226,36 +239,34 @@ pub mod pallet {
 
         /// user force redeem. when user do this means he can get pcx only.
         #[pallet::weight(0)]
-        pub fn force_redeem(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+        pub fn force_redeem(
+            origin: OriginFor<T>,
+            redeemid: super::types::RedeemRequestIdentify,
+        ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             let height = <frame_system::Pallet<T>>::block_number();
+            let request = <RedeemRequests<T>>::get(redeemid).ok_or(Error::<T>::RedeemNotExist)?;
+            let expired_time = <RedeemRequestExpiredTime<T>>::get();
+            ensure!(
+                height - request.open_time > expired_time,
+                Error::<T>::RedeemRequestNotExpired
+            );
+            ensure!(
+                request.status != super::types::RedeemRequestStatus::Cancled,
+                Error::<T>::CancleRedeemErrOfCancled
+            );
+            ensure!(
+                request.status != super::types::RedeemRequestStatus::Completed,
+                Error::<T>::CancleRedeemErrOfCompleted
+            );
 
-            // check user`s redeem status
-            let user_redeem = <RedeemRequests<T>>::get(&sender);
-            match user_redeem {
-                Some(re) => {
-                    match re.status {
-                        WaitForGetBtc => {
-                            // redeem can be cancled.
+            // catulate user's XBTC worth how much pcx, then give he the pcx
+            let worth_pcx = assetspallet::Pallet::<T>::convert_to_pcx(request.amount)?;
 
-                            // subtract the vault xbtc count.
+            // add user pcx amount of worth_pcx.then we should sub who's pcx ????
+            assetspallet::Pallet::<T>::slash_collateral(&sender, &sender, worth_pcx);
 
-                            // tell vault do not transfer btc to user btc addr
-                        }
-                        Cancled => {
-                            // redeem is already cancled. can not be force redeem
-
-                            // to do...
-                        }
-                        completed => {
-                            // redeem is already completed.
-
-                            // to do...
-                        }
-                    }
-                }
-                None => (),
-            }
+            // notice(how to give phone msg or mail msg?) the vault that the user's force redeem action
 
             // send msg to user
             Self::deposit_event(Event::<T>::ForceRedeemIsAccepted);
@@ -265,16 +276,9 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
-        /// get correct vault to serve redeem request
-        // fn get_vaultid_by_redeem(user: &T::AccountId, redeem_amount: BalanceOf<T>) -> Result<vaultpallet::Vault<T::AccountId, T::BlockNumber, BalanceOf<T>>, DispatchError> {
-        //     /// to do ...
-        //     //let vt = vaultpallet::get_vault_by_id(user);
-        //     Ok(())
-        // }
-
         /// caculate redeem fee
-        fn caculate_redeem_fee(redeem_amount: BalanceOf<T>) -> u8 {
-            /// to do ...
+        fn caculate_redeem_fee(redeem_amount: BalanceOf<T>) -> u128 {
+            // to do ...
             0
         }
     }
