@@ -76,7 +76,7 @@ pub mod pallet {
 
     use super::types::*;
     use crate::assets::pallet as assets;
-    use assets::{BalanceOf, CollateralLender};
+    use assets::BalanceOf;
 
     #[pallet::config]
     pub trait Config: frame_system::Config + assets::Config {
@@ -294,6 +294,9 @@ pub mod pallet {
             }
         }
 
+        /// Liquidate vault and mark it as `Liquidated`
+        ///
+        /// Liquidated vault cannot be updated.
         pub(crate) fn liquidate_vault(id: &T::AccountId) -> Result<(), DispatchError> {
             <Vaults<T>>::mutate(id, |vault| match vault {
                 Some(ref mut vault) => {
@@ -308,8 +311,7 @@ pub mod pallet {
             })?;
 
             let vault = Self::get_vault_by_id(id)?;
-
-            let collateral = CollateralLender::<T>::get_collateral(&vault);
+            let collateral = <assets::CurrencyOf<T>>::reserved_balance(&vault.id);
             <assets::Pallet<T>>::slash_collateral(&vault.id, &Self::liquidator_id(), collateral)?;
 
             <Liquidator<T>>::mutate(|liquidator| {
@@ -320,12 +322,4 @@ pub mod pallet {
             Ok(())
         }
     }
-
-    impl<T: Config> CollateralLender<T> for Vault<T::AccountId, T::BlockNumber, BalanceOf<T>> {
-        fn get_collateral(&self) -> BalanceOf<T> {
-            <assets::CurrencyOf<T>>::reserved_balance(&self.id)
-        }
-    }
-
-    //TODO: pub trait UpdatableVault<T: Config>
 }

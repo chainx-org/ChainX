@@ -292,14 +292,6 @@ pub mod pallet {
             oracles.contains(account)
         }
 
-        pub(crate) fn _update_exchange_rate(exchange_rate: TradingPrice) -> DispatchResult {
-            // TODO: sanity check?
-            <ExchangeRate<T>>::put(exchange_rate);
-            let height = <frame_system::Pallet<T>>::block_number();
-            <ExchangeRateUpdateTime<T>>::put(height);
-            Ok(())
-        }
-
         /// Slash collateral to receiver
         pub fn slash_collateral(
             sender: &T::AccountId,
@@ -319,9 +311,13 @@ pub mod pallet {
             // Self::deposit_event(...);
             Ok(().into())
         }
-    }
 
-    pub(crate) trait CollateralLender<T: Config> {
-        fn get_collateral(&self) -> BalanceOf<T>;
+        pub(crate) fn _update_exchange_rate(exchange_rate: TradingPrice) -> DispatchResult {
+            // TODO: sanity check?
+            <ExchangeRate<T>>::put(exchange_rate);
+            let height = <frame_system::Pallet<T>>::block_number();
+            <ExchangeRateUpdateTime<T>>::put(height);
+            Ok(())
+        }
     }
 }
