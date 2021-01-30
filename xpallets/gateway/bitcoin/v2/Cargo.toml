@@ -13,6 +13,7 @@ impl-trait-for-tuples = "0.2.0"
 serde = { version = "1.0.101", optional = true, features = ["derive"] }
 sha2 = { version = "0.8.0", default-features = false }
 
+# Substrate
 sp-arithmetic = { version = "2.0.1", default-features = false }
 sp-core = { version = "2.0.1", default-features = false }
 sp-io = { version = "2.0.1", default-features = false }
@@ -22,12 +23,14 @@ sp-std = { version = "2.0.1", default-features = false }
 sp-version = { version = "2.0.1", default-features = false }
 frame-support = { version = "2.0.1", default-features = false }
 frame-system = { version = "2.0.1", default-features = false }
+pallet-balances = "2.0.1"
 
+# ChainX pallet
 xpallet-assets = { path = "../../../assets", default-features = false }
 xpallet-assets-registrar = { path = "../../../assets-registrar", default-features = false }
 
-[dev-dependencies]
-pallet-balances = "2.0.1"
+# light-bitcoin
+light-bitcoin = { git = "https://github.com/chainx-org/light-bitcoin", branch = "master", default-features = false }
 
 [features]
 default = ["std"]
