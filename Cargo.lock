@@ -564,9 +564,9 @@ dependencies = [
 
 [[package]]
 name = "bumpalo"
-version = "3.5.0"
+version = "3.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f07aa6688c702439a1be0307b6a94dffe1168569e45b9500c1372bc580740d59"
+checksum = "099e596ef14349721d9016f6b80dd3419ea1bf289ab9b44df8e4dfd3a005d5d9"
 
 [[package]]
 name = "byte-slice-cast"
@@ -692,20 +692,20 @@ dependencies = [
 
 [[package]]
 name = "chainx"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-cli",
 ]
 
 [[package]]
 name = "chainx-cli"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
- "chainx-dev-runtime",
  "chainx-executor",
  "chainx-primitives",
  "chainx-rpc",
  "chainx-runtime",
+ "dev-runtime",
  "frame-benchmarking-cli",
  "futures 0.3.12",
  "hex",
@@ -713,6 +713,7 @@ dependencies = [
  "jsonrpc-pubsub",
  "log",
  "log4rs",
+ "malan-runtime",
  "pallet-im-online",
  "parking_lot 0.11.1",
  "sc-authority-discovery",
@@ -751,92 +752,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "chainx-dev-runtime"
-version = "2.0.8"
-dependencies = [
- "chainx-primitives",
- "chainx-runtime-common",
- "frame-benchmarking",
- "frame-executive",
- "frame-support",
- "frame-system",
- "frame-system-benchmarking",
- "frame-system-rpc-runtime-api",
- "hex-literal",
- "orml-currencies",
- "orml-traits",
- "pallet-authority-discovery",
- "pallet-authorship",
- "pallet-babe",
- "pallet-balances",
- "pallet-bounties",
- "pallet-collective",
- "pallet-democracy",
- "pallet-elections-phragmen",
- "pallet-grandpa",
- "pallet-identity",
- "pallet-im-online",
- "pallet-indices",
- "pallet-membership",
- "pallet-multisig",
- "pallet-offences",
- "pallet-randomness-collective-flip",
- "pallet-scheduler",
- "pallet-session",
- "pallet-sudo",
- "pallet-timestamp",
- "pallet-tips",
- "pallet-transaction-payment",
- "pallet-transaction-payment-rpc-runtime-api",
- "pallet-treasury",
- "pallet-utility",
- "parity-scale-codec",
- "serde",
- "smallvec 1.6.1",
- "sp-api",
- "sp-authority-discovery",
- "sp-block-builder",
- "sp-consensus-babe",
- "sp-core",
- "sp-inherents",
- "sp-io",
- "sp-offchain",
- "sp-runtime",
- "sp-session",
- "sp-std",
- "sp-transaction-pool",
- "sp-version",
- "static_assertions",
- "substrate-wasm-builder",
- "xp-gateway-bitcoin",
- "xp-logging",
- "xp-mining-staking",
- "xp-protocol",
- "xp-runtime",
- "xpallet-assets",
- "xpallet-assets-registrar",
- "xpallet-assets-rpc-runtime-api",
- "xpallet-dex-spot",
- "xpallet-dex-spot-rpc-runtime-api",
- "xpallet-gateway-bitcoin",
- "xpallet-gateway-common",
- "xpallet-gateway-common-rpc-runtime-api",
- "xpallet-gateway-records",
- "xpallet-gateway-records-rpc-runtime-api",
- "xpallet-genesis-builder",
- "xpallet-mining-asset",
- "xpallet-mining-asset-rpc-runtime-api",
- "xpallet-mining-staking",
- "xpallet-mining-staking-rpc-runtime-api",
- "xpallet-support",
- "xpallet-system",
- "xpallet-transaction-fee",
- "xpallet-transaction-fee-rpc-runtime-api",
-]
-
-[[package]]
 name = "chainx-executor"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-runtime",
  "frame-benchmarking",
@@ -846,7 +763,7 @@ dependencies = [
 
 [[package]]
 name = "chainx-primitives"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -859,7 +776,7 @@ dependencies = [
 
 [[package]]
 name = "chainx-rpc"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "chainx-runtime",
@@ -908,7 +825,7 @@ dependencies = [
 
 [[package]]
 name = "chainx-runtime"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "chainx-runtime-common",
@@ -1343,6 +1260,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "ctor"
+version = "0.1.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "10bcb9d7dcbf7002aaffbb53eac22906b64cdcc127971dcc387d8eb7c95d5560"
+dependencies = [
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "cuckoofilter"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1381,9 +1308,9 @@ dependencies = [
 
 [[package]]
 name = "data-encoding"
-version = "2.3.1"
+version = "2.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "993a608597367c6377b258c25d7120740f00ed23a2252b729b1932dd7866f908"
+checksum = "3ee2393c4a91429dffb4bedf19f4d6abf27d8a732c8ce4980305d782e5426d57"
 
 [[package]]
 name = "derive_more"
@@ -1394,6 +1321,90 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "dev-runtime"
+version = "2.0.8-1"
+dependencies = [
+ "chainx-primitives",
+ "chainx-runtime-common",
+ "frame-benchmarking",
+ "frame-executive",
+ "frame-support",
+ "frame-system",
+ "frame-system-benchmarking",
+ "frame-system-rpc-runtime-api",
+ "hex-literal",
+ "orml-currencies",
+ "orml-traits",
+ "pallet-authority-discovery",
+ "pallet-authorship",
+ "pallet-babe",
+ "pallet-balances",
+ "pallet-bounties",
+ "pallet-collective",
+ "pallet-democracy",
+ "pallet-elections-phragmen",
+ "pallet-grandpa",
+ "pallet-identity",
+ "pallet-im-online",
+ "pallet-indices",
+ "pallet-membership",
+ "pallet-multisig",
+ "pallet-offences",
+ "pallet-randomness-collective-flip",
+ "pallet-scheduler",
+ "pallet-session",
+ "pallet-sudo",
+ "pallet-timestamp",
+ "pallet-tips",
+ "pallet-transaction-payment",
+ "pallet-transaction-payment-rpc-runtime-api",
+ "pallet-treasury",
+ "pallet-utility",
+ "parity-scale-codec",
+ "serde",
+ "smallvec 1.6.1",
+ "sp-api",
+ "sp-authority-discovery",
+ "sp-block-builder",
+ "sp-consensus-babe",
+ "sp-core",
+ "sp-inherents",
+ "sp-io",
+ "sp-offchain",
+ "sp-runtime",
+ "sp-session",
+ "sp-std",
+ "sp-transaction-pool",
+ "sp-version",
+ "static_assertions",
+ "substrate-wasm-builder",
+ "xp-gateway-bitcoin",
+ "xp-logging",
+ "xp-mining-staking",
+ "xp-protocol",
+ "xp-runtime",
+ "xpallet-assets",
+ "xpallet-assets-registrar",
+ "xpallet-assets-rpc-runtime-api",
+ "xpallet-dex-spot",
+ "xpallet-dex-spot-rpc-runtime-api",
+ "xpallet-gateway-bitcoin",
+ "xpallet-gateway-common",
+ "xpallet-gateway-common-rpc-runtime-api",
+ "xpallet-gateway-records",
+ "xpallet-gateway-records-rpc-runtime-api",
+ "xpallet-genesis-builder",
+ "xpallet-mining-asset",
+ "xpallet-mining-asset-rpc-runtime-api",
+ "xpallet-mining-staking",
+ "xpallet-mining-staking-rpc-runtime-api",
+ "xpallet-support",
+ "xpallet-system",
+ "xpallet-transaction-fee",
+ "xpallet-transaction-fee-rpc-runtime-api",
 ]
 
 [[package]]
@@ -1506,7 +1517,7 @@ dependencies = [
  "ed25519",
  "rand 0.7.3",
  "serde",
- "sha2 0.9.2",
+ "sha2 0.9.3",
  "zeroize",
 ]
 
@@ -1696,7 +1707,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cfcf0ed7fe52a17a03854ec54a9f76d6d84508d1c0e66bc1793301c73fc8493c"
 dependencies = [
  "byteorder",
- "rand 0.8.2",
+ "rand 0.8.3",
  "rustc-hex",
  "static_assertions",
 ]
@@ -1709,9 +1720,9 @@ checksum = "37ab347416e802de484e4d03c7316c48f1ecb56574dfd4a46a80f173ce1de04d"
 
 [[package]]
 name = "flate2"
-version = "1.0.19"
+version = "1.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7411863d55df97a419aa64cb4d2f167103ea9d767e2c54a1868b7ac3f6b47129"
+checksum = "cd3aec53de10fe96d7d8c565eb17f2c687bb5518a2ec453b5b1252964526abe0"
 dependencies = [
  "cfg-if 1.0.0",
  "crc32fast",
@@ -2258,7 +2269,7 @@ dependencies = [
  "http 0.2.3",
  "indexmap",
  "slab",
- "tokio 0.2.24",
+ "tokio 0.2.25",
  "tokio-util",
  "tracing",
  "tracing-futures",
@@ -2482,7 +2493,7 @@ dependencies = [
  "itoa",
  "pin-project 1.0.4",
  "socket2",
- "tokio 0.2.24",
+ "tokio 0.2.25",
  "tower-service",
  "tracing",
  "want 0.3.0",
@@ -2501,7 +2512,7 @@ dependencies = [
  "log",
  "rustls 0.18.1",
  "rustls-native-certs",
- "tokio 0.2.24",
+ "tokio 0.2.25",
  "tokio-rustls",
  "webpki",
 ]
@@ -2551,9 +2562,9 @@ dependencies = [
 
 [[package]]
 name = "if-watch"
-version = "0.1.7"
+version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16d7c5e361e6b05c882b4847dd98992534cebc6fcde7f4bc98225bcf10fd6d0d"
+checksum = "97b8538953a3f0d0d3868f0a706eb4273535e10d72acb5c82c1c23ae48835c85"
 dependencies = [
  "async-io",
  "futures 0.3.12",
@@ -2700,9 +2711,9 @@ dependencies = [
 
 [[package]]
 name = "js-sys"
-version = "0.3.46"
+version = "0.3.47"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf3d7383929f7c9c7c2d0fa596f325832df98c3704f2c60553080f7127a58175"
+checksum = "5cfb73131c35423a367daf8cbd24100af0d077668c8c2943f0e7dd775fef0f65"
 dependencies = [
  "wasm-bindgen",
 ]
@@ -2913,9 +2924,9 @@ checksum = "3576a87f2ba00f6f106fdfcd16db1d698d648a26ad8e0573cad8537c3c362d2a"
 
 [[package]]
 name = "libc"
-version = "0.2.82"
+version = "0.2.84"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "89203f3fba0a3795506acaad8ebce3c80c0af93f994d5a1d7a0b1eeb23271929"
+checksum = "1cca32fa0182e8c0989459524dc356b8f2b5c10f1b9eb521b7d182c03cf8c5ff"
 
 [[package]]
 name = "libloading"
@@ -2997,7 +3008,7 @@ dependencies = [
  "rand 0.7.3",
  "ring",
  "rw-stream-sink",
- "sha2 0.9.2",
+ "sha2 0.9.3",
  "smallvec 1.6.1",
  "thiserror",
  "unsigned-varint 0.6.0",
@@ -3017,9 +3028,9 @@ dependencies = [
 
 [[package]]
 name = "libp2p-deflate"
-version = "0.27.0"
+version = "0.27.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "935893c0e5b6ca6ef60d5225aab9182f97c8c5671df2fa9dee8f4ed72a90e6eb"
+checksum = "6d42eed63305f0420736fa487f9acef720c4528bd7852a6a760f5ccde4813345"
 dependencies = [
  "flate2",
  "futures 0.3.12",
@@ -3075,7 +3086,7 @@ dependencies = [
  "prost-build",
  "rand 0.7.3",
  "regex",
- "sha2 0.9.2",
+ "sha2 0.9.3",
  "smallvec 1.6.1",
  "unsigned-varint 0.6.0",
  "wasm-timer",
@@ -3115,7 +3126,7 @@ dependencies = [
  "prost 0.7.0",
  "prost-build",
  "rand 0.7.3",
- "sha2 0.9.2",
+ "sha2 0.9.3",
  "smallvec 1.6.1",
  "uint 0.9.0",
  "unsigned-varint 0.6.0",
@@ -3177,7 +3188,7 @@ dependencies = [
  "prost 0.7.0",
  "prost-build",
  "rand 0.7.3",
- "sha2 0.9.2",
+ "sha2 0.9.3",
  "snow",
  "static_assertions",
  "x25519-dalek",
@@ -3252,9 +3263,9 @@ dependencies = [
 
 [[package]]
 name = "libp2p-swarm"
-version = "0.27.0"
+version = "0.27.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "22ea8c69839a0e593c8c6a24282cb234d48ac37be4153183f4914e00f5303e75"
+checksum = "d4f89ebb4d8953bda12623e9871959fe728dea3bf6eae0421dc9c42dc821e488"
 dependencies = [
  "either",
  "futures 0.3.12",
@@ -3415,7 +3426,7 @@ dependencies = [
  "light-bitcoin-primitives",
  "ripemd160",
  "sha-1 0.9.2",
- "sha2 0.9.2",
+ "sha2 0.9.3",
  "siphasher",
 ]
 
@@ -3536,12 +3547,13 @@ dependencies = [
 
 [[package]]
 name = "log"
-version = "0.4.13"
+version = "0.4.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fcf3805d4480bb5b86070dcfeb9e2cb2ebc148adb753c5cca5f884d1d65a42b2"
+checksum = "51b9bbe6c47d51fc3e1a9b945965946b4c44142ab8792c50835a980d362c2710"
 dependencies = [
- "cfg-if 0.1.10",
+ "cfg-if 1.0.0",
  "serde",
+ "value-bag",
 ]
 
 [[package]]
@@ -3591,6 +3603,90 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b823e83b2affd8f40a9ee8c29dbc56404c1e34cd2710921f2801e2cf29527afa"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "malan-runtime"
+version = "2.0.8-1"
+dependencies = [
+ "chainx-primitives",
+ "chainx-runtime-common",
+ "frame-benchmarking",
+ "frame-executive",
+ "frame-support",
+ "frame-system",
+ "frame-system-benchmarking",
+ "frame-system-rpc-runtime-api",
+ "hex-literal",
+ "orml-currencies",
+ "orml-traits",
+ "pallet-authority-discovery",
+ "pallet-authorship",
+ "pallet-babe",
+ "pallet-balances",
+ "pallet-bounties",
+ "pallet-collective",
+ "pallet-democracy",
+ "pallet-elections-phragmen",
+ "pallet-grandpa",
+ "pallet-identity",
+ "pallet-im-online",
+ "pallet-indices",
+ "pallet-membership",
+ "pallet-multisig",
+ "pallet-offences",
+ "pallet-randomness-collective-flip",
+ "pallet-scheduler",
+ "pallet-session",
+ "pallet-sudo",
+ "pallet-timestamp",
+ "pallet-tips",
+ "pallet-transaction-payment",
+ "pallet-transaction-payment-rpc-runtime-api",
+ "pallet-treasury",
+ "pallet-utility",
+ "parity-scale-codec",
+ "serde",
+ "smallvec 1.6.1",
+ "sp-api",
+ "sp-authority-discovery",
+ "sp-block-builder",
+ "sp-consensus-babe",
+ "sp-core",
+ "sp-inherents",
+ "sp-io",
+ "sp-offchain",
+ "sp-runtime",
+ "sp-session",
+ "sp-std",
+ "sp-transaction-pool",
+ "sp-version",
+ "static_assertions",
+ "substrate-wasm-builder-runner",
+ "xp-gateway-bitcoin",
+ "xp-logging",
+ "xp-mining-staking",
+ "xp-protocol",
+ "xp-runtime",
+ "xpallet-assets",
+ "xpallet-assets-registrar",
+ "xpallet-assets-rpc-runtime-api",
+ "xpallet-dex-spot",
+ "xpallet-dex-spot-rpc-runtime-api",
+ "xpallet-gateway-bitcoin",
+ "xpallet-gateway-common",
+ "xpallet-gateway-common-rpc-runtime-api",
+ "xpallet-gateway-records",
+ "xpallet-gateway-records-rpc-runtime-api",
+ "xpallet-genesis-builder",
+ "xpallet-mining-asset",
+ "xpallet-mining-asset-rpc-runtime-api",
+ "xpallet-mining-staking",
+ "xpallet-mining-staking-rpc-runtime-api",
+ "xpallet-support",
+ "xpallet-system",
+ "xpallet-transaction-fee",
+ "xpallet-transaction-fee-rpc-runtime-api",
 ]
 
 [[package]]
@@ -3813,7 +3909,7 @@ dependencies = [
  "digest 0.9.0",
  "generic-array 0.14.4",
  "multihash-derive",
- "sha2 0.9.2",
+ "sha2 0.9.3",
  "unsigned-varint 0.5.1",
 ]
 
@@ -5225,9 +5321,9 @@ dependencies = [
 
 [[package]]
 name = "rand"
-version = "0.8.2"
+version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "18519b42a40024d661e1714153e9ad0c3de27cd495760ceb09710920f1098b1e"
+checksum = "0ef9e7e66b4468674bfcb0c81af8b7fa0bb154fa9f28eb840da5c447baeb8d7e"
 dependencies = [
  "libc",
  "rand_chacha 0.3.0",
@@ -5789,7 +5885,7 @@ dependencies = [
  "structopt",
  "thiserror",
  "tiny-bip39",
- "tokio 0.2.24",
+ "tokio 0.2.25",
 ]
 
 [[package]]
@@ -6754,9 +6850,9 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.122"
+version = "1.0.123"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "974ef1bd2ad8a507599b336595454081ff68a9599b4890af7643c0c0ed73a62c"
+checksum = "92d5161132722baa40d802cc70b15262b98258453e85e5d1d365c757c73869ae"
 dependencies = [
  "serde_derive",
 ]
@@ -6773,9 +6869,9 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.122"
+version = "1.0.123"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8dee1f300f838c8ac340ecb0112b3ac472464fa67e87292bdb3dfc9c49128e17"
+checksum = "9391c295d64fc0abb2c556bad848f33cb8296276b1ad2677d1ae1ace4f258f31"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -6844,9 +6940,9 @@ dependencies = [
 
 [[package]]
 name = "sha2"
-version = "0.9.2"
+version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e7aab86fe2149bad8c507606bdb3f4ef5e7b2380eb92350f56122cca72a42a8"
+checksum = "fa827a14b29ab7f44778d14a88d3cb76e949c45083f7dbfa507d0cb699dc12de"
 dependencies = [
  "block-buffer 0.9.0",
  "cfg-if 1.0.0",
@@ -6959,7 +7055,7 @@ dependencies = [
  "rand_core 0.5.1",
  "ring",
  "rustc_version",
- "sha2 0.9.2",
+ "sha2 0.9.3",
  "subtle 2.4.0",
  "x25519-dalek",
 ]
@@ -7214,7 +7310,7 @@ dependencies = [
  "schnorrkel",
  "secrecy",
  "serde",
- "sha2 0.9.2",
+ "sha2 0.9.3",
  "sp-debug-derive",
  "sp-externalities",
  "sp-runtime-interface",
@@ -7783,7 +7879,7 @@ dependencies = [
  "hyper 0.13.9",
  "log",
  "prometheus",
- "tokio 0.2.24",
+ "tokio 0.2.25",
 ]
 
 [[package]]
@@ -7801,6 +7897,12 @@ dependencies = [
  "walkdir",
  "wasm-gc-api",
 ]
+
+[[package]]
+name = "substrate-wasm-builder-runner"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "54cab12167e32b38a62c5ea5825aa0874cde315f907a46aad2b05aa8ef3d862f"
 
 [[package]]
 name = "subtle"
@@ -7857,7 +7959,7 @@ checksum = "dac1c663cfc93810f88aed9b8941d48cabf856a1b111c29a40439018d870eb22"
 dependencies = [
  "cfg-if 1.0.0",
  "libc",
- "rand 0.8.2",
+ "rand 0.8.3",
  "redox_syscall 0.2.4",
  "remove_dir_all",
  "winapi 0.3.9",
@@ -7953,7 +8055,7 @@ dependencies = [
  "pbkdf2 0.4.0",
  "rand 0.7.3",
  "rustc-hash",
- "sha2 0.9.2",
+ "sha2 0.9.3",
  "thiserror",
  "unicode-normalization",
  "zeroize",
@@ -7970,9 +8072,9 @@ dependencies = [
 
 [[package]]
 name = "tinyvec"
-version = "1.1.0"
+version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ccf8dbc19eb42fba10e8feaaec282fb50e2c14b2726d6301dbfeed0f73306a6f"
+checksum = "317cca572a0e89c3ce0ca1f1bdc9369547fe318a683418e42ac8f59d14701023"
 dependencies = [
  "tinyvec_macros",
 ]
@@ -8009,9 +8111,9 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "0.2.24"
+version = "0.2.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "099837d3464c16a808060bb3f02263b412f6fafcb5d01c533d309985fbeebe48"
+checksum = "6703a273949a90131b290be1fe7b039d0fc884aa1935860dfcbe056f28cd8092"
 dependencies = [
  "bytes 0.5.6",
  "fnv",
@@ -8133,7 +8235,7 @@ checksum = "e12831b255bcfa39dc0436b01e19fea231a37db570686c06ee72c423479f889a"
 dependencies = [
  "futures-core",
  "rustls 0.18.1",
- "tokio 0.2.24",
+ "tokio 0.2.25",
  "webpki",
 ]
 
@@ -8243,7 +8345,7 @@ dependencies = [
  "futures-sink",
  "log",
  "pin-project-lite 0.1.11",
- "tokio 0.2.24",
+ "tokio 0.2.25",
 ]
 
 [[package]]
@@ -8355,9 +8457,9 @@ checksum = "efd1f82c56340fdf16f2a953d7bda4f8fdffba13d93b00844c25572110b26079"
 
 [[package]]
 name = "trie-db"
-version = "0.22.2"
+version = "0.22.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5cc176c377eb24d652c9c69c832c832019011b6106182bf84276c66b66d5c9a6"
+checksum = "ec051edf7f0fc9499a2cb0947652cab2148b9d7f61cee7605e312e9f970dacaf"
 dependencies = [
  "hash-db",
  "hashbrown",
@@ -8549,6 +8651,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "value-bag"
+version = "1.0.0-alpha.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6b676010e055c99033117c2343b33a40a30b91fecd6c49055ac9cd2d6c305ab1"
+dependencies = [
+ "ctor",
+]
+
+[[package]]
 name = "vcpkg"
 version = "0.2.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8630,9 +8741,9 @@ checksum = "1a143597ca7c7793eff794def352d41792a93c481eb1042423ff7ff72ba2c31f"
 
 [[package]]
 name = "wasm-bindgen"
-version = "0.2.69"
+version = "0.2.70"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3cd364751395ca0f68cafb17666eee36b63077fb5ecd972bbcd74c90c4bf736e"
+checksum = "55c0f7123de74f0dab9b7d00fd614e7b19349cd1e2f5252bbe9b1754b59433be"
 dependencies = [
  "cfg-if 1.0.0",
  "wasm-bindgen-macro",
@@ -8640,9 +8751,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-backend"
-version = "0.2.69"
+version = "0.2.70"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1114f89ab1f4106e5b55e688b828c0ab0ea593a1ea7c094b141b14cbaaec2d62"
+checksum = "7bc45447f0d4573f3d65720f636bbcc3dd6ce920ed704670118650bcd47764c7"
 dependencies = [
  "bumpalo",
  "lazy_static",
@@ -8655,9 +8766,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-futures"
-version = "0.4.19"
+version = "0.4.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1fe9756085a84584ee9457a002b7cdfe0bfff169f45d2591d8be1345a6780e35"
+checksum = "3de431a2910c86679c34283a33f66f4e4abd7e0aec27b6669060148872aadf94"
 dependencies = [
  "cfg-if 1.0.0",
  "js-sys",
@@ -8667,9 +8778,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-macro"
-version = "0.2.69"
+version = "0.2.70"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a6ac8995ead1f084a8dea1e65f194d0973800c7f571f6edd70adf06ecf77084"
+checksum = "3b8853882eef39593ad4174dd26fc9865a64e84026d223f63bb2c42affcbba2c"
 dependencies = [
  "quote",
  "wasm-bindgen-macro-support",
@@ -8677,9 +8788,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-macro-support"
-version = "0.2.69"
+version = "0.2.70"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b5a48c72f299d80557c7c62e37e7225369ecc0c963964059509fbafe917c7549"
+checksum = "4133b5e7f2a531fa413b3a1695e925038a05a71cf67e87dafa295cb645a01385"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -8690,9 +8801,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-shared"
-version = "0.2.69"
+version = "0.2.70"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e7811dd7f9398f14cc76efd356f98f03aa30419dea46aa810d71e819fc97158"
+checksum = "dd4945e4943ae02d15c13962b38a5b1e81eadd4b71214eee75af64a4d6a4fd64"
 
 [[package]]
 name = "wasm-gc-api"
@@ -8931,9 +9042,9 @@ dependencies = [
 
 [[package]]
 name = "web-sys"
-version = "0.3.46"
+version = "0.3.47"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "222b1ef9334f92a21d3fb53dc3fd80f30836959a90f9274a626d7e06315ba3c3"
+checksum = "c40dc691fc48003eba817c38da7113c15698142da971298003cac3ef175680b3"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
@@ -9052,7 +9163,7 @@ dependencies = [
 
 [[package]]
 name = "xp-assets-registrar"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "impl-trait-for-tuples 0.1.3",
@@ -9064,7 +9175,7 @@ dependencies = [
 
 [[package]]
 name = "xp-gateway-bitcoin"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "frame-support",
@@ -9081,7 +9192,7 @@ dependencies = [
 
 [[package]]
 name = "xp-gateway-common"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "bs58 0.3.1",
  "frame-support",
@@ -9093,7 +9204,7 @@ dependencies = [
 
 [[package]]
 name = "xp-genesis-builder"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "serde",
@@ -9102,7 +9213,7 @@ dependencies = [
 
 [[package]]
 name = "xp-io"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "hex",
  "parity-scale-codec",
@@ -9113,11 +9224,11 @@ dependencies = [
 
 [[package]]
 name = "xp-logging"
-version = "2.0.8"
+version = "2.0.8-1"
 
 [[package]]
 name = "xp-mining-common"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "sp-arithmetic",
@@ -9126,7 +9237,7 @@ dependencies = [
 
 [[package]]
 name = "xp-mining-staking"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "sp-runtime",
@@ -9136,7 +9247,7 @@ dependencies = [
 
 [[package]]
 name = "xp-protocol"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "parity-scale-codec",
@@ -9146,7 +9257,7 @@ dependencies = [
 
 [[package]]
 name = "xp-rpc"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "hex",
  "jsonrpc-core",
@@ -9156,7 +9267,7 @@ dependencies = [
 
 [[package]]
 name = "xp-runtime"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "hex",
  "parity-scale-codec",
@@ -9168,7 +9279,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-assets"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "bitflags",
  "chainx-primitives",
@@ -9192,7 +9303,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-assets-registrar"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "frame-benchmarking",
@@ -9214,7 +9325,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-assets-rpc"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -9229,7 +9340,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-assets-rpc-runtime-api"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "parity-scale-codec",
@@ -9240,7 +9351,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-dex-spot"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "env_logger",
@@ -9264,7 +9375,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-dex-spot-rpc"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -9280,7 +9391,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-dex-spot-rpc-runtime-api"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
@@ -9290,7 +9401,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-gateway-bitcoin"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "bs58 0.3.1",
  "chainx-primitives",
@@ -9327,7 +9438,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-gateway-common"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "frame-benchmarking",
@@ -9358,7 +9469,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-gateway-common-rpc"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "hex",
  "jsonrpc-core",
@@ -9374,7 +9485,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-gateway-common-rpc-runtime-api"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "parity-scale-codec",
@@ -9388,7 +9499,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-gateway-records"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "frame-benchmarking",
@@ -9412,7 +9523,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-gateway-records-rpc"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -9428,7 +9539,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-gateway-records-rpc-runtime-api"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "parity-scale-codec",
@@ -9440,7 +9551,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-genesis-builder"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "frame-support",
@@ -9461,7 +9572,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-mining-asset"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "env_logger",
@@ -9490,7 +9601,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-mining-asset-rpc"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -9505,7 +9616,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-mining-asset-rpc-runtime-api"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "parity-scale-codec",
@@ -9516,7 +9627,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-mining-staking"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "env_logger",
@@ -9546,7 +9657,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-mining-staking-rpc"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -9561,7 +9672,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-mining-staking-rpc-runtime-api"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
@@ -9571,7 +9682,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-support"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "hex",
  "sp-std",
@@ -9579,7 +9690,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-system"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -9592,7 +9703,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-transaction-fee"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -9605,7 +9716,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-transaction-fee-rpc"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -9623,7 +9734,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-transaction-fee-rpc-runtime-api"
-version = "2.0.8"
+version = "2.0.8-1"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
