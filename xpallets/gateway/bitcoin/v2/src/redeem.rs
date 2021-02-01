@@ -115,7 +115,7 @@ pub mod pallet {
         ValtLiquidated,
 
         /// redeem amount is too much
-        RedeemAmountLargerThanHave,
+        InsufficiantAssetsFonds
 
         /// redeem is completed
         CancleRedeemErrOfCompleted,
