@@ -88,7 +88,16 @@ pub mod pallet {
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::hooks]
-    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
+    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+        fn on_finalize(_: BlockNumberFor<T>) {
+            if assets::Pallet::<T>::is_bridge_running() {
+                <Vaults<T>>::translate(|_, vault| {
+                    // assets::Pallet::<T>::check_vault_collateral_ratio(vault);
+                    vault
+                })
+            }
+        }
+    }
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {

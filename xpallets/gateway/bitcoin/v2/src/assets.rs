@@ -134,8 +134,8 @@ pub mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-        fn on_finalize(_n: BlockNumberFor<T>) {
-            todo!("Check if exchange rate expired.")
+        fn on_finalize(n: BlockNumberFor<T>) {
+            Self::_check_exchange_rate_expired(n);
         }
     }
 
@@ -313,12 +313,29 @@ pub mod pallet {
             Ok(().into())
         }
 
+        /// Get if the bridge running
+        pub fn is_bridge_running() -> bool {
+            Self::bridge_status() == Status::Running
+        }
+
         pub(crate) fn _update_exchange_rate(exchange_rate: TradingPrice) -> DispatchResult {
             // TODO: sanity check?
             <ExchangeRate<T>>::put(exchange_rate);
             let height = <frame_system::Pallet<T>>::block_number();
             <ExchangeRateUpdateTime<T>>::put(height);
             Ok(())
+        }
+
+        pub(crate) fn _check_exchange_rate_expired(now: BlockNumberFor<T>) {
+            let last_update_block = Self::exchange_rate_update_time();
+            let period = Self::exchange_rate_expired_period();
+            if now - last_update_block > period {
+                <BridgeErrorCodes<T>>::mutate(|codes| {
+                    if !codes.contains(&ErrorCode::ExchangeRateExpired) {
+                        codes.push(ErrorCode::ExchangeRateExpired);
+                    }
+                })
+            }
         }
     }
 }
