@@ -38,7 +38,7 @@ pub mod types {
 pub mod pallet {
     use sp_arithmetic::Percent;
     use sp_runtime::DispatchError;
-    use sp_std::{default::Default, marker::PhantomData};
+    use sp_std::{default::Default, marker::PhantomData, vec::Vec};
 
     use light_bitcoin::chain::Transaction;
 
