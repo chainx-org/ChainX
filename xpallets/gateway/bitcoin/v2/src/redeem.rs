@@ -106,7 +106,7 @@ pub mod pallet {
     #[pallet::error]
     pub enum Error<T> {
         /// redeem request id is not exsit
-        RedeemNotExist,
+        RedeemRequestNotFound,
 
         /// `RedeemRequest` cancelled for forced redeem when it's not expired.
         RedeemRequestNotExpired,
