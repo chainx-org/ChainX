@@ -118,7 +118,7 @@ pub mod pallet {
         InsufficiantAssetsFonds
 
         /// redeem is completed
-        CancleRedeemErrOfCompleted,
+        RedeemRequestAlreadyCompleted,
 
         /// redeem is cancled
         CancleRedeemErrOfCancled,
