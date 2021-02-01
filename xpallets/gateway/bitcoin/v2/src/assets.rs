@@ -165,6 +165,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        /// Update exchange rate by oracle
         #[pallet::weight(0)]
         pub(crate) fn update_exchange_rate(
             origin: OriginFor<T>,

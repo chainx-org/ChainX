@@ -38,7 +38,9 @@ pub mod types {
 pub mod pallet {
     use sp_arithmetic::Percent;
     use sp_runtime::DispatchError;
-    use sp_std::{default::Default, marker::PhantomData};
+    use sp_std::{default::Default, marker::PhantomData, vec::Vec};
+
+    use light_bitcoin::chain::Transaction;
 
     #[cfg(feature = "std")]
     use frame_support::traits::GenesisBuild;
@@ -109,6 +111,30 @@ pub mod pallet {
                     ..Default::default()
                 },
             );
+            // Self::deposit_event(...);
+            Ok(().into())
+        }
+
+        #[pallet::weight(0)]
+        pub fn execute_issue(
+            origin: OriginFor<T>,
+            request_id: RequestId,
+            _tx_id: Vec<u8>,
+            _merkle_proof: Vec<u8>,
+            _raw_tx: Transaction,
+        ) -> DispatchResultWithPostInfo {
+            let _sender = ensure_signed(origin)?;
+            //TODO(wangyafei): verify tx
+            let issue_request = Self::get_issue_request_by_id(request_id)
+                .ok_or(Error::<T>::IssueRequestNotFound)?;
+            <xpallet_assets::Module<T>>::issue(
+                &1,
+                &issue_request.requester,
+                issue_request.btc_amount,
+            )?;
+            //TODO(wangyafei): <assets::Pallet<T>>::release_collateral(issue_request.request,
+            // issue_request.griefing_collateral)?;
+            // Self::deposit_event(...);
             Ok(().into())
         }
 
