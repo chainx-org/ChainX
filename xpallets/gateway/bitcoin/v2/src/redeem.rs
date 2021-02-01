@@ -121,7 +121,7 @@ pub mod pallet {
         RedeemRequestAlreadyCompleted,
 
         /// redeem is cancled
-        CancleRedeemErrOfCancled,
+        RedeemRequestAlreadyCanceled,
     }
 
     /// redeem fee when use request redeem
