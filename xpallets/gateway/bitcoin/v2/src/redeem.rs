@@ -58,11 +58,11 @@ pub mod pallet {
         Twox64Concat,
     };
     use frame_system::{
-        ensure_signed,ensure_root,
+        ensure_root, ensure_signed,
         pallet_prelude::{BlockNumberFor, OriginFor},
     };
-    use sp_std::marker::PhantomData;
     use light_bitcoin::chain::Transaction;
+    use sp_std::marker::PhantomData;
 
     // import vault,issue,assets code.
     use crate::assets::{pallet as assets, pallet::BalanceOf, pallet::BridgeStatus};
@@ -172,7 +172,7 @@ pub mod pallet {
             let sender = ensure_signed(origin)?;
             let height = <frame_system::Pallet<T>>::block_number();
             let vault = vault::Pallet::<T>::get_active_vault_by_id(&vault_id)?;
-            
+
             // tell vault to transfer btc to this btc_addr(how to give phone msg or mail msg?)
 
             // generate redeem request identify
@@ -208,8 +208,12 @@ pub mod pallet {
             //TODO verify tx
             let request =
                 <RedeemRequests<T>>::get(request_id).ok_or(Error::<T>::RedeemRequestNotFound)?;
-            // decrase user's XBTC amount. 
-            xpallet_assets::Module::<T>::destroy_reserved_withdrawal(&1, &request.requester, request.amount)?;
+            // decrase user's XBTC amount.
+            xpallet_assets::Module::<T>::destroy_reserved_withdrawal(
+                &1,
+                &request.requester,
+                request.amount,
+            )?;
 
             Ok(().into())
         }
