@@ -62,7 +62,7 @@ pub mod pallet {
         pallet_prelude::{BlockNumberFor, OriginFor},
     };
     use light_bitcoin::chain::Transaction;
-    use sp_std::marker::PhantomData;
+    use sp_std::{marker::PhantomData, vec::Vec};
 
     // import vault,issue,assets code.
     use crate::assets::{pallet as assets, pallet::BalanceOf, pallet::BridgeStatus};
