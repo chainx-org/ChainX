@@ -207,9 +207,9 @@ decl_module! {
         fn deposit_event() = default;
         // Each time the block is imported, a worker thread is started and the function is executed.
         fn offchain_worker(block_number: T::BlockNumber) {
-            // Worker lock
+            // Worker thread lock
             let mut worker_lock = StorageLock::<'_, Time>::new(b"ocw::worker::lock");
-            // Worker num
+            // Worker thread num
             let worker_num = StorageValueRef::persistent(b"ocw::worker::num");
 
             match worker_num.get::<u8>() {
@@ -231,6 +231,7 @@ decl_module! {
                 }
             }
 
+            // Mainnet or Testnet
             let network = XGatewayBitcoin::<T>::network_id();
             if block_number.saturated_into::<u32>() % 5 == 0 {
                 debug::info!("[OCW] Worker[{:?}] Start To Working...", block_number);
@@ -275,7 +276,7 @@ decl_module! {
         fn push_transaction(origin, tx: BtcTransaction, relayed_info: BtcRelayedTxInfo, prev_tx: Option<BtcTransaction>)  -> DispatchResultWithPostInfo {
             let worker = ensure_signed(origin)?;
             debug::info!("[OCW] Worker:{:?} Push Transaction: {:?}", worker, tx.hash());
-            let relay_tx = relayed_info.into_relayed_tx(tx.clone());
+            let relay_tx = relayed_info.into_relayed_tx(tx);
             XGatewayBitcoin::<T>::apply_push_transaction(relay_tx, prev_tx)?;
             Ok(Pays::No.into())
         }

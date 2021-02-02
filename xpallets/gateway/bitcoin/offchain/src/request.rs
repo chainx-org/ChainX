@@ -8,10 +8,9 @@ use light_bitcoin::{
     serialization::{deserialize, Reader},
 };
 
+use frame_support::debug;
 use sp_runtime::offchain::{http, Duration};
 use sp_std::{str, vec, vec::Vec};
-
-use frame_support::debug;
 
 use crate::{Error, Module, Trait};
 
