@@ -51,7 +51,7 @@ pub mod types {
 pub mod pallet {
 
     use frame_support::{
-        dispatch::DispatchResultWithPostInfo,
+        dispatch::{DispatchResult, DispatchResultWithPostInfo},
         ensure,
         storage::types::{StorageMap, StorageValue, ValueQuery},
         traits::{Hooks, IsType},
@@ -65,7 +65,12 @@ pub mod pallet {
     use sp_std::{marker::PhantomData, vec::Vec};
 
     // import vault,issue,assets code.
-    use crate::assets::{pallet as assets, pallet::BalanceOf, pallet::BridgeStatus};
+    use crate::assets::{
+        pallet as assets,
+        pallet::BalanceOf,
+        pallet::BridgeStatus,
+        types::{ErrorCode, Status},
+    };
     use crate::issue::pallet as issue;
     use crate::vault::pallet as vault;
 
@@ -92,7 +97,7 @@ pub mod pallet {
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T: Config> {
         /// current chain status is not right
-        ChainStatusErro,
+        ChainStatusError,
         /// redeem request is accepted
         RedeemRequestIsAccepted,
         /// cancle redeem is accepted
@@ -106,6 +111,12 @@ pub mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
+        /// Redeem amount exceeds user has
+        AmoundExceedsAvaliable,
+        /// Bridge has multiple errors
+        BridgeInComlicatedError,
+        /// Bridge shutdown
+        BridgeShutdown,
         /// redeem request id is not exsit
         RedeemRequestNotFound,
 
@@ -155,28 +166,25 @@ pub mod pallet {
             redeem_amount: BalanceOf<T>,
             btc_addr: super::types::BtcAddress,
         ) -> DispatchResultWithPostInfo {
-            //check current bridge status
-            let bridge_status = <BridgeStatus<T>>::get();
-            match bridge_status {
-                crate::assets::types::Status::Running => {}
-                crate::assets::types::Status::Error => {
-                    Self::deposit_event(Event::<T>::ChainStatusErro);
-                    return Ok(().into());
-                }
-                crate::assets::types::Status::Shutdown => {
-                    Self::deposit_event(Event::<T>::ChainStatusErro);
-                    return Ok(().into());
-                }
-            }
-
             let sender = ensure_signed(origin)?;
-            let height = <frame_system::Pallet<T>>::block_number();
+            Self::ensure_bridge_running_or_error_liquidated()?;
+
+            let btc_balances = xpallet_assets::Module::<T>::usable_balance(&sender, &1);
+            ensure!(
+                btc_balances >= redeem_amount,
+                Error::<T>::AmoundExceedsAvaliable
+            );
+
             let vault = vault::Pallet::<T>::get_active_vault_by_id(&vault_id)?;
-
-            // tell vault to transfer btc to this btc_addr(how to give phone msg or mail msg?)
-
             // generate redeem request identify
             let request_id = Self::get_next_request_id();
+            let height = <frame_system::Pallet<T>>::block_number();
+
+            let (btc_amount, pcx_amount) = {
+                //TODO(wangyafei): partial redeem when liquidating.
+                (redeem_amount, 0)
+            };
+
             <RedeemRequests<T>>::insert(
                 request_id,
                 RedeemRequest::<T> {
@@ -184,14 +192,14 @@ pub mod pallet {
                     open_time: height,
                     requester: sender,
                     btc_address: btc_addr,
-                    amount: redeem_amount,
+                    amount: btc_amount,
                     redeem_fee: Default::default(),
                     status: super::types::RedeemRequestStatus::WaitForGetBtc,
                 },
             );
 
             // send msg to user
-            Self::deposit_event(Event::<T>::RedeemRequestIsAccepted);
+            // Self::deposit_event(Event::<T>::RedeemRequestIsAccepted);
 
             Ok(().into())
         }
@@ -310,6 +318,23 @@ pub mod pallet {
         /// Get `IssueRequest` from id
         pub(crate) fn get_redeem_request_by_id(request_id: RequestId) -> Option<RedeemRequest<T>> {
             <RedeemRequests<T>>::get(request_id)
+        }
+
+        pub(crate) fn ensure_bridge_running_or_error_liquidated() -> DispatchResult {
+            let status = assets::Pallet::<T>::bridge_status();
+            match status {
+                Status::Running => Ok(()),
+                Status::Error => {
+                    let error_codes: Vec<_> = assets::Pallet::<T>::bridge_error_codes();
+                    for error_code in error_codes {
+                        if error_code != ErrorCode::Liquidating {
+                            return Err(Error::<T>::BridgeInComlicatedError.into());
+                        }
+                    }
+                    Ok(().into())
+                }
+                Status::Shutdown => Err(Error::<T>::BridgeShutdown.into()),
+            }
         }
     }
 }
