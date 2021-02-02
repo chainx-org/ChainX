@@ -211,12 +211,6 @@ decl_module! {
             let mut worker_lock = StorageLock::<'_, Time>::new(b"ocw::worker::lock");
             // Worker thread num
             let worker_num = StorageValueRef::persistent(b"ocw::worker::num");
-
-            match worker_num.get::<u8>() {
-                Some(Some(num)) => debug::info!("[OCW] worker number: {}", num),
-                _ => debug::info!("[OCW] worker number: None"),
-            }
-
             // Control worker nums
             {
                 let _guard = worker_lock.lock();
@@ -231,9 +225,22 @@ decl_module! {
                 }
             }
 
+            // Speed up worker startup
+            let num = match worker_num.get::<u8>() {
+                Some(Some(num)) => {
+                    debug::info!("[OCW] worker number: {}", num);
+                    num
+                },
+                _ => {
+                    debug::info!("[OCW] worker number: 0");
+                    0
+                },
+            };
+
             // Mainnet or Testnet
             let network = XGatewayBitcoin::<T>::network_id();
-            if block_number.saturated_into::<u32>() % 5 == 0 {
+
+            if (num > 1) || (block_number.saturated_into() % 5 == 0) {
                 debug::info!("[OCW] Worker[{:?}] Start To Working...", block_number);
                 // First, get withdrawal proposal from chain and broadcast to btc network.
                 match Self::broadcast_withdrawal_proposal(network) {
@@ -262,6 +269,7 @@ decl_module! {
             if let Some(Some(num)) = worker_num.get::<u8>(){
                 worker_num.set(&(num - 1));
             }
+
         }
 
         #[weight = <T as Trait>::WeightInfo::push_header()]
@@ -363,7 +371,7 @@ impl<T: Trait> Module<T> {
                 });
                 if let Some((_acct, res)) = result {
                     if res.is_err() {
-                        debug::error!(
+                        debug::warn!(
                             "[OCW|push_header] Failed to submit signed transaction for pushing header: {:?}",
                             res
                         );
@@ -494,8 +502,10 @@ impl<T: Trait> Module<T> {
             let prev_tx_hash = hex::encode(hash_rev(outpoint.txid));
             for num in 0..=RETRY_NUM {
                 if num == MAX_RETRY_NUM {
+                    debug::info!("[OCW] try prev_tx {} times", num);
                     return false;
                 }
+
                 let prev_tx = match Self::fetch_transaction(&prev_tx_hash[..], network) {
                     Ok(prev) => prev,
                     _ => continue,
@@ -534,7 +544,7 @@ impl<T: Trait> Module<T> {
                 });
                 if let Some((_acct, res)) = result {
                     if res.is_err() {
-                        debug::error!("[OCW|push_transaction] Failed to submit signed transaction for pushing transaction: {:?}",res);
+                        debug::warn!("[OCW|push_transaction] Failed to submit signed transaction for pushing transaction: {:?}",res);
                     } else {
                         debug::info!(
                             "[OCW|push_transaction] Submitting signed transaction for pushing transaction: #{:?}",
@@ -551,7 +561,11 @@ impl<T: Trait> Module<T> {
         }
 
         // Clear local storage
-        local_tx_num.clear();
+        {
+            let _guard = tx_lock.lock();
+            local_tx_num.clear();
+        }
+
         true
     }
 
