@@ -68,7 +68,7 @@ pub mod types {
 #[frame_support::pallet]
 #[allow(dead_code)]
 pub mod pallet {
-    use sp_std::default::Default;
+    use sp_std::{collections::btree_set::BTreeSet, default::Default};
 
     use frame_support::pallet_prelude::*;
     use frame_support::traits::ReservableCurrency;
@@ -77,6 +77,8 @@ pub mod pallet {
     use super::types::*;
     use crate::assets::pallet as assets;
     use assets::BalanceOf;
+
+    type DefaultVault<T: Config> = Vault<T::AccountId, BlockNumberFor<T>, BalanceOf<T>>;
 
     #[pallet::config]
     pub trait Config: frame_system::Config + assets::Config {
@@ -91,10 +93,15 @@ pub mod pallet {
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn on_finalize(_: BlockNumberFor<T>) {
             if assets::Pallet::<T>::is_bridge_running() {
-                <Vaults<T>>::translate(|_, vault| {
-                    // assets::Pallet::<T>::check_vault_collateral_ratio(vault);
-                    vault
-                })
+                let mut liquidate_vault_ids = BTreeSet::new();
+                for (id, vault) in <Vaults<T>>::iter() {
+                    if Self::_check_vault_liquidated(&vault) {
+                        liquidate_vault_ids.insert(id.clone());
+                    }
+                }
+                for id in liquidate_vault_ids {
+                    let _ = Self::liquidate_vault(&id);
+                }
             }
         }
     }
@@ -329,6 +336,20 @@ pub mod pallet {
                 liquidator.to_be_redeemed_tokens += vault.to_be_redeemed_tokens;
             });
             Ok(())
+        }
+
+        pub(crate) fn _check_vault_liquidated(vault: &DefaultVault<T>) -> bool {
+            if vault.issued_tokens == 0.into() {
+                return false;
+            }
+            let collateral = <assets::CurrencyOf<T>>::reserved_balance(&vault.id);
+            let collateral_ratio =
+                <assets::Pallet<T>>::calculate_collateral_ratio(vault.issued_tokens, collateral);
+            let liquidation_threshold = Self::liquidation_threshold();
+            match collateral_ratio {
+                Ok(collateral_ratio) => collateral_ratio < liquidation_threshold,
+                _ => false,
+            }
         }
     }
 }

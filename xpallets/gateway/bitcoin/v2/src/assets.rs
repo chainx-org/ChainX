@@ -318,6 +318,28 @@ pub mod pallet {
             Self::bridge_status() == Status::Running
         }
 
+        pub fn calculate_collateral_ratio(
+            issued_tokens: BalanceOf<T>,
+            collateral: BalanceOf<T>,
+        ) -> Result<u16, DispatchError> {
+            let issued_tokens = issued_tokens.saturated_into::<u128>();
+            let collateral = collateral.saturated_into::<u128>();
+            ensure!(issued_tokens != 0, Error::<T>::ArithmeticError);
+
+            let exchange_rate: TradingPrice = Self::exchange_rate();
+            let equivalence_collateral = exchange_rate
+                .convert_to_pcx(issued_tokens)
+                .ok_or(Error::<T>::ArithmeticError)?;
+            let raw_collateral: u128 = collateral.saturated_into();
+            let collateral_ratio = raw_collateral
+                .checked_mul(100)
+                .ok_or(Error::<T>::ArithmeticError)?
+                .checked_div(equivalence_collateral)
+                .ok_or(Error::<T>::ArithmeticError)?;
+            //FIXME(wangyafei): should use try_into?
+            Ok(raw_collateral as u16)
+        }
+
         pub(crate) fn _update_exchange_rate(exchange_rate: TradingPrice) -> DispatchResult {
             // TODO: sanity check?
             <ExchangeRate<T>>::put(exchange_rate);
