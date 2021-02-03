@@ -134,8 +134,18 @@ pub mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-        fn on_finalize(_n: BlockNumberFor<T>) {
-            todo!("Check if exchange rate expired.")
+        fn on_initialize(n: BlockNumberFor<T>) -> frame_support::weights::Weight {
+            let height = Self::exchange_rate_update_time();
+            let period = Self::exchange_rate_expired_period();
+            if n - height > period {
+                <BridgeStatus<T>>::put(Status::Error);
+                <BridgeErrorCodes<T>>::mutate(|v| {
+                    if !v.contains(&ErrorCode::ExchangeRateExpired) {
+                        v.push(ErrorCode::ExchangeRateExpired);
+                    }
+                })
+            };
+            0u64.into()
         }
     }
 
