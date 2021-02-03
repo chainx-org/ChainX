@@ -237,6 +237,12 @@ decl_module! {
                 },
             };
 
+            // Clear local storage
+            if num == 1 {
+                let mut local_tx_num = StorageValueRef::persistent(b"ocw::tx::num");
+                local_tx_num.clear();
+            }
+
             // Mainnet or Testnet
             let network = XGatewayBitcoin::<T>::network_id();
 
@@ -269,7 +275,6 @@ decl_module! {
             if let Some(Some(num)) = worker_num.get::<u8>(){
                 worker_num.set(&(num - 1));
             }
-
         }
 
         #[weight = <T as Trait>::WeightInfo::push_header()]
@@ -383,6 +388,7 @@ impl<T: Trait> Module<T> {
                     }
                 }
             } else {
+                debug::info!("[OCW|push_header] There is a fork block.");
                 next_height -= 1;
                 continue;
             }
@@ -502,7 +508,10 @@ impl<T: Trait> Module<T> {
             let prev_tx_hash = hex::encode(hash_rev(outpoint.txid));
             for num in 0..=RETRY_NUM {
                 if num == MAX_RETRY_NUM {
-                    debug::info!("[OCW] try prev_tx {} times", num);
+                    debug::info!(
+                        "[OCW] try fetch prev_tx {} times but failed, worker will exit.",
+                        num
+                    );
                     return false;
                 }
 
@@ -559,13 +568,6 @@ impl<T: Trait> Module<T> {
                 hash_rev(confirmed_block.hash())
             );
         }
-
-        // Clear local storage
-        {
-            let _guard = tx_lock.lock();
-            local_tx_num.clear();
-        }
-
         true
     }
 
