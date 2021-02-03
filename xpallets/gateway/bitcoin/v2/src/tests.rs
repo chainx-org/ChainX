@@ -131,6 +131,10 @@ fn test_issue_request() {
         assert_eq!(issue_request.requester, 2);
         assert_eq!(issue_request.vault, 1);
         assert_eq!(issue_request.open_time, 0);
+
+        // check vault's token status
+        let vault = vault::Pallet::<Test>::get_vault_by_id(&issue_request.vault).unwrap();
+        assert_eq!(vault.to_be_issued_tokens, issue_request.btc_amount);
     })
 }
 

@@ -102,7 +102,7 @@ pub mod pallet {
             Self::insert_issue_request(
                 request_id,
                 IssueRequest::<T> {
-                    vault: vault.id,
+                    vault: vault.id.clone(),
                     open_time: height,
                     requester: sender,
                     btc_address: vault.wallet,
@@ -111,6 +111,11 @@ pub mod pallet {
                     ..Default::default()
                 },
             );
+            <vault::Vaults<T>>::mutate(&vault.id, |vault| {
+                if let Some(vault) = vault {
+                    vault.to_be_issued_tokens += btc_amount;
+                }
+            });
             // Self::deposit_event(...);
             Ok(().into())
         }
@@ -132,6 +137,12 @@ pub mod pallet {
                 &issue_request.requester,
                 issue_request.btc_amount,
             )?;
+            <vault::Vaults<T>>::mutate(&issue_request.vault, |vault| {
+                if let Some(vault) = vault {
+                    vault.to_be_issued_tokens -= issue_request.btc_amount;
+                    vault.issued_tokens += issue_request.btc_amount;
+                }
+            });
             //TODO(wangyafei): <assets::Pallet<T>>::release_collateral(issue_request.request,
             // issue_request.griefing_collateral)?;
             // Self::deposit_event(...);
@@ -144,17 +155,22 @@ pub mod pallet {
             request_id: RequestId,
         ) -> DispatchResultWithPostInfo {
             let _ = ensure_signed(origin)?;
-            let request = Self::get_issue_request_by_id(request_id)
+            let issue_request = Self::get_issue_request_by_id(request_id)
                 .ok_or(Error::<T>::IssueRequestNotFound)?;
             let height = <frame_system::Pallet<T>>::block_number();
             let expired_time = <IssueRequestExpiredTime<T>>::get();
             ensure!(
-                height - request.open_time > expired_time,
+                height - issue_request.open_time > expired_time,
                 Error::<T>::IssueRequestNotExpired
             );
             // TODO:
             // <assets::Pallet<T>>::slash_collateral(issue.requester, issue.vault)?;
             // Self::deposit_event(...);
+            <vault::Vaults<T>>::mutate(&issue_request.vault, |vault| {
+                if let Some(vault) = vault {
+                    vault.to_be_issued_tokens -= issue_request.btc_amount;
+                }
+            });
             Ok(().into())
         }
 
