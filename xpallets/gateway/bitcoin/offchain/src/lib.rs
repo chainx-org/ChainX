@@ -62,7 +62,7 @@ use xp_gateway_bitcoin::{BtcTxMetaType, BtcTxTypeDetector, OpReturnExtractor};
 use xp_gateway_common::AccountExtractor;
 use xpallet_assets::Chain;
 use xpallet_gateway_bitcoin::{
-    types::{BtcRelayedTxInfo, VoteResult},
+    types::{BtcRelayedTxInfo, BtcTxResult, VoteResult},
     Module as XGatewayBitcoin, WeightInfo,
 };
 use xpallet_gateway_common::{trustees::bitcoin::BtcTrusteeAddrInfo, Module as XGatewayCommon};
@@ -451,6 +451,9 @@ impl<T: Trait> Module<T> {
                     confirmed_info.set(&confirm_height);
                     return false;
                 }
+                // worker abnormal exit, restart all
+                let _guard = confirmed_lock.lock();
+                confirmed_info.set(&(confirm_height - 1));
             }
         }
         true
@@ -544,6 +547,11 @@ impl<T: Trait> Module<T> {
             // Push xbtc relay (withdraw/deposit) transaction
             let signer = Signer::<T, T::RelayAuthId>::any_account();
             for (tx, prev_tx) in needed {
+                if let Some(state) = XGatewayBitcoin::<T>::tx_state(&tx.hash()) {
+                    if state.result == BtcTxResult::Success {
+                        continue;
+                    }
+                }
                 let relayed_info = BtcRelayedTxInfo {
                     block_hash: confirmed_block.hash(),
                     merkle_proof: merkle_proof.clone(),
