@@ -3,9 +3,10 @@
 use sc_cli::{ChainSpec, Role, RuntimeVersion, SubstrateCli};
 use sc_service::PartialComponents;
 
+use chainx_service::{self as service, new_partial};
+
 use crate::chain_spec;
 use crate::cli::{Cli, Subcommand};
-use crate::service::{self, new_partial};
 
 impl SubstrateCli for Cli {
     fn impl_name() -> String {

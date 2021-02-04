@@ -1,21 +1,11 @@
 [package]
-name = "chainx-cli"
+name = "chainx-service"
 version = "2.0.8-1"
 authors = ["The ChainX Authors"]
-description = "Implementation of protocol https://chainx.org in Rust based on the Substrate framework."
 edition = "2018"
 
 [dependencies]
 futures = "0.3.4"
-log = "0.4.8"
-log4rs = { version = "0.12", features = ["rolling_file_appender", "compound_policy", "size_trigger", "fixed_window_roller"] }
-hex = "0.4"
-hex-literal = "0.3.1"
-jsonrpc-pubsub = "15.0.0"
-parking_lot = "0.11.0"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-structopt = "0.3.8"
 
 # Substrate client
 sc-authority-discovery = "0.8.0"
@@ -30,12 +20,8 @@ sc-finality-grandpa = "0.8.0"
 sc-network = "0.8.0"
 sc-rpc = "2.0.0"
 sc-transaction-pool = "2.0.0"
+sc-service = "0.8.0"
 
-frame-benchmarking-cli = { version = "2.0.0", optional = true }
-sc-cli = { version = "0.8.0", optional = true }
-sc-service = { version = "0.8.0", optional = true }
-
-# Substrate primitives
 sp-api = "2.0.0"
 sp-authority-discovery = "2.0.0"
 sp-blockchain = "2.0.0"
@@ -53,23 +39,12 @@ sp-session = "2.0.0"
 frame-system-rpc-runtime-api = "2.0.0"
 pallet-transaction-payment-rpc-runtime-api = "2.0.0"
 
-# Substrate pallets
-pallet-im-online = "2.0.0"
-
 chainx-executor = { path = "../executor" }
 chainx-primitives = { path = "../primitives" }
 chainx-rpc = { path = "../rpc" }
-chainx-service = { path = "../service" }
 chainx-runtime = { path = "../runtime/chainx" }
 dev-runtime = { path = "../runtime/dev" }
 malan-runtime = { path = "../runtime/malan" }
-
-xp-assets-registrar = { path  = "../primitives/assets-registrar" }
-xp-genesis-builder = { path  = "../primitives/genesis-builder" }
-xp-protocol = { path = "../primitives/protocol" }
-
-xpallet-gateway-bitcoin = { path  = "../xpallets/gateway/bitcoin" }
-xpallet-gateway-common = { path  = "../xpallets/gateway/common" }
 
 xpallet-assets-rpc-runtime-api = { path = "../xpallets/assets/rpc/runtime-api" }
 xpallet-dex-spot-rpc-runtime-api = { path = "../xpallets/dex/spot/rpc/runtime-api" }
@@ -78,25 +53,3 @@ xpallet-gateway-records-rpc-runtime-api = { path = "../xpallets/gateway/records/
 xpallet-mining-asset-rpc-runtime-api = { path = "../xpallets/mining/asset/rpc/runtime-api" }
 xpallet-mining-staking-rpc-runtime-api = { path = "../xpallets/mining/staking/rpc/runtime-api" }
 xpallet-transaction-fee-rpc-runtime-api = { path = "../xpallets/transaction-fee/rpc/runtime-api" }
-
-[build-dependencies]
-substrate-build-script-utils = "2.0.0"
-
-[features]
-default = ["cli"]
-cli = [
-    "sc-cli",
-    "sc-service",
-    "frame-benchmarking-cli",
-    "chainx-executor/wasmi-errno",
-]
-wasmtime = [
-    "sc-cli/wasmtime",
-    "sc-service/wasmtime",
-    "chainx-executor/wasmtime",
-]
-runtime-benchmarks = [
-    "chainx-runtime/runtime-benchmarks",
-    "dev-runtime/runtime-benchmarks",
-    "malan-runtime/runtime-benchmarks",
-]

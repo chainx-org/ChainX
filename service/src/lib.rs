@@ -1,4 +1,4 @@
-// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2021 ChainX Project Authors. Licensed under GPL-3.0.
 
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
@@ -14,15 +14,11 @@ use sc_service::{config::Configuration, error::Error as ServiceError, TaskManage
 use sp_inherents::InherentDataProviders;
 use sp_runtime::traits::Block as BlockT;
 
-// use chainx_executor::Executor;
 use chainx_primitives::{AccountId, Balance, Block, BlockNumber, };
 
 type MiningWeight = u128;
 type VoteWeight = u128;
 
-// use chainx_runtime::{self, RuntimeApi};
-
-// type FullClient<RuntimeApi, Executor> = sc_service::TFullClient<Block, RuntimeApi, Executor>;
 type FullClient<RuntimeApi, Executor> = sc_service::TFullClient<Block, RuntimeApi, Executor>;
 
 type FullBackend = sc_service::TFullBackend<Block>;
