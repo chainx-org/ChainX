@@ -14,13 +14,9 @@ use sc_network::{Event, NetworkService};
 use sc_service::{config::Configuration, error::Error as ServiceError, TaskManager};
 use sp_api::ConstructRuntimeApi;
 use sp_inherents::InherentDataProviders;
-use sp_runtime::traits::BlakeTwo256;
 use sp_runtime::traits::Block as BlockT;
 
-use chainx_primitives::{AccountId, Balance, Block, BlockNumber};
-
-use xpallet_mining_asset_rpc_runtime_api::MiningWeight;
-use xpallet_mining_staking_rpc_runtime_api::VoteWeight;
+use chainx_primitives::Block;
 
 mod client;
 use client::RuntimeApiCollection;
@@ -104,7 +100,7 @@ where
 
     let (block_import, babe_link) = sc_consensus_babe::block_import(
         sc_consensus_babe::Config::get_or_compute(&*client)?,
-        grandpa_block_import.clone(),
+        grandpa_block_import,
         client.clone(),
     )?;
 
@@ -188,7 +184,6 @@ pub struct NewFullBase<RuntimeApi, Executor> {
     pub client: Arc<FullClient<RuntimeApi, Executor>>,
     pub network: Arc<NetworkService<Block, <Block as BlockT>::Hash>>,
     pub network_status_sinks: sc_service::NetworkStatusSinks<Block>,
-    // pub transaction_pool: Arc<sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, Executor>>>,
 }
 
 /// Creates a full service from the configuration.
@@ -250,7 +245,7 @@ where
 
     sc_service::spawn_tasks(sc_service::SpawnTasksParams {
         config,
-        backend: backend.clone(),
+        backend,
         client: client.clone(),
         keystore: keystore_container.sync_keystore(),
         network: network.clone(),
@@ -270,7 +265,7 @@ where
         let proposer = sc_basic_authorship::ProposerFactory::new(
             task_manager.spawn_handle(),
             client.clone(),
-            transaction_pool.clone(),
+            transaction_pool,
             prometheus_registry.as_ref(),
         );
 
@@ -370,17 +365,15 @@ where
     }
 
     network_starter.start_network();
+
     Ok(NewFullBase {
         task_manager,
         inherent_data_providers,
         client,
         network,
         network_status_sinks,
-        // transaction_pool,
     })
 }
-
-type Nonce = u32;
 
 /// Builds a new service for a full client.
 pub fn new_full<RuntimeApi, Executor>(config: Configuration) -> Result<TaskManager, ServiceError>
@@ -395,15 +388,15 @@ where
         .map(|NewFullBase { task_manager, .. }| task_manager)
 }
 
-/// Can be called for a `Configuration` to check if it is a configuration for the `Kusama` network.
+/// Can be called for a `Configuration` to check if it is a configuration for the `ChainX` network.
 pub trait IdentifyVariant {
-    /// Returns if this is a configuration for the `Kusama` network.
+    /// Returns if this is a configuration for the `ChainX` network.
     fn is_chainx(&self) -> bool;
 
-    /// Returns if this is a configuration for the `Westend` network.
+    /// Returns if this is a configuration for the `Malan` network.
     fn is_malan(&self) -> bool;
 
-    /// Returns if this is a configuration for the `Rococo` network.
+    /// Returns if this is a configuration for the `Development` network.
     fn is_dev(&self) -> bool;
 }
 
@@ -475,8 +468,8 @@ where
         None,
         Some(Box::new(finality_proof_import)),
         client.clone(),
-        select_chain.clone(),
-        inherent_data_providers.clone(),
+        select_chain,
+        inherent_data_providers,
         &task_manager.spawn_handle(),
         config.prometheus_registry(),
         sp_consensus::NeverCanAuthor,
@@ -522,14 +515,14 @@ where
         on_demand: Some(on_demand),
         remote_blockchain: Some(backend.remote_blockchain()),
         rpc_extensions_builder: Box::new(sc_service::NoopRpcExtensionBuilder(rpc_extensions)),
-        client: client.clone(),
-        transaction_pool: transaction_pool.clone(),
+        client,
+        transaction_pool,
         config,
         keystore: keystore_container.sync_keystore(),
         backend,
         network_status_sinks,
         system_rpc_tx,
-        network: network.clone(),
+        network,
         telemetry_connection_sinks: sc_service::TelemetryConnectionSinks::default(),
         task_manager: &mut task_manager,
     })?;

@@ -1,4 +1,10 @@
-use super::*;
+// Copyright 2021 ChainX Project Authors. Licensed under GPL-3.0.
+
+use sp_runtime::traits::BlakeTwo256;
+
+use chainx_primitives::{AccountId, Balance, Block, BlockNumber, Index};
+use xpallet_mining_asset_rpc_runtime_api::MiningWeight;
+use xpallet_mining_staking_rpc_runtime_api::VoteWeight;
 
 /// A set of APIs that chainx-like runtimes must implement.
 pub trait RuntimeApiCollection:
@@ -7,7 +13,7 @@ pub trait RuntimeApiCollection:
     + sp_consensus_babe::BabeApi<Block>
     + sp_finality_grandpa::GrandpaApi<Block>
     + sp_block_builder::BlockBuilder<Block>
-    + frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce>
+    + frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Index>
     + pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance>
     + sp_api::Metadata<Block>
     + sp_offchain::OffchainWorkerApi<Block>
@@ -46,7 +52,7 @@ where
         + sp_consensus_babe::BabeApi<Block>
         + sp_finality_grandpa::GrandpaApi<Block>
         + sp_block_builder::BlockBuilder<Block>
-        + frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce>
+        + frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Index>
         + pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance>
         + sp_api::Metadata<Block>
         + sp_offchain::OffchainWorkerApi<Block>

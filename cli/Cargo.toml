@@ -36,10 +36,7 @@ sc-cli = { version = "0.8.0", optional = true }
 sc-service = { version = "0.8.0", optional = true }
 
 # Substrate primitives
-sp-api = "2.0.0"
 sp-authority-discovery = "2.0.0"
-sp-blockchain = "2.0.0"
-sp-block-builder = "2.0.0"
 sp-core = "2.0.0"
 sp-consensus = "0.8.0"
 sp-consensus-babe = "0.8.0"
@@ -47,11 +44,6 @@ sp-finality-grandpa = "2.0.0"
 sp-inherents = "2.0.0"
 sp-runtime = "2.0.0"
 sp-transaction-pool = "2.0.0"
-sp-offchain = "2.0.0"
-sp-session = "2.0.0"
-
-frame-system-rpc-runtime-api = "2.0.0"
-pallet-transaction-payment-rpc-runtime-api = "2.0.0"
 
 # Substrate pallets
 pallet-im-online = "2.0.0"
@@ -70,14 +62,6 @@ xp-protocol = { path = "../primitives/protocol" }
 
 xpallet-gateway-bitcoin = { path  = "../xpallets/gateway/bitcoin" }
 xpallet-gateway-common = { path  = "../xpallets/gateway/common" }
-
-xpallet-assets-rpc-runtime-api = { path = "../xpallets/assets/rpc/runtime-api" }
-xpallet-dex-spot-rpc-runtime-api = { path = "../xpallets/dex/spot/rpc/runtime-api" }
-xpallet-gateway-common-rpc-runtime-api = { path = "../xpallets/gateway/common/rpc/runtime-api" }
-xpallet-gateway-records-rpc-runtime-api = { path = "../xpallets/gateway/records/rpc/runtime-api" }
-xpallet-mining-asset-rpc-runtime-api = { path = "../xpallets/mining/asset/rpc/runtime-api" }
-xpallet-mining-staking-rpc-runtime-api = { path = "../xpallets/mining/staking/rpc/runtime-api" }
-xpallet-transaction-fee-rpc-runtime-api = { path = "../xpallets/transaction-fee/rpc/runtime-api" }
 
 [build-dependencies]
 substrate-build-script-utils = "2.0.0"
