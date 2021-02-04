@@ -479,12 +479,22 @@ impl<T: Trait> Module<T> {
         // Initialize local storage and lock
         let mut local_tx_num = StorageValueRef::persistent(b"ocw::tx::num");
         let mut tx_lock = StorageLock::<'_, Time>::new(b"ocw::tx::lock");
-
+        // Exit?
+        let mut local_exit = StorageValueRef::persistent(b"ocw::exit");
         // Filter transaction type (only deposit and withdrawal)
         for (tx_num, tx) in confirmed_block.transactions.iter().enumerate() {
-            // Ensure that multiple threads are mutually exclusive
+            // Ensure that multiple workers are mutually exclusive
             {
                 let _guard = tx_lock.lock();
+                // If a worker exits, everyone exits together
+                let exit = match local_exit.get::<bool>() {
+                    Some(Some(yes)) => yes,
+                    _ => false,
+                };
+                if exit == true {
+                    return false;
+                }
+                // Set current worker's tx index
                 let num = match local_tx_num.get::<u16>() {
                     Some(Some(num)) => num,
                     _ => 0,
@@ -515,6 +525,10 @@ impl<T: Trait> Module<T> {
                         "[OCW] try fetch prev_tx {} times but failed, worker will exit.",
                         num
                     );
+                    // Worker abnormal exit,make all workers exit together
+                    let _guard = tx_lock.lock();
+                    local_tx_num.clear();
+                    local_exit.set(&true);
                     return false;
                 }
 
