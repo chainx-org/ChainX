@@ -8,14 +8,14 @@ use std::time::Duration;
 use futures::prelude::*;
 
 use sc_client_api::{ExecutorProvider, RemoteBackend};
+use sc_executor::NativeExecutionDispatch;
 use sc_finality_grandpa::FinalityProofProvider as GrandpaFinalityProofProvider;
 use sc_network::{Event, NetworkService};
 use sc_service::{config::Configuration, error::Error as ServiceError, TaskManager};
-use sp_inherents::InherentDataProviders;
-use sp_runtime::traits::Block as BlockT;
-use sc_executor::NativeExecutionDispatch;
 use sp_api::ConstructRuntimeApi;
+use sp_inherents::InherentDataProviders;
 use sp_runtime::traits::BlakeTwo256;
+use sp_runtime::traits::Block as BlockT;
 
 use chainx_primitives::{AccountId, Balance, Block, BlockNumber};
 
