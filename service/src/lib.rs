@@ -1,4 +1,4 @@
-// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2021 ChainX Project Authors. Licensed under GPL-3.0.
 
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
@@ -8,37 +8,60 @@ use std::time::Duration;
 use futures::prelude::*;
 
 use sc_client_api::{ExecutorProvider, RemoteBackend};
+use sc_executor::NativeExecutionDispatch;
 use sc_finality_grandpa::FinalityProofProvider as GrandpaFinalityProofProvider;
 use sc_network::{Event, NetworkService};
 use sc_service::{config::Configuration, error::Error as ServiceError, TaskManager};
 use sc_telemetry::TelemetrySpan;
+use sp_api::ConstructRuntimeApi;
 use sp_inherents::InherentDataProviders;
 use sp_runtime::traits::Block as BlockT;
 
-use chainx_executor::Executor;
 use chainx_primitives::Block;
-use chainx_runtime::{self, RuntimeApi};
 
-type FullClient = sc_service::TFullClient<Block, RuntimeApi, Executor>;
+mod client;
+use client::RuntimeApiCollection;
+
+type LightBackend = sc_service::TLightBackendWithHash<Block, sp_runtime::traits::BlakeTwo256>;
+
+type LightClient<RuntimeApi, Executor> =
+    sc_service::TLightClientWithBackend<Block, RuntimeApi, Executor, LightBackend>;
+
+type FullClient<RuntimeApi, Executor> = sc_service::TFullClient<Block, RuntimeApi, Executor>;
+
 type FullBackend = sc_service::TFullBackend<Block>;
-type FullGrandpaBlockImport =
-    sc_finality_grandpa::GrandpaBlockImport<FullBackend, Block, FullClient, FullSelectChain>;
+
+type FullGrandpaBlockImport<RuntimeApi, Executor> = sc_finality_grandpa::GrandpaBlockImport<
+    FullBackend,
+    Block,
+    FullClient<RuntimeApi, Executor>,
+    FullSelectChain,
+>;
+
 type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;
 
-pub fn new_partial(
+pub fn new_partial<RuntimeApi, Executor>(
     config: &Configuration,
 ) -> Result<
     sc_service::PartialComponents<
-        FullClient,
+        FullClient<RuntimeApi, Executor>,
         FullBackend,
         FullSelectChain,
-        sp_consensus::DefaultImportQueue<Block, FullClient>,
-        sc_transaction_pool::FullPool<Block, FullClient>,
+        sp_consensus::DefaultImportQueue<Block, FullClient<RuntimeApi, Executor>>,
+        sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, Executor>>,
         (
             impl Fn(chainx_rpc::DenyUnsafe, sc_rpc::SubscriptionTaskExecutor) -> chainx_rpc::IoHandler,
             (
-                sc_consensus_babe::BabeBlockImport<Block, FullClient, FullGrandpaBlockImport>,
-                sc_finality_grandpa::LinkHalf<Block, FullClient, FullSelectChain>,
+                sc_consensus_babe::BabeBlockImport<
+                    Block,
+                    FullClient<RuntimeApi, Executor>,
+                    FullGrandpaBlockImport<RuntimeApi, Executor>,
+                >,
+                sc_finality_grandpa::LinkHalf<
+                    Block,
+                    FullClient<RuntimeApi, Executor>,
+                    FullSelectChain,
+                >,
                 sc_consensus_babe::BabeLink<Block>,
             ),
             sc_finality_grandpa::SharedVoterState,
@@ -46,7 +69,14 @@ pub fn new_partial(
         ),
     >,
     ServiceError,
-> {
+>
+where
+    RuntimeApi:
+        ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+    RuntimeApi::RuntimeApi:
+        RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
+    Executor: NativeExecutionDispatch + 'static,
+{
     let (client, backend, keystore_container, task_manager, telemetry_span) =
         sc_service::new_full_parts::<Block, RuntimeApi, Executor>(&config)?;
     let client = Arc::new(client);
@@ -69,7 +99,7 @@ pub fn new_partial(
 
     let (block_import, babe_link) = sc_consensus_babe::block_import(
         sc_consensus_babe::Config::get_or_compute(&*client)?,
-        grandpa_block_import.clone(),
+        grandpa_block_import,
         client.clone(),
     )?;
 
@@ -156,17 +186,25 @@ pub fn new_partial(
     })
 }
 
-pub struct NewFullBase {
+pub struct NewFullBase<RuntimeApi, Executor> {
     pub task_manager: TaskManager,
     pub inherent_data_providers: InherentDataProviders,
-    pub client: Arc<FullClient>,
+    pub client: Arc<FullClient<RuntimeApi, Executor>>,
     pub network: Arc<NetworkService<Block, <Block as BlockT>::Hash>>,
     pub network_status_sinks: sc_service::NetworkStatusSinks<Block>,
-    pub transaction_pool: Arc<sc_transaction_pool::FullPool<Block, FullClient>>,
 }
 
 /// Creates a full service from the configuration.
-pub fn new_full_base(mut config: Configuration) -> Result<NewFullBase, ServiceError> {
+pub fn new_full_base<RuntimeApi, Executor>(
+    config: Configuration,
+) -> Result<NewFullBase<RuntimeApi, Executor>, ServiceError>
+where
+    RuntimeApi:
+        ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+    RuntimeApi::RuntimeApi:
+        RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
+    Executor: NativeExecutionDispatch + 'static,
+{
     let sc_service::PartialComponents {
         client,
         backend,
@@ -242,7 +280,7 @@ pub fn new_full_base(mut config: Configuration) -> Result<NewFullBase, ServiceEr
         let proposer = sc_basic_authorship::ProposerFactory::new(
             task_manager.spawn_handle(),
             client.clone(),
-            transaction_pool.clone(),
+            transaction_pool,
             prometheus_registry.as_ref(),
         );
 
@@ -340,25 +378,73 @@ pub fn new_full_base(mut config: Configuration) -> Result<NewFullBase, ServiceEr
     }
 
     network_starter.start_network();
+
     Ok(NewFullBase {
         task_manager,
         inherent_data_providers,
         client,
         network,
         network_status_sinks,
-        transaction_pool,
     })
 }
 
 /// Builds a new service for a full client.
-pub fn new_full(config: Configuration) -> Result<TaskManager, ServiceError> {
-    new_full_base(config).map(|NewFullBase { task_manager, .. }| task_manager)
+pub fn new_full<RuntimeApi, Executor>(config: Configuration) -> Result<TaskManager, ServiceError>
+where
+    RuntimeApi:
+        ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+    RuntimeApi::RuntimeApi:
+        RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
+    Executor: NativeExecutionDispatch + 'static,
+{
+    new_full_base::<RuntimeApi, Executor>(config)
+        .map(|NewFullBase { task_manager, .. }| task_manager)
+}
+
+/// Can be called for a `Configuration` to check if it is a configuration for the `ChainX` network.
+pub trait IdentifyVariant {
+    /// Returns if this is a configuration for the `ChainX` network.
+    fn is_chainx(&self) -> bool;
+
+    /// Returns if this is a configuration for the `Malan` network.
+    fn is_malan(&self) -> bool;
+
+    /// Returns if this is a configuration for the `Development` network.
+    fn is_dev(&self) -> bool;
+}
+
+impl IdentifyVariant for Box<dyn sc_service::ChainSpec> {
+    fn is_chainx(&self) -> bool {
+        self.id() == "chainx"
+    }
+    fn is_malan(&self) -> bool {
+        self.id().contains("malan")
+    }
+    fn is_dev(&self) -> bool {
+        self.id() == "dev"
+    }
+}
+
+pub fn build_full(config: Configuration) -> Result<TaskManager, ServiceError> {
+    if config.chain_spec.is_chainx() {
+        new_full::<chainx_runtime::RuntimeApi, chainx_executor::ChainXExecutor>(config)
+    } else if config.chain_spec.is_malan() {
+        new_full::<malan_runtime::RuntimeApi, chainx_executor::MalanExecutor>(config)
+    } else {
+        new_full::<dev_runtime::RuntimeApi, chainx_executor::DevExecutor>(config)
+    }
 }
 
 /// Builds a new service for a light client.
-pub fn new_light(config: Configuration) -> Result<TaskManager, ServiceError> {
+pub fn new_light<Runtime, Dispatch>(config: Configuration) -> Result<TaskManager, ServiceError>
+where
+    Runtime: 'static + Send + Sync + ConstructRuntimeApi<Block, LightClient<Runtime, Dispatch>>,
+    <Runtime as ConstructRuntimeApi<Block, LightClient<Runtime, Dispatch>>>::RuntimeApi:
+        RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<LightBackend, Block>>,
+    Dispatch: NativeExecutionDispatch + 'static,
+{
     let (client, backend, keystore_container, mut task_manager, on_demand, telemetry_span) =
-        sc_service::new_light_parts::<Block, RuntimeApi, Executor>(&config)?;
+        sc_service::new_light_parts::<Block, Runtime, Dispatch>(&config)?;
 
     let select_chain = sc_consensus::LongestChain::new(backend.clone());
 
@@ -390,8 +476,8 @@ pub fn new_light(config: Configuration) -> Result<TaskManager, ServiceError> {
         babe_block_import,
         Some(Box::new(justification_import)),
         client.clone(),
-        select_chain.clone(),
-        inherent_data_providers.clone(),
+        select_chain,
+        inherent_data_providers,
         &task_manager.spawn_handle(),
         config.prometheus_registry(),
         sp_consensus::NeverCanAuthor,
@@ -432,17 +518,27 @@ pub fn new_light(config: Configuration) -> Result<TaskManager, ServiceError> {
         on_demand: Some(on_demand),
         remote_blockchain: Some(backend.remote_blockchain()),
         rpc_extensions_builder: Box::new(sc_service::NoopRpcExtensionBuilder(rpc_extensions)),
-        client: client.clone(),
-        transaction_pool: transaction_pool.clone(),
+        client,
+        transaction_pool,
         config,
         keystore: keystore_container.sync_keystore(),
         backend,
         network_status_sinks,
         system_rpc_tx,
-        network: network.clone(),
+        network,
         task_manager: &mut task_manager,
         telemetry_span,
     })?;
 
     Ok(task_manager)
+}
+
+pub fn build_light(config: Configuration) -> Result<TaskManager, ServiceError> {
+    if config.chain_spec.is_chainx() {
+        new_light::<chainx_runtime::RuntimeApi, chainx_executor::ChainXExecutor>(config)
+    } else if config.chain_spec.is_malan() {
+        new_light::<malan_runtime::RuntimeApi, chainx_executor::MalanExecutor>(config)
+    } else {
+        new_light::<dev_runtime::RuntimeApi, chainx_executor::DevExecutor>(config)
+    }
 }

@@ -3,9 +3,10 @@
 use sc_cli::{ChainSpec, Role, RuntimeVersion, SubstrateCli};
 use sc_service::PartialComponents;
 
+use chainx_service::{self as service, new_partial};
+
 use crate::chain_spec;
 use crate::cli::{Cli, Subcommand};
-use crate::service::{self, new_partial};
 
 impl SubstrateCli for Cli {
     fn impl_name() -> String {
@@ -97,8 +98,8 @@ pub fn run() -> sc_cli::Result<()> {
             runner
                 .run_node_until_exit(|config| async move {
                     match config.role {
-                        Role::Light => service::new_light(config),
-                        _ => service::new_full(config),
+                        Role::Light => service::build_light(config),
+                        _ => service::build_full(config),
                     }
                 })
                 .map_err(sc_cli::Error::Service)
@@ -111,7 +112,7 @@ pub fn run() -> sc_cli::Result<()> {
                 set_default_ss58_version(chain_spec);
 
                 runner.sync_run(|config| {
-                    cmd.run::<chainx_runtime::Block, chainx_executor::Executor>(config)
+                    cmd.run::<chainx_runtime::Block, chainx_executor::ChainXExecutor>(config)
                 })
             } else {
                 println!(
@@ -141,7 +142,9 @@ pub fn run() -> sc_cli::Result<()> {
                     task_manager,
                     import_queue,
                     ..
-                } = new_partial(&config)?;
+                } = new_partial::<chainx_runtime::RuntimeApi, chainx_executor::ChainXExecutor>(
+                    &config,
+                )?;
                 Ok((cmd.run(client, import_queue), task_manager))
             })
         }
@@ -154,7 +157,9 @@ pub fn run() -> sc_cli::Result<()> {
                     client,
                     task_manager,
                     ..
-                } = new_partial(&config)?;
+                } = new_partial::<chainx_runtime::RuntimeApi, chainx_executor::ChainXExecutor>(
+                    &config,
+                )?;
                 Ok((cmd.run(client, config.database), task_manager))
             })
         }
@@ -167,7 +172,9 @@ pub fn run() -> sc_cli::Result<()> {
                     client,
                     task_manager,
                     ..
-                } = new_partial(&config)?;
+                } = new_partial::<chainx_runtime::RuntimeApi, chainx_executor::ChainXExecutor>(
+                    &config,
+                )?;
                 Ok((cmd.run(client, config.chain_spec), task_manager))
             })
         }
@@ -181,7 +188,9 @@ pub fn run() -> sc_cli::Result<()> {
                     task_manager,
                     import_queue,
                     ..
-                } = new_partial(&config)?;
+                } = new_partial::<chainx_runtime::RuntimeApi, chainx_executor::ChainXExecutor>(
+                    &config,
+                )?;
                 Ok((cmd.run(client, import_queue), task_manager))
             })
         }
@@ -201,7 +210,9 @@ pub fn run() -> sc_cli::Result<()> {
                     task_manager,
                     backend,
                     ..
-                } = new_partial(&config)?;
+                } = new_partial::<chainx_runtime::RuntimeApi, chainx_executor::ChainXExecutor>(
+                    &config,
+                )?;
                 Ok((cmd.run(client, backend), task_manager))
             })
         }

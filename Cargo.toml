@@ -120,6 +120,7 @@ members = [
     "runtime/common",
     "runtime/dev",
     "runtime/malan",
+    "service",
 
     "xpallets/assets",
     "xpallets/assets/rpc",

@@ -38,14 +38,14 @@ sc-cli = { version = "0.8.1", optional = true }
 sc-service = { version = "0.8.1", optional = true }
 
 # Substrate primitives
-sp-core = "2.0.1"
-sp-consensus = "0.8.1"
-sp-consensus-babe = "0.8.1"
-sp-finality-grandpa = "2.0.1"
-sp-inherents = "2.0.1"
-sp-runtime = "2.0.1"
-sp-transaction-pool = "2.0.1"
-sp-authority-discovery = "2.0.1"
+sp-authority-discovery = "2.0.0"
+sp-core = "2.0.0"
+sp-consensus = "0.8.0"
+sp-consensus-babe = "0.8.0"
+sp-finality-grandpa = "2.0.0"
+sp-inherents = "2.0.0"
+sp-runtime = "2.0.0"
+sp-transaction-pool = "2.0.0"
 
 # Substrate pallets
 pallet-im-online = "2.0.1"
@@ -53,6 +53,7 @@ pallet-im-online = "2.0.1"
 chainx-executor = { path = "../executor" }
 chainx-primitives = { path = "../primitives" }
 chainx-rpc = { path = "../rpc" }
+chainx-service = { path = "../service" }
 chainx-runtime = { path = "../runtime/chainx" }
 dev-runtime = { path = "../runtime/dev" }
 malan-runtime = { path = "../runtime/malan" }
