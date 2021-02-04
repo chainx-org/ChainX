@@ -426,10 +426,12 @@ impl<T: Trait> Module<T> {
                     }
                 };
 
-                if Self::push_xbtc_transaction(&btc_confirmed_block, network) {
+                if let Ok(yes) = Self::push_xbtc_transaction(&btc_confirmed_block, network) {
                     // Set confirmed height to local storage
-                    confirmed_info.set(&confirm_height);
-                    return false;
+                    if yes {
+                        confirmed_info.set(&confirm_height);
+                        return false;
+                    }
                 }
                 confirmed_info.set(&(confirm_height - 1));
             }
@@ -438,7 +440,10 @@ impl<T: Trait> Module<T> {
     }
 
     /// Filter x-btc deposit/withdraw transactions and push to the chain
-    fn push_xbtc_transaction(confirmed_block: &BtcBlock, network: BtcNetwork) -> bool {
+    fn push_xbtc_transaction(
+        confirmed_block: &BtcBlock,
+        network: BtcNetwork,
+    ) -> Result<bool, Error<T>> {
         // Need to submit transaction
         let mut needed = Vec::new();
         // To construct partial merkle tree
@@ -452,7 +457,7 @@ impl<T: Trait> Module<T> {
             Ok(Some((hot, cold))) => (hot, cold),
             _ => {
                 debug::warn!("[OCW] Can't get current trustee pair!");
-                return false;
+                return Ok(false);
             }
         };
         let btc_min_deposit = XGatewayBitcoin::<T>::btc_min_deposit();
@@ -474,12 +479,12 @@ impl<T: Trait> Module<T> {
 
             let outpoint = tx.inputs[0].previous_output;
             let prev_tx_hash = hex::encode(hash_rev(outpoint.txid));
-            let pending = Self::get_transactions_pending(&prev_tx_hash[..], network).unwrap();
+            let pending = Self::get_transactions_pending(&prev_tx_hash[..], network)?;
             pending_requests.push(pending);
             tx_matches.push(false);
         }
 
-        let transactions = Self::get_all_transactions(pending_requests).unwrap();
+        let transactions = Self::get_all_transactions(pending_requests)?;
         debug::info!("[OCW] Filter transaction nums: {}", transactions.len() + 1);
         for (i, prev_tx) in transactions.iter().enumerate() {
             // Skip coinbase
@@ -536,7 +541,7 @@ impl<T: Trait> Module<T> {
                 hash_rev(confirmed_block.hash())
             );
         }
-        true
+        Ok(true)
     }
 
     /// Get current trustee pair (hot addr and cold addr)
