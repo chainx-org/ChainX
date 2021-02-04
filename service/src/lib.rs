@@ -16,8 +16,13 @@ use sp_runtime::traits::Block as BlockT;
 
 use chainx_primitives::{AccountId, Balance, Block, BlockNumber};
 
-type MiningWeight = u128;
-type VoteWeight = u128;
+use xpallet_mining_asset_rpc_runtime_api::MiningWeight;
+use xpallet_mining_staking_rpc_runtime_api::VoteWeight;
+
+type LightBackend = sc_service::TLightBackendWithHash<Block, sp_runtime::traits::BlakeTwo256>;
+
+type LightClient<RuntimeApi, Executor> =
+    sc_service::TLightClientWithBackend<Block, RuntimeApi, Executor, LightBackend>;
 
 type FullClient<RuntimeApi, Executor> = sc_service::TFullClient<Block, RuntimeApi, Executor>;
 
@@ -483,7 +488,7 @@ impl IdentifyVariant for Box<dyn sc_service::ChainSpec> {
         self.id() == "chainx"
     }
     fn is_malan(&self) -> bool {
-        self.id() == "malan"
+        self.id().contains("malan")
     }
     fn is_dev(&self) -> bool {
         self.id() == "dev"
@@ -496,16 +501,20 @@ pub fn build_full(config: Configuration) -> Result<TaskManager, ServiceError> {
     } else if config.chain_spec.is_malan() {
         new_full::<malan_runtime::RuntimeApi, chainx_executor::MalanExecutor>(config)
     } else {
-        println!("-------------- build dev runtime");
         new_full::<dev_runtime::RuntimeApi, chainx_executor::DevExecutor>(config)
     }
 }
 
 /// Builds a new service for a light client.
-pub fn new_light<RuntimeApi, Executor>(config: Configuration) -> Result<TaskManager, ServiceError> {
-    /*
+pub fn new_light<Runtime, Dispatch>(config: Configuration) -> Result<TaskManager, ServiceError>
+where
+    Runtime: 'static + Send + Sync + ConstructRuntimeApi<Block, LightClient<Runtime, Dispatch>>,
+    <Runtime as ConstructRuntimeApi<Block, LightClient<Runtime, Dispatch>>>::RuntimeApi:
+        RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<LightBackend, Block>>,
+    Dispatch: NativeExecutionDispatch + 'static,
+{
     let (client, backend, keystore_container, mut task_manager, on_demand) =
-        sc_service::new_light_parts::<Block, RuntimeApi, Executor>(&config)?;
+        sc_service::new_light_parts::<Block, Runtime, Dispatch>(&config)?;
 
     let select_chain = sc_consensus::LongestChain::new(backend.clone());
 
@@ -602,8 +611,6 @@ pub fn new_light<RuntimeApi, Executor>(config: Configuration) -> Result<TaskMana
     })?;
 
     Ok(task_manager)
-        */
-    todo!()
 }
 
 pub fn build_light(config: Configuration) -> Result<TaskManager, ServiceError> {
