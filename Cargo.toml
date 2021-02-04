@@ -116,6 +116,7 @@ members = [
     "runtime/chainx",
     "runtime/dev",
     "runtime/malan",
+    "service",
 
     "xpallets/assets",
     "xpallets/assets/rpc",

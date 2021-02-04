@@ -697,6 +697,7 @@ dependencies = [
  "chainx-primitives",
  "chainx-rpc",
  "chainx-runtime",
+ "chainx-service",
  "dev-runtime",
  "frame-benchmarking-cli",
  "futures 0.3.8",
@@ -746,7 +747,9 @@ name = "chainx-executor"
 version = "2.0.8-1"
 dependencies = [
  "chainx-runtime",
+ "dev-runtime",
  "frame-benchmarking 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "malan-runtime",
  "sc-executor",
  "xp-io",
 ]
@@ -888,6 +891,54 @@ dependencies = [
  "xpallet-support",
  "xpallet-system",
  "xpallet-transaction-fee",
+ "xpallet-transaction-fee-rpc-runtime-api",
+]
+
+[[package]]
+name = "chainx-service"
+version = "2.0.8-1"
+dependencies = [
+ "chainx-executor",
+ "chainx-primitives",
+ "chainx-rpc",
+ "chainx-runtime",
+ "dev-runtime",
+ "frame-system-rpc-runtime-api",
+ "futures 0.3.8",
+ "malan-runtime",
+ "pallet-transaction-payment-rpc-runtime-api",
+ "sc-authority-discovery",
+ "sc-basic-authorship",
+ "sc-chain-spec",
+ "sc-client-api",
+ "sc-consensus",
+ "sc-consensus-babe",
+ "sc-consensus-slots",
+ "sc-executor",
+ "sc-finality-grandpa",
+ "sc-network",
+ "sc-rpc",
+ "sc-service",
+ "sc-transaction-pool",
+ "sp-api",
+ "sp-authority-discovery",
+ "sp-block-builder",
+ "sp-blockchain",
+ "sp-consensus",
+ "sp-consensus-babe",
+ "sp-core",
+ "sp-finality-grandpa",
+ "sp-inherents",
+ "sp-offchain",
+ "sp-runtime",
+ "sp-session",
+ "sp-transaction-pool",
+ "xpallet-assets-rpc-runtime-api",
+ "xpallet-dex-spot-rpc-runtime-api",
+ "xpallet-gateway-common-rpc-runtime-api",
+ "xpallet-gateway-records-rpc-runtime-api",
+ "xpallet-mining-asset-rpc-runtime-api",
+ "xpallet-mining-staking-rpc-runtime-api",
  "xpallet-transaction-fee-rpc-runtime-api",
 ]
 
