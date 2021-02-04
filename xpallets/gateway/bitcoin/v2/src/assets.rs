@@ -134,9 +134,7 @@ pub mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-        fn on_finalize(_n: BlockNumberFor<T>) {
-            todo!("Check if exchange rate expired.")
-        }
+        fn on_finalize(_n: BlockNumberFor<T>) {}
     }
 
     #[pallet::call]
