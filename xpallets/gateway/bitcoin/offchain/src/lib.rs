@@ -338,6 +338,19 @@ impl<T: Trait> Module<T> {
     fn get_new_header_and_push(network: BtcNetwork) {
         let best_index = XGatewayBitcoin::<T>::best_index().height;
         let mut next_height = best_index + 1;
+
+        // Get current height from local storage
+        let current_info = StorageValueRef::persistent(b"ocw::current");
+        // Get current height lock
+        let mut current_lock = StorageLock::<'_, Time>::new(b"ocw::current::lock");
+        // Prevent workers pushing header together
+        let _guard = current_lock.lock();
+        if let Some(Some(current)) = current_info.get::<u32>() {
+            if current == next_height {
+                return;
+            }
+        }
+
         for _ in 0..=MAX_RETRY_NUM {
             let btc_block_hash = match Self::fetch_block_hash(next_height, network) {
                 Ok(Some(hash)) => {
@@ -385,6 +398,7 @@ impl<T: Trait> Module<T> {
                             "[OCW|push_header] ₿ Submitting signed transaction for pushing header: #{}",
                             next_height
                         );
+                        current_info.set(&next_height);
                     }
                 }
             } else {
