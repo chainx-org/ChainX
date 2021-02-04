@@ -14,7 +14,7 @@ use sc_service::{config::Configuration, error::Error as ServiceError, TaskManage
 use sp_inherents::InherentDataProviders;
 use sp_runtime::traits::Block as BlockT;
 
-use chainx_primitives::{AccountId, Balance, Block, BlockNumber, };
+use chainx_primitives::{AccountId, Balance, Block, BlockNumber};
 
 type MiningWeight = u128;
 type VoteWeight = u128;
@@ -23,8 +23,12 @@ type FullClient<RuntimeApi, Executor> = sc_service::TFullClient<Block, RuntimeAp
 
 type FullBackend = sc_service::TFullBackend<Block>;
 
-type FullGrandpaBlockImport<RuntimeApi, Executor> =
-    sc_finality_grandpa::GrandpaBlockImport<FullBackend, Block, FullClient<RuntimeApi, Executor>, FullSelectChain>;
+type FullGrandpaBlockImport<RuntimeApi, Executor> = sc_finality_grandpa::GrandpaBlockImport<
+    FullBackend,
+    Block,
+    FullClient<RuntimeApi, Executor>,
+    FullSelectChain,
+>;
 
 type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;
 
@@ -40,8 +44,16 @@ pub fn new_partial<RuntimeApi, Executor>(
         (
             impl Fn(chainx_rpc::DenyUnsafe, sc_rpc::SubscriptionTaskExecutor) -> chainx_rpc::IoHandler,
             (
-                sc_consensus_babe::BabeBlockImport<Block, FullClient<RuntimeApi, Executor>, FullGrandpaBlockImport<RuntimeApi, Executor>>,
-                sc_finality_grandpa::LinkHalf<Block, FullClient<RuntimeApi, Executor>, FullSelectChain>,
+                sc_consensus_babe::BabeBlockImport<
+                    Block,
+                    FullClient<RuntimeApi, Executor>,
+                    FullGrandpaBlockImport<RuntimeApi, Executor>,
+                >,
+                sc_finality_grandpa::LinkHalf<
+                    Block,
+                    FullClient<RuntimeApi, Executor>,
+                    FullSelectChain,
+                >,
                 sc_consensus_babe::BabeLink<Block>,
             ),
             (
@@ -52,12 +64,13 @@ pub fn new_partial<RuntimeApi, Executor>(
     >,
     ServiceError,
 >
-	where
-		RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
-		RuntimeApi::RuntimeApi:
-		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
-		Executor: NativeExecutionDispatch + 'static,
-            {
+where
+    RuntimeApi:
+        ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+    RuntimeApi::RuntimeApi:
+        RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
+    Executor: NativeExecutionDispatch + 'static,
+{
     let (client, backend, keystore_container, task_manager) =
         sc_service::new_full_parts::<Block, RuntimeApi, Executor>(&config)?;
     let client = Arc::new(client);
@@ -168,14 +181,15 @@ pub struct NewFullBase<RuntimeApi, Executor> {
 }
 
 /// Creates a full service from the configuration.
-pub fn new_full_base<RuntimeApi, Executor>(config: Configuration) -> Result<NewFullBase<RuntimeApi, Executor>, ServiceError> 
-	where
-		RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
-		RuntimeApi::RuntimeApi:
-		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
-		Executor: NativeExecutionDispatch + 'static,
-
-
+pub fn new_full_base<RuntimeApi, Executor>(
+    config: Configuration,
+) -> Result<NewFullBase<RuntimeApi, Executor>, ServiceError>
+where
+    RuntimeApi:
+        ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+    RuntimeApi::RuntimeApi:
+        RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
+    Executor: NativeExecutionDispatch + 'static,
 {
     let sc_service::PartialComponents {
         client,
@@ -355,10 +369,8 @@ pub fn new_full_base<RuntimeApi, Executor>(config: Configuration) -> Result<NewF
     })
 }
 
-
-
-use sp_api::ConstructRuntimeApi;
 use sc_executor::NativeExecutionDispatch;
+use sp_api::ConstructRuntimeApi;
 
 use sp_runtime::traits::BlakeTwo256;
 
@@ -366,17 +378,17 @@ type Nonce = u32;
 
 /// A set of APIs that polkadot-like runtimes must implement.
 pub trait RuntimeApiCollection:
-	sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
-	+ sp_api::ApiExt<Block, Error = sp_blockchain::Error>
-	+ sp_consensus_babe::BabeApi<Block>
-	+ sp_finality_grandpa::GrandpaApi<Block>
-	+ sp_block_builder::BlockBuilder<Block>
-        + frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce>
-        + pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance>
-	+ sp_api::Metadata<Block>
-	+ sp_offchain::OffchainWorkerApi<Block>
-	+ sp_session::SessionKeys<Block>
-	+ sp_authority_discovery::AuthorityDiscoveryApi<Block>
+    sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
+    + sp_api::ApiExt<Block, Error = sp_blockchain::Error>
+    + sp_consensus_babe::BabeApi<Block>
+    + sp_finality_grandpa::GrandpaApi<Block>
+    + sp_block_builder::BlockBuilder<Block>
+    + frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce>
+    + pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance>
+    + sp_api::Metadata<Block>
+    + sp_offchain::OffchainWorkerApi<Block>
+    + sp_session::SessionKeys<Block>
+    + sp_authority_discovery::AuthorityDiscoveryApi<Block>
     + xpallet_assets_rpc_runtime_api::XAssetsApi<Block, AccountId, Balance>
     + xpallet_dex_spot_rpc_runtime_api::XSpotApi<Block, AccountId, Balance, BlockNumber, Balance>
     + xpallet_gateway_common_rpc_runtime_api::XGatewayCommonApi<Block, AccountId, Balance>
@@ -384,106 +396,99 @@ pub trait RuntimeApiCollection:
         Block,
         AccountId,
         Balance,
-        BlockNumber
-    >
-    + xpallet_mining_staking_rpc_runtime_api::XStakingApi<
+        BlockNumber,
+    > + xpallet_mining_staking_rpc_runtime_api::XStakingApi<
         Block,
         AccountId,
         Balance,
         VoteWeight,
-        BlockNumber
-    >
-    + xpallet_mining_asset_rpc_runtime_api::XMiningAssetApi<
+        BlockNumber,
+    > + xpallet_mining_asset_rpc_runtime_api::XMiningAssetApi<
         Block,
         AccountId,
         Balance,
         MiningWeight,
-        BlockNumber
-    >
-    + xpallet_transaction_fee_rpc_runtime_api::XTransactionFeeApi<Block, Balance>
-
+        BlockNumber,
+    > + xpallet_transaction_fee_rpc_runtime_api::XTransactionFeeApi<Block, Balance>
 where
-	<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
-{}
+    <Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
+{
+}
 
 impl<Api> RuntimeApiCollection for Api
 where
-	Api: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
-		+ sp_api::ApiExt<Block, Error = sp_blockchain::Error>
-		+ sp_consensus_babe::BabeApi<Block>
-		+ sp_finality_grandpa::GrandpaApi<Block>
-		+ sp_block_builder::BlockBuilder<Block>
-                + frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce>
-                + pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance>
-		+ sp_api::Metadata<Block>
-		+ sp_offchain::OffchainWorkerApi<Block>
-		+ sp_session::SessionKeys<Block>
-		+ sp_authority_discovery::AuthorityDiscoveryApi<Block>
-    + xpallet_assets_rpc_runtime_api::XAssetsApi<Block, AccountId, Balance>
-    + xpallet_dex_spot_rpc_runtime_api::XSpotApi<Block, AccountId, Balance, BlockNumber, Balance>
-    + xpallet_gateway_common_rpc_runtime_api::XGatewayCommonApi<Block, AccountId, Balance>
-    + xpallet_gateway_records_rpc_runtime_api::XGatewayRecordsApi<
-        Block,
-        AccountId,
-        Balance,
-        BlockNumber
-    >
-    + xpallet_mining_staking_rpc_runtime_api::XStakingApi<
-        Block,
-        AccountId,
-        Balance,
-        VoteWeight,
-        BlockNumber
-    >
-    + xpallet_mining_asset_rpc_runtime_api::XMiningAssetApi<
-        Block,
-        AccountId,
-        Balance,
-        MiningWeight,
-        BlockNumber
-    >
-    + xpallet_transaction_fee_rpc_runtime_api::XTransactionFeeApi<Block, Balance>,
-	<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
-{}
-
+    Api: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
+        + sp_api::ApiExt<Block, Error = sp_blockchain::Error>
+        + sp_consensus_babe::BabeApi<Block>
+        + sp_finality_grandpa::GrandpaApi<Block>
+        + sp_block_builder::BlockBuilder<Block>
+        + frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce>
+        + pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance>
+        + sp_api::Metadata<Block>
+        + sp_offchain::OffchainWorkerApi<Block>
+        + sp_session::SessionKeys<Block>
+        + sp_authority_discovery::AuthorityDiscoveryApi<Block>
+        + xpallet_assets_rpc_runtime_api::XAssetsApi<Block, AccountId, Balance>
+        + xpallet_dex_spot_rpc_runtime_api::XSpotApi<Block, AccountId, Balance, BlockNumber, Balance>
+        + xpallet_gateway_common_rpc_runtime_api::XGatewayCommonApi<Block, AccountId, Balance>
+        + xpallet_gateway_records_rpc_runtime_api::XGatewayRecordsApi<
+            Block,
+            AccountId,
+            Balance,
+            BlockNumber,
+        > + xpallet_mining_staking_rpc_runtime_api::XStakingApi<
+            Block,
+            AccountId,
+            Balance,
+            VoteWeight,
+            BlockNumber,
+        > + xpallet_mining_asset_rpc_runtime_api::XMiningAssetApi<
+            Block,
+            AccountId,
+            Balance,
+            MiningWeight,
+            BlockNumber,
+        > + xpallet_transaction_fee_rpc_runtime_api::XTransactionFeeApi<Block, Balance>,
+    <Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
+{
+}
 
 /// Builds a new service for a full client.
 pub fn new_full<RuntimeApi, Executor>(config: Configuration) -> Result<TaskManager, ServiceError>
-	where
-		RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
-		RuntimeApi::RuntimeApi:
-		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
-		Executor: NativeExecutionDispatch + 'static,
-
+where
+    RuntimeApi:
+        ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+    RuntimeApi::RuntimeApi:
+        RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
+    Executor: NativeExecutionDispatch + 'static,
 {
-    new_full_base::<RuntimeApi, Executor>(config).map(|NewFullBase { task_manager, .. }| task_manager)
+    new_full_base::<RuntimeApi, Executor>(config)
+        .map(|NewFullBase { task_manager, .. }| task_manager)
 }
-
 
 /// Can be called for a `Configuration` to check if it is a configuration for the `Kusama` network.
 pub trait IdentifyVariant {
-	/// Returns if this is a configuration for the `Kusama` network.
-	fn is_chainx(&self) -> bool;
+    /// Returns if this is a configuration for the `Kusama` network.
+    fn is_chainx(&self) -> bool;
 
-	/// Returns if this is a configuration for the `Westend` network.
-	fn is_malan(&self) -> bool;
+    /// Returns if this is a configuration for the `Westend` network.
+    fn is_malan(&self) -> bool;
 
-	/// Returns if this is a configuration for the `Rococo` network.
-	fn is_dev(&self) -> bool;
+    /// Returns if this is a configuration for the `Rococo` network.
+    fn is_dev(&self) -> bool;
 }
 
 impl IdentifyVariant for Box<dyn sc_service::ChainSpec> {
-	fn is_chainx(&self) -> bool {
-		self.id() == "chainx"
-	}
-	fn is_malan(&self) -> bool {
-		self.id() == "malan"
-	}
-	fn is_dev(&self) -> bool {
-		self.id() == "dev"
-	}
+    fn is_chainx(&self) -> bool {
+        self.id() == "chainx"
+    }
+    fn is_malan(&self) -> bool {
+        self.id() == "malan"
+    }
+    fn is_dev(&self) -> bool {
+        self.id() == "dev"
+    }
 }
-
 
 pub fn build_full(config: Configuration) -> Result<TaskManager, ServiceError> {
     if config.chain_spec.is_chainx() {
@@ -497,9 +502,7 @@ pub fn build_full(config: Configuration) -> Result<TaskManager, ServiceError> {
 }
 
 /// Builds a new service for a light client.
-pub fn new_light<RuntimeApi, Executor>(config: Configuration) -> Result<TaskManager, ServiceError>
-
-{
+pub fn new_light<RuntimeApi, Executor>(config: Configuration) -> Result<TaskManager, ServiceError> {
     /*
     let (client, backend, keystore_container, mut task_manager, on_demand) =
         sc_service::new_light_parts::<Block, RuntimeApi, Executor>(&config)?;
