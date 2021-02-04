@@ -33,7 +33,8 @@ use frame_system::{
     },
 };
 use sp_application_crypto::RuntimeAppPublic;
-use sp_core::crypto::KeyTypeId;
+use sp_core::{crypto::KeyTypeId, offchain::Duration};
+use sp_io::offchain;
 use sp_runtime::{
     offchain::{
         http::PendingRequest,
@@ -44,7 +45,6 @@ use sp_runtime::{
         InvalidTransaction, TransactionPriority, TransactionSource, TransactionValidity,
         ValidTransaction,
     },
-    SaturatedConversion,
 };
 
 use sp_std::{
@@ -229,14 +229,15 @@ decl_module! {
             // Mainnet or Testnet
             let network = XGatewayBitcoin::<T>::network_id();
 
-            if block_number.saturated_into() % 5 == 0 {
-                debug::info!("[OCW] Worker[{:?}] Start To Working...", block_number);
-                // First, get withdrawal proposal from chain and broadcast to btc network.
+            debug::info!("[OCW] Worker[{:?}] Start To Working...", block_number);
+            // First, filter transactions from confirmed block and push withdrawal/deposit transactions to chain.
+            if Self::get_transactions_and_push(network) {
+                // Second, get new block from btc network and push block header to chain
+                Self::get_new_header_and_push(network);
+                // Finally, get withdrawal proposal from chain and broadcast to btc network.
                 match Self::broadcast_withdrawal_proposal(network) {
                     Ok(Some(hash)) => {
-                        debug::info!(
-                            "[OCW|broadcast_withdrawal_proposal] Succeed! Transaction Hash: {:?}",
-                            hash);
+                        debug::info!("[OCW|broadcast_withdrawal_proposal] Succeed! Transaction Hash: {:?}", hash);
                     }
                     Ok(None) => {
                         debug::info!("[OCW|broadcast_withdrawal_proposal] No Withdrawal Proposal");
@@ -245,14 +246,8 @@ decl_module! {
                         debug::warn!("[OCW|broadcast_withdrawal_proposal] Failed! Maybe the transaction has been broadcast.");
                     }
                 }
-                    // Second, filter transactions from confirmed block and push withdrawal/deposit transactions to chain.
-                if Self::get_transactions_and_push(network) {
-                    // Third, get new block from btc network and push block header to chain
-                    Self::get_new_header_and_push(network);
-                }
-                debug::info!("[OCW] Worker[{:?}] Exit.", block_number);
             }
-
+            debug::info!("[OCW] Worker[{:?}] Exit.", block_number);
 
             let _guard = worker_lock.lock();
             if let Some(Some(num)) = worker_num.get::<u8>(){
@@ -294,7 +289,7 @@ impl<T: Trait> Module<T> {
 /// can sometimes be hard to debug.
 impl<T: Trait> Module<T> {
     /// Get withdrawal proposal from chain and broadcast raw transaction
-    fn broadcast_withdrawal_proposal(network: BtcNetwork) -> Result<Option<String>, ()> {
+    fn broadcast_withdrawal_proposal(network: BtcNetwork) -> Result<Option<String>, Error<T>> {
         if let Some(withdrawal_proposal) = XGatewayBitcoin::<T>::withdrawal_proposal() {
             if withdrawal_proposal.sig_state == VoteResult::Finish {
                 let tx = serialize(&withdrawal_proposal.tx).take();
@@ -329,6 +324,9 @@ impl<T: Trait> Module<T> {
                 }
                 Ok(None) => {
                     debug::warn!("[OCW] ₿ Block #{} has not been generated yet", next_height);
+                    // Sleep 1 minutes when there is not new block
+                    let sleep_until = offchain::timestamp().add(Duration::from_millis(60_000));
+                    offchain::sleep_until(sleep_until);
                     return;
                 }
                 Err(err) => {
@@ -461,6 +459,10 @@ impl<T: Trait> Module<T> {
         let btc_tx_detector =
             BtcTxTypeDetector::new(network, btc_min_deposit, current_trustee_pair, None);
 
+        debug::info!(
+            "[OCW] All transaction nums: {}",
+            confirmed_block.transactions.len()
+        );
         // Filter transaction type (only deposit and withdrawal)
         for tx in confirmed_block.transactions.iter() {
             // Prepare for constructing partial merkle tree
@@ -478,6 +480,7 @@ impl<T: Trait> Module<T> {
         }
 
         let transactions = Self::get_all_transactions(pending_requests).unwrap();
+        debug::info!("[OCW] Filter transaction nums: {}", transactions.len() + 1);
         for (i, prev_tx) in transactions.iter().enumerate() {
             // Skip coinbase
             let tx = &confirmed_block.transactions[i + 1];
@@ -488,11 +491,12 @@ impl<T: Trait> Module<T> {
                 OpReturnExtractor::extract_account,
             ) {
                 BtcTxMetaType::Withdrawal | BtcTxMetaType::Deposit(..) => {
+                    tx_matches[i + 1] = true;
                     needed.push((tx, Some(prev_tx.clone())));
                 }
                 BtcTxMetaType::HotAndCold
                 | BtcTxMetaType::TrusteeTransition
-                | BtcTxMetaType::Irrelevance => tx_matches[i + 1] = false,
+                | BtcTxMetaType::Irrelevance => {}
             }
         }
 

@@ -41,10 +41,6 @@ impl<T: Trait> Module<T> {
         let response = pending
             .try_wait(deadline)
             .map_err(|_| Error::<T>::HttpDeadlineReached)??;
-        // Let's check the status code before we proceed to reading the response.
-        if response.code != 200 {
-            debug::warn!("Unexpected status code: {}", response.code);
-        }
         // Response body
         let resp_body = response.body().collect::<Vec<u8>>();
         Ok(resp_body)
@@ -63,10 +59,6 @@ impl<T: Trait> Module<T> {
         let response = pending
             .try_wait(deadline)
             .map_err(|_| Error::<T>::HttpDeadlineReached)??;
-        // Let's check the status code before we proceed to reading the response.
-        if response.code != 200 {
-            debug::warn!("Unexpected status code: {}", response.code);
-        }
         // Response body
         let resp_body = response.body().collect::<Vec<u8>>();
         Ok(resp_body)
@@ -123,7 +115,6 @@ impl<T: Trait> Module<T> {
         })?;
         const RESP_BLOCK_NOT_FOUND: &str = "Block not found";
         if resp_body == RESP_BLOCK_NOT_FOUND {
-            debug::info!("₿ Block #{} not found", height);
             Ok(None)
         } else {
             let hash: String = resp_body.into();
@@ -146,6 +137,7 @@ impl<T: Trait> Module<T> {
     }
 
     /// Get transaction from btc network
+    #[allow(dead_code)]
     pub(crate) fn fetch_transaction(
         hash: &str,
         network: BtcNetwork,
