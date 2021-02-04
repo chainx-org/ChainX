@@ -14,30 +14,38 @@ use sc_service::{config::Configuration, error::Error as ServiceError, TaskManage
 use sp_inherents::InherentDataProviders;
 use sp_runtime::traits::Block as BlockT;
 
-use chainx_executor::Executor;
-use chainx_primitives::Block;
-use chainx_runtime::{self, RuntimeApi};
+// use chainx_executor::Executor;
+use chainx_primitives::{AccountId, Balance, Block, BlockNumber, };
 
-type FullClient = sc_service::TFullClient<Block, RuntimeApi, Executor>;
+type MiningWeight = u128;
+type VoteWeight = u128;
+
+// use chainx_runtime::{self, RuntimeApi};
+
+// type FullClient<RuntimeApi, Executor> = sc_service::TFullClient<Block, RuntimeApi, Executor>;
+type FullClient<RuntimeApi, Executor> = sc_service::TFullClient<Block, RuntimeApi, Executor>;
+
 type FullBackend = sc_service::TFullBackend<Block>;
-type FullGrandpaBlockImport =
-    sc_finality_grandpa::GrandpaBlockImport<FullBackend, Block, FullClient, FullSelectChain>;
+
+type FullGrandpaBlockImport<RuntimeApi, Executor> =
+    sc_finality_grandpa::GrandpaBlockImport<FullBackend, Block, FullClient<RuntimeApi, Executor>, FullSelectChain>;
+
 type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;
 
-pub fn new_partial(
+pub fn new_partial<RuntimeApi, Executor>(
     config: &Configuration,
 ) -> Result<
     sc_service::PartialComponents<
-        FullClient,
+        FullClient<RuntimeApi, Executor>,
         FullBackend,
         FullSelectChain,
-        sp_consensus::DefaultImportQueue<Block, FullClient>,
-        sc_transaction_pool::FullPool<Block, FullClient>,
+        sp_consensus::DefaultImportQueue<Block, FullClient<RuntimeApi, Executor>>,
+        sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, Executor>>,
         (
             impl Fn(chainx_rpc::DenyUnsafe, sc_rpc::SubscriptionTaskExecutor) -> chainx_rpc::IoHandler,
             (
-                sc_consensus_babe::BabeBlockImport<Block, FullClient, FullGrandpaBlockImport>,
-                sc_finality_grandpa::LinkHalf<Block, FullClient, FullSelectChain>,
+                sc_consensus_babe::BabeBlockImport<Block, FullClient<RuntimeApi, Executor>, FullGrandpaBlockImport<RuntimeApi, Executor>>,
+                sc_finality_grandpa::LinkHalf<Block, FullClient<RuntimeApi, Executor>, FullSelectChain>,
                 sc_consensus_babe::BabeLink<Block>,
             ),
             (
@@ -47,7 +55,13 @@ pub fn new_partial(
         ),
     >,
     ServiceError,
-> {
+>
+	where
+		RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+		RuntimeApi::RuntimeApi:
+		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
+		Executor: NativeExecutionDispatch + 'static,
+            {
     let (client, backend, keystore_container, task_manager) =
         sc_service::new_full_parts::<Block, RuntimeApi, Executor>(&config)?;
     let client = Arc::new(client);
@@ -148,17 +162,25 @@ pub fn new_partial(
     })
 }
 
-pub struct NewFullBase {
+pub struct NewFullBase<RuntimeApi, Executor> {
     pub task_manager: TaskManager,
     pub inherent_data_providers: InherentDataProviders,
-    pub client: Arc<FullClient>,
+    pub client: Arc<FullClient<RuntimeApi, Executor>>,
     pub network: Arc<NetworkService<Block, <Block as BlockT>::Hash>>,
     pub network_status_sinks: sc_service::NetworkStatusSinks<Block>,
-    pub transaction_pool: Arc<sc_transaction_pool::FullPool<Block, FullClient>>,
+    // pub transaction_pool: Arc<sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, Executor>>>,
 }
 
 /// Creates a full service from the configuration.
-pub fn new_full_base(config: Configuration) -> Result<NewFullBase, ServiceError> {
+pub fn new_full_base<RuntimeApi, Executor>(config: Configuration) -> Result<NewFullBase<RuntimeApi, Executor>, ServiceError> 
+	where
+		RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+		RuntimeApi::RuntimeApi:
+		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
+		Executor: NativeExecutionDispatch + 'static,
+
+
+{
     let sc_service::PartialComponents {
         client,
         backend,
@@ -333,17 +355,156 @@ pub fn new_full_base(config: Configuration) -> Result<NewFullBase, ServiceError>
         client,
         network,
         network_status_sinks,
-        transaction_pool,
+        // transaction_pool,
     })
 }
 
+
+
+use sp_api::ConstructRuntimeApi;
+use sc_executor::NativeExecutionDispatch;
+
+use sp_runtime::traits::BlakeTwo256;
+
+type Nonce = u32;
+
+/// A set of APIs that polkadot-like runtimes must implement.
+pub trait RuntimeApiCollection:
+	sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
+	+ sp_api::ApiExt<Block, Error = sp_blockchain::Error>
+	+ sp_consensus_babe::BabeApi<Block>
+	+ sp_finality_grandpa::GrandpaApi<Block>
+	+ sp_block_builder::BlockBuilder<Block>
+        + frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce>
+        + pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance>
+	+ sp_api::Metadata<Block>
+	+ sp_offchain::OffchainWorkerApi<Block>
+	+ sp_session::SessionKeys<Block>
+	+ sp_authority_discovery::AuthorityDiscoveryApi<Block>
+    + xpallet_assets_rpc_runtime_api::XAssetsApi<Block, AccountId, Balance>
+    + xpallet_dex_spot_rpc_runtime_api::XSpotApi<Block, AccountId, Balance, BlockNumber, Balance>
+    + xpallet_gateway_common_rpc_runtime_api::XGatewayCommonApi<Block, AccountId, Balance>
+    + xpallet_gateway_records_rpc_runtime_api::XGatewayRecordsApi<
+        Block,
+        AccountId,
+        Balance,
+        BlockNumber
+    >
+    + xpallet_mining_staking_rpc_runtime_api::XStakingApi<
+        Block,
+        AccountId,
+        Balance,
+        VoteWeight,
+        BlockNumber
+    >
+    + xpallet_mining_asset_rpc_runtime_api::XMiningAssetApi<
+        Block,
+        AccountId,
+        Balance,
+        MiningWeight,
+        BlockNumber
+    >
+    + xpallet_transaction_fee_rpc_runtime_api::XTransactionFeeApi<Block, Balance>
+
+where
+	<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
+{}
+
+impl<Api> RuntimeApiCollection for Api
+where
+	Api: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
+		+ sp_api::ApiExt<Block, Error = sp_blockchain::Error>
+		+ sp_consensus_babe::BabeApi<Block>
+		+ sp_finality_grandpa::GrandpaApi<Block>
+		+ sp_block_builder::BlockBuilder<Block>
+                + frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce>
+                + pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance>
+		+ sp_api::Metadata<Block>
+		+ sp_offchain::OffchainWorkerApi<Block>
+		+ sp_session::SessionKeys<Block>
+		+ sp_authority_discovery::AuthorityDiscoveryApi<Block>
+    + xpallet_assets_rpc_runtime_api::XAssetsApi<Block, AccountId, Balance>
+    + xpallet_dex_spot_rpc_runtime_api::XSpotApi<Block, AccountId, Balance, BlockNumber, Balance>
+    + xpallet_gateway_common_rpc_runtime_api::XGatewayCommonApi<Block, AccountId, Balance>
+    + xpallet_gateway_records_rpc_runtime_api::XGatewayRecordsApi<
+        Block,
+        AccountId,
+        Balance,
+        BlockNumber
+    >
+    + xpallet_mining_staking_rpc_runtime_api::XStakingApi<
+        Block,
+        AccountId,
+        Balance,
+        VoteWeight,
+        BlockNumber
+    >
+    + xpallet_mining_asset_rpc_runtime_api::XMiningAssetApi<
+        Block,
+        AccountId,
+        Balance,
+        MiningWeight,
+        BlockNumber
+    >
+    + xpallet_transaction_fee_rpc_runtime_api::XTransactionFeeApi<Block, Balance>,
+	<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
+{}
+
+
 /// Builds a new service for a full client.
-pub fn new_full(config: Configuration) -> Result<TaskManager, ServiceError> {
-    new_full_base(config).map(|NewFullBase { task_manager, .. }| task_manager)
+pub fn new_full<RuntimeApi, Executor>(config: Configuration) -> Result<TaskManager, ServiceError>
+	where
+		RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+		RuntimeApi::RuntimeApi:
+		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
+		Executor: NativeExecutionDispatch + 'static,
+
+{
+    new_full_base::<RuntimeApi, Executor>(config).map(|NewFullBase { task_manager, .. }| task_manager)
+}
+
+
+/// Can be called for a `Configuration` to check if it is a configuration for the `Kusama` network.
+pub trait IdentifyVariant {
+	/// Returns if this is a configuration for the `Kusama` network.
+	fn is_chainx(&self) -> bool;
+
+	/// Returns if this is a configuration for the `Westend` network.
+	fn is_malan(&self) -> bool;
+
+	/// Returns if this is a configuration for the `Rococo` network.
+	fn is_dev(&self) -> bool;
+}
+
+impl IdentifyVariant for Box<dyn sc_service::ChainSpec> {
+	fn is_chainx(&self) -> bool {
+		self.id() == "chainx"
+	}
+	fn is_malan(&self) -> bool {
+		self.id() == "malan"
+	}
+	fn is_dev(&self) -> bool {
+		self.id() == "dev"
+	}
+}
+
+
+pub fn build_full(config: Configuration) -> Result<TaskManager, ServiceError> {
+    if config.chain_spec.is_chainx() {
+        new_full::<chainx_runtime::RuntimeApi, chainx_executor::ChainXExecutor>(config)
+    } else if config.chain_spec.is_malan() {
+        new_full::<malan_runtime::RuntimeApi, chainx_executor::MalanExecutor>(config)
+    } else {
+        println!("-------------- build dev runtime");
+        new_full::<dev_runtime::RuntimeApi, chainx_executor::DevExecutor>(config)
+    }
 }
 
 /// Builds a new service for a light client.
-pub fn new_light(config: Configuration) -> Result<TaskManager, ServiceError> {
+pub fn new_light<RuntimeApi, Executor>(config: Configuration) -> Result<TaskManager, ServiceError>
+
+{
+    /*
     let (client, backend, keystore_container, mut task_manager, on_demand) =
         sc_service::new_light_parts::<Block, RuntimeApi, Executor>(&config)?;
 
@@ -442,4 +603,16 @@ pub fn new_light(config: Configuration) -> Result<TaskManager, ServiceError> {
     })?;
 
     Ok(task_manager)
+        */
+    todo!()
+}
+
+pub fn build_light(config: Configuration) -> Result<TaskManager, ServiceError> {
+    if config.chain_spec.is_chainx() {
+        new_light::<chainx_runtime::RuntimeApi, chainx_executor::ChainXExecutor>(config)
+    } else if config.chain_spec.is_malan() {
+        new_light::<malan_runtime::RuntimeApi, chainx_executor::MalanExecutor>(config)
+    } else {
+        new_light::<dev_runtime::RuntimeApi, chainx_executor::DevExecutor>(config)
+    }
 }
