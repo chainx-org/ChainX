@@ -36,6 +36,7 @@ use sp_application_crypto::RuntimeAppPublic;
 use sp_core::crypto::KeyTypeId;
 use sp_runtime::{
     offchain::{
+        http::PendingRequest,
         storage::StorageValueRef,
         storage_lock::{StorageLock, Time},
     },
@@ -68,7 +69,7 @@ use xpallet_gateway_bitcoin::{
 use xpallet_gateway_common::{trustees::bitcoin::BtcTrusteeAddrInfo, Module as XGatewayCommon};
 
 // Max worker nums
-const MAX_WORKER_NUM: usize = 6;
+const MAX_WORKER_NUM: usize = 1;
 const DEFAULT_WORKER_NUM: usize = 1;
 
 /// Defines application identifier for crypto keys of this module.
@@ -225,36 +226,17 @@ decl_module! {
                 }
             }
 
-            // Speed up worker startup
-            let num = match worker_num.get::<u8>() {
-                Some(Some(num)) => {
-                    debug::info!("[OCW] worker number: {}", num);
-                    num
-                },
-                _ => {
-                    debug::info!("[OCW] worker number: 0");
-                    0
-                },
-            };
-
-            // Clear local storage
-            if num == 1 {
-                let mut local_tx_num = StorageValueRef::persistent(b"ocw::tx::num");
-                local_tx_num.clear();
-            }
-
             // Mainnet or Testnet
             let network = XGatewayBitcoin::<T>::network_id();
 
-            if (num > 1) || (block_number.saturated_into() % 5 == 0) {
+            if block_number.saturated_into() % 5 == 0 {
                 debug::info!("[OCW] Worker[{:?}] Start To Working...", block_number);
                 // First, get withdrawal proposal from chain and broadcast to btc network.
                 match Self::broadcast_withdrawal_proposal(network) {
                     Ok(Some(hash)) => {
                         debug::info!(
-                                "[OCW|broadcast_withdrawal_proposal] Succeed! Transaction Hash: {:?}",
-                                hash
-                            );
+                            "[OCW|broadcast_withdrawal_proposal] Succeed! Transaction Hash: {:?}",
+                            hash);
                     }
                     Ok(None) => {
                         debug::info!("[OCW|broadcast_withdrawal_proposal] No Withdrawal Proposal");
@@ -263,13 +245,14 @@ decl_module! {
                         debug::warn!("[OCW|broadcast_withdrawal_proposal] Failed! Maybe the transaction has been broadcast.");
                     }
                 }
-                // Second, filter transactions from confirmed block and push withdrawal/deposit transactions to chain.
+                    // Second, filter transactions from confirmed block and push withdrawal/deposit transactions to chain.
                 if Self::get_transactions_and_push(network) {
                     // Third, get new block from btc network and push block header to chain
                     Self::get_new_header_and_push(network);
                 }
                 debug::info!("[OCW] Worker[{:?}] Exit.", block_number);
             }
+
 
             let _guard = worker_lock.lock();
             if let Some(Some(num)) = worker_num.get::<u8>(){
@@ -338,19 +321,6 @@ impl<T: Trait> Module<T> {
     fn get_new_header_and_push(network: BtcNetwork) {
         let best_index = XGatewayBitcoin::<T>::best_index().height;
         let mut next_height = best_index + 1;
-
-        // Get current height from local storage
-        let current_info = StorageValueRef::persistent(b"ocw::current");
-        // Get current height lock
-        let mut current_lock = StorageLock::<'_, Time>::new(b"ocw::current::lock");
-        // Prevent workers pushing header together
-        let _guard = current_lock.lock();
-        if let Some(Some(current)) = current_info.get::<u32>() {
-            if current == next_height {
-                return;
-            }
-        }
-
         for _ in 0..=MAX_RETRY_NUM {
             let btc_block_hash = match Self::fetch_block_hash(next_height, network) {
                 Ok(Some(hash)) => {
@@ -398,7 +368,6 @@ impl<T: Trait> Module<T> {
                             "[OCW|push_header] ₿ Submitting signed transaction for pushing header: #{}",
                             next_height
                         );
-                        current_info.set(&next_height);
                     }
                 }
             } else {
@@ -460,13 +429,10 @@ impl<T: Trait> Module<T> {
                 };
 
                 if Self::push_xbtc_transaction(&btc_confirmed_block, network) {
-                    let _guard = confirmed_lock.lock();
                     // Set confirmed height to local storage
                     confirmed_info.set(&confirm_height);
                     return false;
                 }
-                // worker abnormal exit, restart all
-                let _guard = confirmed_lock.lock();
                 confirmed_info.set(&(confirm_height - 1));
             }
         }
@@ -475,10 +441,15 @@ impl<T: Trait> Module<T> {
 
     /// Filter x-btc deposit/withdraw transactions and push to the chain
     fn push_xbtc_transaction(confirmed_block: &BtcBlock, network: BtcNetwork) -> bool {
+        // Need to submit transaction
         let mut needed = Vec::new();
+        // To construct partial merkle tree
         let mut tx_hashes = Vec::with_capacity(confirmed_block.transactions.len());
         let mut tx_matches = Vec::with_capacity(confirmed_block.transactions.len());
+        // All requests
+        let mut pending_requests = Vec::<PendingRequest>::new();
 
+        // Construct tx detector
         let current_trustee_pair = match Self::get_current_trustee_pair() {
             Ok(Some((hot, cold))) => (hot, cold),
             _ => {
@@ -490,40 +461,8 @@ impl<T: Trait> Module<T> {
         let btc_tx_detector =
             BtcTxTypeDetector::new(network, btc_min_deposit, current_trustee_pair, None);
 
-        // Initialize local storage and lock
-        let mut local_tx_num = StorageValueRef::persistent(b"ocw::tx::num");
-        let mut tx_lock = StorageLock::<'_, Time>::new(b"ocw::tx::lock");
-        // Exit?
-        let mut local_exit = StorageValueRef::persistent(b"ocw::exit");
         // Filter transaction type (only deposit and withdrawal)
-        for (tx_num, tx) in confirmed_block.transactions.iter().enumerate() {
-            // Ensure that multiple workers are mutually exclusive
-            {
-                let _guard = tx_lock.lock();
-                // If a worker exits, everyone exits together
-                let exit = match local_exit.get::<bool>() {
-                    Some(Some(yes)) => yes,
-                    _ => false,
-                };
-                if exit == true {
-                    return false;
-                }
-                // Set current worker's tx index
-                let num = match local_tx_num.get::<u16>() {
-                    Some(Some(num)) => num,
-                    _ => 0,
-                };
-                if tx_num as u16 > num {
-                    local_tx_num.set(&(tx_num as u16));
-                } else {
-                    local_tx_num.set(&(num));
-                    tx_hashes.push(tx.hash());
-                    tx_matches.push(false);
-                    continue;
-                }
-            }
-            debug::info!("[OCW] transaction number: {}", tx_num);
-
+        for tx in confirmed_block.transactions.iter() {
             // Prepare for constructing partial merkle tree
             tx_hashes.push(tx.hash());
             if tx.is_coinbase() {
@@ -533,38 +472,27 @@ impl<T: Trait> Module<T> {
 
             let outpoint = tx.inputs[0].previous_output;
             let prev_tx_hash = hex::encode(hash_rev(outpoint.txid));
-            for num in 0..=RETRY_NUM {
-                if num == MAX_RETRY_NUM {
-                    debug::info!(
-                        "[OCW] try fetch prev_tx {} times but failed, worker will exit.",
-                        num
-                    );
-                    // Worker abnormal exit,make all workers exit together
-                    let _guard = tx_lock.lock();
-                    local_tx_num.clear();
-                    local_exit.set(&true);
-                    return false;
-                }
+            let pending = Self::get_transactions_pending(&prev_tx_hash[..], network).unwrap();
+            pending_requests.push(pending);
+            tx_matches.push(false);
+        }
 
-                let prev_tx = match Self::fetch_transaction(&prev_tx_hash[..], network) {
-                    Ok(prev) => prev,
-                    _ => continue,
-                };
-                // Detect transaction type
-                match btc_tx_detector.detect_transaction_type(
-                    &tx,
-                    Some(&prev_tx),
-                    OpReturnExtractor::extract_account,
-                ) {
-                    BtcTxMetaType::Withdrawal | BtcTxMetaType::Deposit(..) => {
-                        tx_matches.push(true);
-                        needed.push((tx, Some(prev_tx)));
-                    }
-                    BtcTxMetaType::HotAndCold
-                    | BtcTxMetaType::TrusteeTransition
-                    | BtcTxMetaType::Irrelevance => tx_matches.push(false),
+        let transactions = Self::get_all_transactions(pending_requests).unwrap();
+        for (i, prev_tx) in transactions.iter().enumerate() {
+            // Skip coinbase
+            let tx = &confirmed_block.transactions[i + 1];
+            // Detect transaction type
+            match btc_tx_detector.detect_transaction_type(
+                tx,
+                Some(prev_tx),
+                OpReturnExtractor::extract_account,
+            ) {
+                BtcTxMetaType::Withdrawal | BtcTxMetaType::Deposit(..) => {
+                    needed.push((tx, Some(prev_tx.clone())));
                 }
-                break;
+                BtcTxMetaType::HotAndCold
+                | BtcTxMetaType::TrusteeTransition
+                | BtcTxMetaType::Irrelevance => tx_matches[i + 1] = false,
             }
         }
 

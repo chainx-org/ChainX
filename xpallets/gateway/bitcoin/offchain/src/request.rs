@@ -9,7 +9,7 @@ use light_bitcoin::{
 };
 
 use frame_support::debug;
-use sp_runtime::offchain::{http, Duration};
+use sp_runtime::offchain::{http, http::PendingRequest, Duration};
 use sp_std::{str, vec, vec::Vec};
 
 use crate::{Error, Module, Trait};
@@ -70,6 +70,38 @@ impl<T: Trait> Module<T> {
         // Response body
         let resp_body = response.body().collect::<Vec<u8>>();
         Ok(resp_body)
+    }
+
+    /// Get transaction's PendingRequest
+    pub(crate) fn get_transactions_pending(
+        hash: &str,
+        network: BtcNetwork,
+    ) -> Result<http::PendingRequest, Error<T>> {
+        let url = match network {
+            BtcNetwork::Mainnet => format!("https://blockstream.info/api/tx/{}/raw", hash),
+            BtcNetwork::Testnet => format!("https://blockstream.info/testnet/api/tx/{}/raw", hash),
+        };
+        let deadline = sp_io::offchain::timestamp().add(Duration::from_millis(2_000));
+        let pending = http::Request::get(url.as_ref())
+            .deadline(deadline)
+            .send()
+            .map_err(Error::<T>::from)?;
+        Ok(pending)
+    }
+
+    /// Get all transactions
+    pub(crate) fn get_all_transactions(
+        pending: Vec<PendingRequest>,
+    ) -> Result<Vec<BtcTransaction>, Error<T>> {
+        let responses = PendingRequest::wait_all(pending);
+        let mut transactions = Vec::<BtcTransaction>::new();
+        for response in responses {
+            let body = response?.body().collect::<Vec<u8>>();
+            let transaction = deserialize::<_, BtcTransaction>(Reader::new(&body))
+                .map_err(|_| Error::<T>::BtcSserializationError)?;
+            transactions.push(transaction);
+        }
+        Ok(transactions)
     }
 
     /// Get btc block hash from btc network
