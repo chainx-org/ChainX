@@ -11,7 +11,6 @@ mod command;
 mod config;
 mod genesis;
 mod logger;
-mod service;
 
 pub use sc_cli::Result;
 

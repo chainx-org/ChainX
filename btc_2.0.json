@@ -1,0 +1,19 @@
+{
+  "BlockWeights": {
+    "baseBlock": "Weight",
+    "maxBlock": "Weight",
+    "perClass": "PerDispatchClass"
+  },
+  "PerDispatchClass": {
+    "normal": "WeightPerClass",
+    "operational": "WeightPerClass",
+    "mandatory": "WeightPerClass"
+  },
+  "WeightPerClass": {
+    "baseExtrinsic": "Weight",
+    "maxExtrinsic": "Weight",
+    "maxTotal": "Option<Weight>",
+    "reserved": "Option<Weight>"
+  },
+  "RequestId": "u128"
+}

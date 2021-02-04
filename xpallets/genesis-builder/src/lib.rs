@@ -93,6 +93,7 @@ mod genesis {
                         ..Default::default()
                     },
                 )
+                .expect("Set balance can not fail; qed")
             };
 
             let treasury_account =
