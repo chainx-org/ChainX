@@ -38,7 +38,7 @@ pallet-authority-discovery = { version = "2.0.1", default-features = false }
 pallet-authorship = { version = "2.0.1", default-features = false }
 pallet-babe = { version = "2.0.1", default-features = false }
 pallet-balances = { version = "2.0.1", default-features = false }
-pallet-bounties = {  git = "https://github.com/paritytech/substrate", rev = "81ca765646c35c7676ec2f86e718bf1f6a5cc274", default-features = false }
+pallet-bounties = {  git = "https://github.com/paritytech/substrate", rev = "bc69520ae4abb78ca89a57ff9af8887d598ce048", default-features = false }
 pallet-collective = { version = "2.0.1", default-features = false }
 pallet-democracy = { version = "2.0.1", default-features = false }
 pallet-elections-phragmen = { version = "3.0.0", default-features = false }
@@ -54,7 +54,7 @@ pallet-scheduler = { version = "2.0.1", default-features = false }
 pallet-session = { version = "2.0.1", default-features = false, features = ["historical"] }
 pallet-sudo = { version = "2.0.1", default-features = false }
 pallet-timestamp = { version = "2.0.1", default-features = false }
-pallet-tips = {  git = "https://github.com/paritytech/substrate", rev = "81ca765646c35c7676ec2f86e718bf1f6a5cc274", default-features = false }
+pallet-tips = {  git = "https://github.com/paritytech/substrate", rev = "bc69520ae4abb78ca89a57ff9af8887d598ce048", default-features = false }
 pallet-transaction-payment = { version = "2.0.1", default-features = false }
 pallet-transaction-payment-rpc-runtime-api = { version = "2.0.1", default-features = false }
 pallet-treasury = { version = "2.0.1", default-features = false }
