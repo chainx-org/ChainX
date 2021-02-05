@@ -1093,7 +1093,7 @@ impl_runtime_apis! {
             }
         }
 
-        fn current_epoch_start() -> sp_consensus_babe::SlotNumber {
+        fn current_epoch_start() -> sp_consensus_babe::Slot {
             Babe::current_epoch_start()
         }
 
@@ -1107,7 +1107,7 @@ impl_runtime_apis! {
 
 
         fn generate_key_ownership_proof(
-            _slot_number: sp_consensus_babe::SlotNumber,
+            _slot: sp_consensus_babe::Slot,
             authority_id: sp_consensus_babe::AuthorityId,
         ) -> Option<sp_consensus_babe::OpaqueKeyOwnershipProof> {
             Historical::prove((sp_consensus_babe::KEY_TYPE, authority_id))
