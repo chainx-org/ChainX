@@ -21,7 +21,7 @@ sc-keystore = "2.0.1"
 sc-rpc = "2.0.1"
 sc-rpc-api = "0.8.1"
 sc-service = { version = "0.8.1", features = ["test-helpers"] }
-sc-sync-state-rpc = { git = "https://github.com/paritytech/substrate", rev = "075796f75f754a712ebb417c8b17633f7b88adf1" }
+sc-sync-state-rpc = { git = "https://github.com/paritytech/substrate", rev = "f14488dfca012659297d2b4676fab91c179095dd" }
 
 # Substrate primitives
 sp-api = "2.0.1"
