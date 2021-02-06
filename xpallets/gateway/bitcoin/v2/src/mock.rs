@@ -74,7 +74,7 @@ impl xpallet_assets::Config for Test {
     type Currency = Balances;
     type Amount = Amount;
     type TreasuryAccount = ();
-    type OnCreatedAccount = frame_system::CallOnCreatedAccount<Test>;
+    type OnCreatedAccount = ();
     type OnAssetChanged = ();
     type WeightInfo = ();
 }

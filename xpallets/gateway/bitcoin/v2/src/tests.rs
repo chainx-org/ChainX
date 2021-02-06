@@ -163,3 +163,17 @@ fn test_slash_collateral() {
         assert_eq!(<assets::CurrencyOf<Test>>::reserved_balance(2), 200);
     });
 }
+
+#[test]
+fn test_release_collateral() {
+    ExtBuilder::build(BuildConfig::default()).execute_with(|| {
+        assets::Pallet::<Test>::lock_collateral(&1, 200).unwrap();
+        assert_eq!(<assets::CurrencyOf<Test>>::reserved_balance(1), 200);
+        assert_ok!(assets::Pallet::<Test>::release_collateral(&1, 200));
+        assert_eq!(<assets::CurrencyOf<Test>>::reserved_balance(1), 0);
+        assert_err!(
+            assets::Pallet::<Test>::release_collateral(&1, 200),
+            assets::Error::<Test>::InsufficientCollateral
+        );
+    })
+}
