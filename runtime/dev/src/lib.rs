@@ -404,11 +404,11 @@ impl frame_support::traits::ValidatorSet<AccountId> for Runtime {
 
     // TODO: use sp_staking::SessionIndex?
     fn session_index() -> SessionIndex {
-        <pallet_session::Module<Runtime>>::current_index()
+        Session::current_index()
     }
 
     fn validators() -> Vec<Self::ValidatorId> {
-        todo!("active validator set")
+        Session::validators()
     }
 }
 
