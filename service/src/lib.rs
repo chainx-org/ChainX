@@ -12,7 +12,6 @@ use sc_executor::NativeExecutionDispatch;
 use sc_finality_grandpa::FinalityProofProvider as GrandpaFinalityProofProvider;
 use sc_network::{Event, NetworkService};
 use sc_service::{config::Configuration, error::Error as ServiceError, TaskManager};
-use sc_telemetry::TelemetrySpan;
 use sp_api::ConstructRuntimeApi;
 use sp_inherents::InherentDataProviders;
 use sp_runtime::traits::Block as BlockT;
@@ -65,7 +64,6 @@ pub fn new_partial<RuntimeApi, Executor>(
                 sc_consensus_babe::BabeLink<Block>,
             ),
             sc_finality_grandpa::SharedVoterState,
-            Option<TelemetrySpan>,
         ),
     >,
     ServiceError,
@@ -77,7 +75,7 @@ where
         RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
     Executor: NativeExecutionDispatch + 'static,
 {
-    let (client, backend, keystore_container, task_manager, telemetry_span) =
+    let (client, backend, keystore_container, task_manager) =
         sc_service::new_full_parts::<Block, RuntimeApi, Executor>(&config)?;
     let client = Arc::new(client);
 
@@ -85,6 +83,7 @@ where
 
     let transaction_pool = sc_transaction_pool::BasicPool::new_full(
         config.transaction_pool.clone(),
+        config.role.is_authority().into(),
         config.prometheus_registry(),
         task_manager.spawn_handle(),
         client.clone(),
@@ -129,7 +128,6 @@ where
 
         let finality_proof_provider = GrandpaFinalityProofProvider::new_for_service(
             backend.clone(),
-            client.clone(),
             Some(shared_authority_set.clone()),
         );
 
@@ -181,7 +179,6 @@ where
             rpc_extensions_builder,
             import_setup,
             rpc_setup,
-            telemetry_span,
         ),
     })
 }
@@ -214,7 +211,7 @@ where
         select_chain,
         transaction_pool,
         inherent_data_providers,
-        other: (rpc_extensions_builder, import_setup, rpc_setup, telemetry_span),
+        other: (rpc_extensions_builder, import_setup, rpc_setup),
     } = new_partial(&config)?;
 
     let shared_voter_state = rpc_setup;
@@ -271,7 +268,6 @@ where
             remote_blockchain: None,
             network_status_sinks: network_status_sinks.clone(),
             system_rpc_tx,
-            telemetry_span,
         })?;
 
     let (block_import, grandpa_link, babe_link) = import_setup;
@@ -443,7 +439,7 @@ where
         RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<LightBackend, Block>>,
     Dispatch: NativeExecutionDispatch + 'static,
 {
-    let (client, backend, keystore_container, mut task_manager, on_demand, telemetry_span) =
+    let (client, backend, keystore_container, mut task_manager, on_demand) =
         sc_service::new_light_parts::<Block, Runtime, Dispatch>(&config)?;
 
     let select_chain = sc_consensus::LongestChain::new(backend.clone());
@@ -527,7 +523,6 @@ where
         system_rpc_tx,
         network,
         task_manager: &mut task_manager,
-        telemetry_span,
     })?;
 
     Ok(task_manager)

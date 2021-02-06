@@ -393,10 +393,30 @@ parameter_types! {
 impl pallet_im_online::Config for Runtime {
     type AuthorityId = ImOnlineId;
     type Event = Event;
+    type ValidatorSet = Self;
     type SessionDuration = SessionDuration;
     type ReportUnresponsiveness = Offences;
     type UnsignedPriority = ImOnlineUnsignedPriority;
     type WeightInfo = pallet_im_online::weights::SubstrateWeight<Runtime>;
+}
+
+impl frame_support::traits::ValidatorSet<AccountId> for Runtime {
+    type ValidatorId = AccountId;
+    type ValidatorIdOf = SimpleValidatorIdConverter;
+
+    // TODO: use sp_staking::SessionIndex?
+    fn session_index() -> SessionIndex {
+        <pallet_session::Module<Runtime>>::current_index()
+    }
+
+    fn validators() -> Vec<Self::ValidatorId> {
+        todo!("active validator set")
+    }
+}
+
+impl frame_support::traits::ValidatorSetWithIdentification<AccountId> for Runtime {
+    type Identification = AccountId;
+    type IdentificationOf = SimpleValidatorIdConverter;
 }
 
 /// Dummy implementation for the trait bound of pallet_im_online.
@@ -1093,7 +1113,7 @@ impl_runtime_apis! {
             }
         }
 
-        fn current_epoch_start() -> sp_consensus_babe::SlotNumber {
+        fn current_epoch_start() -> sp_consensus_babe::Slot {
             Babe::current_epoch_start()
         }
 
@@ -1107,7 +1127,7 @@ impl_runtime_apis! {
 
 
         fn generate_key_ownership_proof(
-            _slot_number: sp_consensus_babe::SlotNumber,
+            _slot: sp_consensus_babe::Slot,
             authority_id: sp_consensus_babe::AuthorityId,
         ) -> Option<sp_consensus_babe::OpaqueKeyOwnershipProof> {
             Historical::prove((sp_consensus_babe::KEY_TYPE, authority_id))
