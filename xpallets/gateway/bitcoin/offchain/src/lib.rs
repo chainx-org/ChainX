@@ -316,6 +316,7 @@ impl<T: Trait> Module<T> {
     fn get_new_header_and_push(network: BtcNetwork) {
         let best_index = XGatewayBitcoin::<T>::best_index().height;
         let mut next_height = best_index + 1;
+
         for _ in 0..=MAX_RETRY_NUM {
             let btc_block_hash = match Self::fetch_block_hash(next_height, network) {
                 Ok(Some(hash)) => {
@@ -323,7 +324,7 @@ impl<T: Trait> Module<T> {
                     hash
                 }
                 Ok(None) => {
-                    debug::warn!("[OCW] ₿ Block #{} has not been generated yet", next_height);
+                    debug::info!("[OCW] ₿ Block #{} has not been generated yet", next_height);
                     // Sleep 1 minutes when there is not new block
                     let sleep_until = offchain::timestamp().add(Duration::from_millis(60_000));
                     offchain::sleep_until(sleep_until);
@@ -347,6 +348,11 @@ impl<T: Trait> Module<T> {
             };
 
             let btc_header = btc_block.header;
+            // Determine whether the block header already exists
+            if let Some(header) = XGatewayBitcoin::<T>::headers(btc_header.hash()) {
+                debug::info!("[OCW] Header #{} {:?} Exist.", next_height, header);
+                break;
+            }
             // Determine whether it is a branch block
             if XGatewayBitcoin::<T>::block_hash_for(best_index)
                 .contains(&btc_header.previous_header_hash)
@@ -430,7 +436,7 @@ impl<T: Trait> Module<T> {
                     // Set confirmed height to local storage
                     if yes {
                         confirmed_info.set(&confirm_height);
-                        return false;
+                        return true;
                     }
                 }
                 confirmed_info.set(&(confirm_height - 1));
