@@ -71,8 +71,8 @@ use xpallet_gateway_common::{trustees::bitcoin::BtcTrusteeAddrInfo, Module as XG
 // Max worker nums
 const MAX_WORKER_NUM: usize = 1;
 const DEFAULT_WORKER_NUM: usize = 1;
-// Default delay 
-const DEFAULT_DELAY: Duration = Duration::from_millis(1_000);
+// Default delay
+const DEFAULT_DELAY: Duration = Duration::from_millis(6_000);
 
 /// Defines application identifier for crypto keys of this module.
 ///
