@@ -393,10 +393,31 @@ parameter_types! {
 impl pallet_im_online::Config for Runtime {
     type AuthorityId = ImOnlineId;
     type Event = Event;
+    // FIXME: replace Session using Staking
+    type ValidatorSet = Self;
     type SessionDuration = SessionDuration;
     type ReportUnresponsiveness = Offences;
     type UnsignedPriority = ImOnlineUnsignedPriority;
     type WeightInfo = pallet_im_online::weights::SubstrateWeight<Runtime>;
+}
+
+impl frame_support::traits::ValidatorSet<AccountId> for Runtime {
+    type ValidatorId = AccountId;
+    type ValidatorIdOf = SimpleValidatorIdConverter;
+
+    // TODO: use sp_staking::SessionIndex?
+    fn session_index() -> SessionIndex {
+        <pallet_session::Module<Runtime>>::current_index()
+    }
+
+    fn validators() -> Vec<Self::ValidatorId> {
+        todo!("active validator set")
+    }
+}
+
+impl frame_support::traits::ValidatorSetWithIdentification<AccountId> for Runtime {
+    type Identification = AccountId;
+    type IdentificationOf = SimpleValidatorIdConverter;
 }
 
 /// Dummy implementation for the trait bound of pallet_im_online.

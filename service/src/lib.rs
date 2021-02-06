@@ -12,7 +12,6 @@ use sc_executor::NativeExecutionDispatch;
 use sc_finality_grandpa::FinalityProofProvider as GrandpaFinalityProofProvider;
 use sc_network::{Event, NetworkService};
 use sc_service::{config::Configuration, error::Error as ServiceError, TaskManager};
-use sc_telemetry::TelemetrySpan;
 use sp_api::ConstructRuntimeApi;
 use sp_inherents::InherentDataProviders;
 use sp_runtime::traits::Block as BlockT;
