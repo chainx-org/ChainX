@@ -125,7 +125,7 @@ pub mod types {
 #[allow(dead_code)]
 pub mod pallet {
     use sp_arithmetic::traits::SaturatedConversion;
-    use sp_std::{collections::btree_set::BTreeSet, default::Default, marker::PhantomData};
+    use sp_std::{default::Default, marker::PhantomData, vec::Vec};
 
     #[cfg(feature = "std")]
     use frame_support::traits::GenesisBuild;
