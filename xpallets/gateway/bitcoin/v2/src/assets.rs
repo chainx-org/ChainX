@@ -318,5 +318,15 @@ pub mod pallet {
             // Self::deposit_event(...);
             Ok(().into())
         }
+
+        /// Release collateral
+        pub fn release_collateral(account: &T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
+            let reserved_collateral = <CurrencyOf<T>>::reserved_balance(account);
+            ensure!(
+                reserved_collateral >= amount,
+                Error::<T>::InsufficientCollateral
+            );
+            <CurrencyOf<T>>::unreserve(account, amount);
+        }
     }
 }
