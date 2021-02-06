@@ -30,6 +30,7 @@ pub mod types {
 
     bitflags! {
         /// Bridge error with bitflag
+        #[derive(Encode, Decode)]
         pub struct ErrorCode : u8 {
             const NONE = 0b00000000;
             /// During liquidation
@@ -38,20 +39,6 @@ pub mod types {
             /// Oracle doesn't update exchange rate in time.
             /// Bridge recovers after exchange rate updating
             const EXCHANGE_RATE_EXPIRED = 0b00000010;
-        }
-    }
-
-    impl Encode for ErrorCode {
-        fn encode_to<T: Output + ?Sized>(&self, dest: &mut T) {
-            dest.push_byte(self.bits())
-        }
-    }
-
-    impl codec::EncodeLike for ErrorCode {}
-
-    impl Decode for ErrorCode {
-        fn decode<I: Input>(input: &mut I) -> Result<Self, Error> {
-            Self::from_bits(input.read_byte()?).ok_or_else(|| Error::from("Invalid bytes"))
         }
     }
 
