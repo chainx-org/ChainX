@@ -31,10 +31,10 @@ use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult},
     ensure,
-    traits::{Currency, Get, Happened, IsDeadAccount, LockableCurrency, ReservableCurrency},
+    traits::{Currency, Get, HandleLifetime, LockableCurrency, ReservableCurrency},
     Parameter, StorageDoubleMap,
 };
-use frame_system::{ensure_root, ensure_signed};
+use frame_system::{ensure_root, ensure_signed, AccountInfo};
 use orml_traits::arithmetic::{Signed, SimpleArithmetic};
 use sp_runtime::traits::{
     CheckedAdd, CheckedSub, MaybeSerializeDeserialize, Member, Saturating, StaticLookup, Zero,
@@ -78,7 +78,7 @@ pub trait Config: xpallet_assets_registrar::Config {
 
     type TreasuryAccount: TreasuryAccount<Self::AccountId>;
 
-    type OnCreatedAccount: Happened<Self::AccountId>;
+    type OnCreatedAccount: HandleLifetime<Self::AccountId>;
 
     type OnAssetChanged: OnAssetChanged<Self::AccountId, BalanceOf<Self>>;
 
@@ -510,12 +510,22 @@ impl<T: Config> Module<T> {
 
     fn new_account(who: &T::AccountId) {
         info!("[new_account] account:{:?}", who);
-        T::OnCreatedAccount::happened(who)
+        // FIXME: handle the result properly.
+        let _ = T::OnCreatedAccount::created(who);
+    }
+
+    fn is_dead_account(who: &T::AccountId) -> bool {
+        let AccountInfo {
+            providers,
+            consumers,
+            ..
+        } = frame_system::pallet::Account::<T>::get(who);
+        providers.is_zero() && consumers.is_zero()
     }
 
     fn try_new_account(who: &T::AccountId) {
         // lookup chainx balance
-        if frame_system::Module::<T>::is_dead_account(who) {
+        if Self::is_dead_account(who) {
             Self::new_account(who);
         }
     }
@@ -551,9 +561,10 @@ impl<T: Config> Module<T> {
         );
         if !existed && exists {
             Self::try_new_account(who);
-            frame_system::Module::<T>::inc_ref(who);
+            // FIXME: handle the result properly
+            let _ = frame_system::Module::<T>::inc_consumers(who);
         } else if existed && !exists {
-            frame_system::Module::<T>::dec_ref(who);
+            frame_system::Module::<T>::dec_consumers(who);
             AssetBalance::<T>::remove(who, id);
         }
 

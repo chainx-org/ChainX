@@ -413,7 +413,7 @@ fn test_account_init() {
         let _ = XAssets::issue(&X_BTC, &a, 100);
         assert!(System::events().contains(&EventRecord {
             phase: Phase::Initialization,
-            event: MetaEvent::system(frame_system::RawEvent::NewAccount(a)),
+            event: MetaEvent::system(frame_system::Event::<Test>::NewAccount(a)),
             topics: vec![],
         }));
 
@@ -426,7 +426,7 @@ fn test_account_init() {
         ));
         assert!(System::events().contains(&EventRecord {
             phase: Phase::Initialization,
-            event: MetaEvent::system(frame_system::RawEvent::NewAccount(id1)),
+            event: MetaEvent::system(frame_system::Event::<Test>::NewAccount(id1)),
             topics: vec![],
         }));
     })
@@ -441,7 +441,7 @@ fn test_transfer_not_init() {
                 .filter(|e| {
                     **e == EventRecord {
                         phase: Phase::Initialization,
-                        event: MetaEvent::system(frame_system::RawEvent::NewAccount(new_id)),
+                        event: MetaEvent::system(frame_system::Event::<Test>::NewAccount(new_id)),
                         topics: vec![],
                     }
                 })
@@ -475,14 +475,14 @@ fn test_transfer_not_init() {
         }
         check_only_one_new_account(new_id);
 
-        assert_eq!(System::refs(&new_id), 1);
+        assert_eq!(System::consumers(&new_id), 1);
         assert_ok!(XAssets::transfer(
             Origin::signed(new_id),
             a.into(),
             btc_id.into(),
             50,
         ));
-        assert_eq!(System::refs(&new_id), 0);
+        assert_eq!(System::consumers(&new_id), 0);
         assert_ok!(XAssets::transfer(
             Origin::signed(a),
             new_id.into(),
