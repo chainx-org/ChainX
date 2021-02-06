@@ -175,11 +175,7 @@ where
         import_queue,
         transaction_pool,
         inherent_data_providers,
-        other: (
-            rpc_extensions_builder,
-            import_setup,
-            rpc_setup,
-        ),
+        other: (rpc_extensions_builder, import_setup, rpc_setup),
     })
 }
 
