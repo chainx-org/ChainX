@@ -1,6 +1,6 @@
 [package]
 name = "chainx-cli"
-version = "2.0.8"
+version = "2.0.8-1"
 authors = ["The ChainX Authors"]
 description = "Implementation of protocol https://chainx.org in Rust based on the Substrate framework."
 edition = "2018"
@@ -27,32 +27,36 @@ sc-consensus-babe = "0.8.1"
 sc-consensus-slots = "0.8.1"
 sc-executor = "0.8.1"
 sc-finality-grandpa = "0.8.1"
+sc-finality-grandpa-warp-sync = { git = "https://github.com/paritytech/substrate", rev = "bb0fb2965f9eb59c305ce0c294962d3317a29ece", optional = true }
 sc-network = "0.8.1"
 sc-rpc = "2.0.1"
 sc-transaction-pool = "2.0.1"
+sc-telemetry = "2.0.1"
 
 frame-benchmarking-cli = { version = "2.0.1", optional = true }
 sc-cli = { version = "0.8.1", optional = true }
 sc-service = { version = "0.8.1", optional = true }
 
 # Substrate primitives
-sp-core = "2.0.1"
-sp-consensus = "0.8.1"
-sp-consensus-babe = "0.8.1"
-sp-finality-grandpa = "2.0.1"
-sp-inherents = "2.0.1"
-sp-runtime = "2.0.1"
-sp-transaction-pool = "2.0.1"
-sp-authority-discovery = "2.0.1"
+sp-authority-discovery = "2.0.0"
+sp-core = "2.0.0"
+sp-consensus = "0.8.0"
+sp-consensus-babe = "0.8.0"
+sp-finality-grandpa = "2.0.0"
+sp-inherents = "2.0.0"
+sp-runtime = "2.0.0"
+sp-transaction-pool = "2.0.0"
 
 # Substrate pallets
 pallet-im-online = "2.0.1"
 
 chainx-executor = { path = "../executor" }
-chainx-dev-runtime = { path = "../runtime/dev" }
 chainx-primitives = { path = "../primitives" }
 chainx-rpc = { path = "../rpc" }
+chainx-service = { path = "../service" }
 chainx-runtime = { path = "../runtime/chainx" }
+dev-runtime = { path = "../runtime/dev" }
+malan-runtime = { path = "../runtime/malan" }
 
 xp-assets-registrar = { path  = "../primitives/assets-registrar" }
 xp-genesis-builder = { path  = "../primitives/genesis-builder" }
@@ -70,6 +74,7 @@ default = ["cli"]
 cli = [
     "sc-cli",
     "sc-service",
+    "sc-finality-grandpa-warp-sync",
     "frame-benchmarking-cli",
     "chainx-executor/wasmi-errno",
 ]
@@ -80,5 +85,6 @@ wasmtime = [
 ]
 runtime-benchmarks = [
     "chainx-runtime/runtime-benchmarks",
-    "chainx-dev-runtime/runtime-benchmarks",
+    "dev-runtime/runtime-benchmarks",
+    "malan-runtime/runtime-benchmarks",
 ]

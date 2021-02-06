@@ -1,6 +1,6 @@
 [package]
 name = "chainx-rpc"
-version = "2.0.8"
+version = "2.0.8-1"
 authors = ["The ChainX Authors"]
 edition = "2018"
 
@@ -21,7 +21,7 @@ sc-keystore = "2.0.1"
 sc-rpc = "2.0.1"
 sc-rpc-api = "0.8.1"
 sc-service = { version = "0.8.1", features = ["test-helpers"] }
-sc-sync-state-rpc = { git = "https://github.com/paritytech/substrate", rev = "e6d498a901706c9753cb96de4bec5401143be8f2" }
+sc-sync-state-rpc = { git = "https://github.com/paritytech/substrate", rev = "bb0fb2965f9eb59c305ce0c294962d3317a29ece" }
 
 # Substrate primitives
 sp-api = "2.0.1"
