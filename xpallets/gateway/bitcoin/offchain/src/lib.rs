@@ -71,6 +71,8 @@ use xpallet_gateway_common::{trustees::bitcoin::BtcTrusteeAddrInfo, Module as XG
 // Max worker nums
 const MAX_WORKER_NUM: usize = 1;
 const DEFAULT_WORKER_NUM: usize = 1;
+// Default delay 
+const DEFAULT_DELAY: Duration = Duration::from_millis(1_000);
 
 /// Defines application identifier for crypto keys of this module.
 ///
@@ -234,6 +236,9 @@ decl_module! {
             if Self::get_transactions_and_push(network) {
                 // Second, get new block from btc network and push block header to chain
                 Self::get_new_header_and_push(network);
+                // Delay 1s to prevent submission of the same transaction
+                let wait_time = offchain::timestamp().add(DEFAULT_DELAY);
+                offchain::sleep_until(wait_time);
                 // Finally, get withdrawal proposal from chain and broadcast to btc network.
                 match Self::broadcast_withdrawal_proposal(network) {
                     Ok(Some(hash)) => {
@@ -325,8 +330,8 @@ impl<T: Trait> Module<T> {
                 }
                 Ok(None) => {
                     debug::info!("[OCW] ₿ Block #{} has not been generated yet", next_height);
-                    // Sleep 1 minutes when there is not new block
-                    let sleep_until = offchain::timestamp().add(Duration::from_millis(60_000));
+                    // Sleep 5 minutes when there is not new block
+                    let sleep_until = offchain::timestamp().add(Duration::from_millis(300_000));
                     offchain::sleep_until(sleep_until);
                     return;
                 }
