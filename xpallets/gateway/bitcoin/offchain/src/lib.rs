@@ -1,6 +1,7 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 //!
+//!
 
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -88,22 +89,21 @@ pub const BTC_RELAY: KeyTypeId = KeyTypeId(*b"btcr");
 /// the types with this pallet-specific identifier.
 pub mod app {
     pub use super::BTC_RELAY;
+    use crate::AuthorityId;
     use sp_core::sr25519::Signature as Sr25519Signature;
     use sp_runtime::app_crypto::{app_crypto, sr25519};
     use sp_runtime::{traits::Verify, MultiSignature, MultiSigner};
 
     app_crypto!(sr25519, BTC_RELAY);
 
-    pub struct RelayAuthId;
-
-    impl frame_system::offchain::AppCrypto<MultiSigner, MultiSignature> for RelayAuthId {
+    impl frame_system::offchain::AppCrypto<MultiSigner, MultiSignature> for AuthorityId {
         type RuntimeAppPublic = Public;
-        type GenericSignature = sp_core::sr25519::Signature;
         type GenericPublic = sp_core::sr25519::Public;
+        type GenericSignature = sp_core::sr25519::Signature;
     }
 
     impl frame_system::offchain::AppCrypto<<Sr25519Signature as Verify>::Signer, Sr25519Signature>
-        for RelayAuthId
+        for AuthorityId
     {
         type RuntimeAppPublic = Public;
         type GenericPublic = sp_core::sr25519::Public;
@@ -136,8 +136,11 @@ pub trait Trait:
     /// A configuration for base priority of unsigned transactions.
     type UnsignedPriority: Get<TransactionPriority>;
     /// The identifier type for an offchain worker.
-    type AuthorityId: Parameter + Default + RuntimeAppPublic + Ord;
-    type RelayAuthId: AppCrypto<Self::Public, Self::Signature>;
+    type AuthorityId: Parameter
+        + Default
+        + RuntimeAppPublic
+        + Ord
+        + AppCrypto<Self::Public, Self::Signature>;
     /// Weight information for extrinsics in this pallet.
     type WeightInfo: WeightInfo;
 }
@@ -208,7 +211,7 @@ decl_module! {
     /// A public part of the pallet.
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         fn deposit_event() = default;
-        // Each time the block is imported, a worker thread is started and the function is executed.
+        /// Each time the block is imported, a worker thread will be started and run this function.
         fn offchain_worker(block_number: T::BlockNumber) {
             // Worker thread lock
             let mut worker_lock = StorageLock::<'_, Time>::new(b"ocw::worker::lock");
@@ -236,7 +239,7 @@ decl_module! {
             if Self::get_transactions_and_push(network) {
                 // Second, get new block from btc network and push block header to chain
                 Self::get_new_header_and_push(network);
-                // Delay 1s to prevent submission of the same transaction
+                // Delay 6s to prevent submission of the same transaction
                 let wait_time = offchain::timestamp().add(DEFAULT_DELAY);
                 offchain::sleep_until(wait_time);
                 // Finally, get withdrawal proposal from chain and broadcast to btc network.
@@ -253,7 +256,7 @@ decl_module! {
                 }
             }
             debug::info!("[OCW] Worker[{:?}] Exit.", block_number);
-
+            // Control worker nums
             let _guard = worker_lock.lock();
             if let Some(Some(num)) = worker_num.get::<u8>(){
                 worker_num.set(&(num - 1));
@@ -265,6 +268,7 @@ decl_module! {
             let worker = ensure_signed(origin)?;
             debug::info!("[OCW] Worker:{:?} Push Header: {:?}, #Height{}", worker, header, height);
             XGatewayBitcoin::<T>::apply_push_header(header)?;
+
             Ok(Pays::No.into())
         }
 
@@ -274,6 +278,7 @@ decl_module! {
             debug::info!("[OCW] Worker:{:?} Push Transaction: {:?}", worker, tx.hash());
             let relay_tx = relayed_info.into_relayed_tx(tx);
             XGatewayBitcoin::<T>::apply_push_transaction(relay_tx, prev_tx)?;
+
             Ok(Pays::No.into())
         }
     }
@@ -362,7 +367,8 @@ impl<T: Trait> Module<T> {
             if XGatewayBitcoin::<T>::block_hash_for(best_index)
                 .contains(&btc_header.previous_header_hash)
             {
-                let signer = Signer::<T, T::RelayAuthId>::any_account();
+                // Submit a signed transaction
+                let signer = Signer::<T, T::AuthorityId>::any_account();
                 let result = signer.send_signed_transaction(|_acct| {
                     Call::push_header(next_height, btc_block.header)
                 });
@@ -483,11 +489,11 @@ impl<T: Trait> Module<T> {
         for tx in confirmed_block.transactions.iter() {
             // Prepare for constructing partial merkle tree
             tx_hashes.push(tx.hash());
+            // Skip coinbase (the first transaction of block)
             if tx.is_coinbase() {
                 tx_matches.push(false);
                 continue;
             }
-
             let outpoint = tx.inputs[0].previous_output;
             let prev_tx_hash = hex::encode(hash_rev(outpoint.txid));
             let pending = Self::get_transactions_pending(&prev_tx_hash[..], network)?;
@@ -521,8 +527,9 @@ impl<T: Trait> Module<T> {
             // Construct partial merkle tree
             let merkle_proof = PartialMerkleTree::from_txids(&tx_hashes, &tx_matches);
             // Push xbtc relay (withdraw/deposit) transaction
-            let signer = Signer::<T, T::RelayAuthId>::any_account();
+            let signer = Signer::<T, T::AuthorityId>::any_account();
             for (tx, prev_tx) in needed {
+                // Check if the transaction has been completed
                 if let Some(state) = XGatewayBitcoin::<T>::tx_state(&tx.hash()) {
                     if state.result == BtcTxResult::Success {
                         continue;
@@ -532,6 +539,7 @@ impl<T: Trait> Module<T> {
                     block_hash: confirmed_block.hash(),
                     merkle_proof: merkle_proof.clone(),
                 };
+                // Submit a signed transaction
                 let result = signer.send_signed_transaction(|_acct| {
                     Call::push_transaction(tx.clone(), relayed_info.clone(), prev_tx.clone())
                 });

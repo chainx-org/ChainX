@@ -172,7 +172,6 @@ impl Trait for Test {
     type Event = ();
     type Call = Call<Test>;
     type AuthorityId = AuthorityId;
-    type RelayAuthId = RelayAuthId;
     type WeightInfo = ();
     type UnsignedPriority = ();
 }

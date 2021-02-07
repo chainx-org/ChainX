@@ -1,14 +1,13 @@
 #[cfg(not(feature = "std"))]
 use alloc::{format, string::String};
 
+use frame_support::debug;
 use light_bitcoin::{
     chain::{Block as BtcBlock, Transaction as BtcTransaction},
     keys::Network as BtcNetwork,
     primitives::{hash_rev, H256 as BtcHash},
     serialization::{deserialize, Reader},
 };
-
-use frame_support::debug;
 use sp_runtime::offchain::{http, http::PendingRequest, Duration};
 use sp_std::{str, vec, vec::Vec};
 
@@ -30,36 +29,28 @@ impl<T: Trait> Module<T> {
         B: Default + IntoIterator<Item = I>,
         I: AsRef<[u8]>,
     {
-        // Set timeout
         let deadline = sp_io::offchain::timestamp().add(Duration::from_millis(2_000));
-        // Http post request
         let pending = http::Request::post(url, req_body)
             .deadline(deadline)
             .send()
             .map_err(Error::<T>::from)?;
-        // Http response
         let response = pending
             .try_wait(deadline)
             .map_err(|_| Error::<T>::HttpDeadlineReached)??;
-        // Response body
         let resp_body = response.body().collect::<Vec<u8>>();
         Ok(resp_body)
     }
 
     /// Http get request
     pub(crate) fn get<U: AsRef<str>>(url: U) -> Result<Vec<u8>, Error<T>> {
-        // Set timeout
         let deadline = sp_io::offchain::timestamp().add(Duration::from_millis(2_000));
-        // Http get request
         let pending = http::Request::get(url.as_ref())
             .deadline(deadline)
             .send()
             .map_err(Error::<T>::from)?;
-        // Http response
         let response = pending
             .try_wait(deadline)
             .map_err(|_| Error::<T>::HttpDeadlineReached)??;
-        // Response body
         let resp_body = response.body().collect::<Vec<u8>>();
         Ok(resp_body)
     }
@@ -81,7 +72,7 @@ impl<T: Trait> Module<T> {
         Ok(pending)
     }
 
-    /// Get all transactions
+    /// Get all responses and return all transactions
     pub(crate) fn get_all_transactions(
         pending: Vec<PendingRequest>,
     ) -> Result<Vec<BtcTransaction>, Error<T>> {
@@ -232,13 +223,12 @@ impl<T: Trait> Module<T> {
 
 #[cfg(test)]
 mod tests {
-    use sp_core::offchain::{testing, OffchainExt};
-    use sp_io::TestExternalities;
-
     use light_bitcoin::{
         keys::Network as BtcNetwork,
         primitives::{h256, hash_rev},
     };
+    use sp_core::offchain::{testing, OffchainExt};
+    use sp_io::TestExternalities;
 
     use crate::mock::XGatewayBitcoinRelay;
 
