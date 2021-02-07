@@ -1,6 +1,21 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
+//! This module is to support cross-chain bitcoin transactions.
 //!
+//! ## Overview
+//! The main things in this module:
+//! - Submit header
+//! - Submit transaction
+//! - Broadcast raw transaction
+//!
+//! ### Submit header
+//! Fetch block headers from btc network and submit them to ChainX.
+//!
+//! ### Submit transaction
+//! Fetch transactions from btc network and submit filtered deposit/withdrawal transactions of X-BTC.
+//!
+//! ### Broadcast raw transaction
+//! Get withdrawal transactions from ChainX and broadcast raw transaction to btc network.
 //!
 
 // Ensure we're `no_std` when compiling for Wasm.
@@ -326,7 +341,7 @@ impl<T: Trait> Module<T> {
     fn get_new_header_and_push(network: BtcNetwork) {
         let best_index = XGatewayBitcoin::<T>::best_index().height;
         let mut next_height = best_index + 1;
-
+        // Prevent unstable network connections
         for _ in 0..=MAX_RETRY_NUM {
             let btc_block_hash = match Self::fetch_block_hash(next_height, network) {
                 Ok(Some(hash)) => {
@@ -461,7 +476,7 @@ impl<T: Trait> Module<T> {
         confirmed_block: &BtcBlock,
         network: BtcNetwork,
     ) -> Result<bool, Error<T>> {
-        // Need to submit transaction
+        // Submitted transaction
         let mut needed = Vec::new();
         // To construct partial merkle tree
         let mut tx_hashes = Vec::with_capacity(confirmed_block.transactions.len());
@@ -481,11 +496,7 @@ impl<T: Trait> Module<T> {
         let btc_tx_detector =
             BtcTxTypeDetector::new(network, btc_min_deposit, current_trustee_pair, None);
 
-        debug::info!(
-            "[OCW] All transaction nums: {}",
-            confirmed_block.transactions.len()
-        );
-        // Filter transaction type (only deposit and withdrawal)
+        // Save all requests
         for tx in confirmed_block.transactions.iter() {
             // Prepare for constructing partial merkle tree
             tx_hashes.push(tx.hash());
@@ -501,8 +512,8 @@ impl<T: Trait> Module<T> {
             tx_matches.push(false);
         }
 
+        // Filter transaction type (only deposit and withdrawal)
         let transactions = Self::get_all_transactions(pending_requests)?;
-        debug::info!("[OCW] Filter transaction nums: {}", transactions.len() + 1);
         for (i, prev_tx) in transactions.iter().enumerate() {
             // Skip coinbase
             let tx = &confirmed_block.transactions[i + 1];
@@ -578,10 +589,6 @@ impl<T: Trait> Module<T> {
                 Self::extract_trustee_address(trustee_session_info.0.hot_address).unwrap();
             let cold_addr =
                 Self::extract_trustee_address(trustee_session_info.0.cold_address).unwrap();
-            debug::info!("[OCW|get_trustee_pair] ChainX X-BTC Trustee Session Info (session number = {:?}):[Hot Address: {}, Cold Address: {}]",
-                            current_trustee_session_number,
-                            hot_addr,
-                            cold_addr,);
             Ok(Some((hot_addr, cold_addr)))
         } else {
             Ok(None)
