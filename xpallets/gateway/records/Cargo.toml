@@ -9,16 +9,16 @@ codec = { package = "parity-scale-codec", version = "2.0.0", features = ["derive
 serde = { version = "1.0", optional = true }
 
 # Substrate primitives
-sp-runtime = { version = "2.0.1", default-features = false }
-sp-std = { version = "2.0.1", default-features = false }
+sp-runtime = { version = "3.0.0", default-features = false }
+sp-std = { version = "3.0.0", default-features = false }
 
 # Substrate pallets
-frame-benchmarking = { version = "2.0.1", default-features = false, optional = true }
-frame-support = { version = "2.0.1", default-features = false }
-frame-system = { version = "2.0.1", default-features = false }
+frame-benchmarking = { version = "3.0.0", default-features = false, optional = true }
+frame-support = { version = "3.0.0", default-features = false }
+frame-system = { version = "3.0.0", default-features = false }
 
 # Orml
-orml-utilities = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "8c150f34a5b305103438e93337e1b9e7868dd1f3", default-features = false }
+orml-utilities = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "bdc0e4ca0bae7e8d8d80dae3b04ba99312d0d0b2", default-features = false }
 
 # ChainX primitives
 chainx-primitives = { path = "../../../primitives", default-features = false }
@@ -32,9 +32,9 @@ xpallet-assets-registrar = { path = "../../assets-registrar", default-features =
 xpallet-support = { path = "../../support", default-features = false }
 
 [dev-dependencies]
-sp-io = "2.0.1"
-sp-core = "2.0.1"
-pallet-balances = "2.0.1"
+sp-io = "3.0.0"
+sp-core = "3.0.0"
+pallet-balances = "3.0.0"
 
 [features]
 default = ["std"]

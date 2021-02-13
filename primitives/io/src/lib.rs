@@ -24,6 +24,8 @@ pub enum Ss58CheckError {
     InvalidPath,
     /// Mismatch version.
     MismatchVersion,
+    /// Disallowed SS58 Address Format for this datatype.
+    FormatNotAllowed,
 }
 
 #[runtime_interface]
@@ -39,6 +41,7 @@ pub trait Ss58Codec {
                 PublicError::InvalidChecksum => Ss58CheckError::InvalidChecksum,
                 PublicError::InvalidFormat => Ss58CheckError::InvalidFormat,
                 PublicError::InvalidPath => Ss58CheckError::InvalidPath,
+                PublicError::FormatNotAllowed => Ss58CheckError::FormatNotAllowed,
             })
             .and_then(|(account, ver)| match ver {
                 ver if ver == Ss58AddressFormat::default() => Ok(account),
