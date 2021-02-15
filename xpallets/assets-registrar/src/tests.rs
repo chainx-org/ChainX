@@ -1,8 +1,6 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use frame_support::{
-    assert_noop, assert_ok, impl_outer_event, impl_outer_origin, parameter_types, sp_io,
-};
+use frame_support::{assert_noop, assert_ok, parameter_types, sp_io};
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
@@ -12,33 +10,26 @@ use sp_runtime::{
 use chainx_primitives::AssetId;
 use xp_protocol::X_BTC;
 
-use crate::*;
+use crate::{self as xpallet_assets_registrar, AssetInfo, Chain, Config, Error};
 
 /// The AccountId alias in this test module.
 pub(crate) type BlockNumber = u64;
 
-impl_outer_origin! {
-    pub enum Origin for Test {}
-}
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
+type Block = frame_system::mocking::MockBlock<Test>;
 
-use frame_system as system;
-mod xpallet_assets_metadata {
-    // Re-export needed for `impl_outer_event!`.
-    pub use super::super::*;
-}
+use frame_support::construct_runtime;
 
-impl_outer_event! {
-    pub enum MetaEvent for Test {
-        system<T>,
-        xpallet_assets_metadata,
+construct_runtime!(
+    pub enum Test where
+        Block = Block,
+        NodeBlock = Block,
+        UncheckedExtrinsic = UncheckedExtrinsic,
+    {
+        System: frame_system::{Module, Call, Config, Storage, Event<T>},
+        XAssetsRegistrar: xpallet_assets_registrar::{Module, Call, Config, Storage, Event},
     }
-}
-
-// For testing the pallet, we construct most of a mock runtime. This means
-// first constructing a configuration type (`Test`) which `impl`s each of the
-// configuration traits of pallets we want to use.
-#[derive(Clone, Eq, PartialEq, Debug)]
-pub struct Test;
+);
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
@@ -50,7 +41,7 @@ impl frame_system::Config for Test {
     type BlockWeights = ();
     type BlockLength = ();
     type Origin = Origin;
-    type Call = ();
+    type Call = Call;
     type Index = u64;
     type BlockNumber = BlockNumber;
     type Hash = H256;
@@ -58,11 +49,11 @@ impl frame_system::Config for Test {
     type AccountId = u64;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = MetaEvent;
+    type Event = Event;
     type BlockHashCount = BlockHashCount;
     type DbWeight = ();
     type Version = ();
-    type PalletInfo = ();
+    type PalletInfo = PalletInfo;
     type AccountData = ();
     type OnNewAccount = ();
     type OnKilledAccount = ();
@@ -75,7 +66,7 @@ parameter_types! {
 }
 
 impl Config for Test {
-    type Event = MetaEvent;
+    type Event = Event;
     type NativeAssetId = ChainXAssetId;
     type RegistrarHandler = ();
     type WeightInfo = ();
@@ -108,7 +99,9 @@ impl ExtBuilder {
             .build_storage::<Test>()
             .unwrap();
 
-        let _ = GenesisConfig { assets }.assimilate_storage::<Test>(&mut storage);
+        xpallet_assets_registrar::GenesisConfig { assets }
+            .assimilate_storage::<Test>(&mut storage)
+            .unwrap();
 
         let ext = sp_io::TestExternalities::new(storage);
         ext
@@ -123,8 +116,6 @@ impl ExtBuilder {
     }
 }
 
-pub type System = frame_system::Module<Test>;
-pub type XAssetsRegistrar = Module<Test>;
 pub type Err = Error<Test>;
 
 #[test]
