@@ -1,12 +1,19 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use frame_support::{assert_noop, assert_ok};
+use std::collections::BTreeMap;
+
+use frame_support::{assert_noop, assert_ok, traits::Currency, StorageDoubleMap, StorageMap};
 use frame_system::{EventRecord, Phase};
 
 use xp_protocol::X_BTC;
 
-pub use crate::mock::*;
-use crate::*;
+use crate::{
+    mock::{Balance, Event, ExtBuilder, Origin, System, Test, XAssets, XAssetsErr},
+    AssetBalance, AssetErr, AssetInfo, AssetRestrictions, AssetType, Chain, Config,
+    TotalAssetBalance,
+};
+// pub use crate::mock::*;
+// use crate::*;
 
 #[test]
 fn test_genesis() {
@@ -413,7 +420,7 @@ fn test_account_init() {
         let _ = XAssets::issue(&X_BTC, &a, 100);
         assert!(System::events().contains(&EventRecord {
             phase: Phase::Initialization,
-            event: MetaEvent::system(frame_system::Event::<Test>::NewAccount(a)),
+            event: Event::frame_system(frame_system::Event::<Test>::NewAccount(a)),
             topics: vec![],
         }));
 
@@ -426,7 +433,7 @@ fn test_account_init() {
         ));
         assert!(System::events().contains(&EventRecord {
             phase: Phase::Initialization,
-            event: MetaEvent::system(frame_system::Event::<Test>::NewAccount(id1)),
+            event: Event::frame_system(frame_system::Event::<Test>::NewAccount(id1)),
             topics: vec![],
         }));
     })
@@ -441,7 +448,7 @@ fn test_transfer_not_init() {
                 .filter(|e| {
                     **e == EventRecord {
                         phase: Phase::Initialization,
-                        event: MetaEvent::system(frame_system::Event::<Test>::NewAccount(new_id)),
+                        event: Event::frame_system(frame_system::Event::<Test>::NewAccount(new_id)),
                         topics: vec![],
                     }
                 })
