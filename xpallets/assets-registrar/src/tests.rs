@@ -18,9 +18,7 @@ pub(crate) type BlockNumber = u64;
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
-use frame_support::construct_runtime;
-
-construct_runtime!(
+frame_support::construct_runtime!(
     pub enum Test where
         Block = Block,
         NodeBlock = Block,

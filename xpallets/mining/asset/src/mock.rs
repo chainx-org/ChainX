@@ -5,7 +5,7 @@ use std::{
     collections::{BTreeMap, HashSet},
 };
 
-use frame_support::{impl_outer_event, impl_outer_origin, parameter_types, traits::Get};
+use frame_support::{parameter_types, traits::Get};
 use sp_core::H256;
 use sp_runtime::{
     testing::{Header, UintAuthorityId},
@@ -17,8 +17,8 @@ use chainx_primitives::AssetId;
 use xp_mining_staking::SessionIndex;
 use xpallet_assets::{AssetInfo, AssetRestrictions, Chain};
 
-use crate::*;
-use crate::{Config, Module};
+use crate::Config;
+use crate::{self as xpallet_mining_asset, *};
 
 pub const INIT_TIMESTAMP: u64 = 30_000;
 
@@ -28,39 +28,25 @@ pub(crate) type BlockNumber = u64;
 pub(crate) type Balance = u128;
 pub(crate) type Amount = i128;
 
-impl_outer_origin! {
-    pub enum Origin for Test {}
-}
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
+type Block = frame_system::mocking::MockBlock<Test>;
 
-mod mining_asset {
-    // Re-export needed for `impl_outer_event!`.
-    pub use super::super::*;
-}
-
-use frame_system as system;
-use pallet_balances as balances;
-use pallet_session as session;
-use xpallet_assets as assets;
-use xpallet_assets_registrar as assets_registrar;
-use xpallet_mining_staking as staking;
-
-impl_outer_event! {
-    pub enum MetaEvent for Test {
-        system<T>,
-        balances<T>,
-        session,
-        assets_registrar,
-        assets<T>,
-        staking<T>,
-        mining_asset<T>,
+frame_support::construct_runtime!(
+    pub enum Test where
+        Block = Block,
+        NodeBlock = Block,
+        UncheckedExtrinsic = UncheckedExtrinsic,
+    {
+        System: frame_system::{Module, Call, Config, Storage, Event<T>},
+        Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
+        Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
+        Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
+        XAssetsRegistrar: xpallet_assets_registrar::{Module, Call, Config, Storage, Event},
+        XAssets: xpallet_assets::{Module, Call, Config<T>, Storage, Event<T>},
+        XStaking: xpallet_mining_staking::{Module, Call, Storage, Event<T>, Config<T>},
+        XMiningAsset: xpallet_mining_asset::{Module, Call, Storage, Event<T>, Config<T>} = 28,
     }
-}
-
-// For testing the pallet, we construct most of a mock runtime. This means
-// first constructing a configuration type (`Test`) which `impl`s each of the
-// configuration traits of pallets we want to use.
-#[derive(Clone, Eq, PartialEq, Debug)]
-pub struct Test;
+);
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
@@ -72,7 +58,7 @@ impl frame_system::Config for Test {
     type BlockWeights = ();
     type BlockLength = ();
     type Origin = Origin;
-    type Call = ();
+    type Call = Call;
     type Index = u64;
     type BlockNumber = u64;
     type Hash = H256;
@@ -80,11 +66,11 @@ impl frame_system::Config for Test {
     type AccountId = u64;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = MetaEvent;
+    type Event = Event;
     type BlockHashCount = BlockHashCount;
     type DbWeight = ();
     type Version = ();
-    type PalletInfo = ();
+    type PalletInfo = PalletInfo;
     type AccountData = pallet_balances::AccountData<Balance>;
     type OnNewAccount = ();
     type OnKilledAccount = ();
@@ -113,7 +99,7 @@ impl Get<Balance> for ExistentialDeposit {
 impl pallet_balances::Config for Test {
     type MaxLocks = ();
     type Balance = Balance;
-    type Event = MetaEvent;
+    type Event = Event;
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
@@ -124,14 +110,14 @@ parameter_types! {
     pub const ChainXAssetId: AssetId = 0;
 }
 impl xpallet_assets_registrar::Config for Test {
-    type Event = MetaEvent;
+    type Event = Event;
     type NativeAssetId = ChainXAssetId;
     type RegistrarHandler = XMiningAsset;
     type WeightInfo = ();
 }
 
 impl xpallet_assets::Config for Test {
-    type Event = MetaEvent;
+    type Event = Event;
     type Currency = Balances;
     type Amount = Amount;
     type TreasuryAccount = ();
@@ -214,7 +200,7 @@ impl pallet_session::Config for Test {
     type Keys = SessionKeys;
     type ShouldEndSession = pallet_session::PeriodicSessions<Period, Offset>;
     type SessionHandler = (OtherSessionHandler,);
-    type Event = MetaEvent;
+    type Event = Event;
     type ValidatorId = AccountId;
     type ValidatorIdOf = ();
     type DisabledValidatorsThreshold = DisabledValidatorsThreshold;
@@ -252,7 +238,7 @@ impl xp_mining_common::RewardPotAccountFor<AccountId, AccountId>
 
 impl xpallet_mining_staking::Config for Test {
     type Currency = Balances;
-    type Event = MetaEvent;
+    type Event = Event;
     type AssetMining = XMiningAsset;
     type MigrationSessionOffset = MigrationSessionOffset;
     type SessionDuration = SessionDuration;
@@ -285,7 +271,7 @@ impl GatewayInterface<AccountId> for DummyGatewayReferralGetter {
 impl Config for Test {
     type StakingInterface = Self;
     type GatewayInterface = DummyGatewayReferralGetter;
-    type Event = MetaEvent;
+    type Event = Event;
     type TreasuryAccount = ();
     type DetermineRewardPotAccount = DummyAssetRewardPotAccountDeterminer;
     type WeightInfo = ();
@@ -376,7 +362,7 @@ impl ExtBuilder {
         }
         .assimilate_storage(&mut storage);
 
-        let _ = GenesisConfig::<Test> {
+        let _ = xpallet_mining_asset::GenesisConfig::<Test> {
             claim_restrictions: vec![(xp_protocol::X_BTC, (7, 3))],
             mining_power_map: vec![(xp_protocol::X_BTC, 400)],
         }
@@ -404,12 +390,3 @@ impl ExtBuilder {
         // ext.execute_with(post_conditions);
     }
 }
-
-pub type System = frame_system::Module<Test>;
-pub type Balances = pallet_balances::Module<Test>;
-pub type XAssetsRegistrar = xpallet_assets_registrar::Module<Test>;
-pub type XAssets = xpallet_assets::Module<Test>;
-pub type Session = pallet_session::Module<Test>;
-pub type Timestamp = pallet_timestamp::Module<Test>;
-pub type XStaking = xpallet_mining_staking::Module<Test>;
-pub type XMiningAsset = Module<Test>;
