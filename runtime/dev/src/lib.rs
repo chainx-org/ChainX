@@ -56,7 +56,7 @@ pub use frame_support::{
     construct_runtime, debug, parameter_types,
     traits::{
         Currency, Filter, Imbalance, InstanceFilter, KeyOwnerProofSystem, LockIdentifier,
-        OnUnbalanced, Randomness,
+        OnUnbalanced, Randomness, Get
     },
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
@@ -178,7 +178,7 @@ parameter_types! {
         * MaximumBlockWeight::get();
     pub const MaximumBlockLength: u32 = 5 * 1024 * 1024;
     pub const Version: RuntimeVersion = VERSION;
-    pub const SS58Prefix: u8 = 0;
+    pub const SS58Prefix: u8 = xp_protocol::TESTNET_ADDRESS_FORMAT_ID;
 }
 
 const_assert!(
@@ -270,8 +270,16 @@ impl pallet_authorship::Config for Runtime {
 parameter_types! {
     pub const EpochDuration: u64 = EPOCH_DURATION_IN_BLOCKS as u64;
     pub const ExpectedBlockTime: Moment = MILLISECS_PER_BLOCK;
-    // FIXME BondingDuration::get() as u64 * SessionsPerEra::get() as u64 * EpochDuration::get();
-    pub const ReportLongevity: u64 = 10;
+}
+
+pub struct ReportLongevity;
+
+impl Get<u64> for ReportLongevity {
+    fn get() -> u64 {
+        xpallet_mining_staking::BondingDuration::<Runtime>::get() as u64
+            * xpallet_mining_staking::SessionsPerEra::get() as u64
+            * EpochDuration::get()
+    }
 }
 
 impl pallet_babe::Config for Runtime {
