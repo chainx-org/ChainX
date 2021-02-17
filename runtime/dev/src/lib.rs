@@ -31,7 +31,7 @@ use sp_runtime::{
         InvalidTransaction, TransactionPriority, TransactionSource, TransactionValidity,
         TransactionValidityError, ValidTransaction,
     },
-    ApplyExtrinsicResult, DispatchError, ModuleId, Perbill, Percent, Permill, RuntimeDebug
+    ApplyExtrinsicResult, DispatchError, ModuleId, Perbill, Percent, Permill, RuntimeDebug,
 };
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 #[cfg(feature = "std")]
