@@ -48,6 +48,7 @@ pallet-indices = { version = "2.0.0", default-features = false }
 pallet-membership = { version = "2.0.0", default-features = false }
 pallet-multisig = { version = "2.0.0", default-features = false }
 pallet-offences = { version = "2.0.0", default-features = false }
+pallet-proxy = { version = "2.0.0", default-features = false }
 pallet-randomness-collective-flip = { version = "2.0.0", default-features = false }
 pallet-scheduler = { version = "2.0.0", default-features = false }
 pallet-session = { version = "2.0.0", default-features = false, features = ["historical"] }
@@ -136,6 +137,7 @@ std = [
     "pallet-membership/std",
     "pallet-multisig/std",
     "pallet-offences/std",
+    "pallet-proxy/std",
     "pallet-randomness-collective-flip/std",
     "pallet-scheduler/std",
     "pallet-session/std",
