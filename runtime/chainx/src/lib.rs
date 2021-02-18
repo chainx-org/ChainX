@@ -104,7 +104,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("chainx"),
     impl_name: create_runtime_str!("chainx-net"),
     authoring_version: 1,
-    spec_version: 9,
+    spec_version: 10,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -814,7 +814,6 @@ impl InstanceFilter<Call> for ProxyType {
                     | Call::Elections(..)
                     | Call::TechnicalMembership(..)
                     | Call::Treasury(..)
-                    // Specifically omitting Vesting `vested_transfer`, and `force_vested_transfer`
                     | Call::Utility(..)
                     | Call::Identity(..)
                     | Call::Proxy(..)

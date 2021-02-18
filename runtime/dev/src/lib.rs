@@ -817,7 +817,6 @@ impl InstanceFilter<Call> for ProxyType {
                     | Call::Elections(..)
                     | Call::TechnicalMembership(..)
                     | Call::Treasury(..)
-                    // Specifically omitting Vesting `vested_transfer`, and `force_vested_transfer`
                     | Call::Utility(..)
                     | Call::Identity(..)
                     | Call::Proxy(..)
