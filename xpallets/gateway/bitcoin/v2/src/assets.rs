@@ -158,10 +158,8 @@ pub mod pallet {
 
         fn on_finalize(_: BlockNumberFor<T>) {
             // recover from error if all errors were solved.
-            if let Status::Error(codes) = Self::bridge_status() {
-                if codes == ErrorCode::NONE {
-                    <BridgeStatus<T>>::put(Status::Running);
-                }
+            if let Status::Error(ErrorCode::NONE) = Self::bridge_status() {
+                <BridgeStatus<T>>::put(Status::Running);
             }
         }
     }
