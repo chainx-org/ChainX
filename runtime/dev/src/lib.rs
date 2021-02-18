@@ -55,8 +55,8 @@ use xpallet_support::traits::MultisigAddressFor;
 pub use frame_support::{
     construct_runtime, debug, parameter_types,
     traits::{
-        Currency, Filter, Imbalance, InstanceFilter, KeyOwnerProofSystem, LockIdentifier,
-        OnUnbalanced, Randomness, Get
+        Currency, Filter, Get, Imbalance, InstanceFilter, KeyOwnerProofSystem, LockIdentifier,
+        OnUnbalanced, Randomness,
     },
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
