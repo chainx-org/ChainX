@@ -9,7 +9,7 @@ pub mod types {
     #[cfg_attr(feature = "std", derive(Debug))]
     pub enum RedeemRequestStatus {
         /// redeem is accepted and vault will transfer btc
-        WaitGetBTC,
+        Processing,
         /// redeem is cancled by redeemer
         Cancled,
         /// redeem is compeleted
@@ -19,7 +19,7 @@ pub mod types {
     // default value
     impl Default for RedeemRequestStatus {
         fn default() -> Self {
-            RedeemRequestStatus::WaitGetBTC
+            RedeemRequestStatus::Processing
         }
     }
 
@@ -64,7 +64,7 @@ pub mod pallet {
     use sp_std::vec::Vec;
     use xpallet_assets::AssetType;
     // import vault,issue,assets code.
-    use super::types;
+    use super::types::{BtcAddress, RedeemRequestStatus};
     use crate::assets::{pallet as assets, pallet::BalanceOf};
     use crate::issue::pallet as issue;
     use crate::vault::pallet as vault;
@@ -77,12 +77,14 @@ pub mod pallet {
     >;
     type RequestId = u128;
 
+    const XBTC_ASSETID: u32 = 1;
+
     #[pallet::pallet]
     #[pallet::generate_store(pub(crate) trait Store)]
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + issue::Config + xpallet_assets::Config {
+    pub trait Config: frame_system::Config + issue::Config {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
 
@@ -91,15 +93,15 @@ pub mod pallet {
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T: Config> {
         /// current chain status is not right
-        ChainStatusErro,
+        ChainStatusError,
         /// redeem request is accepted
-        RedeemRequestAccepted,
+        RedeemRequest,
         /// cancle redeem is accepted
-        CancleRedeemAccepted,
+        RedeemCanceled,
         /// liquidation redeem is accepted
-        LiquidationRedeemAccepted,
+        RedeemLiquidation,
         /// Execute redeem is accepted
-        ExecuteRedeemAccepted,
+        RedeemExecuted,
     }
 
     #[pallet::hooks]
@@ -160,14 +162,13 @@ pub mod pallet {
             origin: OriginFor<T>,
             vault_id: T::AccountId,
             redeem_amount: BalanceOf<T>,
-            btc_addr: super::types::BtcAddress,
+            btc_addr: BtcAddress,
         ) -> DispatchResultWithPostInfo {
             Self::ensure_chain_correct_status()?;
 
             // verify redeemer asset
             let sender = ensure_signed(origin)?;
-            let redeemer_balance =
-                xpallet_assets::Module::<T>::asset_balance_of(&sender, &1, AssetType::Usable);
+            let redeemer_balance = Self::asset_balance_of(&sender);
             ensure!(
                 redeem_amount <= redeemer_balance,
                 Error::<T>::InsufficiantAssetsFunds
@@ -197,15 +198,7 @@ pub mod pallet {
             });
 
             // lock redeem's xtbc
-            xpallet_assets::Module::<T>::move_balance(
-                &1,
-                &sender,
-                AssetType::Usable,
-                &sender,
-                AssetType::Locked,
-                redeem_amount,
-            )
-            .map_err::<xpallet_assets::Error<T>, _>(Into::into)?;
+            Self::lock_xbtc(&sender, redeem_amount)?;
 
             // generate redeem request identify and insert it to record
             let request_id = Self::get_next_request_id();
@@ -224,7 +217,7 @@ pub mod pallet {
             );
 
             // send msg to user
-            Self::deposit_event(Event::<T>::ExecuteRedeemAccepted);
+            Self::deposit_event(Event::<T>::RedeemRequest);
             Ok(().into())
         }
 
@@ -254,13 +247,9 @@ pub mod pallet {
             // TODO verify tx
 
             // decrase user's XBTC amount.
-            xpallet_assets::Module::<T>::destroy_reserved_withdrawal(
-                &1,
-                &request.requester,
-                request.amount,
-            )?;
+            Self::burn_xbtc(&request.requester, request.amount)?;
 
-            Self::deposit_event(Event::<T>::LiquidationRedeemAccepted);
+            Self::deposit_event(Event::<T>::RedeemExecuted);
             Ok(().into())
         }
 
@@ -280,11 +269,11 @@ pub mod pallet {
 
             // ensure the redeem request right status
             ensure!(
-                request.status != types::RedeemRequestStatus::Completed,
+                request.status != RedeemRequestStatus::Completed,
                 Error::<T>::RedeemRequestAlreadyCompleted
             );
             ensure!(
-                request.status != types::RedeemRequestStatus::Cancled,
+                request.status != RedeemRequestStatus::Cancled,
                 Error::<T>::RedeemRequestAlreadyCancled
             );
 
@@ -310,41 +299,21 @@ pub mod pallet {
                 });
 
                 // burn user xbtc
-                xpallet_assets::Module::<T>::move_balance(
-                    &1,
-                    &request.requester,
-                    AssetType::Locked,
-                    &request.requester,
-                    AssetType::ReservedWithdrawal,
-                    punishment_fee,
-                )
-                .map_err::<xpallet_assets::Error<T>, _>(Into::into)?;
+                Self::burn_xbtc(&request.requester, punishment_fee)?;
 
                 // vault give pcx to sender
-                xpallet_assets::Module::<T>::move_balance(
-                    &1,
+                assets::Pallet::<T>::slash_collateral(
                     &request.vault,
-                    AssetType::Reserved,
                     &request.requester,
-                    AssetType::Usable,
                     worth_pcx,
-                )
-                .map_err::<xpallet_assets::Error<T>, _>(Into::into)?;
+                )?;
             } else {
                 // punish fee give redeemer
-                xpallet_assets::Module::<T>::move_balance(
-                    &1,
-                    &request.vault,
-                    AssetType::Usable,
-                    &request.requester,
-                    AssetType::Usable,
-                    punishment_fee,
-                )
-                .map_err::<xpallet_assets::Error<T>, _>(Into::into)?;
+                Self::transfer_xbtc(&request.vault, &request.requester, punishment_fee)?;
             }
 
-            Self::remove_redeem_request(request_id, types::RedeemRequestStatus::Completed);
-            Self::deposit_event(Event::<T>::CancleRedeemAccepted);
+            Self::remove_redeem_request(request_id, RedeemRequestStatus::Completed);
+            Self::deposit_event(Event::<T>::RedeemCanceled);
             Ok(().into())
         }
 
@@ -357,32 +326,24 @@ pub mod pallet {
             let sender = ensure_signed(origin)?;
 
             // ensure redeem amount less than have
-            let redeemer_balance =
-                xpallet_assets::Module::<T>::asset_balance_of(&sender, &1, AssetType::Usable);
+            let redeemer_balance = Self::asset_balance_of(&sender);
             ensure!(
                 redeem_amount <= redeemer_balance,
                 Error::<T>::InsufficiantAssetsFunds
             );
 
             // user burn xbtc
-            xpallet_assets::Module::<T>::move_balance(
-                &1,
-                &sender,
-                AssetType::Usable,
-                &sender,
-                AssetType::ReservedWithdrawal,
-                redeem_amount,
-            )
-            .map_err::<xpallet_assets::Error<T>, _>(Into::into)?;
+            Self::burn_xbtc(&sender, redeem_amount)?;
 
             // catulate user's XBTC worth how much pcx, then give he the pcx
             let worth_pcx = assets::Pallet::<T>::convert_to_pcx(redeem_amount)?;
 
             // system vault give him pcx
-            //let system_vault: T::AccountId = vault::pallet::<T>::<vault::pallet::<T>>::get();
+            let system_vault = <vault::LiquidateVault<T>>::get();
+            assets::Pallet::<T>::slash_collateral(&system_vault.id, &sender, worth_pcx)?;
 
             // send msg to user
-            Self::deposit_event(Event::<T>::LiquidationRedeemAccepted);
+            Self::deposit_event(Event::<T>::RedeemLiquidation);
             Ok(().into())
         }
 
@@ -418,7 +379,7 @@ pub mod pallet {
         }
 
         /// mark the request as removed
-        fn remove_redeem_request(request_id: RequestId, status: types::RedeemRequestStatus) {
+        fn remove_redeem_request(request_id: RequestId, status: RedeemRequestStatus) {
             // TODO: delete redeem request from storage
             <RedeemRequests<T>>::mutate(request_id, |request| {
                 if let Some(request) = request {
@@ -427,10 +388,55 @@ pub mod pallet {
             });
         }
 
-        ///check request if is expired
-        fn has_request_expired(opentime: T::BlockNumber, period: T::BlockNumber) -> bool {
-            let height = <frame_system::Module<T>>::block_number();
-            height > opentime + period
+        /// transfer XBTC
+        fn transfer_xbtc(
+            sender: &T::AccountId,
+            receiver: &T::AccountId,
+            count: BalanceOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            xpallet_assets::Module::<T>::move_balance(
+                &XBTC_ASSETID,
+                &sender,
+                AssetType::Usable,
+                &receiver,
+                AssetType::Usable,
+                count,
+            )
+            .map_err::<xpallet_assets::Error<T>, _>(Into::into)?;
+            Ok(().into())
+        }
+
+        /// lock XBTC
+        fn lock_xbtc(user: &T::AccountId, count: BalanceOf<T>) -> DispatchResultWithPostInfo {
+            xpallet_assets::Module::<T>::move_balance(
+                &XBTC_ASSETID,
+                &user,
+                AssetType::Usable,
+                &user,
+                AssetType::Locked,
+                count,
+            )
+            .map_err::<xpallet_assets::Error<T>, _>(Into::into)?;
+            Ok(().into())
+        }
+
+        /// burn XBTC
+        fn burn_xbtc(user: &T::AccountId, count: BalanceOf<T>) -> DispatchResultWithPostInfo {
+            xpallet_assets::Module::<T>::move_balance(
+                &XBTC_ASSETID,
+                &user,
+                AssetType::Locked,
+                &user,
+                AssetType::ReservedWithdrawal,
+                count,
+            )
+            .map_err::<xpallet_assets::Error<T>, _>(Into::into)?;
+            Ok(().into())
+        }
+
+        /// user have XBTC count
+        fn asset_balance_of(user: &T::AccountId) -> BalanceOf<T> {
+            xpallet_assets::Module::<T>::asset_balance_of(&user, &XBTC_ASSETID, AssetType::Usable)
         }
     }
 }
