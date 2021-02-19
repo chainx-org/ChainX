@@ -984,7 +984,7 @@ construct_runtime!(
         XGatewayRecords: xpallet_gateway_records::{Module, Call, Storage, Event<T>},
         XGatewayCommon: xpallet_gateway_common::{Module, Call, Storage, Event<T>, Config<T>},
         XGatewayBitcoin: xpallet_gateway_bitcoin::{Module, Call, Storage, Event<T>, Config<T>},
-        XGatewayBitcoinV2Issue: xpallet_gateway_bitcoin_v2_issue::{Module, Call, Storage},
+        XGatewayBitcoinV2Issue: xpallet_gateway_bitcoin_v2_issue::{Module, Call, Storage, Event<T>},
         XGatewayBitcoinV2Vault: xpallet_gateway_bitcoin_v2_vault::{Module, Call, Storage, Event<T>, Config<T>},
         XGatewayBitcoinV2Assets: xpallet_gateway_bitcoin_v2_assets::{Module, Call, Storage, Event<T>},
 
