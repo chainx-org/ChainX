@@ -2,7 +2,8 @@
 
 /// Types used by pallet
 pub mod types {
-    use codec::{Decode, Encode};
+    use bitflags::bitflags;
+    use codec::{Decode, Encode, Error, Input, Output};
     use sp_runtime::RuntimeDebug;
 
     #[cfg(feature = "std")]
@@ -15,7 +16,8 @@ pub mod types {
         /// `Running` means bridge runs normally.
         Running,
         /// `Error` means bridge has errors need to be solved.
-        Error,
+        /// Bridge may be in multiple error state.
+        Error(ErrorCode),
         /// `Shutdown` means bridge is closed, and all feature are unavailable.
         Shutdown,
     }
@@ -26,14 +28,25 @@ pub mod types {
         }
     }
 
-    /// Bridge errors
-    #[derive(Encode, Decode, RuntimeDebug, Clone, Eq, PartialEq)]
-    #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-    pub enum ErrorCode {
-        /// bridge during liquidation
-        Liquidating,
-        /// Oracle doesn't update exchange rate in time
-        ExchangeRateExpired,
+    bitflags! {
+        /// Bridge error with bitflag
+        #[derive(Encode, Decode)]
+        #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+        pub struct ErrorCode : u8 {
+            const NONE = 0b00000000;
+            /// During liquidation
+            /// Bridge ecovers after debt was paid off.
+            const LIQUIDATING = 0b00000001;
+            /// Oracle doesn't update exchange rate in time.
+            /// Bridge recovers after exchange rate updating
+            const EXCHANGE_RATE_EXPIRED = 0b00000010;
+        }
+    }
+
+    impl Default for ErrorCode {
+        fn default() -> Self {
+            Self::NONE
+        }
     }
 
     /// This struct represents the price of trading pair PCX/BTC.
@@ -134,7 +147,21 @@ pub mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-        fn on_finalize(_n: BlockNumberFor<T>) {}
+        fn on_initialize(n: BlockNumberFor<T>) -> frame_support::weights::Weight {
+            let height = Self::exchange_rate_update_time();
+            let period = Self::exchange_rate_expired_period();
+            if n - height > period {
+                <BridgeStatus<T>>::put(Status::Error(ErrorCode::EXCHANGE_RATE_EXPIRED));
+            };
+            0u64.into()
+        }
+
+        fn on_finalize(_: BlockNumberFor<T>) {
+            // recover from error if all errors were solved.
+            if let Status::Error(ErrorCode::NONE) = Self::bridge_status() {
+                <BridgeStatus<T>>::put(Status::Running);
+            }
+        }
     }
 
     #[pallet::call]
@@ -188,6 +215,8 @@ pub mod pallet {
         ArithmeticError,
         /// Account doesn't have enough collateral to be slashed.
         InsufficientCollateral,
+        /// Bridge was shutdown or in error.
+        BridgeNotRunning,
     }
 
     /// Events for assets module
@@ -229,10 +258,6 @@ pub mod pallet {
     #[pallet::getter(fn exchange_rate_expired_period)]
     pub(crate) type ExchangeRateExpiredPeriod<T: Config> =
         StorageValue<_, BlockNumberFor<T>, ValueQuery>;
-
-    #[pallet::storage]
-    #[pallet::getter(fn bridge_error_codes)]
-    pub(crate) type BridgeErrorCodes<T: Config> = StorageValue<_, Vec<ErrorCode>, ValueQuery>;
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
@@ -296,6 +321,7 @@ pub mod pallet {
             <ExchangeRate<T>>::put(exchange_rate);
             let height = <frame_system::Pallet<T>>::block_number();
             <ExchangeRateUpdateTime<T>>::put(height);
+            Self::recover_from_exchange_rate_expired();
             Ok(())
         }
 
@@ -317,6 +343,39 @@ pub mod pallet {
                 .map_err(|_| Error::<T>::InsufficientFunds)?;
             // Self::deposit_event(...);
             Ok(().into())
+        }
+
+        #[inline]
+        pub(crate) fn ensure_bridge_running() -> DispatchResult {
+            ensure!(
+                Self::bridge_status() == Status::Running,
+                Error::<T>::BridgeNotRunning
+            );
+            Ok(())
+        }
+
+        /// Clarify `ExchangeRateExpired` is solved and recover from this error.
+        ///
+        /// Dangerous! Ensure this error truly solved is caller's responsibility.
+        pub(crate) fn recover_from_exchange_rate_expired() {
+            if let Status::Error(mut error_codes) = Self::bridge_status() {
+                if error_codes.contains(ErrorCode::EXCHANGE_RATE_EXPIRED) {
+                    error_codes.remove(ErrorCode::EXCHANGE_RATE_EXPIRED);
+                    <BridgeStatus<T>>::put(Status::Error(error_codes))
+                }
+            }
+        }
+
+        /// Clarify `Liquidating` is solved and recover from this error.
+        ///
+        /// Dangerous! Ensure this error truly solved is caller's responsibility.
+        pub(crate) fn recover_from_liquidating() {
+            if let Status::Error(mut error_codes) = Self::bridge_status() {
+                if error_codes.contains(ErrorCode::LIQUIDATING) {
+                    error_codes.remove(ErrorCode::LIQUIDATING);
+                    <BridgeStatus<T>>::put(Status::Error(error_codes))
+                }
+            }
         }
     }
 }

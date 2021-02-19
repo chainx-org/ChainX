@@ -12,6 +12,7 @@ codec = { package = "parity-scale-codec", version = "2.0.0", default-features = 
 impl-trait-for-tuples = "0.2.0"
 serde = { version = "1.0.101", optional = true, features = ["derive"] }
 sha2 = { version = "0.8.0", default-features = false }
+bitflags = { version = "1.2.1", default-features = false }
 
 # Substrate
 sp-arithmetic = { version = "2.0.1", default-features = false }
