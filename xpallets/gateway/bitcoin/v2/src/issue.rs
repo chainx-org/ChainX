@@ -48,7 +48,7 @@ pub mod pallet {
         dispatch::DispatchResultWithPostInfo,
         ensure,
         storage::types::{StorageMap, StorageValue, ValueQuery},
-        traits::Hooks,
+        traits::{Hooks, IsType},
         Twox64Concat,
     };
     use frame_system::{
@@ -73,7 +73,9 @@ pub mod pallet {
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + vault::Config {}
+    pub trait Config: frame_system::Config + vault::Config {
+        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+    }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
@@ -116,7 +118,7 @@ pub mod pallet {
                     vault.to_be_issued_tokens += btc_amount;
                 }
             });
-            // Self::deposit_event(...);
+            Self::deposit_event(Event::<T>::IssueRequestSubmitted);
             Ok(().into())
         }
 
@@ -145,7 +147,7 @@ pub mod pallet {
             });
             //TODO(wangyafei): <assets::Pallet<T>>::release_collateral(issue_request.request,
             // issue_request.griefing_collateral)?;
-            // Self::deposit_event(...);
+            Self::deposit_event(Event::<T>::IssueRequestExcuted);
             Ok(().into())
         }
 
@@ -165,12 +167,12 @@ pub mod pallet {
             );
             // TODO:
             // <assets::Pallet<T>>::slash_collateral(issue.requester, issue.vault)?;
-            // Self::deposit_event(...);
             <vault::Vaults<T>>::mutate(&issue_request.vault, |vault| {
                 if let Some(vault) = vault {
                     vault.to_be_issued_tokens -= issue_request.btc_amount;
                 }
             });
+            Self::deposit_event(Event::<T>::IssueRequestCancelled);
             Ok(().into())
         }
 
@@ -182,8 +184,7 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
             <IssueRequestExpiredTime<T>>::put(expired_time);
-            // TODO:
-            // Self::deposit_event(...);
+            Self::deposit_event(Event::<T>::ExpiredTimeUpdated);
             Ok(().into())
         }
 
@@ -195,8 +196,7 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
             <IssueGriefingFee<T>>::put(griefing_fee);
-            // TODO:
-            // Self::deposit_event(...);
+            Self::deposit_event(Event::<T>::GriefingFeeUpdated);
             Ok(().into())
         }
     }
@@ -212,6 +212,23 @@ pub mod pallet {
         IssueRequestNotExpired,
         /// Value to be set is invalid.
         InvalidConfigValue,
+    }
+
+    /// Events for issue module
+    #[pallet::event]
+    #[pallet::generate_deposit(pub(crate) fn deposit_event)]
+    pub enum Event<T: Config> {
+        // TODO(wangyafei)
+        // An issue request was submitted and waiting user to excute.
+        IssueRequestSubmitted,
+        // `IssueRequest` excuted.
+        IssueRequestExcuted,
+        // `IssueRequest` cancelled.`
+        IssueRequestCancelled,
+        // Root updated `IssueRequestExpiredTime`.
+        ExpiredTimeUpdated,
+        // Root updated `IssueGriefingFee`.
+        GriefingFeeUpdated,
     }
 
     /// Percentage to lock, when user requests issue

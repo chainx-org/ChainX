@@ -87,7 +87,9 @@ impl vault::Config for Test {
     type Event = ();
 }
 
-impl issue::Config for Test {}
+impl issue::Config for Test {
+    type Event = ();
+}
 
 pub(crate) type System = frame_system::Pallet<Test>;
 pub(crate) type Balances = pallet_balances::Module<Test>;
