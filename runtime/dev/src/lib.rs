@@ -430,7 +430,9 @@ impl pallet_session_historical::Config for Runtime {
     type FullIdentificationOf = SimpleValidatorIdConverter;
 }
 
-impl xpallet_gateway_bitcoin_v2_issue::Config for Runtime {}
+impl xpallet_gateway_bitcoin_v2_issue::Config for Runtime {
+    type Event = Event;
+}
 impl xpallet_gateway_bitcoin_v2_vault::Config for Runtime {
     type Event = Event;
 }
