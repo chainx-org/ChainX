@@ -301,6 +301,7 @@ pub mod pallet {
                 <T as frame_system::Config>::AccountId,
             >>::reserve(sender, amount)
             .map_err(|_| Error::<T>::InsufficientFunds)?;
+            <TotalCollateral<T>>::mutate(|total| *total += amount);
             Ok(())
         }
 
@@ -341,8 +342,21 @@ pub mod pallet {
             <CurrencyOf<T>>::resolve_creating(receiver, slashed);
             <CurrencyOf<T>>::reserve(receiver, amount)
                 .map_err(|_| Error::<T>::InsufficientFunds)?;
-            // Self::deposit_event(...);
+            //TODO(wangyafei): Self::deposit_event(...);
             Ok(().into())
+        }
+
+        /// Release collateral
+        pub fn release_collateral(account: &T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
+            let reserved_collateral = <CurrencyOf<T>>::reserved_balance(account);
+            ensure!(
+                reserved_collateral >= amount,
+                Error::<T>::InsufficientCollateral
+            );
+            <CurrencyOf<T>>::unreserve(account, amount);
+            <TotalCollateral<T>>::mutate(|total| *total -= amount);
+            //TODO(wangyafei): Self::deposit_event(...);
+            Ok(())
         }
 
         /// Get if the bridge running
