@@ -93,14 +93,10 @@ pub mod pallet {
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn on_finalize(_: BlockNumberFor<T>) {
             if assets::Pallet::<T>::is_bridge_running() {
-                let mut liquidate_vault_ids = BTreeSet::new();
                 for (id, vault) in <Vaults<T>>::iter() {
                     if Self::_check_vault_liquidated(&vault) {
-                        liquidate_vault_ids.insert(id.clone());
+                        let _ = Self::liquidate_vault(&id);
                     }
-                }
-                for id in liquidate_vault_ids {
-                    let _ = Self::liquidate_vault(&id);
                 }
             }
         }
@@ -343,13 +339,9 @@ pub mod pallet {
                 return false;
             }
             let collateral = <assets::CurrencyOf<T>>::reserved_balance(&vault.id);
-            let collateral_ratio =
-                <assets::Pallet<T>>::calculate_collateral_ratio(vault.issued_tokens, collateral);
-            let liquidation_threshold = Self::liquidation_threshold();
-            match collateral_ratio {
-                Ok(collateral_ratio) => collateral_ratio < liquidation_threshold,
-                _ => false,
-            }
+            <assets::Pallet<T>>::calculate_collateral_ratio(vault.issued_tokens, collateral)
+                .map(|collateral_ratio| collateral_ratio < Self::liquidation_threshold())
+                .unwrap_or(false)
         }
     }
 }
