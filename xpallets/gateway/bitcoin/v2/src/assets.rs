@@ -229,7 +229,7 @@ pub mod pallet {
         ExchangeRateForceUpdated(TradingPrice),
         /// Update oracles by root
         OracleForceUpdated(Vec<T::AccountId>),
-        /// Collateral slashed from Account`0` to Account`1` with amount `2`
+        /// Collateral was slashed. [from, to, amount]
         CollateralSlashed(T::AccountId, T::AccountId, BalanceOf<T>),
         // Account `0` released collateral with amount `1`
         CollateralReleased(T::AccountId, BalanceOf<T>),
