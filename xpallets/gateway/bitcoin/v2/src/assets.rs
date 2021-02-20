@@ -229,6 +229,10 @@ pub mod pallet {
         ExchangeRateForceUpdated(TradingPrice),
         /// Update oracles by root
         OracleForceUpdated(Vec<T::AccountId>),
+        /// Collateral was slashed. [from, to, amount]
+        CollateralSlashed(T::AccountId, T::AccountId, BalanceOf<T>),
+        // The collateral was released to the user successfully. [who, amount]
+        CollateralReleased(T::AccountId, BalanceOf<T>),
     }
 
     /// Total collateral
@@ -342,7 +346,11 @@ pub mod pallet {
             <CurrencyOf<T>>::resolve_creating(receiver, slashed);
             <CurrencyOf<T>>::reserve(receiver, amount)
                 .map_err(|_| Error::<T>::InsufficientFunds)?;
-            //TODO(wangyafei): Self::deposit_event(...);
+            Self::deposit_event(Event::<T>::CollateralSlashed(
+                sender.clone(),
+                receiver.clone(),
+                amount,
+            ));
             Ok(().into())
         }
 
@@ -355,7 +363,7 @@ pub mod pallet {
             );
             <CurrencyOf<T>>::unreserve(account, amount);
             <TotalCollateral<T>>::mutate(|total| *total -= amount);
-            //TODO(wangyafei): Self::deposit_event(...);
+            Self::deposit_event(Event::<T>::CollateralReleased(account.clone(), amount));
             Ok(())
         }
 
@@ -383,7 +391,7 @@ pub mod pallet {
                 .checked_div(equivalence_collateral)
                 .ok_or(Error::<T>::ArithmeticError)?;
             //FIXME(wangyafei): should use try_into?
-            Ok(raw_collateral as u16)
+            Ok(collateral_ratio as u16)
         }
 
         #[inline]
