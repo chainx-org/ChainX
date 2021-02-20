@@ -341,7 +341,7 @@ pub mod pallet {
             let worth_pcx = assets::Pallet::<T>::convert_to_pcx(redeem_amount)?;
 
             // System vault give him pcx
-            let system_vault = <vault::LiquidateVault<T>>::get();
+            let system_vault = <vault::Liquidator<T>>::get();
             assets::Pallet::<T>::slash_collateral(&system_vault.id, &sender, worth_pcx)?;
 
             // Send msg to user
