@@ -25,6 +25,9 @@ sp-version = { version = "2.0.1", default-features = false }
 frame-support = { version = "2.0.1", default-features = false }
 frame-system = { version = "2.0.1", default-features = false }
 
+# ChainX primitives
+chainx-primitives = { path = "../../../../primitives", default-features = false }
+
 # ChainX pallet
 xpallet-assets = { path = "../../../assets", default-features = false }
 xpallet-assets-registrar = { path = "../../../assets-registrar", default-features = false }
