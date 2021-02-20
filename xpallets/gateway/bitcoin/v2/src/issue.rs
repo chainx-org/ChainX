@@ -90,7 +90,7 @@ pub mod pallet {
             btc_amount: BalanceOf<T>,
             collateral: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
-            //FIXME(wangyafei): break if bridge in liquidation mode.
+            assets::Pallet::<T>::ensure_bridge_running()?;
             let sender = ensure_signed(origin)?;
             let height = <frame_system::Pallet<T>>::block_number();
             let vault = vault::Pallet::<T>::get_active_vault_by_id(&vault_id)?;
@@ -130,10 +130,12 @@ pub mod pallet {
             _merkle_proof: Vec<u8>,
             _raw_tx: Transaction,
         ) -> DispatchResultWithPostInfo {
+            // TODO(wangyafei): ensure bridge running and check if the request doesn't expired.
             let _sender = ensure_signed(origin)?;
             //TODO(wangyafei): verify tx
             let issue_request = Self::get_issue_request_by_id(request_id)
                 .ok_or(Error::<T>::IssueRequestNotFound)?;
+            // TODO(wangyafei): add associated type.
             <xpallet_assets::Module<T>>::issue(
                 &1,
                 &issue_request.requester,
@@ -145,8 +147,10 @@ pub mod pallet {
                     vault.issued_tokens += issue_request.btc_amount;
                 }
             });
-            //TODO(wangyafei): <assets::Pallet<T>>::release_collateral(issue_request.request,
-            // issue_request.griefing_collateral)?;
+            assets::Pallet::<T>::release_collateral(
+                &issue_request.requester,
+                issue_request.griefing_collateral,
+            )?;
             Self::deposit_event(Event::<T>::IssueRequestExcuted);
             Ok(().into())
         }

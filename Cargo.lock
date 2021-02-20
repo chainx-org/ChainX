@@ -9536,6 +9536,7 @@ name = "xpallet-gateway-bitcoin-v2"
 version = "2.0.1"
 dependencies = [
  "bitflags",
+ "chainx-primitives",
  "frame-support",
  "frame-system",
  "impl-trait-for-tuples 0.2.0",
@@ -9551,6 +9552,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "sp-version",
+ "xp-protocol",
  "xpallet-assets",
  "xpallet-assets-registrar",
 ]
