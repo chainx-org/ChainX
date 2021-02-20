@@ -215,7 +215,7 @@ fn test_redeem_request() {
             ),
             redeem::Error::<Test>::InsufficiantAssetsFunds
         );
-
+      
         assert_err!(
             redeem::Pallet::<Test>::request_redeem(
                 Origin::signed(2),
