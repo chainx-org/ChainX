@@ -255,10 +255,7 @@ fn test_liquidation_redeem() {
         assert_eq!(reserved_balance, 100);
 
         assert_err!(
-            redeem::Pallet::<Test>::liquidation_redeem(
-                Origin::signed(2),
-                1,
-            ),
+            redeem::Pallet::<Test>::liquidation_redeem(Origin::signed(2), 1,),
             redeem::Error::<Test>::InsufficiantAssetsFunds
         );
     })
