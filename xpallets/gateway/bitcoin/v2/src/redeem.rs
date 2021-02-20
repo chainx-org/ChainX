@@ -131,6 +131,8 @@ pub mod pallet {
         RedeemRequestAlreadyCompleted,
         /// Redeem is cancled
         RedeemRequestAlreadyCancled,
+        /// Bridge status is not correct
+        BridgeStatusError,
     }
 
     /// Redeem fee when use request redeem
@@ -362,6 +364,11 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         /// Ensure the chain is in correct status
         fn ensure_chain_correct_status() -> DispatchResultWithPostInfo {
+            let bridge_status = <assets::BridgeStatus<T>>::get();
+            ensure!(
+                bridge_status == crate::assets::types::Status::Running,
+                Error::<T>::BridgeStatusError
+            );
             Ok(().into())
         }
 
