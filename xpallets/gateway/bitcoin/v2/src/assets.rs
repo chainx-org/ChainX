@@ -231,7 +231,7 @@ pub mod pallet {
         OracleForceUpdated(Vec<T::AccountId>),
         /// Collateral was slashed. [from, to, amount]
         CollateralSlashed(T::AccountId, T::AccountId, BalanceOf<T>),
-        // Account `0` released collateral with amount `1`
+        // The collateral was released to the user successfully. [who, amount]
         CollateralReleased(T::AccountId, BalanceOf<T>),
     }
 
