@@ -99,11 +99,11 @@ pub mod pallet {
         /// Redeem request is accepted
         NewRedeemRequest,
         /// Cancle redeem is accepted
-        UserCancleRedeem,
+        RedeemCancled,
         /// Liquidation redeem is accepted
-        UserLiquidateRedeem,
+        RedeemLiquidated,
         /// Execute redeem is accepted
-        UserExecuteRedeem,
+        RedeemExecuted,
     }
 
     #[pallet::hooks]
@@ -255,7 +255,7 @@ pub mod pallet {
             // Decrase user's XBTC amount.
             Self::burn_xbtc(&request.requester, request.amount)?;
 
-            Self::deposit_event(Event::<T>::UserExecuteRedeem);
+            Self::deposit_event(Event::<T>::RedeemExecuted);
             Ok(().into())
         }
 
@@ -315,7 +315,7 @@ pub mod pallet {
             }
 
             Self::remove_redeem_request(request_id, RedeemRequestStatus::Completed);
-            Self::deposit_event(Event::<T>::UserCancleRedeem);
+            Self::deposit_event(Event::<T>::RedeemCancled);
             Ok(().into())
         }
 
@@ -345,7 +345,7 @@ pub mod pallet {
             assets::Pallet::<T>::slash_collateral(&system_vault.id, &sender, worth_pcx)?;
 
             // Send msg to user
-            Self::deposit_event(Event::<T>::UserLiquidateRedeem);
+            Self::deposit_event(Event::<T>::RedeemLiquidated);
             Ok(().into())
         }
 
