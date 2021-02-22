@@ -4,11 +4,12 @@ pub mod types {
     use sp_std::{default::Default, vec::Vec};
 
     use codec::{Decode, Encode};
+    use light_bitcoin::keys::Address;
 
     #[cfg(feature = "std")]
     use frame_support::{Deserialize, Serialize};
 
-    pub(crate) type BtcAddress = Vec<u8>;
+    pub(crate) type BtcAddress = Address;
 
     /// Contains all informations while executing a issue request needed.
     #[derive(Encode, Decode, Default, Clone, PartialEq)]

@@ -1,6 +1,9 @@
 #![cfg(test)]
 
+use sp_std::str::FromStr;
+
 use light_bitcoin::chain::Transaction;
+use light_bitcoin::keys::Address;
 
 use sp_arithmetic::Percent;
 
@@ -18,7 +21,7 @@ use super::vault::pallet as vault;
 use super::mock::*;
 
 fn t_register_vault(id: u64, collateral: u128, addr: &str) -> DispatchResultWithPostInfo {
-    Vault::register_vault(Origin::signed(id), collateral, addr.as_bytes().to_vec())
+    Vault::register_vault(Origin::signed(id), collateral, addr.parse().unwrap())
 }
 
 fn t_register_btc() -> DispatchResult {
@@ -48,20 +51,24 @@ fn test_register_vault() {
     })
     .execute_with(|| {
         assert_err!(
-            t_register_vault(1, 10000, "test"),
+            t_register_vault(1, 10000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna"),
             assets::Error::<Test>::InsufficientFunds
         );
         assert_err!(
-            t_register_vault(1, 10, "test"),
+            t_register_vault(1, 10, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna"),
             vault::Error::<Test>::InsufficientVaultCollateralAmount
         );
-        assert_ok!(t_register_vault(1, 200, "test"));
+        assert_ok!(t_register_vault(
+            1,
+            200,
+            "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna"
+        ));
         assert_err!(
-            t_register_vault(1, 200, "testuu"),
+            t_register_vault(1, 200, "3LrrqZ2LtZxAcroVaYKgM6yDeRszV2sY1r"),
             vault::Error::<Test>::VaultAlreadyRegistered
         );
         assert_err!(
-            t_register_vault(2, 200, "test"),
+            t_register_vault(2, 200, "3LrrqZ2LtZxAcroVaYKgM6yDeRszV2sY1r"),
             vault::Error::<Test>::BtcAddressOccupied
         );
     })
