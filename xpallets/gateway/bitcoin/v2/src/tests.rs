@@ -1,5 +1,3 @@
-#![cfg(test)]
-
 use sp_std::str::FromStr;
 
 use light_bitcoin::chain::Transaction;
