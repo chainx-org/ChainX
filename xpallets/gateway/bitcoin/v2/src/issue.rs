@@ -131,11 +131,20 @@ pub mod pallet {
             _merkle_proof: Vec<u8>,
             _raw_tx: Transaction,
         ) -> DispatchResultWithPostInfo {
-            // TODO(wangyafei): ensure bridge running and check if the request doesn't expired.
+            assets::Pallet::<T>::ensure_bridge_running()?;
             let _sender = ensure_signed(origin)?;
+
             //TODO(wangyafei): verify tx
+
             let issue_request = Self::get_issue_request_by_id(request_id)
                 .ok_or(Error::<T>::IssueRequestNotFound)?;
+
+            let height = frame_system::Pallet::<T>::block_number();
+            ensure!(
+                height - issue_request.open_time < Self::issue_request_expired_time(),
+                Error::<T>::IssueRequestExpired
+            );
+
             // TODO(wangyafei): add associated type.
             <xpallet_assets::Module<T>>::issue(
                 &1,
@@ -217,6 +226,8 @@ pub mod pallet {
         IssueRequestNotExpired,
         /// Value to be set is invalid.
         InvalidConfigValue,
+        /// Tried to execute `IssueRequest` while  it's expired.
+        IssueRequestExpired,
     }
 
     /// Events for issue module
@@ -253,6 +264,7 @@ pub mod pallet {
 
     /// Expired time for an `IssueRequest`
     #[pallet::storage]
+    #[pallet::getter(fn issue_request_expired_time)]
     pub(crate) type IssueRequestExpiredTime<T: Config> =
         StorageValue<_, BlockNumberFor<T>, ValueQuery>;
 
