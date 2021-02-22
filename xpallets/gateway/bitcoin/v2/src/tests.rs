@@ -223,7 +223,7 @@ fn test_release_collateral() {
 fn test_redeem_request() {
     use super::assets::types::TradingPrice;
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
-        register_vault(1, 800, "test").unwrap();
+        t_register_vault(1, 800, "test").unwrap();
         issue::Pallet::<Test>::update_expired_time(Origin::root(), 10u64).unwrap();
         issue::Pallet::<Test>::update_griefing_fee(Origin::root(), Percent::from_parts(10))
             .unwrap();
@@ -272,7 +272,7 @@ fn test_redeem_request() {
 fn test_liquidation_redeem() {
     use super::assets::types::TradingPrice;
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
-        register_vault(1, 800, "test").unwrap();
+        t_register_vault(1, 800, "test").unwrap();
         issue::Pallet::<Test>::update_expired_time(Origin::root(), 10u64).unwrap();
         issue::Pallet::<Test>::update_griefing_fee(Origin::root(), Percent::from_parts(10))
             .unwrap();
