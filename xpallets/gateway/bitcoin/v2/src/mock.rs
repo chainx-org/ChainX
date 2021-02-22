@@ -1,18 +1,17 @@
+#![cfg(test)]
+
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
 
-use frame_support::{impl_outer_origin, parameter_types, sp_io, traits::GenesisBuild};
+use frame_support::{construct_runtime, parameter_types, sp_io, traits::GenesisBuild};
 
 use super::assets::pallet as assets;
 use super::issue::pallet as issue;
 use super::redeem::pallet as redeem;
 use super::vault::pallet as vault;
-
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub struct Test;
 
 /// The AccountId alias in this test module.
 pub(crate) type AccountId = u64;
@@ -20,16 +19,16 @@ pub(crate) type BlockNumber = u64;
 pub(crate) type Amount = i128;
 pub(crate) type Balance = u128;
 
-impl_outer_origin! {
-    pub enum Origin for Test where system = frame_system {}
-}
+// impl_outer_origin! {
+//     pub enum Origin for Test where system = frame_system {}
+// }
 
 impl frame_system::Config for Test {
     type BaseCallFilter = ();
     type BlockWeights = ();
     type BlockLength = ();
     type Origin = Origin;
-    type Call = ();
+    type Call = Call;
     type Index = u64;
     type BlockNumber = BlockNumber;
     type Hash = H256;
@@ -96,8 +95,23 @@ impl redeem::Config for Test {
     type Event = ();
 }
 
-pub(crate) type System = frame_system::Pallet<Test>;
-pub(crate) type Balances = pallet_balances::Module<Test>;
+type Block = frame_system::mocking::MockBlock<Test>;
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
+
+construct_runtime! {
+    pub enum Test where
+        Block = Block,
+        NodeBlock = Block,
+        UncheckedExtrinsic = UncheckedExtrinsic,
+        {
+            System: frame_system::{Module, Call, Event<T>},
+            Balances: pallet_balances::{Module, Call, Event<T>},
+            Issue: issue::{Module, Call, Event<T>, Config<T>},
+            Vault: vault::{Module, Call, Event<T>, Config<T>},
+            Assets: assets::{Module, Call, Event<T>,Config<T>},
+            Redeem: redeem::{Module, Call, Event<T>},
+        }
+}
 
 #[derive(Default)]
 pub struct BuildConfig {
