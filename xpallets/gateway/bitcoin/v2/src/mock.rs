@@ -8,6 +8,7 @@ use frame_support::{impl_outer_origin, parameter_types, sp_io, traits::GenesisBu
 
 use super::assets::pallet as assets;
 use super::issue::pallet as issue;
+use super::redeem::pallet as redeem;
 use super::vault::pallet as vault;
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -88,6 +89,10 @@ impl vault::Config for Test {
 }
 
 impl issue::Config for Test {
+    type Event = ();
+}
+
+impl redeem::Config for Test {
     type Event = ();
 }
 

@@ -13,6 +13,7 @@ use crate::assets::types::TradingPrice;
 use super::assets::pallet as assets;
 use super::issue::pallet as issue;
 use super::mock::{BuildConfig, ExtBuilder, Origin, Test};
+use super::redeem::pallet as redeem;
 use super::vault::pallet as vault;
 
 fn t_register_vault(id: u64, collateral: u128, addr: &str) -> DispatchResultWithPostInfo {
@@ -255,15 +256,15 @@ fn test_redeem_request() {
             redeem::Error::<Test>::InsufficiantAssetsFunds
         );
 
-        assert_ok!(redeem::Pallet::<Test>::request_redeem(
-            Origin::signed(2),
-            1,
-            20,
-            "test".as_bytes().to_vec()
-        ));
-
-        let reserved_balance = <<Test as xpallet_assets::Config>::Currency>::reserved_balance(2);
-        assert_eq!(reserved_balance, 80);
+        assert_err!(
+            redeem::Pallet::<Test>::request_redeem(
+                Origin::signed(2),
+                1,
+                1,
+                "test".as_bytes().to_vec(),
+            ),
+            redeem::Error::<Test>::InsufficiantAssetsFunds
+        );
     })
 }
 
