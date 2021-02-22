@@ -1,4 +1,7 @@
+use sp_std::str::FromStr;
+
 use light_bitcoin::chain::Transaction;
+use light_bitcoin::keys::Address;
 
 use sp_arithmetic::Percent;
 
@@ -16,7 +19,7 @@ use super::vault::pallet as vault;
 use super::mock::*;
 
 fn t_register_vault(id: u64, collateral: u128, addr: &str) -> DispatchResultWithPostInfo {
-    Vault::register_vault(Origin::signed(id), collateral, addr.as_bytes().to_vec())
+    Vault::register_vault(Origin::signed(id), collateral, addr.parse().unwrap())
 }
 
 fn t_register_btc() -> DispatchResult {
@@ -46,20 +49,24 @@ fn test_register_vault() {
     })
     .execute_with(|| {
         assert_err!(
-            t_register_vault(1, 10000, "test"),
+            t_register_vault(1, 10000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna"),
             assets::Error::<Test>::InsufficientFunds
         );
         assert_err!(
-            t_register_vault(1, 10, "test"),
+            t_register_vault(1, 10, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna"),
             vault::Error::<Test>::InsufficientVaultCollateralAmount
         );
-        assert_ok!(t_register_vault(1, 200, "test"));
+        assert_ok!(t_register_vault(
+            1,
+            200,
+            "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna"
+        ));
         assert_err!(
-            t_register_vault(1, 200, "testuu"),
+            t_register_vault(1, 200, "3LrrqZ2LtZxAcroVaYKgM6yDeRszV2sY1r"),
             vault::Error::<Test>::VaultAlreadyRegistered
         );
         assert_err!(
-            t_register_vault(2, 200, "test"),
+            t_register_vault(2, 200, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna"),
             vault::Error::<Test>::BtcAddressOccupied
         );
     })
@@ -76,7 +83,11 @@ fn test_add_extra_collateral() {
             Vault::add_extra_collateral(Origin::signed(1), 100),
             vault::Error::<Test>::VaultNotFound
         );
-        assert_ok!(t_register_vault(1, 200, "test"));
+        assert_ok!(t_register_vault(
+            1,
+            200,
+            "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna"
+        ));
         assert_err!(
             Vault::add_extra_collateral(Origin::signed(1), 10000),
             assets::Error::<Test>::InsufficientFunds
@@ -118,7 +129,7 @@ fn test_update_exchange_rate() {
 fn test_issue_request() {
     use super::assets::types::TradingPrice;
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
-        t_register_vault(1, 800, "test").unwrap();
+        t_register_vault(1, 800, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
         Issue::update_expired_time(Origin::root(), 10u64).unwrap();
         Issue::update_griefing_fee(Origin::root(), Percent::from_parts(10)).unwrap();
         Assets::force_update_exchange_rate(
@@ -207,7 +218,7 @@ fn test_release_collateral() {
 fn test_redeem_request() {
     use super::assets::types::TradingPrice;
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
-        t_register_vault(1, 800, "test").unwrap();
+        t_register_vault(1, 800, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
         Issue::update_expired_time(Origin::root(), 10u64).unwrap();
         Issue::update_griefing_fee(Origin::root(), Percent::from_parts(10)).unwrap();
         assets::Pallet::<Test>::force_update_exchange_rate(
@@ -234,7 +245,7 @@ fn test_redeem_request() {
                 Origin::signed(2),
                 1,
                 1000,
-                "test".as_bytes().to_vec()
+                "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".parse().unwrap()
             ),
             redeem::Error::<Test>::InsufficiantAssetsFunds
         );
@@ -244,7 +255,7 @@ fn test_redeem_request() {
                 Origin::signed(2),
                 1,
                 1,
-                "test".as_bytes().to_vec(),
+                "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".parse().unwrap()
             ),
             redeem::Error::<Test>::InsufficiantAssetsFunds
         );
@@ -255,7 +266,7 @@ fn test_redeem_request() {
 fn test_liquidation_redeem() {
     use super::assets::types::TradingPrice;
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
-        t_register_vault(1, 800, "test").unwrap();
+        t_register_vault(1, 800, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
         Issue::update_expired_time(Origin::root(), 10u64).unwrap();
         Issue::update_griefing_fee(Origin::root(), Percent::from_parts(10)).unwrap();
         assets::Pallet::<Test>::force_update_exchange_rate(

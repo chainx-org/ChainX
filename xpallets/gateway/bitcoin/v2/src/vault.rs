@@ -1,10 +1,12 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub mod types {
-    use codec::{Decode, Encode};
     use sp_std::{default::Default, prelude::Vec};
 
-    pub type BtcAddress = Vec<u8>;
+    use codec::{Decode, Encode};
+    use light_bitcoin::keys::Address;
+
+    pub type BtcAddress = Address;
 
     #[derive(Encode, Decode, Clone, PartialEq)]
     #[cfg_attr(feature = "std", derive(Debug))]

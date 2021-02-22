@@ -1,9 +1,12 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub mod types {
-    use codec::{Decode, Encode};
     use sp_std::vec::Vec;
-    pub type BtcAddress = Vec<u8>;
+
+    use codec::{Decode, Encode};
+    use light_bitcoin::keys::Address;
+
+    pub type BtcAddress = Address;
 
     #[derive(Encode, Decode, Clone, PartialEq)]
     #[cfg_attr(feature = "std", derive(Debug))]
@@ -89,76 +92,6 @@ pub mod pallet {
     pub trait Config: frame_system::Config + issue::Config {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
-
-    /// Events for redeem module
-    #[pallet::event]
-    #[pallet::generate_deposit(pub(crate) fn deposit_event)]
-    pub enum Event<T: Config> {
-        /// Current chain status is not right
-        ChainStatusError,
-        /// Redeem request is accepted
-        NewRedeemRequest,
-        /// Cancle redeem is accepted
-        RedeemCancled,
-        /// Liquidation redeem is accepted
-        RedeemLiquidated,
-        /// Execute redeem is accepted
-        RedeemExecuted,
-    }
-
-    #[pallet::hooks]
-    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
-
-    #[pallet::error]
-    pub enum Error<T> {
-        /// Redeem request id is not exsit
-        RedeemRequestNotFound,
-        /// Redeem request cancelled for forced redeem when it's not expired.
-        RedeemRequestNotExpired,
-        /// Redeem request is expierd
-        RedeemRequestExpired,
-        /// Vault is under Liquidation
-        VaultLiquidated,
-        /// Actioner is not the request's owner
-        UnauthorizedUser,
-        /// Redeem amount is to low
-        AmountBelowDustAmount,
-        /// Redeem amount is not correct
-        InsufficiantAssetsFunds,
-        /// Redeem in Processing
-        RedeemRequestProcessing,
-        /// Redeem is completed
-        RedeemRequestAlreadyCompleted,
-        /// Redeem is cancled
-        RedeemRequestAlreadyCancled,
-        /// Bridge status is not correct
-        BridgeStatusError,
-    }
-
-    /// Redeem fee when use request redeem
-    #[pallet::storage]
-    #[pallet::getter(fn redeem_fee)]
-    pub(crate) type RedeemFee<T: Config> = StorageValue<_, u8, ValueQuery>;
-
-    /// Auto-increament id to identify each redeem request.
-    /// Also presents total amount of created requests.
-    #[pallet::storage]
-    pub(crate) type RequestCount<T: Config> = StorageValue<_, RequestId, ValueQuery>;
-
-    /// The minimum amount of btc that is accepted for redeem requests; any lower values would
-    /// Risk the bitcoin client to reject the payment
-    #[pallet::storage]
-    pub(crate) type RedeemBtcDustValue<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
-
-    /// Mapping from redeem id to `RedeemRequest`
-    #[pallet::storage]
-    pub(crate) type RedeemRequests<T: Config> =
-        StorageMap<_, Twox64Concat, RequestId, RedeemRequest<T>>;
-
-    /// Expired time for an `RedeemRequest`
-    #[pallet::storage]
-    pub(crate) type RedeemRequestExpiredTime<T: Config> =
-        StorageValue<_, BlockNumberFor<T>, ValueQuery>;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -360,6 +293,76 @@ pub mod pallet {
             Ok(().into())
         }
     }
+
+    /// Events for redeem module
+    #[pallet::event]
+    #[pallet::generate_deposit(pub(crate) fn deposit_event)]
+    pub enum Event<T: Config> {
+        /// Current chain status is not right
+        ChainStatusError,
+        /// Redeem request is accepted
+        NewRedeemRequest,
+        /// Cancle redeem is accepted
+        RedeemCancled,
+        /// Liquidation redeem is accepted
+        RedeemLiquidated,
+        /// Execute redeem is accepted
+        RedeemExecuted,
+    }
+
+    #[pallet::hooks]
+    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
+
+    #[pallet::error]
+    pub enum Error<T> {
+        /// Redeem request id is not exsit
+        RedeemRequestNotFound,
+        /// Redeem request cancelled for forced redeem when it's not expired.
+        RedeemRequestNotExpired,
+        /// Redeem request is expierd
+        RedeemRequestExpired,
+        /// Vault is under Liquidation
+        VaultLiquidated,
+        /// Actioner is not the request's owner
+        UnauthorizedUser,
+        /// Redeem amount is to low
+        AmountBelowDustAmount,
+        /// Redeem amount is not correct
+        InsufficiantAssetsFunds,
+        /// Redeem in Processing
+        RedeemRequestProcessing,
+        /// Redeem is completed
+        RedeemRequestAlreadyCompleted,
+        /// Redeem is cancled
+        RedeemRequestAlreadyCancled,
+        /// Bridge status is not correct
+        BridgeStatusError,
+    }
+
+    /// Redeem fee when use request redeem
+    #[pallet::storage]
+    #[pallet::getter(fn redeem_fee)]
+    pub(crate) type RedeemFee<T: Config> = StorageValue<_, u8, ValueQuery>;
+
+    /// Auto-increament id to identify each redeem request.
+    /// Also presents total amount of created requests.
+    #[pallet::storage]
+    pub(crate) type RequestCount<T: Config> = StorageValue<_, RequestId, ValueQuery>;
+
+    /// The minimum amount of btc that is accepted for redeem requests; any lower values would
+    /// Risk the bitcoin client to reject the payment
+    #[pallet::storage]
+    pub(crate) type RedeemBtcDustValue<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
+
+    /// Mapping from redeem id to `RedeemRequest`
+    #[pallet::storage]
+    pub(crate) type RedeemRequests<T: Config> =
+        StorageMap<_, Twox64Concat, RequestId, RedeemRequest<T>>;
+
+    /// Expired time for an `RedeemRequest`
+    #[pallet::storage]
+    pub(crate) type RedeemRequestExpiredTime<T: Config> =
+        StorageValue<_, BlockNumberFor<T>, ValueQuery>;
 
     impl<T: Config> Pallet<T> {
         /// Ensure the chain is in correct status
