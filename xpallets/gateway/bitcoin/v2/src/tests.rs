@@ -2,6 +2,7 @@ use light_bitcoin::chain::Transaction;
 
 use sp_arithmetic::Percent;
 
+use frame_support::traits::Hooks;
 use frame_support::{
     assert_err, assert_ok,
     dispatch::{DispatchResult, DispatchResultWithPostInfo},
@@ -17,6 +18,24 @@ use super::mock::*;
 
 fn t_register_vault(id: u64, collateral: u128, addr: &str) -> DispatchResultWithPostInfo {
     Vault::register_vault(Origin::signed(id), collateral, addr.as_bytes().to_vec())
+}
+
+fn run_to_block(index: u64) {
+    while System::block_number() < index {
+        Redeem::on_finalize(System::block_number());
+        Assets::on_finalize(System::block_number());
+        Vault::on_finalize(System::block_number());
+        Issue::on_finalize(System::block_number());
+        System::on_finalize(System::block_number());
+
+        System::set_block_number(System::block_number() + 1);
+
+        System::on_initialize(System::block_number());
+        Issue::on_initialize(System::block_number());
+        Vault::on_initialize(System::block_number());
+        Assets::on_initialize(System::block_number());
+        Redeem::on_initialize(System::block_number());
+    }
 }
 
 fn t_register_btc() -> DispatchResult {
@@ -37,6 +56,10 @@ fn t_register_btc() -> DispatchResult {
     XAssetsRegistrar::register(RawOrigin::Root.into(), btc_asset.0, btc_asset.1, true, true)?;
     XAssets::set_asset_limit(RawOrigin::Root.into(), btc_asset.0, btc_asset.2)
 }
+
+// ============================================================
+// test vault
+// ============================================================
 
 #[test]
 fn test_register_vault() {
@@ -87,6 +110,10 @@ fn test_add_extra_collateral() {
     })
 }
 
+// ============================================================
+// test assets
+// ============================================================
+
 #[test]
 fn test_update_exchange_rate() {
     use super::assets::types::TradingPrice;
@@ -113,6 +140,48 @@ fn test_update_exchange_rate() {
         assert_eq!(exchange_rate, new_exchange_rate);
     })
 }
+
+#[test]
+fn test_bridge_needs_to_update_exchange_rate() {
+    use crate::assets::types::{ErrorCode, Status, TradingPrice};
+    ExtBuilder::build(BuildConfig::default()).execute_with(|| {
+        assert_eq!(Assets::bridge_status(), Status::Running);
+
+        assets::ExchangeRateExpiredPeriod::<Test>::put(2);
+        Assets::force_update_exchange_rate(
+            RawOrigin::Root.into(),
+            TradingPrice {
+                price: 1u128,
+                decimal: 3u8,
+            },
+        )
+        .unwrap();
+        assert_eq!(Assets::bridge_status(), Status::Running);
+
+        run_to_block(3);
+
+        assert_eq!(
+            Assets::bridge_status(),
+            Status::Error(ErrorCode::EXCHANGE_RATE_EXPIRED)
+        );
+
+        Assets::force_update_exchange_rate(
+            RawOrigin::Root.into(),
+            TradingPrice {
+                price: 1u128,
+                decimal: 3u8,
+            },
+        )
+        .unwrap();
+
+        run_to_block(4);
+        assert_eq!(Assets::bridge_status(), Status::Running);
+    })
+}
+
+// ============================================================
+// test assets
+// ============================================================
 
 #[test]
 fn test_issue_request() {
