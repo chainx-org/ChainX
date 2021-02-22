@@ -57,10 +57,6 @@ fn t_register_btc() -> DispatchResult {
     XAssets::set_asset_limit(RawOrigin::Root.into(), btc_asset.0, btc_asset.2)
 }
 
-// ============================================================
-// test vault
-// ============================================================
-
 #[test]
 fn test_register_vault() {
     ExtBuilder::build(BuildConfig {
@@ -109,10 +105,6 @@ fn test_add_extra_collateral() {
         assert_eq!(free_balance, 700);
     })
 }
-
-// ============================================================
-// test assets
-// ============================================================
 
 #[test]
 fn test_update_exchange_rate() {
@@ -178,10 +170,6 @@ fn test_bridge_needs_to_update_exchange_rate() {
         assert_eq!(Assets::bridge_status(), Status::Running);
     })
 }
-
-// ============================================================
-// test assets
-// ============================================================
 
 #[test]
 fn test_issue_request() {
