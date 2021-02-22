@@ -1,5 +1,3 @@
-#![cfg(test)]
-
 use light_bitcoin::chain::Transaction;
 
 use sp_arithmetic::Percent;
