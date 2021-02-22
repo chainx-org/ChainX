@@ -842,6 +842,7 @@ dependencies = [
  "pallet-membership",
  "pallet-multisig",
  "pallet-offences",
+ "pallet-proxy",
  "pallet-randomness-collective-flip",
  "pallet-scheduler",
  "pallet-session",
@@ -1375,6 +1376,7 @@ dependencies = [
  "pallet-membership",
  "pallet-multisig",
  "pallet-offences",
+ "pallet-proxy",
  "pallet-randomness-collective-flip",
  "pallet-scheduler",
  "pallet-session",
@@ -3726,6 +3728,7 @@ dependencies = [
  "pallet-membership",
  "pallet-multisig",
  "pallet-offences",
+ "pallet-proxy",
  "pallet-randomness-collective-flip",
  "pallet-scheduler",
  "pallet-session",
@@ -4500,6 +4503,21 @@ dependencies = [
  "serde",
  "sp-runtime",
  "sp-staking",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-proxy"
+version = "2.0.1"
+source = "git+https://github.com/paritytech/substrate?rev=11ace4ef8b2ad176293ad6db2b3dd795befd2c79#11ace4ef8b2ad176293ad6db2b3dd795befd2c79"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
  "sp-std",
 ]
 
