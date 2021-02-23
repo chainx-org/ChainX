@@ -37,7 +37,7 @@ pub mod types {
 #[frame_support::pallet]
 #[allow(dead_code)]
 pub mod pallet {
-    use sp_arithmetic::Percent;
+    use sp_arithmetic::{traits::SaturatedConversion, Percent};
     use sp_runtime::DispatchError;
     use sp_std::{default::Default, marker::PhantomData, vec::Vec};
 
@@ -83,7 +83,9 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// user request issue xbtc
+        /// User request issue xbtc
+        ///
+        /// `IssueRequest` couldn't be submitted while bridge during liquidating.
         #[pallet::weight(0)]
         pub fn request_issue(
             origin: OriginFor<T>,
@@ -92,6 +94,10 @@ pub mod pallet {
             collateral: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             assets::Pallet::<T>::ensure_bridge_running()?;
+
+            //TODO(wangyafei): should check vault's collateral ratio, cause the `IssueRequest` in
+            // the extrinsic poll were not considered when match vault.
+
             let sender = ensure_signed(origin)?;
             let height = <frame_system::Pallet<T>>::block_number();
             let vault = vault::Pallet::<T>::get_active_vault_by_id(&vault_id)?;
@@ -179,8 +185,20 @@ pub mod pallet {
                 height - issue_request.open_time > expired_time,
                 Error::<T>::IssueRequestNotExpired
             );
-            // TODO:
-            // <assets::Pallet<T>>::slash_collateral(issue.requester, issue.vault)?;
+
+            let slashed_collateral = Self::calculate_slashed_collateral(issue_request.btc_amount)?;
+
+            <assets::Pallet<T>>::slash_collateral(
+                &issue_request.vault,
+                &issue_request.requester,
+                slashed_collateral,
+            )?;
+
+            <assets::Pallet<T>>::release_collateral(
+                &issue_request.requester,
+                issue_request.griefing_collateral,
+            )?;
+
             <vault::Vaults<T>>::mutate(&issue_request.vault, |vault| {
                 if let Some(vault) = vault {
                     vault.to_be_issued_tokens -= issue_request.btc_amount;
@@ -304,7 +322,7 @@ pub mod pallet {
             })
         }
 
-        /// Calculated minimium required collateral for a `IssueRequest`
+        /// Calculate minimium required collateral for a `IssueRequest`
         pub(crate) fn calculate_required_collateral(
             btc_amount: BalanceOf<T>,
         ) -> Result<BalanceOf<T>, DispatchError> {
@@ -317,6 +335,19 @@ pub mod pallet {
         /// Get `IssueRequest` from id
         pub(crate) fn get_issue_request_by_id(request_id: RequestId) -> Option<IssueRequest<T>> {
             <IssueRequests<T>>::get(request_id)
+        }
+
+        /// Calculate slashed amount.
+        ///
+        /// Equals the corresponding pcx times secure threshold
+        pub(crate) fn calculate_slashed_collateral(
+            btc_amount: BalanceOf<T>,
+        ) -> Result<BalanceOf<T>, DispatchError> {
+            let pcx_amount = assets::Pallet::<T>::convert_to_pcx(btc_amount)?;
+            let secure_threshold = vault::Pallet::<T>::secure_threshold();
+            let slashed_collateral: u32 =
+                (pcx_amount.saturated_into::<u128>() * secure_threshold as u128 / 100) as u32;
+            Ok(slashed_collateral.into())
         }
     }
 }

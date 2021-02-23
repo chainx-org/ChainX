@@ -49,7 +49,7 @@ fn test_register_vault() {
     })
     .execute_with(|| {
         assert_err!(
-            t_register_vault(1, 10000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna"),
+            t_register_vault(1, 20000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna"),
             assets::Error::<Test>::InsufficientFunds
         );
         assert_err!(
@@ -94,7 +94,7 @@ fn test_add_extra_collateral() {
         );
         assert_ok!(Vault::add_extra_collateral(Origin::signed(1), 100));
         let free_balance = Balances::free_balance(1);
-        assert_eq!(free_balance, 700);
+        assert_eq!(free_balance, 9700);
     })
 }
 
@@ -103,8 +103,8 @@ fn test_update_exchange_rate() {
     use super::assets::types::TradingPrice;
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
         let exchange_rate = Assets::exchange_rate();
-        assert_eq!(exchange_rate.price, 0);
-        assert_eq!(exchange_rate.decimal, 0);
+        assert_eq!(exchange_rate.price, 1);
+        assert_eq!(exchange_rate.decimal, 3);
 
         let new_exchange_rate = TradingPrice {
             price: 100,
@@ -129,7 +129,7 @@ fn test_update_exchange_rate() {
 fn test_issue_request() {
     use super::assets::types::TradingPrice;
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
-        t_register_vault(1, 800, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
+        t_register_vault(1, 8000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
         Issue::update_expired_time(Origin::root(), 10u64).unwrap();
         Issue::update_griefing_fee(Origin::root(), Percent::from_parts(10)).unwrap();
         Assets::force_update_exchange_rate(
@@ -173,6 +173,31 @@ fn test_issue_request() {
     })
 }
 
+#[test]
+fn test_cancel_issue_request() {
+    ExtBuilder::build(BuildConfig::default()).execute_with(|| {
+        issue::Pallet::<Test>::update_griefing_fee(RawOrigin::Root.into(), Percent::from_parts(10))
+            .unwrap();
+        issue::Pallet::<Test>::update_expired_time(RawOrigin::Root.into(), 10).unwrap();
+
+        t_register_vault(3, 20000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
+        Issue::request_issue(Origin::signed(1), 3, 1, 100).unwrap();
+
+        System::set_block_number(5);
+        assert_err!(
+            Issue::cancel_issue(Origin::signed(1), 1),
+            issue::Error::<Test>::IssueRequestNotExpired
+        );
+
+        System::set_block_number(20);
+        assert_ok!(Issue::cancel_issue(Origin::signed(1), 1));
+
+        assert_eq!(<assets::CurrencyOf<Test>>::reserved_balance(3), 17000);
+        assert_eq!(<assets::CurrencyOf<Test>>::reserved_balance(1), 3000);
+        assert_eq!(Balances::free_balance(1), 10000);
+    })
+}
+
 // Basic function test cases.
 #[test]
 fn test_lock_collateral() {
@@ -180,7 +205,7 @@ fn test_lock_collateral() {
         assert_ok!(Assets::lock_collateral(&1, 200));
         assert_eq!(<assets::CurrencyOf<Test>>::reserved_balance(1), 200);
         assert_err!(
-            Assets::lock_collateral(&1, 1000),
+            Assets::lock_collateral(&1, 100_000),
             assets::Error::<Test>::InsufficientFunds
         );
     });
@@ -218,7 +243,7 @@ fn test_release_collateral() {
 fn test_redeem_request() {
     use super::assets::types::TradingPrice;
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
-        t_register_vault(1, 800, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
+        t_register_vault(1, 1000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
         Issue::update_expired_time(Origin::root(), 10u64).unwrap();
         Issue::update_griefing_fee(Origin::root(), Percent::from_parts(10)).unwrap();
         assets::Pallet::<Test>::force_update_exchange_rate(
@@ -266,7 +291,7 @@ fn test_redeem_request() {
 fn test_liquidation_redeem() {
     use super::assets::types::TradingPrice;
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
-        t_register_vault(1, 800, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
+        t_register_vault(1, 1000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
         Issue::update_expired_time(Origin::root(), 10u64).unwrap();
         Issue::update_griefing_fee(Origin::root(), Percent::from_parts(10)).unwrap();
         assets::Pallet::<Test>::force_update_exchange_rate(

@@ -111,11 +111,20 @@ construct_runtime! {
         }
 }
 
-#[derive(Default)]
 pub struct BuildConfig {
     pub(crate) minimium_vault_collateral: u32,
     pub(crate) exchange_price: u128,
     pub(crate) exchange_decimal: u8,
+}
+
+impl Default for BuildConfig {
+    fn default() -> Self {
+        Self {
+            minimium_vault_collateral: 1000,
+            exchange_price: 1,
+            exchange_decimal: 3,
+        }
+    }
 }
 
 pub struct ExtBuilder;
@@ -145,7 +154,7 @@ impl ExtBuilder {
         );
 
         let _ = pallet_balances::GenesisConfig::<Test> {
-            balances: vec![(0, 100_000), (1, 1000), (2, 2000), (3, 3000)],
+            balances: vec![(0, 100_000), (1, 10000), (2, 20000), (3, 30000)],
         }
         .assimilate_storage(&mut storage);
 
