@@ -49,13 +49,15 @@ pub mod pallet {
         dispatch::DispatchResultWithPostInfo,
         ensure,
         storage::types::{StorageMap, StorageValue, ValueQuery},
-        traits::{Hooks, IsType},
+        traits::{Get, Hooks, IsType},
         Twox64Concat,
     };
     use frame_system::{
         ensure_root, ensure_signed,
         pallet_prelude::{BlockNumberFor, OriginFor},
     };
+
+    use chainx_primitives::AssetId;
 
     use crate::assets::{pallet as assets, pallet::BalanceOf};
     use crate::vault::pallet as vault;
@@ -76,6 +78,7 @@ pub mod pallet {
     #[pallet::config]
     pub trait Config: frame_system::Config + vault::Config {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type TargetAssetId: Get<AssetId>;
     }
 
     #[pallet::hooks]
@@ -151,9 +154,8 @@ pub mod pallet {
                 Error::<T>::IssueRequestExpired
             );
 
-            // TODO(wangyafei): add associated type.
             <xpallet_assets::Module<T>>::issue(
-                &1,
+                &T::TargetAssetId::get(),
                 &issue_request.requester,
                 issue_request.btc_amount,
             )?;
