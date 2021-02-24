@@ -95,17 +95,29 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             assets::Pallet::<T>::ensure_bridge_running()?;
 
-            //TODO(wangyafei): should check vault's collateral ratio, cause the `IssueRequest` in
-            // the extrinsic poll were not considered when match vault.
-
             let sender = ensure_signed(origin)?;
             let height = <frame_system::Pallet<T>>::block_number();
             let vault = vault::Pallet::<T>::get_active_vault_by_id(&vault_id)?;
+            let vault_collateral = assets::Pallet::<T>::reserved_balance_of(&vault_id);
+
+            // check if vault is rich enough
+            let collateral_ratio_after_requesting =
+                assets::Pallet::<T>::calculate_collateral_ratio(
+                    vault.issued_tokens + vault.to_be_issued_tokens + btc_amount,
+                    vault_collateral,
+                )?;
+            ensure!(
+                collateral_ratio_after_requesting >= vault::Pallet::<T>::secure_threshold(),
+                Error::<T>::InsecureVault
+            );
+
             let required_collateral = Self::calculate_required_collateral(btc_amount)?;
             ensure!(
                 collateral >= required_collateral,
                 Error::<T>::InsufficientGriefingCollateral
             );
+
+            // insert `IssueRequest` to request map
             assets::Pallet::<T>::lock_collateral(&sender, collateral)?;
             let request_id = Self::get_next_request_id();
             Self::insert_issue_request(
@@ -246,6 +258,8 @@ pub mod pallet {
         InvalidConfigValue,
         /// Tried to execute `IssueRequest` while  it's expired.
         IssueRequestExpired,
+        /// Vault colateral ratio was below than `SecureThreshold`
+        InsecureVault,
     }
 
     /// Events for issue module
