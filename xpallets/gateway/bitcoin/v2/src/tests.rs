@@ -20,7 +20,7 @@ use super::vault::pallet as vault;
 use super::mock::*;
 
 fn t_register_vault(id: u64, collateral: u128, addr: &str) -> DispatchResultWithPostInfo {
-    Vault::register_vault(Origin::signed(id), collateral, addr.parse().unwrap())
+    Vault::register_vault(Origin::signed(id), collateral, addr.as_bytes().to_vec())
 }
 
 fn run_to_block(index: u64) {
@@ -229,7 +229,7 @@ fn test_issue_request() {
             1,
             vec![],
             vec![],
-            Transaction::default(),
+            vec![],
         ));
         let vault = Vault::get_vault_by_id(&issue_request.vault).unwrap();
         assert_eq!(vault.issued_tokens, issue_request.btc_amount);

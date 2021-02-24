@@ -147,9 +147,10 @@ pub mod pallet {
             request_id: RequestId,
             _tx_id: Vec<u8>,
             _merkle_proof: Vec<u8>,
-            _raw_tx: Transaction,
+            _raw_tx: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             assets::Pallet::<T>::ensure_bridge_running()?;
+
             let _sender = ensure_signed(origin)?;
 
             //TODO(wangyafei): verify tx

@@ -191,6 +191,20 @@ pub mod pallet {
             Ok(().into())
         }
 
+        /// Force update the exchange rate expired period.
+        #[pallet::weight(0)]
+        pub(crate) fn force_update_exchange_rate_expired_period(
+            origin: OriginFor<T>,
+            expired_period: BlockNumberFor<T>,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            ExchangeRateExpiredPeriod::<T>::put(expired_period);
+            Self::deposit_event(Event::<T>::ExchangeRateExpiredPeriodForceUpdated(
+                expired_period,
+            ));
+            Ok(().into())
+        }
+
         /// Force update oracles.
         #[pallet::weight(0)]
         pub(crate) fn force_update_oracles(
@@ -235,6 +249,8 @@ pub mod pallet {
         CollateralSlashed(T::AccountId, T::AccountId, BalanceOf<T>),
         // The collateral was released to the user successfully. [who, amount]
         CollateralReleased(T::AccountId, BalanceOf<T>),
+        // Update `ExchangeRateExpiredPeriod`
+        ExchangeRateExpiredPeriodForceUpdated(BlockNumberFor<T>),
     }
 
     /// Total collateral
