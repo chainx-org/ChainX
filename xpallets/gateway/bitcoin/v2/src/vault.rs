@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub mod types {
-    use sp_std::{default::Default, prelude::Vec};
+    use sp_std::default::Default;
 
     use codec::{Decode, Encode};
     use light_bitcoin::keys::Address;
@@ -70,17 +70,19 @@ pub mod types {
 #[frame_support::pallet]
 #[allow(dead_code)]
 pub mod pallet {
-    use sp_std::{collections::btree_set::BTreeSet, default::Default};
+    use sp_std::{default::Default, str::from_utf8, vec::Vec};
 
     use frame_support::pallet_prelude::*;
     use frame_support::traits::ReservableCurrency;
     use frame_system::pallet_prelude::{ensure_signed, BlockNumberFor, OriginFor};
 
     use super::types::*;
-    use crate::assets::pallet as assets;
-    use assets::BalanceOf;
+    use crate::assets::pallet::{self as assets, BalanceOf};
 
+    #[allow(type_alias_bounds)]
     type DefaultVault<T: Config> = Vault<T::AccountId, BlockNumberFor<T>, BalanceOf<T>>;
+
+    type AddrStr = Vec<u8>;
 
     #[pallet::config]
     pub trait Config: frame_system::Config + assets::Config {
@@ -111,9 +113,13 @@ pub mod pallet {
         pub(crate) fn register_vault(
             origin: OriginFor<T>,
             collateral: BalanceOf<T>,
-            btc_address: BtcAddress,
+            btc_address: AddrStr,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
+            let btc_address = from_utf8(&btc_address)
+                .map_err(|_| Error::<T>::InvalidAddress)?
+                .parse()
+                .map_err(|_| Error::<T>::InvalidAddress)?;
             ensure!(
                 collateral >= Self::minimium_vault_collateral(),
                 Error::<T>::InsufficientVaultCollateralAmount
@@ -165,6 +171,8 @@ pub mod pallet {
         VaultNotFound,
         /// Vault was inactive
         VaultInactive,
+        /// BtcAddress invalid
+        InvalidAddress,
     }
 
     /// Event during register, withdrawing collateral or adding extra collateral
