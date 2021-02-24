@@ -431,7 +431,12 @@ impl pallet_session_historical::Config for Runtime {
     type FullIdentificationOf = SimpleValidatorIdConverter;
 }
 
+parameter_types! {
+    pub const BridgeTargetAssetId: u8 = 1;
+}
+
 impl xpallet_gateway_bitcoin_v2_issue::Config for Runtime {
+    type TargetAssetId = BridgeTargetAssetId;
     type Event = Event;
 }
 impl xpallet_gateway_bitcoin_v2_redeem::Config for Runtime {
