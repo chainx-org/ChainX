@@ -327,7 +327,7 @@ fn test_redeem_request() {
                 Origin::signed(2),
                 1,
                 1000,
-                "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".parse().unwrap()
+                "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".as_bytes().to_vec()
             ),
             redeem::Error::<Test>::InsufficiantAssetsFunds
         );
@@ -337,7 +337,7 @@ fn test_redeem_request() {
                 Origin::signed(2),
                 1,
                 1,
-                "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".parse().unwrap()
+                "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".as_bytes().to_vec()
             ),
             redeem::Error::<Test>::InsufficiantAssetsFunds
         );

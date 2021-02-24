@@ -1,8 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub mod types {
-    use sp_std::vec::Vec;
-
     use codec::{Decode, Encode};
     use light_bitcoin::keys::Address;
 
@@ -14,7 +12,7 @@ pub mod types {
         /// Redeem is accepted and vault will transfer btc
         Processing,
         /// Redeem is cancled by redeemer
-        Cancled,
+        Canceled,
         /// Redeem is compeleted
         Completed,
     }
@@ -51,7 +49,8 @@ pub mod types {
 #[frame_support::pallet]
 #[allow(dead_code)]
 pub mod pallet {
-    use chainx_primitives::AssetId;
+    use sp_std::{marker::PhantomData, str::from_utf8, vec::Vec};
+
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         ensure,
@@ -63,13 +62,13 @@ pub mod pallet {
         ensure_root, ensure_signed,
         pallet_prelude::{BlockNumberFor, OriginFor},
     };
+
+    use chainx_primitives::AssetId;
     use light_bitcoin::chain::Transaction;
-    use sp_std::marker::PhantomData;
-    use sp_std::vec::Vec;
     use xpallet_assets::AssetType;
 
     // Import vault,issue,assets code.
-    use super::types::{BtcAddress, RedeemRequestStatus};
+    use super::types::RedeemRequestStatus;
     use crate::assets::{pallet as assets, pallet::BalanceOf};
     use crate::issue::pallet as issue;
     use crate::vault::pallet as vault;
@@ -81,6 +80,7 @@ pub mod pallet {
         BalanceOf<T>,
     >;
     type RequestId = u128;
+    type AddrStr = Vec<u8>;
 
     const ASSET_ID: AssetId = 1;
 
@@ -101,12 +101,16 @@ pub mod pallet {
             origin: OriginFor<T>,
             vault_id: T::AccountId,
             redeem_amount: BalanceOf<T>,
-            btc_addr: BtcAddress,
+            btc_addr: AddrStr,
         ) -> DispatchResultWithPostInfo {
             Self::ensure_chain_correct_status()?;
 
             // Verify redeemer asset
             let sender = ensure_signed(origin)?;
+            let btc_addr = from_utf8(&btc_addr)
+                .map_err(|_| Error::<T>::InvalidBtcAddress)?
+                .parse()
+                .map_err(|_| Error::<T>::InvalidBtcAddress)?;
             let redeemer_balance = Self::asset_balance_of(&sender);
             ensure!(
                 redeem_amount <= redeemer_balance,
@@ -337,6 +341,8 @@ pub mod pallet {
         RedeemRequestAlreadyCancled,
         /// Bridge status is not correct
         BridgeStatusError,
+        /// Invalid btc address
+        InvalidBtcAddress,
     }
 
     /// Redeem fee when use request redeem

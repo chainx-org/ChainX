@@ -70,7 +70,7 @@ pub mod types {
 #[frame_support::pallet]
 #[allow(dead_code)]
 pub mod pallet {
-    use sp_std::{collections::btree_set::BTreeSet, default::Default};
+    use sp_std::default::Default;
 
     use frame_support::pallet_prelude::*;
     use frame_support::traits::ReservableCurrency;
@@ -80,6 +80,7 @@ pub mod pallet {
     use crate::assets::pallet as assets;
     use assets::BalanceOf;
 
+    #[allow(type_alias_bounds)]
     type DefaultVault<T: Config> = Vault<T::AccountId, BlockNumberFor<T>, BalanceOf<T>>;
 
     #[pallet::config]
