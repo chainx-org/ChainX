@@ -217,6 +217,8 @@ pub mod pallet {
         InsufficientCollateral,
         /// Bridge was shutdown or in error.
         BridgeNotRunning,
+        /// Try to calculate collateral ratio while has no issued_tokens
+        NoIssuedTokens,
     }
 
     /// Events for assets module
@@ -378,7 +380,7 @@ pub mod pallet {
         ) -> Result<u16, DispatchError> {
             let issued_tokens = issued_tokens.saturated_into::<u128>();
             let collateral = collateral.saturated_into::<u128>();
-            ensure!(issued_tokens != 0, Error::<T>::ArithmeticError);
+            ensure!(issued_tokens != 0, Error::<T>::NoIssuedTokens);
 
             let exchange_rate: TradingPrice = Self::exchange_rate();
             let equivalence_collateral = exchange_rate
@@ -425,6 +427,10 @@ pub mod pallet {
                     <BridgeStatus<T>>::put(Status::Error(error_codes))
                 }
             }
+        }
+
+        pub(crate) fn reserved_balance_of(who: &T::AccountId) -> BalanceOf<T> {
+            CurrencyOf::<T>::reserved_balance(who)
         }
     }
 }
