@@ -161,6 +161,11 @@ pub mod pallet {
             let issue_request = Self::get_issue_request_by_id(request_id)
                 .ok_or(Error::<T>::IssueRequestNotFound)?;
 
+            ensure!(
+                !issue_request.completed && !issue_request.cancelled,
+                Error::<T>::IssueRequestDealt
+            );
+
             let height = frame_system::Pallet::<T>::block_number();
             ensure!(
                 height - issue_request.open_time < Self::issue_request_expired_time(),
@@ -182,6 +187,12 @@ pub mod pallet {
                 &issue_request.requester,
                 issue_request.griefing_collateral,
             )?;
+
+            IssueRequests::<T>::mutate(request_id, |issue_request| {
+                if let Some(issue_request) = issue_request {
+                    issue_request.completed = true
+                }
+            });
             Self::deposit_event(Event::<T>::IssueRequestExcuted);
             Ok(().into())
         }
@@ -191,9 +202,15 @@ pub mod pallet {
             origin: OriginFor<T>,
             request_id: RequestId,
         ) -> DispatchResultWithPostInfo {
-            let _ = ensure_signed(origin)?;
+            ensure_signed(origin)?;
+
             let issue_request = Self::get_issue_request_by_id(request_id)
                 .ok_or(Error::<T>::IssueRequestNotFound)?;
+            ensure!(
+                !issue_request.completed && !issue_request.cancelled,
+                Error::<T>::IssueRequestDealt
+            );
+
             let height = <frame_system::Pallet<T>>::block_number();
             let expired_time = <IssueRequestExpiredTime<T>>::get();
             ensure!(
@@ -219,6 +236,13 @@ pub mod pallet {
                     vault.to_be_issued_tokens -= issue_request.btc_amount;
                 }
             });
+
+            IssueRequests::<T>::mutate(request_id, |issue_request| {
+                if let Some(issue_request) = issue_request {
+                    issue_request.cancelled = true
+                }
+            });
+
             Self::deposit_event(Event::<T>::IssueRequestCancelled);
             Ok(().into())
         }
@@ -251,18 +275,20 @@ pub mod pallet {
     /// Error for issue module
     #[pallet::error]
     pub enum Error<T> {
-        /// Collateral in request is less than griefing collateral.
+        /// Collateral in request is less than griefing collateral
         InsufficientGriefingCollateral,
         /// No such `IssueRequest`
         IssueRequestNotFound,
-        /// `IssueRequest` cancelled when it's not expired.
+        /// `IssueRequest` cancelled when it's not expired
         IssueRequestNotExpired,
-        /// Value to be set is invalid.
+        /// Value to be set is invalid
         InvalidConfigValue,
-        /// Tried to execute `IssueRequest` while  it's expired.
+        /// Tried to execute `IssueRequest` while  it's expired
         IssueRequestExpired,
         /// Vault colateral ratio was below than `SecureThreshold`
         InsecureVault,
+        /// `IssueRequest` has been excuted or cancelled
+        IssueRequestDealt,
     }
 
     /// Events for issue module
