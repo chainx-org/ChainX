@@ -307,10 +307,11 @@ fn test_release_collateral() {
 fn test_redeem_request() {
     use super::assets::types::TradingPrice;
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
-        t_register_vault(1, 1000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
+        t_register_vault(3, 30000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
         Issue::update_expired_time(Origin::root(), 10u64).unwrap();
         Issue::update_griefing_fee(Origin::root(), Percent::from_parts(10)).unwrap();
-        assets::Pallet::<Test>::force_update_exchange_rate(
+
+        Assets::force_update_exchange_rate(
             Origin::root(),
             TradingPrice {
                 price: 1,
@@ -319,35 +320,28 @@ fn test_redeem_request() {
         )
         .unwrap();
 
-        assert_ok!(issue::Pallet::<Test>::request_issue(
-            Origin::signed(2),
-            1,
-            1,
-            100
-        ));
-
-        let reserved_balance = <<Test as xpallet_assets::Config>::Currency>::reserved_balance(2);
-        assert_eq!(reserved_balance, 100);
+        Issue::request_issue(Origin::signed(2), 3, 1, 100).unwrap();
 
         assert_err!(
             redeem::Pallet::<Test>::request_redeem(
                 Origin::signed(2),
-                1,
+                3,
                 1000,
                 "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".parse().unwrap()
             ),
             redeem::Error::<Test>::InsufficiantAssetsFunds
         );
 
-        assert_err!(
-            redeem::Pallet::<Test>::request_redeem(
-                Origin::signed(2),
-                1,
-                1,
-                "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".parse().unwrap()
-            ),
-            redeem::Error::<Test>::InsufficiantAssetsFunds
-        );
+        t_register_btc().unwrap();
+        Issue::execute_issue(Origin::signed(2), 1, vec![], vec![], Transaction::default()).unwrap();
+
+        // request redeem
+        assert_ok!(Redeem::request_redeem(
+            Origin::signed(2),
+            3,
+            1,
+            "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".parse().unwrap()
+        ));
     })
 }
 
