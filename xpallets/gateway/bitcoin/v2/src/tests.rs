@@ -234,6 +234,11 @@ fn test_issue_request() {
         let vault = Vault::get_vault_by_id(&issue_request.vault).unwrap();
         assert_eq!(vault.issued_tokens, issue_request.btc_amount);
         assert_eq!(vault.to_be_issued_tokens, 0);
+
+        assert_err!(
+            Issue::execute_issue(Origin::signed(1), 1, vec![], vec![], vec![],),
+            issue::Error::<Test>::IssueRequestDealt
+        );
     })
 }
 
