@@ -1050,7 +1050,7 @@ construct_runtime!(
         Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>} = 2,
 
         // Must be before session.
-        Babe: pallet_babe::{Module, Call, Storage, Config, Inherent, ValidateUnsigned} = 3,
+        Babe: pallet_babe::{Module, Call, Storage, Config, ValidateUnsigned} = 3,
 
         Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent} = 4,
         Indices: pallet_indices::{Module, Call, Storage, Config<T>, Event<T>} = 5,

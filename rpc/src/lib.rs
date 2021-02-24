@@ -123,7 +123,6 @@ where
         BlockNumber,
     >,
     C::Api: xpallet_transaction_fee_rpc_runtime_api::XTransactionFeeApi<Block, Balance>,
-    <C::Api as sp_api::ApiErrorExt>::Error: fmt::Debug,
     P: TransactionPool + 'static,
     SC: SelectChain<Block> + 'static,
     B: sc_client_api::Backend<Block> + Send + Sync + 'static,

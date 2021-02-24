@@ -12,6 +12,7 @@ use sc_executor::NativeExecutionDispatch;
 use sc_finality_grandpa::FinalityProofProvider as GrandpaFinalityProofProvider;
 use sc_network::{Event, NetworkService};
 use sc_service::{config::Configuration, error::Error as ServiceError, TaskManager};
+use sc_telemetry::TelemetrySpan;
 use sp_api::ConstructRuntimeApi;
 use sp_inherents::InherentDataProviders;
 use sp_runtime::traits::Block as BlockT;
@@ -111,7 +112,7 @@ where
         client.clone(),
         select_chain.clone(),
         inherent_data_providers.clone(),
-        &task_manager.spawn_handle(),
+        &task_manager.spawn_essential_handle(),
         config.prometheus_registry(),
         sp_consensus::CanAuthorWithNativeVersion::new(client.executor().clone()),
     )?;
@@ -250,6 +251,9 @@ where
     let enable_grandpa = !config.disable_grandpa;
     let prometheus_registry = config.prometheus_registry().cloned();
 
+    let telemetry_span = TelemetrySpan::new();
+    let _telemetry_span_entered = telemetry_span.enter();
+
     let (_rpc_handlers, telemetry_connection_notifier) =
         sc_service::spawn_tasks(sc_service::SpawnTasksParams {
             config,
@@ -264,6 +268,7 @@ where
             remote_blockchain: None,
             network_status_sinks: network_status_sinks.clone(),
             system_rpc_tx,
+            telemetry_span: Some(telemetry_span.clone()),
         })?;
 
     let (block_import, grandpa_link, babe_link) = import_setup;
@@ -341,7 +346,7 @@ where
         name: Some(name),
         observer_enabled: false,
         keystore,
-        is_authority: role.is_network_authority(),
+        is_authority: role.is_authority(),
     };
 
     if enable_grandpa {
@@ -470,7 +475,7 @@ where
         client.clone(),
         select_chain,
         inherent_data_providers,
-        &task_manager.spawn_handle(),
+        &task_manager.spawn_essential_handle(),
         config.prometheus_registry(),
         sp_consensus::NeverCanAuthor,
     )?;
@@ -506,6 +511,9 @@ where
 
     let rpc_extensions = chainx_rpc::create_light(light_deps);
 
+    let telemetry_span = TelemetrySpan::new();
+    let _telemetry_span_entered = telemetry_span.enter();
+
     let _rpc_handlers = sc_service::spawn_tasks(sc_service::SpawnTasksParams {
         on_demand: Some(on_demand),
         remote_blockchain: Some(backend.remote_blockchain()),
@@ -519,6 +527,7 @@ where
         system_rpc_tx,
         network,
         task_manager: &mut task_manager,
+        telemetry_span: Some(telemetry_span.clone()),
     })?;
 
     Ok(task_manager)
