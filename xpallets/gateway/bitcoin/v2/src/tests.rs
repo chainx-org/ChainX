@@ -424,22 +424,7 @@ fn test_execute_redeem() {
             1,
             "".as_bytes().to_vec(),
             "".as_bytes().to_vec(),
-            Transaction {
-                version: 1,
-                lock_time: 0,
-                ..Default::default()
-            },
-        ));
-      
-        t_register_btc().unwrap();
-        Issue::execute_issue(Origin::signed(2), 1, vec![], vec![], Transaction::default()).unwrap();
-
-        // request redeem
-        assert_ok!(Redeem::request_redeem(
-            Origin::signed(2),
-            3,
-            1,
-            "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".parse().unwrap()
+            "".as_bytes().to_vec(),
         ));
     })
 }
