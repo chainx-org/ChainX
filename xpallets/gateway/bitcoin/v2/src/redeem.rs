@@ -141,12 +141,6 @@ pub mod pallet {
             // Lock redeemer's XTBC
             Self::lock_xbtc(&sender, redeem_amount)?;
 
-            <vault::Vaults<T>>::mutate(&vault_id, |vault| {
-                if let Some(vault) = vault {
-                    vault.to_be_redeemed_tokens += redeem_amount;
-                }
-            });
-
             // Generate redeem request identify and insert it to record
             let request_id = Self::get_next_request_id();
             <RedeemRequests<T>>::insert(
@@ -244,7 +238,12 @@ pub mod pallet {
                 // Decrease vault tokens
                 <vault::Vaults<T>>::mutate(&vault.id, |vault| {
                     if let Some(vault) = vault {
-                        vault.to_be_redeemed_tokens += request.amount;
+                        vault.to_be_redeemed_tokens -= request.amount;
+                    }
+                });
+                <vault::Vaults<T>>::mutate(&vault.id, |vault| {
+                    if let Some(vault) = vault {
+                        vault.issued_tokens -= request.amount;
                     }
                 });
 
@@ -260,7 +259,11 @@ pub mod pallet {
                 assets::Pallet::<T>::release_collateral(&request.requester, worth_pcx)?;
             } else {
                 // Punish fee give redeemer
-                Self::transfer_xbtc(&request.vault, &request.requester, punishment_fee)?;
+                assets::Pallet::<T>::slash_collateral(
+                    &request.vault,
+                    &request.requester,
+                    punishment_fee,
+                )?;
             }
 
             Self::remove_redeem_request(request_id, RedeemRequestStatus::Completed);
