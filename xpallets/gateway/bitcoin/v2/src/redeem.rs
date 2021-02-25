@@ -13,9 +13,9 @@ pub mod types {
     pub enum RedeemRequestStatus {
         /// Redeem is accepted and vault will transfer btc
         Processing,
-        /// Redeem is cancled by redeemer
-        Cancled,
-        /// Redeem is compeleted
+        /// Redeem is canceled by redeemer
+        Canceled,
+        /// Redeem is completed
         Completed,
     }
 
@@ -55,7 +55,9 @@ pub mod pallet {
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         ensure,
+        pallet_prelude::*,
         storage::types::{StorageMap, StorageValue, ValueQuery},
+        traits::ReservableCurrency,
         traits::{Hooks, IsType},
         Twox64Concat,
     };
@@ -103,7 +105,7 @@ pub mod pallet {
             redeem_amount: BalanceOf<T>,
             btc_addr: BtcAddress,
         ) -> DispatchResultWithPostInfo {
-            Self::ensure_chain_correct_status()?;
+            assets::Pallet::<T>::ensure_bridge_running()?;
 
             // Verify redeemer asset
             let sender = ensure_signed(origin)?;
@@ -136,7 +138,7 @@ pub mod pallet {
                 }
             });
 
-            // Lock redeem's xtbc
+            // Lock redeemer's XTBC
             Self::lock_xbtc(&sender, redeem_amount)?;
 
             // Generate redeem request identify and insert it to record
@@ -168,7 +170,7 @@ pub mod pallet {
             _merkle_proof: Vec<u8>,
             _raw_tx: Transaction,
         ) -> DispatchResultWithPostInfo {
-            Self::ensure_chain_correct_status()?;
+            assets::Pallet::<T>::ensure_bridge_running()?;
             let sender = ensure_signed(origin)?;
 
             // Ensure this is the correct vault
@@ -179,29 +181,29 @@ pub mod pallet {
             let height = <frame_system::Pallet<T>>::block_number();
             let expired_time = <RedeemRequestExpiredTime<T>>::get();
             ensure!(
-                height - request.open_time < expired_time,
+                height - request.open_time <= expired_time,
                 Error::<T>::RedeemRequestExpired
             );
 
             // TODO verify tx
 
-            // Decrase user's XBTC amount.
+            // Decrease user's XBTC amount.
             Self::burn_xbtc(&request.requester, request.amount)?;
 
             Self::deposit_event(Event::<T>::RedeemExecuted);
             Ok(().into())
         }
 
-        /// User cancle redeem
+        /// User cancel redeem
         #[pallet::weight(0)]
-        pub fn cancle_redeem(
+        pub fn cancel_redeem(
             origin: OriginFor<T>,
             request_id: RequestId,
             reimburse: bool,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
 
-            // Ensure sender is is redeem's owner
+            // Ensure sender is is redeemer's owner
             let request =
                 <RedeemRequests<T>>::get(request_id).ok_or(Error::<T>::RedeemRequestNotFound)?;
             ensure!(request.requester == sender, Error::<T>::UnauthorizedUser);
@@ -212,7 +214,7 @@ pub mod pallet {
                 Error::<T>::RedeemRequestProcessing
             );
 
-            // Ensure the redeem request is outdate
+            // Ensure the redeem request is outdated
             let height = <frame_system::Pallet<T>>::block_number();
             let expired_time = <RedeemRequestExpiredTime<T>>::get();
             ensure!(
@@ -233,7 +235,7 @@ pub mod pallet {
                     }
                 });
 
-                // Burn user xbtc
+                // Burn user XBTC
                 Self::burn_xbtc(&request.requester, punishment_fee)?;
 
                 // Vault give pcx to sender
@@ -242,13 +244,14 @@ pub mod pallet {
                     &request.requester,
                     worth_pcx,
                 )?;
+                assets::Pallet::<T>::release_collateral(&request.requester, worth_pcx)?;
             } else {
                 // Punish fee give redeemer
                 Self::transfer_xbtc(&request.vault, &request.requester, punishment_fee)?;
             }
 
             Self::remove_redeem_request(request_id, RedeemRequestStatus::Completed);
-            Self::deposit_event(Event::<T>::RedeemCancled);
+            Self::deposit_event(Event::<T>::RedeemCanceled);
             Ok(().into())
         }
 
@@ -258,6 +261,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             redeem_amount: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
+            assets::Pallet::<T>::ensure_bridge_running()?;
             let sender = ensure_signed(origin)?;
 
             // Ensure redeem amount less than have
@@ -267,15 +271,16 @@ pub mod pallet {
                 Error::<T>::InsufficiantAssetsFunds
             );
 
-            // User burn xbtc
+            // User burn XBTC
             Self::burn_xbtc(&sender, redeem_amount)?;
 
-            // Catulate user's XBTC worth how much pcx, then give he the pcx
+            // Calculate user's XBTC worth how much pcx, then give he the pcx
             let worth_pcx = assets::Pallet::<T>::convert_to_pcx(redeem_amount)?;
 
             // System vault give him pcx
             let system_vault = <vault::Liquidator<T>>::get();
             assets::Pallet::<T>::slash_collateral(&system_vault.id, &sender, worth_pcx)?;
+            assets::Pallet::<T>::release_collateral(&sender, worth_pcx)?;
 
             // Send msg to user
             Self::deposit_event(Event::<T>::RedeemLiquidated);
@@ -302,8 +307,8 @@ pub mod pallet {
         ChainStatusError,
         /// Redeem request is accepted
         NewRedeemRequest,
-        /// Cancle redeem is accepted
-        RedeemCancled,
+        /// Cancel redeem is accepted
+        RedeemCanceled,
         /// Liquidation redeem is accepted
         RedeemLiquidated,
         /// Execute redeem is accepted
@@ -315,15 +320,15 @@ pub mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
-        /// Redeem request id is not exsit
+        /// Redeem request id is not exist
         RedeemRequestNotFound,
         /// Redeem request cancelled for forced redeem when it's not expired.
         RedeemRequestNotExpired,
-        /// Redeem request is expierd
+        /// Redeem request is expired
         RedeemRequestExpired,
         /// Vault is under Liquidation
         VaultLiquidated,
-        /// Actioner is not the request's owner
+        /// Action is not the request's owner
         UnauthorizedUser,
         /// Redeem amount is to low
         AmountBelowDustAmount,
@@ -333,8 +338,8 @@ pub mod pallet {
         RedeemRequestProcessing,
         /// Redeem is completed
         RedeemRequestAlreadyCompleted,
-        /// Redeem is cancled
-        RedeemRequestAlreadyCancled,
+        /// Redeem is canceled
+        RedeemRequestAlreadyCanceled,
         /// Bridge status is not correct
         BridgeStatusError,
     }
@@ -342,39 +347,60 @@ pub mod pallet {
     /// Redeem fee when use request redeem
     #[pallet::storage]
     #[pallet::getter(fn redeem_fee)]
-    pub(crate) type RedeemFee<T: Config> = StorageValue<_, u8, ValueQuery>;
+    pub(crate) type RedeemFee<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
     /// Auto-increament id to identify each redeem request.
     /// Also presents total amount of created requests.
     #[pallet::storage]
+    #[pallet::getter(fn request_count)]
     pub(crate) type RequestCount<T: Config> = StorageValue<_, RequestId, ValueQuery>;
 
     /// The minimum amount of btc that is accepted for redeem requests; any lower values would
     /// Risk the bitcoin client to reject the payment
     #[pallet::storage]
+    #[pallet::getter(fn dust_value)]
     pub(crate) type RedeemBtcDustValue<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
     /// Mapping from redeem id to `RedeemRequest`
     #[pallet::storage]
+    #[pallet::getter(fn redeem_requests)]
     pub(crate) type RedeemRequests<T: Config> =
         StorageMap<_, Twox64Concat, RequestId, RedeemRequest<T>>;
 
     /// Expired time for an `RedeemRequest`
     #[pallet::storage]
+    #[pallet::getter(fn expired_time)]
     pub(crate) type RedeemRequestExpiredTime<T: Config> =
         StorageValue<_, BlockNumberFor<T>, ValueQuery>;
 
-    impl<T: Config> Pallet<T> {
-        /// Ensure the chain is in correct status
-        fn ensure_chain_correct_status() -> DispatchResultWithPostInfo {
-            let bridge_status = <assets::BridgeStatus<T>>::get();
-            ensure!(
-                bridge_status == crate::assets::types::Status::Running,
-                Error::<T>::BridgeStatusError
-            );
-            Ok(().into())
-        }
+    #[pallet::genesis_config]
+    pub struct GenesisConfig<T: Config> {
+        pub(crate) redeem_fee: BalanceOf<T>,
+        pub(crate) dust_value: BalanceOf<T>,
+        pub(crate) expired_time: T::BlockNumber,
+    }
 
+    #[cfg(feature = "std")]
+    impl<T: Config> Default for GenesisConfig<T> {
+        fn default() -> Self {
+            Self {
+                redeem_fee: Default::default(),
+                dust_value: 1.into(),
+                expired_time: 2.into(),
+            }
+        }
+    }
+
+    #[pallet::genesis_build]
+    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+        fn build(&self) {
+            <RedeemFee<T>>::put(self.redeem_fee);
+            <RedeemBtcDustValue<T>>::put(self.dust_value);
+            <RedeemRequestExpiredTime<T>>::put(self.expired_time);
+        }
+    }
+
+    impl<T: Config> Pallet<T> {
         /// Generate secure key from account id
         pub(crate) fn get_next_request_id() -> RequestId {
             <RequestCount<T>>::mutate(|n| {
@@ -383,7 +409,7 @@ pub mod pallet {
             })
         }
 
-        /// Get `RedeemssueRequest` from id
+        /// Get `RedeemRequest` from id
         pub(crate) fn get_redeem_request_by_id(request_id: RequestId) -> Option<RedeemRequest<T>> {
             <RedeemRequests<T>>::get(request_id)
         }
@@ -432,12 +458,21 @@ pub mod pallet {
 
         /// Burn XBTC
         fn burn_xbtc(user: &T::AccountId, count: BalanceOf<T>) -> DispatchResultWithPostInfo {
+            xpallet_assets::Module::<T>::move_balance(
+                &ASSET_ID,
+                &user,
+                AssetType::Usable,
+                &user,
+                AssetType::ReservedWithdrawal,
+                count,
+            )
+            .map_err::<xpallet_assets::Error<T>, _>(Into::into)?;
             xpallet_assets::Module::<T>::destroy_reserved_withdrawal(&ASSET_ID, &user, count)?;
             Ok(().into())
         }
 
         /// User have XBTC count
-        fn asset_balance_of(user: &T::AccountId) -> BalanceOf<T> {
+        pub fn asset_balance_of(user: &T::AccountId) -> BalanceOf<T> {
             xpallet_assets::Module::<T>::asset_balance_of(&user, &ASSET_ID, AssetType::Usable)
         }
     }

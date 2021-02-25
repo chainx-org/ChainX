@@ -1,8 +1,12 @@
+use chainx_primitives::AssetId;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
+use std::collections::BTreeMap;
+use xpallet_assets::AssetRestrictions;
+use xpallet_assets_registrar::{AssetInfo, Chain};
 
 use frame_support::{construct_runtime, parameter_types, sp_io, traits::GenesisBuild};
 
@@ -127,6 +131,21 @@ impl Default for BuildConfig {
     }
 }
 
+pub(crate) fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {
+    (
+        1,
+        AssetInfo::new::<Test>(
+            b"X-BTC".to_vec(),
+            b"X-BTC".to_vec(),
+            Chain::Bitcoin,
+            8,
+            b"ChainX's cross-chain Bitcoin".to_vec(),
+        )
+        .unwrap(),
+        AssetRestrictions::DESTROY_USABLE,
+    )
+}
+
 pub struct ExtBuilder;
 impl ExtBuilder {
     pub fn build(
@@ -154,7 +173,45 @@ impl ExtBuilder {
         );
 
         let _ = pallet_balances::GenesisConfig::<Test> {
-            balances: vec![(0, 100_000), (1, 10000), (2, 20000), (3, 30000)],
+            balances: vec![
+                (0, 100_000),
+                (1, 1000),
+                (2, 2000),
+                (3, 3000),
+                (100, 10000000),
+            ],
+        }
+        .assimilate_storage(&mut storage);
+
+        let _ = GenesisBuild::<Test>::assimilate_storage(
+            &redeem::GenesisConfig {
+                redeem_fee: 1u128.into(),
+                dust_value: 1u128.into(),
+                expired_time: 20u64.into(),
+            },
+            &mut storage,
+        );
+
+        let btc_assets = btc();
+        let assets = vec![(btc_assets.0, btc_assets.1, btc_assets.2, true, true)];
+        let mut endowed = BTreeMap::new();
+        let endowed_info = vec![(1, 100), (2, 200), (3, 300), (4, 400), (100, 10000000)];
+        endowed.insert(btc_assets.0, endowed_info);
+        let mut init_assets = vec![];
+        let mut assets_restrictions = vec![];
+        for (a, b, c, d, e) in assets {
+            init_assets.push((a, b, d, e));
+            assets_restrictions.push((a, c))
+        }
+
+        let _ = xpallet_assets_registrar::GenesisConfig {
+            assets: init_assets,
+        }
+        .assimilate_storage::<Test>(&mut storage);
+
+        let _ = xpallet_assets::GenesisConfig::<Test> {
+            assets_restrictions,
+            endowed,
         }
         .assimilate_storage(&mut storage);
 

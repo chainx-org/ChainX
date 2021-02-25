@@ -308,26 +308,19 @@ fn test_redeem_request() {
     use super::assets::types::TradingPrice;
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
         t_register_vault(1, 1000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
-        Issue::update_expired_time(Origin::root(), 10u64).unwrap();
-        Issue::update_griefing_fee(Origin::root(), Percent::from_parts(10)).unwrap();
+        <vault::Vaults<Test>>::mutate(&1, |vault| {
+            if let Some(vault) = vault {
+                vault.issued_tokens = 75
+            }
+        });
         assets::Pallet::<Test>::force_update_exchange_rate(
             Origin::root(),
             TradingPrice {
-                price: 1,
+                price: 10,
                 decimal: 2,
             },
         )
         .unwrap();
-
-        assert_ok!(issue::Pallet::<Test>::request_issue(
-            Origin::signed(2),
-            1,
-            1,
-            100
-        ));
-
-        let reserved_balance = <<Test as xpallet_assets::Config>::Currency>::reserved_balance(2);
-        assert_eq!(reserved_balance, 100);
 
         assert_err!(
             redeem::Pallet::<Test>::request_redeem(
@@ -339,15 +332,99 @@ fn test_redeem_request() {
             redeem::Error::<Test>::InsufficiantAssetsFunds
         );
 
+        assert_ok!(redeem::Pallet::<Test>::request_redeem(
+            Origin::signed(2),
+            1,
+            1,
+            "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".parse().unwrap()
+        ));
+    })
+}
+
+#[test]
+fn test_cancel_redeem() {
+    use super::assets::types::TradingPrice;
+    ExtBuilder::build(BuildConfig::default()).execute_with(|| {
+        t_register_vault(1, 1000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
+        <vault::Vaults<Test>>::mutate(&1, |vault| {
+            if let Some(vault) = vault {
+                vault.issued_tokens = 1
+            }
+        });
+        assets::Pallet::<Test>::force_update_exchange_rate(
+            Origin::root(),
+            TradingPrice {
+                price: 10,
+                decimal: 2,
+            },
+        )
+        .unwrap();
+
+        redeem::Pallet::<Test>::request_redeem(
+            Origin::signed(2),
+            1,
+            1,
+            "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".parse().unwrap(),
+        );
+
+        let height = <frame_system::Pallet<Test>>::block_number();
+        run_to_block(height + redeem::Pallet::<Test>::expired_time() + 1);
+
+        assert_ok!(redeem::Pallet::<Test>::cancel_redeem(
+            Origin::signed(2),
+            1,
+            false
+        ));
+    })
+}
+
+#[test]
+fn test_execute_redeem() {
+    use super::assets::types::TradingPrice;
+    ExtBuilder::build(BuildConfig::default()).execute_with(|| {
+        t_register_vault(1, 1000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
+        <vault::Vaults<Test>>::mutate(&1, |vault| {
+            if let Some(vault) = vault {
+                vault.issued_tokens = 75
+            }
+        });
+        assets::Pallet::<Test>::force_update_exchange_rate(
+            Origin::root(),
+            TradingPrice {
+                price: 10,
+                decimal: 2,
+            },
+        )
+        .unwrap();
+
         assert_err!(
             redeem::Pallet::<Test>::request_redeem(
                 Origin::signed(2),
                 1,
-                1,
+                1000,
                 "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".parse().unwrap()
             ),
             redeem::Error::<Test>::InsufficiantAssetsFunds
         );
+
+        assert_ok!(redeem::Pallet::<Test>::request_redeem(
+            Origin::signed(2),
+            1,
+            1,
+            "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".parse().unwrap()
+        ));
+
+        assert_ok!(redeem::Pallet::<Test>::execute_redeem(
+            Origin::signed(2),
+            1,
+            "".as_bytes().to_vec(),
+            "".as_bytes().to_vec(),
+            Transaction {
+                version: 1,
+                lock_time: 0,
+                ..Default::default()
+            },
+        ));
     })
 }
 
@@ -355,27 +432,28 @@ fn test_redeem_request() {
 fn test_liquidation_redeem() {
     use super::assets::types::TradingPrice;
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
-        t_register_vault(1, 1000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
-        Issue::update_expired_time(Origin::root(), 10u64).unwrap();
-        Issue::update_griefing_fee(Origin::root(), Percent::from_parts(10)).unwrap();
         assets::Pallet::<Test>::force_update_exchange_rate(
             Origin::root(),
             TradingPrice {
-                price: 1,
+                price: 10,
                 decimal: 2,
             },
         )
         .unwrap();
 
-        assert_ok!(Issue::request_issue(Origin::signed(2), 1, 1, 100));
-
-        let reserved_balance = <<Test as xpallet_assets::Config>::Currency>::reserved_balance(2);
-        assert_eq!(reserved_balance, 100);
+        assets::Pallet::<Test>::lock_collateral(&100, 5000);
 
         assert_err!(
-            redeem::Pallet::<Test>::liquidation_redeem(Origin::signed(2), 1,),
+            redeem::Pallet::<Test>::liquidation_redeem(Origin::signed(1), 1000),
             redeem::Error::<Test>::InsufficiantAssetsFunds
         );
+
+        let _ = redeem::Pallet::<Test>::liquidation_redeem(Origin::signed(1), 10);
+        assert_eq!(redeem::Pallet::<Test>::asset_balance_of(&1), 90); //100 - 10
+        assert_eq!(
+            <<Test as xpallet_assets::Config>::Currency>::free_balance(1),
+            1100
+        ); //1000 + 10 * 10 = 1100
     })
 }
 
