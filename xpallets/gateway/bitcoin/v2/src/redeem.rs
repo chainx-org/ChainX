@@ -139,12 +139,6 @@ pub mod pallet {
             // Lock redeem's xtbc
             Self::lock_xbtc(&sender, redeem_amount)?;
 
-            <vault::Vaults<T>>::mutate(&vault_id, |vault| {
-                if let Some(vault) = vault {
-                    vault.to_be_redeemed_tokens += redeem_amount;
-                }
-            });
-
             // Generate redeem request identify and insert it to record
             let request_id = Self::get_next_request_id();
             <RedeemRequests<T>>::insert(
@@ -191,15 +185,19 @@ pub mod pallet {
             );
 
             // TODO verify tx
+            // TODO: premium redeem fee
 
             <vault::Vaults<T>>::mutate(&request.vault, |vault| {
                 if let Some(vault) = vault {
                     vault.issued_tokens -= request.amount;
+                    vault.to_be_redeemed_tokens -= request.amount;
                 }
             });
 
             // Decrase user's XBTC amount.
             Self::burn_xbtc(&request.requester, request.amount)?;
+
+            Self::remove_redeem_request(request_id, RedeemRequestStatus::Completed);
 
             Self::deposit_event(Event::<T>::RedeemExecuted);
             Ok(().into())
@@ -238,34 +236,32 @@ pub mod pallet {
 
             // Punish vault fee
             let punishment_fee: BalanceOf<T> = 0.into();
+
             if reimburse {
                 // Decrease vault tokens
-                <vault::Vaults<T>>::mutate(&vault.id, |vault| {
+                vault::Vaults::<T>::mutate(&vault.id, |vault| {
                     if let Some(vault) = vault {
-                        vault.to_be_redeemed_tokens += request.amount;
+                        vault.to_be_redeemed_tokens -= request.amount;
                     }
                 });
-
-                // Burn user xbtc
-                Self::burn_xbtc(&request.requester, punishment_fee)?;
 
                 // Vault give pcx to sender
                 assets::Pallet::<T>::slash_collateral(
                     &request.vault,
                     &request.requester,
-                    worth_pcx,
+                    worth_pcx + punishment_fee,
                 )?;
             } else {
-                // Punish fee give redeemer
-                Self::transfer_xbtc(&request.vault, &request.requester, punishment_fee)?;
+                Self::release_xbtc(&request.requester, request.amount)?;
             }
 
-            Self::remove_redeem_request(request_id, RedeemRequestStatus::Completed);
+            Self::remove_redeem_request(request_id, RedeemRequestStatus::Cancled);
             Self::deposit_event(Event::<T>::RedeemCancled);
             Ok(().into())
         }
 
         /// User liquidation redeem. when user do this means he can get pcx only.
+        // FIXME(wangyafei): need to reimplement
         #[pallet::weight(0)]
         pub fn liquidation_redeem(
             origin: OriginFor<T>,
@@ -405,30 +401,11 @@ pub mod pallet {
 
         /// Mark the request as removed
         fn remove_redeem_request(request_id: RequestId, status: RedeemRequestStatus) {
-            // TODO: delete redeem request from storage
             <RedeemRequests<T>>::mutate(request_id, |request| {
                 if let Some(request) = request {
                     request.status = status;
                 }
             });
-        }
-
-        /// Transfer XBTC
-        fn transfer_xbtc(
-            sender: &T::AccountId,
-            receiver: &T::AccountId,
-            count: BalanceOf<T>,
-        ) -> DispatchResultWithPostInfo {
-            xpallet_assets::Module::<T>::move_balance(
-                &ASSET_ID,
-                &sender,
-                AssetType::Usable,
-                &receiver,
-                AssetType::Usable,
-                count,
-            )
-            .map_err::<xpallet_assets::Error<T>, _>(Into::into)?;
-            Ok(().into())
         }
 
         /// Lock XBTC
@@ -440,6 +417,20 @@ pub mod pallet {
                 &user,
                 AssetType::Locked,
                 count,
+            )
+            .map_err::<xpallet_assets::Error<T>, _>(Into::into)?;
+            Ok(().into())
+        }
+
+        /// Release XBTC
+        fn release_xbtc(user: &T::AccountId, amount: BalanceOf<T>) -> DispatchResultWithPostInfo {
+            xpallet_assets::Module::<T>::move_balance(
+                &ASSET_ID,
+                &user,
+                AssetType::Locked,
+                &user,
+                AssetType::Usable,
+                amount,
             )
             .map_err::<xpallet_assets::Error<T>, _>(Into::into)?;
             Ok(().into())
