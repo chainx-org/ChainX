@@ -221,7 +221,7 @@ fn test_issue_request() {
         let vault = Vault::get_vault_by_id(&issue_request.vault).unwrap();
         assert_eq!(vault.to_be_issued_tokens, issue_request.btc_amount);
 
-        t_register_btc().unwrap();
+        //t_register_btc().unwrap();
 
         // execute issue_request
         assert_ok!(Issue::execute_issue(
@@ -453,8 +453,8 @@ fn test_liquidation_redeem() {
         assert_eq!(redeem::Pallet::<Test>::asset_balance_of(&1), 90); //100 - 10
         assert_eq!(
             <<Test as xpallet_assets::Config>::Currency>::free_balance(1),
-            1100
-        ); //1000 + 10 * 10 = 1100
+            10100
+        ); //10000 + 10 * 10 = 1100
     })
 }
 
