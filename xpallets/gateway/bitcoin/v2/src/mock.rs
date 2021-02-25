@@ -52,6 +52,7 @@ impl frame_system::Config for Test {
 parameter_types! {
     pub const ExistentialDeposit: u64 = 0;
     pub const ChainXAssetId: u32 = 0;
+    pub const BridgeTargetAssetId: u32 = 1;
 }
 
 impl pallet_balances::Config for Test {
@@ -91,6 +92,7 @@ impl vault::Config for Test {
 
 impl issue::Config for Test {
     type Event = ();
+    type TargetAssetId = BridgeTargetAssetId;
 }
 
 impl redeem::Config for Test {
