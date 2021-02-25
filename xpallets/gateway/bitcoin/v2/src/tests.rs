@@ -333,7 +333,7 @@ fn test_redeem_request() {
         );
 
         t_register_btc().unwrap();
-        Issue::execute_issue(Origin::signed(2), 3, vec![], vec![], vec![]).unwrap();
+        Issue::execute_issue(Origin::signed(2), 1, vec![], vec![], vec![]).unwrap();
 
         // request redeem
         assert_ok!(Redeem::request_redeem(

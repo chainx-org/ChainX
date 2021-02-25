@@ -70,7 +70,7 @@ pub mod types {
 #[frame_support::pallet]
 #[allow(dead_code)]
 pub mod pallet {
-    use sp_std::default::Default;
+    use sp_std::{default::Default, str::from_utf8};
 
     use frame_support::pallet_prelude::*;
     use frame_support::traits::ReservableCurrency;

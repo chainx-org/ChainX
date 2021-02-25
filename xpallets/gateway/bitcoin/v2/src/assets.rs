@@ -3,7 +3,7 @@
 /// Types used by pallet
 pub mod types {
     use bitflags::bitflags;
-    use codec::{Decode, Encode, Error};
+    use codec::{Decode, Encode};
     use sp_runtime::RuntimeDebug;
 
     #[cfg(feature = "std")]

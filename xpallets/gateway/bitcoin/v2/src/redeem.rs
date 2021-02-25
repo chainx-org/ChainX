@@ -64,7 +64,6 @@ pub mod pallet {
     };
 
     use chainx_primitives::AssetId;
-    use light_bitcoin::chain::Transaction;
     use xpallet_assets::AssetType;
 
     // Import vault,issue,assets code.
