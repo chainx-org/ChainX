@@ -1,8 +1,3 @@
-use sp_std::str::FromStr;
-
-use light_bitcoin::chain::Transaction;
-use light_bitcoin::keys::Address;
-
 use sp_arithmetic::Percent;
 
 use frame_support::traits::Hooks;
@@ -332,20 +327,20 @@ fn test_redeem_request() {
                 Origin::signed(2),
                 3,
                 1000,
-                "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".parse().unwrap()
+                "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".as_bytes().to_vec()
             ),
             redeem::Error::<Test>::InsufficiantAssetsFunds
         );
 
         t_register_btc().unwrap();
-        Issue::execute_issue(Origin::signed(2), 1, vec![], vec![], Transaction::default()).unwrap();
+        Issue::execute_issue(Origin::signed(2), 1, vec![], vec![], vec![]).unwrap();
 
         // request redeem
         assert_ok!(Redeem::request_redeem(
             Origin::signed(2),
             3,
             1,
-            "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".parse().unwrap()
+            "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".as_bytes().to_vec()
         ));
     })
 }

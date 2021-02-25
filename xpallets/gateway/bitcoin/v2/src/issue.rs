@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub mod types {
-    use sp_std::{default::Default, vec::Vec};
+    use sp_std::default::Default;
 
     use codec::{Decode, Encode};
     use light_bitcoin::keys::Address;
@@ -40,8 +40,6 @@ pub mod pallet {
     use sp_arithmetic::{traits::SaturatedConversion, Percent};
     use sp_runtime::DispatchError;
     use sp_std::{default::Default, marker::PhantomData, vec::Vec};
-
-    use light_bitcoin::chain::Transaction;
 
     #[cfg(feature = "std")]
     use frame_support::traits::GenesisBuild;
