@@ -122,7 +122,7 @@ pub mod pallet {
             let vault = vault::Pallet::<T>::get_active_vault_by_id(&vault_id)?;
             ensure!(
                 redeem_amount <= vault.issued_tokens,
-                Error::<T>::InsufficiantAssetsFunds
+                Error::<T>::VaultTokenInsufficiant
             );
 
             // Only allow requests of amount above above the minimum
@@ -142,6 +142,12 @@ pub mod pallet {
 
             // Lock redeem's xtbc
             Self::lock_xbtc(&sender, redeem_amount)?;
+
+            <vault::Vaults<T>>::mutate(&vault_id, |vault| {
+                if let Some(vault) = vault {
+                    vault.to_be_redeemed_tokens += redeem_amount;
+                }
+            });
 
             // Generate redeem request identify and insert it to record
             let request_id = Self::get_next_request_id();
@@ -170,10 +176,10 @@ pub mod pallet {
             request_id: RequestId,
             _tx_id: Vec<u8>,
             _merkle_proof: Vec<u8>,
-            _raw_tx: Transaction,
+            _raw_tx: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             Self::ensure_chain_correct_status()?;
-            let sender = ensure_signed(origin)?;
+            ensure_signed(origin)?;
 
             // Ensure this is the correct vault
             let request =
@@ -182,12 +188,19 @@ pub mod pallet {
             // Ensure this redeem not expired
             let height = <frame_system::Pallet<T>>::block_number();
             let expired_time = <RedeemRequestExpiredTime<T>>::get();
+
             ensure!(
                 height - request.open_time < expired_time,
                 Error::<T>::RedeemRequestExpired
             );
 
             // TODO verify tx
+
+            <vault::Vaults<T>>::mutate(&request.vault, |vault| {
+                if let Some(vault) = vault {
+                    vault.issued_tokens -= request.amount;
+                }
+            });
 
             // Decrase user's XBTC amount.
             Self::burn_xbtc(&request.requester, request.amount)?;
@@ -343,6 +356,8 @@ pub mod pallet {
         BridgeStatusError,
         /// Invalid btc address
         InvalidBtcAddress,
+        /// Vault issue token insufficient
+        VaultTokenInsufficiant,
     }
 
     /// Redeem fee when use request redeem

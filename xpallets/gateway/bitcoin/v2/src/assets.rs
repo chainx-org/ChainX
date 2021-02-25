@@ -191,6 +191,20 @@ pub mod pallet {
             Ok(().into())
         }
 
+        /// Force update the exchange rate expired period.
+        #[pallet::weight(0)]
+        pub(crate) fn force_update_exchange_rate_expired_period(
+            origin: OriginFor<T>,
+            expired_period: BlockNumberFor<T>,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            ExchangeRateExpiredPeriod::<T>::put(expired_period);
+            Self::deposit_event(Event::<T>::ExchangeRateExpiredPeriodForceUpdated(
+                expired_period,
+            ));
+            Ok(().into())
+        }
+
         /// Force update oracles.
         #[pallet::weight(0)]
         pub(crate) fn force_update_oracles(
@@ -217,6 +231,8 @@ pub mod pallet {
         InsufficientCollateral,
         /// Bridge was shutdown or in error.
         BridgeNotRunning,
+        /// Try to calculate collateral ratio while has no issued_tokens
+        NoIssuedTokens,
     }
 
     /// Events for assets module
@@ -233,6 +249,8 @@ pub mod pallet {
         CollateralSlashed(T::AccountId, T::AccountId, BalanceOf<T>),
         // The collateral was released to the user successfully. [who, amount]
         CollateralReleased(T::AccountId, BalanceOf<T>),
+        // Update `ExchangeRateExpiredPeriod`
+        ExchangeRateExpiredPeriodForceUpdated(BlockNumberFor<T>),
     }
 
     /// Total collateral
@@ -378,7 +396,7 @@ pub mod pallet {
         ) -> Result<u16, DispatchError> {
             let issued_tokens = issued_tokens.saturated_into::<u128>();
             let collateral = collateral.saturated_into::<u128>();
-            ensure!(issued_tokens != 0, Error::<T>::ArithmeticError);
+            ensure!(issued_tokens != 0, Error::<T>::NoIssuedTokens);
 
             let exchange_rate: TradingPrice = Self::exchange_rate();
             let equivalence_collateral = exchange_rate
@@ -425,6 +443,10 @@ pub mod pallet {
                     <BridgeStatus<T>>::put(Status::Error(error_codes))
                 }
             }
+        }
+
+        pub(crate) fn reserved_balance_of(who: &T::AccountId) -> BalanceOf<T> {
+            CurrencyOf::<T>::reserved_balance(who)
         }
     }
 }

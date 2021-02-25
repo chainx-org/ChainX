@@ -49,13 +49,15 @@ pub mod pallet {
         dispatch::DispatchResultWithPostInfo,
         ensure,
         storage::types::{StorageMap, StorageValue, ValueQuery},
-        traits::{Hooks, IsType},
+        traits::{Get, Hooks, IsType},
         Twox64Concat,
     };
     use frame_system::{
         ensure_root, ensure_signed,
         pallet_prelude::{BlockNumberFor, OriginFor},
     };
+
+    use chainx_primitives::AssetId;
 
     use crate::assets::{pallet as assets, pallet::BalanceOf};
     use crate::vault::pallet as vault;
@@ -76,6 +78,7 @@ pub mod pallet {
     #[pallet::config]
     pub trait Config: frame_system::Config + vault::Config {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type TargetAssetId: Get<AssetId>;
     }
 
     #[pallet::hooks]
@@ -95,17 +98,29 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             assets::Pallet::<T>::ensure_bridge_running()?;
 
-            //TODO(wangyafei): should check vault's collateral ratio, cause the `IssueRequest` in
-            // the extrinsic poll were not considered when match vault.
-
             let sender = ensure_signed(origin)?;
             let height = <frame_system::Pallet<T>>::block_number();
             let vault = vault::Pallet::<T>::get_active_vault_by_id(&vault_id)?;
+            let vault_collateral = assets::Pallet::<T>::reserved_balance_of(&vault_id);
+
+            // check if vault is rich enough
+            let collateral_ratio_after_requesting =
+                assets::Pallet::<T>::calculate_collateral_ratio(
+                    vault.issued_tokens + vault.to_be_issued_tokens + btc_amount,
+                    vault_collateral,
+                )?;
+            ensure!(
+                collateral_ratio_after_requesting >= vault::Pallet::<T>::secure_threshold(),
+                Error::<T>::InsecureVault
+            );
+
             let required_collateral = Self::calculate_required_collateral(btc_amount)?;
             ensure!(
                 collateral >= required_collateral,
                 Error::<T>::InsufficientGriefingCollateral
             );
+
+            // insert `IssueRequest` to request map
             assets::Pallet::<T>::lock_collateral(&sender, collateral)?;
             let request_id = Self::get_next_request_id();
             Self::insert_issue_request(
@@ -135,9 +150,10 @@ pub mod pallet {
             request_id: RequestId,
             _tx_id: Vec<u8>,
             _merkle_proof: Vec<u8>,
-            _raw_tx: Transaction,
+            _raw_tx: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             assets::Pallet::<T>::ensure_bridge_running()?;
+
             let _sender = ensure_signed(origin)?;
 
             //TODO(wangyafei): verify tx
@@ -145,15 +161,19 @@ pub mod pallet {
             let issue_request = Self::get_issue_request_by_id(request_id)
                 .ok_or(Error::<T>::IssueRequestNotFound)?;
 
+            ensure!(
+                !issue_request.completed && !issue_request.cancelled,
+                Error::<T>::IssueRequestDealt
+            );
+
             let height = frame_system::Pallet::<T>::block_number();
             ensure!(
                 height - issue_request.open_time < Self::issue_request_expired_time(),
                 Error::<T>::IssueRequestExpired
             );
 
-            // TODO(wangyafei): add associated type.
             <xpallet_assets::Module<T>>::issue(
-                &1,
+                &T::TargetAssetId::get(),
                 &issue_request.requester,
                 issue_request.btc_amount,
             )?;
@@ -167,6 +187,12 @@ pub mod pallet {
                 &issue_request.requester,
                 issue_request.griefing_collateral,
             )?;
+
+            IssueRequests::<T>::mutate(request_id, |issue_request| {
+                if let Some(issue_request) = issue_request {
+                    issue_request.completed = true
+                }
+            });
             Self::deposit_event(Event::<T>::IssueRequestExcuted);
             Ok(().into())
         }
@@ -176,9 +202,15 @@ pub mod pallet {
             origin: OriginFor<T>,
             request_id: RequestId,
         ) -> DispatchResultWithPostInfo {
-            let _ = ensure_signed(origin)?;
+            ensure_signed(origin)?;
+
             let issue_request = Self::get_issue_request_by_id(request_id)
                 .ok_or(Error::<T>::IssueRequestNotFound)?;
+            ensure!(
+                !issue_request.completed && !issue_request.cancelled,
+                Error::<T>::IssueRequestDealt
+            );
+
             let height = <frame_system::Pallet<T>>::block_number();
             let expired_time = <IssueRequestExpiredTime<T>>::get();
             ensure!(
@@ -204,6 +236,13 @@ pub mod pallet {
                     vault.to_be_issued_tokens -= issue_request.btc_amount;
                 }
             });
+
+            IssueRequests::<T>::mutate(request_id, |issue_request| {
+                if let Some(issue_request) = issue_request {
+                    issue_request.cancelled = true
+                }
+            });
+
             Self::deposit_event(Event::<T>::IssueRequestCancelled);
             Ok(().into())
         }
@@ -236,16 +275,20 @@ pub mod pallet {
     /// Error for issue module
     #[pallet::error]
     pub enum Error<T> {
-        /// Collateral in request is less than griefing collateral.
+        /// Collateral in request is less than griefing collateral
         InsufficientGriefingCollateral,
         /// No such `IssueRequest`
         IssueRequestNotFound,
-        /// `IssueRequest` cancelled when it's not expired.
+        /// `IssueRequest` cancelled when it's not expired
         IssueRequestNotExpired,
-        /// Value to be set is invalid.
+        /// Value to be set is invalid
         InvalidConfigValue,
-        /// Tried to execute `IssueRequest` while  it's expired.
+        /// Tried to execute `IssueRequest` while  it's expired
         IssueRequestExpired,
+        /// Vault colateral ratio was below than `SecureThreshold`
+        InsecureVault,
+        /// `IssueRequest` has been excuted or cancelled
+        IssueRequestDealt,
     }
 
     /// Events for issue module
