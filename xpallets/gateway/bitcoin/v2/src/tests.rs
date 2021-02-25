@@ -199,10 +199,6 @@ fn test_issue_request() {
             issue::Error::<Test>::InsufficientGriefingCollateral
         );
         assert_ok!(Issue::request_issue(Origin::signed(2), 3, 1, 300));
-        // assert_err!(
-        //     Issue::request_issue(Origin::signed(2), 3, 2, 400),
-        //     issue::Error::<Test>::InsecureVault
-        // );
 
         let reserved_balance = <<Test as xpallet_assets::Config>::Currency>::reserved_balance(2);
         assert_eq!(reserved_balance, 300);
@@ -226,6 +222,14 @@ fn test_issue_request() {
             vec![],
             vec![],
         ));
+
+        let user_xbtc = xpallet_assets::Module::<Test>::asset_balance_of(
+            &issue_request.requester,
+            &BridgeTargetAssetId::get(),
+            xpallet_assets::AssetType::Usable,
+        );
+        assert_eq!(user_xbtc, 1);
+
         let vault = Vault::get_vault_by_id(&issue_request.vault).unwrap();
         assert_eq!(vault.issued_tokens, issue_request.btc_amount);
         assert_eq!(vault.to_be_issued_tokens, 0);
@@ -321,7 +325,6 @@ fn test_redeem_request() {
         .unwrap();
 
         Issue::request_issue(Origin::signed(2), 3, 1, 100).unwrap();
-
         assert_err!(
             redeem::Pallet::<Test>::request_redeem(
                 Origin::signed(2),
@@ -342,34 +345,16 @@ fn test_redeem_request() {
             1,
             "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".as_bytes().to_vec()
         ));
-    })
-}
 
-#[test]
-fn test_liquidation_redeem() {
-    use super::assets::types::TradingPrice;
-    ExtBuilder::build(BuildConfig::default()).execute_with(|| {
-        t_register_vault(1, 1000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
-        Issue::update_expired_time(Origin::root(), 10u64).unwrap();
-        Issue::update_griefing_fee(Origin::root(), Percent::from_parts(10)).unwrap();
-        assets::Pallet::<Test>::force_update_exchange_rate(
-            Origin::root(),
-            TradingPrice {
-                price: 1,
-                decimal: 2,
-            },
-        )
-        .unwrap();
+        let vault = Vault::get_vault_by_id(&3).unwrap();
+        assert_eq!(vault.to_be_redeemed_tokens, 1);
 
-        assert_ok!(Issue::request_issue(Origin::signed(2), 1, 1, 100));
-
-        let reserved_balance = <<Test as xpallet_assets::Config>::Currency>::reserved_balance(2);
-        assert_eq!(reserved_balance, 100);
-
-        assert_err!(
-            redeem::Pallet::<Test>::liquidation_redeem(Origin::signed(2), 1,),
-            redeem::Error::<Test>::InsufficiantAssetsFunds
+        let requester_locked_xbtc = xpallet_assets::Module::<Test>::asset_balance_of(
+            &2,
+            &BridgeTargetAssetId::get(),
+            xpallet_assets::AssetType::Locked,
         );
+        assert_eq!(requester_locked_xbtc, 1);
     })
 }
 
