@@ -5,7 +5,6 @@ on:
       - "btc-bridge-2.0"
   workflow_dispatch:
 
-
 jobs:
   rust:
     name: doc
