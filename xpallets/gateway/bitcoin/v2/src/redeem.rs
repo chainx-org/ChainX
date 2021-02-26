@@ -272,6 +272,7 @@ pub mod pallet {
                     &request.requester,
                     punishment_fee,
                 )?;
+                assets::Pallet::<T>::release_collateral(&request.requester, punishment_fee)?;
             }
 
             Self::remove_redeem_request(request_id, RedeemRequestStatus::Completed);

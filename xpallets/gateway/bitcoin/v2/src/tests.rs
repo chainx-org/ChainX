@@ -342,6 +342,8 @@ fn test_redeem_request() {
             1,
             "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".as_bytes().to_vec()
         ));
+    })
+}
 
 #[test]
 fn test_cancel_redeem() {
@@ -366,7 +368,7 @@ fn test_cancel_redeem() {
             Origin::signed(2),
             1,
             1,
-            "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".parse().unwrap(),
+            "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".as_bytes().to_vec(),
         );
 
         let height = <frame_system::Pallet<Test>>::block_number();
@@ -404,7 +406,7 @@ fn test_execute_redeem() {
                 Origin::signed(2),
                 1,
                 1000,
-                "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".parse().unwrap()
+                "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".as_bytes().to_vec()
             ),
             redeem::Error::<Test>::InsufficiantAssetsFunds
         );
@@ -413,7 +415,7 @@ fn test_execute_redeem() {
             Origin::signed(2),
             1,
             1,
-            "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".parse().unwrap()
+            "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".as_bytes().to_vec()
         ));
 
         assert_ok!(redeem::Pallet::<Test>::execute_redeem(
