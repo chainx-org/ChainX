@@ -12,10 +12,10 @@ jobs:
   rust:
     name: doc
     runs-on: "ubuntu-latest"
-  steps:
-    - name: install
-      run: cargo install --version $GHP_UPLOAD_VERSION cargo-ghp-upload
+   steps:
+      - name: install
+        run: cargo install --version $GHP_UPLOAD_VERSION cargo-ghp-upload
 
-  steps:
-    - name: deploy
-      run: cargo doc --verbose && cargo ghp-upload -vv
+    steps:
+      - name: deploy
+        run: cargo doc --verbose && cargo ghp-upload -vv
