@@ -1,0 +1,21 @@
+name: pages
+on:
+  push:
+    branches:
+      - "btc-bridge-2.0"
+  workflow_dispatch:
+
+env:
+  GHP_UPLOAD_VERSION:0.3.2
+
+job:
+  rust:
+    name: doc
+    runs-on: "ubuntu-latest"
+  steps:
+    - name: install
+      run: cargo install --version $GHP_UPLOAD_VERSION cargo-ghp-upload
+
+  steps:
+    - name: deploy
+      run: cargo doc --verbose && cargo ghp-upload -vv
