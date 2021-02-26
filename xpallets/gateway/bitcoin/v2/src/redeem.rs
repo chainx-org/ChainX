@@ -443,7 +443,16 @@ pub mod pallet {
 
         /// Burn XBTC
         fn burn_xbtc(user: &T::AccountId, count: BalanceOf<T>) -> DispatchResultWithPostInfo {
-            xpallet_assets::Module::<T>::destroy_reserved_withdrawal(&ASSET_ID, &user, count)?;
+            xpallet_assets::Module::<T>::move_balance(
+                &ASSET_ID,
+                user,
+                AssetType::Locked,
+                user,
+                AssetType::ReservedWithdrawal,
+                count,
+            )
+            .map_err(|_| Error::<T>::InsufficiantAssetsFunds)?;
+            xpallet_assets::Module::<T>::destroy_reserved_withdrawal(&ASSET_ID, user, count)?;
             Ok(().into())
         }
 

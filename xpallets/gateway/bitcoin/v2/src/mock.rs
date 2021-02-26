@@ -106,6 +106,7 @@ construct_runtime! {
         {
             System: frame_system::{Module, Call, Event<T>},
             Balances: pallet_balances::{Module, Call, Event<T>},
+            XAssets: xpallet_assets::{Module,Call, Event<T>, Config<T>},
             Issue: issue::{Module, Call, Event<T>, Config<T>},
             Vault: vault::{Module, Call, Event<T>, Config<T>},
             Assets: assets::{Module, Call, Event<T>,Config<T>},
