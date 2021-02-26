@@ -1,9 +1,5 @@
 name: pages
-on:
-  push:
-    branches:
-      - "btc-bridge-2.0"
-  workflow_dispatch:
+on: workflow_dispatch
 
 jobs:
   rust:
