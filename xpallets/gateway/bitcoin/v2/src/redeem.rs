@@ -152,6 +152,7 @@ pub mod pallet {
                     requester: sender,
                     btc_address: btc_addr,
                     amount: redeem_amount,
+                    // TODO(wangyafei): use storage value
                     redeem_fee: Default::default(),
                     status: Default::default(),
                     reimburse: false,

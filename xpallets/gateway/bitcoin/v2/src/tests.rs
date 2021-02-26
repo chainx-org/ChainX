@@ -1,3 +1,4 @@
+use redeem::RedeemRequests;
 use sp_arithmetic::Percent;
 
 use frame_support::traits::Hooks;
@@ -6,6 +7,8 @@ use frame_support::{
     dispatch::{DispatchResult, DispatchResultWithPostInfo},
 };
 use frame_system::RawOrigin;
+
+use crate::redeem::types::RedeemRequestStatus;
 
 use super::assets::pallet as assets;
 use super::issue::pallet as issue;
@@ -350,6 +353,10 @@ fn test_redeem_request() {
         let vault = Vault::get_vault_by_id(&3).unwrap();
         assert_eq!(vault.to_be_redeemed_tokens, 1);
 
+        let redeem_request = RedeemRequests::<Test>::get(&1).unwrap();
+        assert_eq!(redeem_request.amount, 1);
+        assert_eq!(redeem_request.status, RedeemRequestStatus::Processing);
+
         let requester_locked_xbtc = xpallet_assets::Module::<Test>::asset_balance_of(
             &2,
             &BridgeTargetAssetId::get(),
@@ -364,6 +371,10 @@ fn test_redeem_request() {
             vec![],
             vec![]
         ));
+
+        let redeem_request = RedeemRequests::<Test>::get(&1).unwrap();
+        assert_eq!(redeem_request.amount, 1);
+        assert_eq!(redeem_request.status, RedeemRequestStatus::Completed);
 
         // check requester assets after executing
         let requester_locked_xbtc = xpallet_assets::Module::<Test>::asset_balance_of(
