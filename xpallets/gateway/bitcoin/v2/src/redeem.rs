@@ -11,8 +11,8 @@ pub mod types {
     pub enum RedeemRequestStatus {
         /// Redeem is accepted and vault will transfer btc
         Processing,
-        /// Redeem is cancled by redeemer
-        Canceled,
+        /// Redeem is cancelled by redeemer
+        Cancelled,
         /// Redeem is compeleted
         Completed,
     }
@@ -152,6 +152,7 @@ pub mod pallet {
                     requester: sender,
                     btc_address: btc_addr,
                     amount: redeem_amount,
+                    // TODO(wangyafei): use storage value
                     redeem_fee: Default::default(),
                     status: Default::default(),
                     reimburse: false,
@@ -258,8 +259,8 @@ pub mod pallet {
                 Self::release_xbtc(&request.requester, request.amount)?;
             }
 
-            Self::remove_redeem_request(request_id, RedeemRequestStatus::Cancled);
-            Self::deposit_event(Event::<T>::RedeemCancled);
+            Self::remove_redeem_request(request_id, RedeemRequestStatus::Cancelled);
+            Self::deposit_event(Event::<T>::RedeemCancelled);
             Ok(().into())
         }
 
@@ -314,8 +315,8 @@ pub mod pallet {
         ChainStatusError,
         /// Redeem request is accepted
         NewRedeemRequest,
-        /// Cancle redeem is accepted
-        RedeemCancled,
+        /// Cancel redeem is accepted
+        RedeemCancelled,
         /// Liquidation redeem is accepted
         RedeemLiquidated,
         /// Execute redeem is accepted
@@ -443,7 +444,16 @@ pub mod pallet {
 
         /// Burn XBTC
         fn burn_xbtc(user: &T::AccountId, count: BalanceOf<T>) -> DispatchResultWithPostInfo {
-            xpallet_assets::Module::<T>::destroy_reserved_withdrawal(&ASSET_ID, &user, count)?;
+            xpallet_assets::Module::<T>::move_balance(
+                &ASSET_ID,
+                user,
+                AssetType::Locked,
+                user,
+                AssetType::ReservedWithdrawal,
+                count,
+            )
+            .map_err(|_| Error::<T>::InsufficiantAssetsFunds)?;
+            xpallet_assets::Module::<T>::destroy_reserved_withdrawal(&ASSET_ID, user, count)?;
             Ok(().into())
         }
 
