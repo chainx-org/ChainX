@@ -228,7 +228,7 @@ fn test_issue_request() {
             &BridgeTargetAssetId::get(),
             xpallet_assets::AssetType::Usable,
         );
-        assert_eq!(user_xbtc, 1);
+        assert_eq!(user_xbtc, 201);
 
         let vault = Vault::get_vault_by_id(&issue_request.vault).unwrap();
         assert_eq!(vault.issued_tokens, issue_request.btc_amount);
