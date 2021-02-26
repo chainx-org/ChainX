@@ -1,8 +1,3 @@
-use sp_std::str::FromStr;
-
-use light_bitcoin::chain::Transaction;
-use light_bitcoin::keys::Address;
-
 use sp_arithmetic::Percent;
 
 use frame_support::traits::Hooks;
@@ -204,10 +199,6 @@ fn test_issue_request() {
             issue::Error::<Test>::InsufficientGriefingCollateral
         );
         assert_ok!(Issue::request_issue(Origin::signed(2), 3, 1, 300));
-        // assert_err!(
-        //     Issue::request_issue(Origin::signed(2), 3, 2, 400),
-        //     issue::Error::<Test>::InsecureVault
-        // );
 
         let reserved_balance = <<Test as xpallet_assets::Config>::Currency>::reserved_balance(2);
         assert_eq!(reserved_balance, 300);
@@ -231,6 +222,14 @@ fn test_issue_request() {
             vec![],
             vec![],
         ));
+
+        let user_xbtc = xpallet_assets::Module::<Test>::asset_balance_of(
+            &issue_request.requester,
+            &BridgeTargetAssetId::get(),
+            xpallet_assets::AssetType::Usable,
+        );
+        assert_eq!(user_xbtc, 1);
+
         let vault = Vault::get_vault_by_id(&issue_request.vault).unwrap();
         assert_eq!(vault.issued_tokens, issue_request.btc_amount);
         assert_eq!(vault.to_be_issued_tokens, 0);
@@ -332,7 +331,7 @@ fn test_redeem_request() {
                 Origin::signed(2),
                 3,
                 1000,
-                "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".parse().unwrap()
+                "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".as_bytes().to_vec()
             ),
             redeem::Error::<Test>::InsufficiantAssetsFunds
         );
@@ -341,10 +340,8 @@ fn test_redeem_request() {
             Origin::signed(2),
             1,
             1,
-            "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".parse().unwrap()
+            "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".as_bytes().to_vec()
         ));
-    })
-}
 
 #[test]
 fn test_cancel_redeem() {
