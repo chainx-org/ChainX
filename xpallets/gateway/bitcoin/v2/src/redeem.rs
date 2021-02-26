@@ -266,13 +266,14 @@ pub mod pallet {
                 )?;
                 assets::Pallet::<T>::release_collateral(&request.requester, worth_pcx)?;
             } else {
-                // Punish fee give redeemer
+                // Punish fee and redeem fee give redeemer
+                let total_fee = request.redeem_fee + punishment_fee;
                 assets::Pallet::<T>::slash_collateral(
                     &request.vault,
                     &request.requester,
-                    punishment_fee,
+                    total_fee,
                 )?;
-                assets::Pallet::<T>::release_collateral(&request.requester, punishment_fee)?;
+                assets::Pallet::<T>::release_collateral(&request.requester, total_fee)?;
             }
 
             Self::remove_redeem_request(request_id, RedeemRequestStatus::Completed);
