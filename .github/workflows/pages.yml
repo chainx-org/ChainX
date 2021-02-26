@@ -8,7 +8,7 @@ on:
 env:
   GHP_UPLOAD_VERSION:0.3.2
 
-job:
+jobs:
   rust:
     name: doc
     runs-on: "ubuntu-latest"
