@@ -314,6 +314,7 @@ fn test_redeem_request() {
         t_register_vault(3, 30000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
         Issue::update_expired_time(Origin::root(), 10u64).unwrap();
         Issue::update_griefing_fee(Origin::root(), Percent::from_parts(10)).unwrap();
+        Redeem::update_expired_time(Origin::root(), 10u64).unwrap();
 
         Assets::force_update_exchange_rate(
             Origin::root(),
@@ -355,6 +356,26 @@ fn test_redeem_request() {
             xpallet_assets::AssetType::Locked,
         );
         assert_eq!(requester_locked_xbtc, 1);
+
+        assert_ok!(Redeem::execute_redeem(
+            Origin::signed(1),
+            1,
+            vec![],
+            vec![],
+            vec![]
+        ));
+
+        // check requester assets after executing
+        let requester_locked_xbtc = xpallet_assets::Module::<Test>::asset_balance_of(
+            &2,
+            &BridgeTargetAssetId::get(),
+            xpallet_assets::AssetType::Locked,
+        );
+        assert_eq!(requester_locked_xbtc, 0);
+
+        let vault = Vault::get_vault_by_id(&3).unwrap();
+        assert_eq!(vault.to_be_redeemed_tokens, 0);
+        assert_eq!(vault.issued_tokens, 0);
     })
 }
 

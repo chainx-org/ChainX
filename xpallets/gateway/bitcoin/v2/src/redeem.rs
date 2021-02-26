@@ -11,8 +11,8 @@ pub mod types {
     pub enum RedeemRequestStatus {
         /// Redeem is accepted and vault will transfer btc
         Processing,
-        /// Redeem is cancled by redeemer
-        Canceled,
+        /// Redeem is cancelled by redeemer
+        Cancelled,
         /// Redeem is compeleted
         Completed,
     }
@@ -258,8 +258,8 @@ pub mod pallet {
                 Self::release_xbtc(&request.requester, request.amount)?;
             }
 
-            Self::remove_redeem_request(request_id, RedeemRequestStatus::Cancled);
-            Self::deposit_event(Event::<T>::RedeemCancled);
+            Self::remove_redeem_request(request_id, RedeemRequestStatus::Cancelled);
+            Self::deposit_event(Event::<T>::RedeemCancelled);
             Ok(().into())
         }
 
@@ -314,8 +314,8 @@ pub mod pallet {
         ChainStatusError,
         /// Redeem request is accepted
         NewRedeemRequest,
-        /// Cancle redeem is accepted
-        RedeemCancled,
+        /// Cancel redeem is accepted
+        RedeemCancelled,
         /// Liquidation redeem is accepted
         RedeemLiquidated,
         /// Execute redeem is accepted
