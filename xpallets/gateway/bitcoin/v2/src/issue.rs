@@ -57,7 +57,7 @@ pub mod pallet {
 
     use chainx_primitives::AssetId;
 
-    use crate::assets::{pallet as assets, pallet::BalanceOf};
+    use crate::pallet::{self as xbridge, BalanceOf};
     use crate::vault::pallet as vault;
 
     type IssueRequest<T> = super::types::IssueRequest<
@@ -94,16 +94,16 @@ pub mod pallet {
             btc_amount: BalanceOf<T>,
             collateral: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
-            assets::Pallet::<T>::ensure_bridge_running()?;
+            xbridge::Pallet::<T>::ensure_bridge_running()?;
 
             let sender = ensure_signed(origin)?;
             let height = <frame_system::Pallet<T>>::block_number();
             let vault = vault::Pallet::<T>::get_active_vault_by_id(&vault_id)?;
-            let vault_collateral = assets::Pallet::<T>::reserved_balance_of(&vault_id);
+            let vault_collateral = xbridge::Pallet::<T>::reserved_balance_of(&vault_id);
 
             // check if vault is rich enough
             let collateral_ratio_after_requesting =
-                assets::Pallet::<T>::calculate_collateral_ratio(
+                xbridge::Pallet::<T>::calculate_collateral_ratio(
                     vault.issued_tokens + vault.to_be_issued_tokens + btc_amount,
                     vault_collateral,
                 )?;
@@ -119,7 +119,7 @@ pub mod pallet {
             );
 
             // insert `IssueRequest` to request map
-            assets::Pallet::<T>::lock_collateral(&sender, collateral)?;
+            xbridge::Pallet::<T>::lock_collateral(&sender, collateral)?;
             let request_id = Self::get_next_request_id();
             Self::insert_issue_request(
                 request_id,
@@ -150,7 +150,7 @@ pub mod pallet {
             _merkle_proof: Vec<u8>,
             _raw_tx: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
-            assets::Pallet::<T>::ensure_bridge_running()?;
+            xbridge::Pallet::<T>::ensure_bridge_running()?;
 
             let _sender = ensure_signed(origin)?;
 
@@ -181,7 +181,7 @@ pub mod pallet {
                     vault.issued_tokens += issue_request.btc_amount;
                 }
             });
-            assets::Pallet::<T>::release_collateral(
+            xbridge::Pallet::<T>::release_collateral(
                 &issue_request.requester,
                 issue_request.griefing_collateral,
             )?;
@@ -218,13 +218,13 @@ pub mod pallet {
 
             let slashed_collateral = Self::calculate_slashed_collateral(issue_request.btc_amount)?;
 
-            <assets::Pallet<T>>::slash_collateral(
+            <xbridge::Pallet<T>>::slash_collateral(
                 &issue_request.vault,
                 &issue_request.requester,
                 slashed_collateral,
             )?;
 
-            <assets::Pallet<T>>::release_collateral(
+            <xbridge::Pallet<T>>::release_collateral(
                 &issue_request.requester,
                 issue_request.griefing_collateral,
             )?;
@@ -367,7 +367,7 @@ pub mod pallet {
         pub(crate) fn calculate_required_collateral(
             btc_amount: BalanceOf<T>,
         ) -> Result<BalanceOf<T>, DispatchError> {
-            let pcx_amount = <assets::Pallet<T>>::convert_to_pcx(btc_amount)?;
+            let pcx_amount = <xbridge::Pallet<T>>::convert_to_pcx(btc_amount)?;
             let percentage = Self::issue_griefing_fee();
             let griefing_fee = percentage.mul_ceil(pcx_amount);
             Ok(griefing_fee)
@@ -384,7 +384,7 @@ pub mod pallet {
         pub(crate) fn calculate_slashed_collateral(
             btc_amount: BalanceOf<T>,
         ) -> Result<BalanceOf<T>, DispatchError> {
-            let pcx_amount = assets::Pallet::<T>::convert_to_pcx(btc_amount)?;
+            let pcx_amount = xbridge::Pallet::<T>::convert_to_pcx(btc_amount)?;
             let secure_threshold = vault::Pallet::<T>::secure_threshold();
             let slashed_collateral: u32 =
                 (pcx_amount.saturated_into::<u128>() * secure_threshold as u128 / 100) as u32;

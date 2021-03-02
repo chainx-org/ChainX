@@ -6,10 +6,10 @@ use sp_runtime::{
 
 use frame_support::{construct_runtime, parameter_types, sp_io, traits::GenesisBuild};
 
-use super::assets::pallet as assets;
 use super::issue::pallet as issue;
 use super::redeem::pallet as redeem;
 use super::vault::pallet as vault;
+use crate::pallet as xbridge;
 
 /// The AccountId alias in this test module.
 pub(crate) type AccountId = u64;
@@ -78,10 +78,6 @@ impl xpallet_assets::Config for Test {
     type WeightInfo = ();
 }
 
-impl assets::Config for Test {
-    type Event = ();
-}
-
 impl vault::Config for Test {
     type Event = ();
 }
@@ -92,6 +88,10 @@ impl issue::Config for Test {
 }
 
 impl redeem::Config for Test {
+    type Event = ();
+}
+
+impl xbridge::Config for Test {
     type Event = ();
 }
 
@@ -109,8 +109,8 @@ construct_runtime! {
             XAssets: xpallet_assets::{Module,Call, Event<T>, Config<T>},
             Issue: issue::{Module, Call, Event<T>, Config<T>},
             Vault: vault::{Module, Call, Event<T>, Config<T>},
-            Assets: assets::{Module, Call, Event<T>,Config<T>},
             Redeem: redeem::{Module, Call, Event<T>},
+            XBridge: xbridge::{Module, Call, Event<T>},
         }
 }
 
@@ -139,14 +139,14 @@ impl ExtBuilder {
             exchange_decimal,
         }: BuildConfig,
     ) -> sp_io::TestExternalities {
-        use super::assets::types::TradingPrice;
+        use super::types::TradingPrice;
 
         let mut storage = frame_system::GenesisConfig::default()
             .build_storage::<Test>()
             .unwrap();
 
         let _ = GenesisBuild::<Test>::assimilate_storage(
-            &assets::GenesisConfig {
+            &xbridge::GenesisConfig {
                 exchange_rate: TradingPrice {
                     price: exchange_price,
                     decimal: exchange_decimal,

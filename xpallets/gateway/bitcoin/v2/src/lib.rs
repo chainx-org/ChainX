@@ -37,6 +37,9 @@ pub mod pallet {
     use sp_arithmetic::traits::SaturatedConversion;
     use sp_std::{marker::PhantomData, vec::Vec};
 
+    #[cfg(feature = "std")]
+    use frame_support::traits::GenesisBuild;
+
     use frame_support::{
         dispatch::{DispatchError, DispatchResult, DispatchResultWithPostInfo},
         ensure,
@@ -203,6 +206,32 @@ pub mod pallet {
     #[pallet::getter(fn exchange_rate_expired_period)]
     pub(crate) type ExchangeRateExpiredPeriod<T: Config> =
         StorageValue<_, BlockNumberFor<T>, ValueQuery>;
+
+    #[pallet::genesis_config]
+    pub struct GenesisConfig<T: Config> {
+        /// pcx/btc trading pair
+        pub exchange_rate: TradingPrice,
+        /// oracles allowed to update exchange_rate
+        pub oracle_accounts: Vec<T::AccountId>,
+    }
+
+    #[cfg(feature = "std")]
+    impl<T: Config> Default for GenesisConfig<T> {
+        fn default() -> Self {
+            Self {
+                exchange_rate: Default::default(),
+                oracle_accounts: Default::default(),
+            }
+        }
+    }
+
+    #[pallet::genesis_build]
+    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+        fn build(&self) {
+            <ExchangeRate<T>>::put(self.exchange_rate.clone());
+            <OracleAccounts<T>>::put(self.oracle_accounts.clone());
+        }
+    }
 
     impl<T: Config> Pallet<T> {
         pub fn convert_to_pcx(btc_amount: BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError> {

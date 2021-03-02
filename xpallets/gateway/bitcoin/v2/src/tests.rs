@@ -10,10 +10,11 @@ use frame_system::RawOrigin;
 
 use crate::redeem::types::RedeemRequestStatus;
 
-use super::assets::pallet as assets;
 use super::issue::pallet as issue;
 use super::redeem::pallet as redeem;
 use super::vault::pallet as vault;
+
+use crate::pallet as xbridge;
 
 use super::mock::*;
 
@@ -24,17 +25,17 @@ fn t_register_vault(id: u64, collateral: u128, addr: &str) -> DispatchResultWith
 fn run_to_block(index: u64) {
     while System::block_number() < index {
         Redeem::on_finalize(System::block_number());
-        Assets::on_finalize(System::block_number());
         Vault::on_finalize(System::block_number());
         Issue::on_finalize(System::block_number());
+        XBridge::on_finalize(System::block_number());
         System::on_finalize(System::block_number());
 
         System::set_block_number(System::block_number() + 1);
 
         System::on_initialize(System::block_number());
+        XBridge::on_initialize(System::block_number());
         Issue::on_initialize(System::block_number());
         Vault::on_initialize(System::block_number());
-        Assets::on_initialize(System::block_number());
         Redeem::on_initialize(System::block_number());
     }
 }
@@ -67,7 +68,7 @@ fn test_register_vault() {
     .execute_with(|| {
         assert_err!(
             t_register_vault(1, 20000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna"),
-            assets::Error::<Test>::InsufficientFunds
+            xbridge::Error::<Test>::InsufficientFunds
         );
         assert_err!(
             t_register_vault(1, 10, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna"),
@@ -107,7 +108,7 @@ fn test_add_extra_collateral() {
         ));
         assert_err!(
             Vault::add_extra_collateral(Origin::signed(1), 10000),
-            assets::Error::<Test>::InsufficientFunds
+            xbridge::Error::<Test>::InsufficientFunds
         );
         assert_ok!(Vault::add_extra_collateral(Origin::signed(1), 100));
         let free_balance = Balances::free_balance(1);
@@ -117,9 +118,9 @@ fn test_add_extra_collateral() {
 
 #[test]
 fn test_update_exchange_rate() {
-    use super::assets::types::TradingPrice;
+    use crate::types::TradingPrice;
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
-        let exchange_rate = Assets::exchange_rate();
+        let exchange_rate = XBridge::exchange_rate();
         assert_eq!(exchange_rate.price, 1);
         assert_eq!(exchange_rate.decimal, 3);
 
@@ -129,27 +130,27 @@ fn test_update_exchange_rate() {
         };
 
         assert_err!(
-            Assets::update_exchange_rate(Origin::signed(2), new_exchange_rate.clone()),
-            assets::Error::<Test>::OperationForbidden
+            XBridge::update_exchange_rate(Origin::signed(2), new_exchange_rate.clone()),
+            xbridge::Error::<Test>::OperationForbidden
         );
-        assert_ok!(Assets::force_update_oracles(Origin::root(), vec![0]));
-        assert_ok!(Assets::update_exchange_rate(
+        assert_ok!(XBridge::force_update_oracles(Origin::root(), vec![0]));
+        assert_ok!(XBridge::update_exchange_rate(
             Origin::signed(0),
             new_exchange_rate.clone()
         ));
-        let exchange_rate = Assets::exchange_rate();
+        let exchange_rate = XBridge::exchange_rate();
         assert_eq!(exchange_rate, new_exchange_rate);
     })
 }
 
 #[test]
 fn test_bridge_needs_to_update_exchange_rate() {
-    use crate::assets::types::{ErrorCode, Status, TradingPrice};
+    use crate::types::{ErrorCode, Status, TradingPrice};
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
-        assert_eq!(Assets::bridge_status(), Status::Running);
+        assert_eq!(XBridge::bridge_status(), Status::Running);
 
-        assets::ExchangeRateExpiredPeriod::<Test>::put(2);
-        Assets::force_update_exchange_rate(
+        xbridge::ExchangeRateExpiredPeriod::<Test>::put(2);
+        XBridge::force_update_exchange_rate(
             RawOrigin::Root.into(),
             TradingPrice {
                 price: 1u128,
@@ -157,16 +158,16 @@ fn test_bridge_needs_to_update_exchange_rate() {
             },
         )
         .unwrap();
-        assert_eq!(Assets::bridge_status(), Status::Running);
+        assert_eq!(XBridge::bridge_status(), Status::Running);
 
         run_to_block(3);
 
         assert_eq!(
-            Assets::bridge_status(),
+            XBridge::bridge_status(),
             Status::Error(ErrorCode::EXCHANGE_RATE_EXPIRED)
         );
 
-        Assets::force_update_exchange_rate(
+        XBridge::force_update_exchange_rate(
             RawOrigin::Root.into(),
             TradingPrice {
                 price: 1u128,
@@ -176,18 +177,18 @@ fn test_bridge_needs_to_update_exchange_rate() {
         .unwrap();
 
         run_to_block(4);
-        assert_eq!(Assets::bridge_status(), Status::Running);
+        assert_eq!(XBridge::bridge_status(), Status::Running);
     })
 }
 
 #[test]
 fn test_issue_request() {
-    use super::assets::types::TradingPrice;
+    use super::types::TradingPrice;
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
         t_register_vault(3, 30000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
         Issue::update_expired_time(Origin::root(), 10u64).unwrap();
         Issue::update_griefing_fee(Origin::root(), Percent::from_parts(10)).unwrap();
-        Assets::force_update_exchange_rate(
+        XBridge::force_update_exchange_rate(
             Origin::root(),
             TradingPrice {
                 price: 1,
@@ -263,8 +264,8 @@ fn test_cancel_issue_request() {
         System::set_block_number(20);
         assert_ok!(Issue::cancel_issue(Origin::signed(1), 1));
 
-        assert_eq!(<assets::CurrencyOf<Test>>::reserved_balance(3), 17000);
-        assert_eq!(<assets::CurrencyOf<Test>>::reserved_balance(1), 3000);
+        assert_eq!(<xbridge::CurrencyOf<Test>>::reserved_balance(3), 17000);
+        assert_eq!(<xbridge::CurrencyOf<Test>>::reserved_balance(1), 3000);
         assert_eq!(Balances::free_balance(1), 10000);
     })
 }
@@ -273,11 +274,11 @@ fn test_cancel_issue_request() {
 #[test]
 fn test_lock_collateral() {
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
-        assert_ok!(Assets::lock_collateral(&1, 200));
-        assert_eq!(<assets::CurrencyOf<Test>>::reserved_balance(1), 200);
+        assert_ok!(XBridge::lock_collateral(&1, 200));
+        assert_eq!(<xbridge::CurrencyOf<Test>>::reserved_balance(1), 200);
         assert_err!(
-            Assets::lock_collateral(&1, 100_000),
-            assets::Error::<Test>::InsufficientFunds
+            XBridge::lock_collateral(&1, 100_000),
+            xbridge::Error::<Test>::InsufficientFunds
         );
     });
 }
@@ -285,41 +286,41 @@ fn test_lock_collateral() {
 #[test]
 fn test_slash_collateral() {
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
-        Assets::lock_collateral(&1, 200).unwrap();
+        XBridge::lock_collateral(&1, 200).unwrap();
         assert_err!(
-            Assets::slash_collateral(&1, &2, 300),
-            assets::Error::<Test>::InsufficientCollateral
+            XBridge::slash_collateral(&1, &2, 300),
+            xbridge::Error::<Test>::InsufficientCollateral
         );
-        assert_ok!(Assets::slash_collateral(&1, &2, 200));
-        assert_eq!(<assets::CurrencyOf<Test>>::reserved_balance(1), 0);
-        assert_eq!(<assets::CurrencyOf<Test>>::reserved_balance(2), 200);
+        assert_ok!(XBridge::slash_collateral(&1, &2, 200));
+        assert_eq!(<xbridge::CurrencyOf<Test>>::reserved_balance(1), 0);
+        assert_eq!(<xbridge::CurrencyOf<Test>>::reserved_balance(2), 200);
     });
 }
 
 #[test]
 fn test_release_collateral() {
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
-        Assets::lock_collateral(&1, 200).unwrap();
-        assert_eq!(<assets::CurrencyOf<Test>>::reserved_balance(1), 200);
-        assert_ok!(Assets::release_collateral(&1, 200));
-        assert_eq!(<assets::CurrencyOf<Test>>::reserved_balance(1), 0);
+        XBridge::lock_collateral(&1, 200).unwrap();
+        assert_eq!(<xbridge::CurrencyOf<Test>>::reserved_balance(1), 200);
+        assert_ok!(XBridge::release_collateral(&1, 200));
+        assert_eq!(<xbridge::CurrencyOf<Test>>::reserved_balance(1), 0);
         assert_err!(
-            assets::Pallet::<Test>::release_collateral(&1, 200),
-            assets::Error::<Test>::InsufficientCollateral
+            xbridge::Pallet::<Test>::release_collateral(&1, 200),
+            xbridge::Error::<Test>::InsufficientCollateral
         );
     })
 }
 
 #[test]
 fn test_redeem_request() {
-    use super::assets::types::TradingPrice;
+    use super::types::TradingPrice;
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
         t_register_vault(3, 30000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
         Issue::update_expired_time(Origin::root(), 10u64).unwrap();
         Issue::update_griefing_fee(Origin::root(), Percent::from_parts(10)).unwrap();
         Redeem::update_expired_time(Origin::root(), 10u64).unwrap();
 
-        Assets::force_update_exchange_rate(
+        XBridge::force_update_exchange_rate(
             Origin::root(),
             TradingPrice {
                 price: 1,
@@ -401,6 +402,6 @@ fn test_calculate_required_collateral() {
 #[test]
 fn test_calculate_collateral_ratio() {
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
-        assert_ok!(Assets::calculate_collateral_ratio(10, 40000));
+        assert_ok!(XBridge::calculate_collateral_ratio(10, 40000));
     })
 }

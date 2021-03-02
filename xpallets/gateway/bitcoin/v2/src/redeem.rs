@@ -68,8 +68,8 @@ pub mod pallet {
 
     // Import vault,issue,assets code.
     use super::types::RedeemRequestStatus;
-    use crate::assets::{pallet as assets, pallet::BalanceOf};
     use crate::issue::pallet as issue;
+    use crate::pallet::{self as xbridge, BalanceOf};
     use crate::vault::pallet as vault;
 
     type RedeemRequest<T> = super::types::RedeemRequest<
@@ -236,7 +236,7 @@ pub mod pallet {
             );
 
             let vault = vault::Pallet::<T>::get_active_vault_by_id(&request.vault)?;
-            let worth_pcx = assets::Pallet::<T>::convert_to_pcx(request.amount)?;
+            let worth_pcx = xbridge::Pallet::<T>::convert_to_pcx(request.amount)?;
 
             // Punish vault fee
             let punishment_fee: BalanceOf<T> = 0.into();
@@ -250,7 +250,7 @@ pub mod pallet {
                 });
 
                 // Vault give pcx to sender
-                assets::Pallet::<T>::slash_collateral(
+                xbridge::Pallet::<T>::slash_collateral(
                     &request.vault,
                     &request.requester,
                     worth_pcx + punishment_fee,
@@ -284,11 +284,11 @@ pub mod pallet {
             Self::burn_xbtc(&sender, redeem_amount)?;
 
             // Catulate user's XBTC worth how much pcx, then give he the pcx
-            let worth_pcx = assets::Pallet::<T>::convert_to_pcx(redeem_amount)?;
+            let worth_pcx = xbridge::Pallet::<T>::convert_to_pcx(redeem_amount)?;
 
             // System vault give him pcx
             let system_vault = <vault::Liquidator<T>>::get();
-            assets::Pallet::<T>::slash_collateral(&system_vault.id, &sender, worth_pcx)?;
+            xbridge::Pallet::<T>::slash_collateral(&system_vault.id, &sender, worth_pcx)?;
 
             // Send msg to user
             Self::deposit_event(Event::<T>::RedeemLiquidated);
@@ -384,9 +384,9 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         /// Ensure the chain is in correct status
         fn ensure_chain_correct_status() -> DispatchResultWithPostInfo {
-            let bridge_status = <assets::BridgeStatus<T>>::get();
+            let bridge_status = <xbridge::BridgeStatus<T>>::get();
             ensure!(
-                bridge_status == crate::assets::types::Status::Running,
+                bridge_status == crate::types::Status::Running,
                 Error::<T>::BridgeStatusError
             );
             Ok(().into())

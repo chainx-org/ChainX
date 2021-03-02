@@ -77,7 +77,7 @@ pub mod pallet {
     use frame_system::pallet_prelude::{ensure_signed, BlockNumberFor, OriginFor};
 
     use super::types::*;
-    use crate::assets::pallet::{self as assets, BalanceOf};
+    use crate::pallet::{self as xbridge, BalanceOf};
 
     #[allow(type_alias_bounds)]
     type DefaultVault<T: Config> = Vault<T::AccountId, BlockNumberFor<T>, BalanceOf<T>>;
@@ -85,7 +85,7 @@ pub mod pallet {
     type AddrStr = Vec<u8>;
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + assets::Config {
+    pub trait Config: frame_system::Config + xbridge::Config {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
 
@@ -96,7 +96,7 @@ pub mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn on_finalize(_: BlockNumberFor<T>) {
-            if assets::Pallet::<T>::is_bridge_running() {
+            if xbridge::Pallet::<T>::is_bridge_running() {
                 for (id, vault) in <Vaults<T>>::iter() {
                     if Self::_check_vault_liquidated(&vault) {
                         let _ = Self::liquidate_vault(&id);
@@ -132,8 +132,8 @@ pub mod pallet {
                 !Self::btc_address_exists(&btc_address),
                 Error::<T>::BtcAddressOccupied
             );
-            <assets::Pallet<T>>::lock_collateral(&sender, collateral)?;
-            <assets::Pallet<T>>::increase_total_collateral(collateral);
+            <xbridge::Pallet<T>>::lock_collateral(&sender, collateral)?;
+            <xbridge::Pallet<T>>::increase_total_collateral(collateral);
             Self::insert_btc_address(&btc_address, sender.clone());
             let vault = Vault::new(sender.clone(), btc_address);
             Self::insert_vault(&sender, vault.clone());
@@ -149,8 +149,8 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             ensure!(Self::vault_exists(&sender), Error::<T>::VaultNotFound);
-            <assets::Pallet<T>>::lock_collateral(&sender, collateral)?;
-            <assets::Pallet<T>>::increase_total_collateral(collateral);
+            <xbridge::Pallet<T>>::lock_collateral(&sender, collateral)?;
+            <xbridge::Pallet<T>>::increase_total_collateral(collateral);
             Self::deposit_event(Event::ExtraCollateralAdded(sender, collateral));
             Ok(().into())
         }
@@ -333,8 +333,8 @@ pub mod pallet {
             })?;
 
             let vault = Self::get_vault_by_id(id)?;
-            let collateral = <assets::CurrencyOf<T>>::reserved_balance(&vault.id);
-            <assets::Pallet<T>>::slash_collateral(&vault.id, &Self::liquidator_id(), collateral)?;
+            let collateral = <xbridge::CurrencyOf<T>>::reserved_balance(&vault.id);
+            <xbridge::Pallet<T>>::slash_collateral(&vault.id, &Self::liquidator_id(), collateral)?;
 
             <Liquidator<T>>::mutate(|liquidator| {
                 liquidator.issued_tokens += vault.issued_tokens;
@@ -348,8 +348,8 @@ pub mod pallet {
             if vault.issued_tokens == 0.into() {
                 return false;
             }
-            let collateral = <assets::CurrencyOf<T>>::reserved_balance(&vault.id);
-            <assets::Pallet<T>>::calculate_collateral_ratio(vault.issued_tokens, collateral)
+            let collateral = <xbridge::CurrencyOf<T>>::reserved_balance(&vault.id);
+            <xbridge::Pallet<T>>::calculate_collateral_ratio(vault.issued_tokens, collateral)
                 .map(|collateral_ratio| collateral_ratio < Self::liquidation_threshold())
                 .unwrap_or(false)
         }
