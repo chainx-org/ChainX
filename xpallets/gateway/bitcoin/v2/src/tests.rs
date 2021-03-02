@@ -8,7 +8,7 @@ use frame_support::{
 };
 use frame_system::RawOrigin;
 
-use crate::redeem::types::RedeemRequestStatus;
+use crate::types::RedeemRequestStatus;
 
 use super::issue::pallet as issue;
 use super::redeem::pallet as redeem;

@@ -1,51 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub mod types {
-    use codec::{Decode, Encode};
-    use light_bitcoin::keys::Address;
-
-    pub type BtcAddress = Address;
-
-    #[derive(Encode, Decode, Clone, PartialEq)]
-    #[cfg_attr(feature = "std", derive(Debug))]
-    pub enum RedeemRequestStatus {
-        /// Redeem is accepted and vault will transfer btc
-        Processing,
-        /// Redeem is cancelled by redeemer
-        Cancelled,
-        /// Redeem is compeleted
-        Completed,
-    }
-
-    // Default value
-    impl Default for RedeemRequestStatus {
-        fn default() -> Self {
-            RedeemRequestStatus::Processing
-        }
-    }
-
-    #[derive(Encode, Decode, Default, Clone, PartialEq)]
-    #[cfg_attr(feature = "std", derive(Debug))]
-    pub struct RedeemRequest<AccountId, BlockNumber, XBTC, PCX> {
-        /// Vault id
-        pub(crate) vault: AccountId,
-        /// Block height when the redeem requested
-        pub(crate) open_time: BlockNumber,
-        /// Who requests redeem
-        pub(crate) requester: AccountId,
-        /// Vault's btc address
-        pub(crate) btc_address: BtcAddress,
-        /// Amount that user wants to redeem
-        pub(crate) amount: XBTC,
-        /// Redeem fee amount
-        pub(crate) redeem_fee: PCX,
-        /// Request status
-        pub(crate) status: RedeemRequestStatus,
-        /// If redeem is reimbursed by redeemer
-        pub(crate) reimburse: bool,
-    }
-}
-
 #[frame_support::pallet]
 #[allow(dead_code)]
 pub mod pallet {
@@ -67,12 +21,12 @@ pub mod pallet {
     use xpallet_assets::AssetType;
 
     // Import vault,issue,assets code.
-    use super::types::RedeemRequestStatus;
     use crate::issue::pallet as issue;
     use crate::pallet::{self as xbridge, BalanceOf};
+    use crate::types::RedeemRequestStatus;
     use crate::vault::pallet as vault;
 
-    type RedeemRequest<T> = super::types::RedeemRequest<
+    type RedeemRequest<T> = crate::types::RedeemRequest<
         <T as frame_system::Config>::AccountId,
         <T as frame_system::Config>::BlockNumber,
         BalanceOf<T>,

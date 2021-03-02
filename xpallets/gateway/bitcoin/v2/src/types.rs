@@ -1,9 +1,12 @@
 use bitflags::bitflags;
 use codec::{Decode, Encode};
+use light_bitcoin::keys::Address;
 use sp_runtime::RuntimeDebug;
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
+
+pub type BtcAddress = Address;
 
 /// Bridge status
 #[derive(Encode, Decode, RuntimeDebug, Clone, Eq, PartialEq)]
@@ -73,6 +76,125 @@ impl TradingPrice {
             .checked_mul(10_u128.pow(u32::from(self.decimal)))
             .and_then(|c| c.checked_div(self.price))
     }
+}
+
+#[derive(Encode, Decode, Clone, PartialEq)]
+#[cfg_attr(feature = "std", derive(Debug))]
+pub enum VaultStatus {
+    /// Vault is ready to serve issue and redeem request, unless it was banned.
+    Active,
+    /// Vault is under Liquidation
+    Liquidated,
+    /// Vault was committed has illegal behavior.
+    CommittedTheft,
+}
+
+impl Default for VaultStatus {
+    fn default() -> Self {
+        VaultStatus::Active
+    }
+}
+
+#[derive(Encode, Decode, Default, Clone, PartialEq)]
+#[cfg_attr(feature = "std", derive(Debug))]
+pub struct SystemVault<AccountId, Balance> {
+    pub(crate) id: AccountId,
+    pub(crate) to_be_issued_tokens: Balance,
+    pub(crate) issued_tokens: Balance,
+    pub(crate) to_be_redeemed_tokens: Balance,
+}
+
+#[derive(Encode, Decode, Default, Clone, PartialEq)]
+#[cfg_attr(feature = "std", derive(Debug))]
+pub struct Vault<AccountId, BlockNumber, Balance> {
+    /// Account identifier of the Vault
+    pub id: AccountId,
+    /// Number of tokens pending issue
+    pub to_be_issued_tokens: Balance,
+    /// Number of issued tokens
+    pub issued_tokens: Balance,
+    /// Number of tokens pending redeem
+    pub to_be_redeemed_tokens: Balance,
+    /// Bitcoin address of this Vault (P2PKH, P2SH, P2PKH, P2WSH)
+    pub wallet: BtcAddress,
+    /// Block height until which this Vault is banned from being
+    /// used for Issue, Redeem (except during automatic liquidation) and Replace .
+    pub banned_until: Option<BlockNumber>,
+    /// Current status of the vault
+    pub status: VaultStatus,
+}
+
+impl<AccountId: Default, BlockNumber: Default, Balance: Default>
+    Vault<AccountId, BlockNumber, Balance>
+{
+    pub(crate) fn new(id: AccountId, address: BtcAddress) -> Self {
+        Self {
+            id,
+            wallet: address,
+            ..Default::default()
+        }
+    }
+}
+
+#[derive(Encode, Decode, Clone, PartialEq)]
+#[cfg_attr(feature = "std", derive(Debug))]
+pub enum RedeemRequestStatus {
+    /// Redeem is accepted and vault will transfer btc
+    Processing,
+    /// Redeem is cancelled by redeemer
+    Cancelled,
+    /// Redeem is compeleted
+    Completed,
+}
+
+// Default value
+impl Default for RedeemRequestStatus {
+    fn default() -> Self {
+        RedeemRequestStatus::Processing
+    }
+}
+
+#[derive(Encode, Decode, Default, Clone, PartialEq)]
+#[cfg_attr(feature = "std", derive(Debug))]
+pub struct RedeemRequest<AccountId, BlockNumber, XBTC, PCX> {
+    /// Vault id
+    pub(crate) vault: AccountId,
+    /// Block height when the redeem requested
+    pub(crate) open_time: BlockNumber,
+    /// Who requests redeem
+    pub(crate) requester: AccountId,
+    /// Vault's btc address
+    pub(crate) btc_address: BtcAddress,
+    /// Amount that user wants to redeem
+    pub(crate) amount: XBTC,
+    /// Redeem fee amount
+    pub(crate) redeem_fee: PCX,
+    /// Request status
+    pub(crate) status: RedeemRequestStatus,
+    /// If redeem is reimbursed by redeemer
+    pub(crate) reimburse: bool,
+}
+
+/// Contains all informations while executing a issue request needed.
+#[derive(Encode, Decode, Default, Clone, PartialEq)]
+#[cfg_attr(feature = "std", derive(Debug, Deserialize, Serialize))]
+pub struct IssueRequest<AccountId, BlockNumber, XBTC, PCX> {
+    /// Vault id
+    pub(crate) vault: AccountId,
+    /// Block height when the issue requested
+    pub(crate) open_time: BlockNumber,
+    /// Who requests issue
+    pub(crate) requester: AccountId,
+    /// Vault's btc address
+    pub(crate) btc_address: BtcAddress,
+    /// Wheather request finished
+    pub(crate) completed: bool,
+    /// Wheather request cancelled
+    pub(crate) cancelled: bool,
+    /// Amount that user wants to issue
+    pub(crate) btc_amount: XBTC,
+    /// Collateral locked to avoid user griefing
+    pub(crate) griefing_collateral: PCX,
 }
 
 #[cfg(test)]

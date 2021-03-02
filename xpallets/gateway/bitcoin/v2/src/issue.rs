@@ -1,39 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub mod types {
-    use sp_std::default::Default;
-
-    use codec::{Decode, Encode};
-    use light_bitcoin::keys::Address;
-
-    #[cfg(feature = "std")]
-    use frame_support::{Deserialize, Serialize};
-
-    pub(crate) type BtcAddress = Address;
-
-    /// Contains all informations while executing a issue request needed.
-    #[derive(Encode, Decode, Default, Clone, PartialEq)]
-    #[cfg_attr(feature = "std", derive(Debug, Deserialize, Serialize))]
-    pub struct IssueRequest<AccountId, BlockNumber, XBTC, PCX> {
-        /// Vault id
-        pub(crate) vault: AccountId,
-        /// Block height when the issue requested
-        pub(crate) open_time: BlockNumber,
-        /// Who requests issue
-        pub(crate) requester: AccountId,
-        /// Vault's btc address
-        pub(crate) btc_address: BtcAddress,
-        /// Wheather request finished
-        pub(crate) completed: bool,
-        /// Wheather request cancelled
-        pub(crate) cancelled: bool,
-        /// Amount that user wants to issue
-        pub(crate) btc_amount: XBTC,
-        /// Collateral locked to avoid user griefing
-        pub(crate) griefing_collateral: PCX,
-    }
-}
-
 #[frame_support::pallet]
 #[allow(dead_code)]
 pub mod pallet {
@@ -60,7 +26,7 @@ pub mod pallet {
     use crate::pallet::{self as xbridge, BalanceOf};
     use crate::vault::pallet as vault;
 
-    type IssueRequest<T> = super::types::IssueRequest<
+    type IssueRequest<T> = crate::types::IssueRequest<
         <T as frame_system::Config>::AccountId,
         <T as frame_system::Config>::BlockNumber,
         BalanceOf<T>,
