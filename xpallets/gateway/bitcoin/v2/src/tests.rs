@@ -12,7 +12,6 @@ use crate::types::RedeemRequestStatus;
 
 use super::issue::pallet as issue;
 use super::redeem::pallet as redeem;
-use super::vault::pallet as vault;
 
 use crate::pallet as xbridge;
 

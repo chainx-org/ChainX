@@ -20,11 +20,9 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub mod assets;
 pub mod issue;
 pub mod redeem;
 pub(crate) mod types;
-pub mod vault;
 
 #[cfg(test)]
 mod mock;

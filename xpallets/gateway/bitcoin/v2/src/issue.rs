@@ -24,7 +24,6 @@ pub mod pallet {
     use chainx_primitives::AssetId;
 
     use crate::pallet::{self as xbridge, BalanceOf};
-    use crate::vault::pallet as vault;
 
     type IssueRequest<T> = crate::types::IssueRequest<
         <T as frame_system::Config>::AccountId,
