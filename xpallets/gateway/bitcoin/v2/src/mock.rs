@@ -6,7 +6,6 @@ use sp_runtime::{
 
 use frame_support::{construct_runtime, parameter_types, sp_io, traits::GenesisBuild};
 
-use super::issue::pallet as issue;
 use super::redeem::pallet as redeem;
 use crate::pallet as xbridge;
 
@@ -77,17 +76,13 @@ impl xpallet_assets::Config for Test {
     type WeightInfo = ();
 }
 
-impl issue::Config for Test {
-    type Event = ();
-    type TargetAssetId = BridgeTargetAssetId;
-}
-
 impl redeem::Config for Test {
     type Event = ();
 }
 
 impl xbridge::Config for Test {
     type Event = ();
+    type TargetAssetId = BridgeTargetAssetId;
 }
 
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -102,7 +97,6 @@ construct_runtime! {
             System: frame_system::{Module, Call, Event<T>},
             Balances: pallet_balances::{Module, Call, Event<T>},
             XAssets: xpallet_assets::{Module,Call, Event<T>, Config<T>},
-            Issue: issue::{Module, Call, Event<T>, Config<T>},
             Redeem: redeem::{Module, Call, Event<T>},
             XBridge: xbridge::{Module, Call, Event<T>, Config<T>},
         }
@@ -134,6 +128,7 @@ impl ExtBuilder {
         }: BuildConfig,
     ) -> sp_io::TestExternalities {
         use super::types::TradingPrice;
+        use sp_arithmetic::Percent;
 
         let mut storage = frame_system::GenesisConfig::default()
             .build_storage::<Test>()
@@ -151,6 +146,8 @@ impl ExtBuilder {
                 secure_threshold: 300,
                 premium_threshold: 250,
                 liquidation_threshold: 180,
+                issue_griefing_fee: Percent::from_parts(10),
+                expired_time: 3,
             },
             &mut storage,
         );

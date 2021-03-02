@@ -51,10 +51,7 @@ use xpallet_mining_asset::{MinerLedger, MiningAssetInfo, MiningDividendInfo};
 use xpallet_mining_staking::{NominatorInfo, NominatorLedger, ValidatorInfo};
 use xpallet_support::traits::MultisigAddressFor;
 
-use xpallet_gateway_bitcoin_v2::assets::pallet as xpallet_gateway_bitcoin_v2_assets;
-use xpallet_gateway_bitcoin_v2::issue::pallet as xpallet_gateway_bitcoin_v2_issue;
-use xpallet_gateway_bitcoin_v2::redeem::pallet as xpallet_gateway_bitcoin_v2_redeem;
-use xpallet_gateway_bitcoin_v2::vault::pallet as xpallet_gateway_bitcoin_v2_vault;
+use xpallet_gateway_bitcoin_v2::pallet as xpallet_gateway_bitcoin_v2;
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
