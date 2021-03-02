@@ -6,7 +6,6 @@ use sp_runtime::{
 
 use frame_support::{construct_runtime, parameter_types, sp_io, traits::GenesisBuild};
 
-use super::redeem::pallet as redeem;
 use crate::pallet as xbridge;
 
 /// The AccountId alias in this test module.
@@ -76,10 +75,6 @@ impl xpallet_assets::Config for Test {
     type WeightInfo = ();
 }
 
-impl redeem::Config for Test {
-    type Event = ();
-}
-
 impl xbridge::Config for Test {
     type Event = ();
     type TargetAssetId = BridgeTargetAssetId;
@@ -97,7 +92,6 @@ construct_runtime! {
             System: frame_system::{Module, Call, Event<T>},
             Balances: pallet_balances::{Module, Call, Event<T>},
             XAssets: xpallet_assets::{Module,Call, Event<T>, Config<T>},
-            Redeem: redeem::{Module, Call, Event<T>},
             XBridge: xbridge::{Module, Call, Event<T>, Config<T>},
         }
 }

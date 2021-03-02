@@ -1,4 +1,3 @@
-use redeem::RedeemRequests;
 use sp_arithmetic::Percent;
 
 use frame_support::traits::Hooks;
@@ -10,8 +9,6 @@ use frame_system::RawOrigin;
 
 use crate::types::RedeemRequestStatus;
 
-use super::redeem::pallet as redeem;
-
 use crate::pallet as xbridge;
 
 use super::mock::*;
@@ -22,7 +19,6 @@ fn t_register_vault(id: u64, collateral: u128, addr: &str) -> DispatchResultWith
 
 fn run_to_block(index: u64) {
     while System::block_number() < index {
-        Redeem::on_finalize(System::block_number());
         XBridge::on_finalize(System::block_number());
         System::on_finalize(System::block_number());
 
@@ -30,7 +26,6 @@ fn run_to_block(index: u64) {
 
         System::on_initialize(System::block_number());
         XBridge::on_initialize(System::block_number());
-        Redeem::on_initialize(System::block_number());
     }
 }
 
@@ -180,8 +175,8 @@ fn test_issue_request() {
     use super::types::TradingPrice;
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
         t_register_vault(3, 30000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
-        XBridge::update_expired_time(Origin::root(), 10u64).unwrap();
-        XBridge::update_griefing_fee(Origin::root(), Percent::from_parts(10)).unwrap();
+        XBridge::update_issue_expired_time(Origin::root(), 10u64).unwrap();
+        XBridge::update_issue_griefing_fee(Origin::root(), Percent::from_parts(10)).unwrap();
         XBridge::force_update_exchange_rate(
             Origin::root(),
             TradingPrice {
@@ -242,8 +237,9 @@ fn test_issue_request() {
 #[test]
 fn test_cancel_issue_request() {
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
-        XBridge::update_griefing_fee(RawOrigin::Root.into(), Percent::from_parts(10)).unwrap();
-        XBridge::update_expired_time(RawOrigin::Root.into(), 10).unwrap();
+        XBridge::update_issue_griefing_fee(RawOrigin::Root.into(), Percent::from_parts(10))
+            .unwrap();
+        XBridge::update_issue_expired_time(RawOrigin::Root.into(), 10).unwrap();
 
         t_register_vault(3, 20000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
         XBridge::request_issue(Origin::signed(1), 3, 1, 100).unwrap();
@@ -310,8 +306,8 @@ fn test_redeem_request() {
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
         t_register_vault(3, 30000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
         XBridge::update_expired_time(Origin::root(), 10u64).unwrap();
-        XBridge::update_griefing_fee(Origin::root(), Percent::from_parts(10)).unwrap();
-        Redeem::update_expired_time(Origin::root(), 10u64).unwrap();
+        XBridge::update_issue_griefing_fee(Origin::root(), Percent::from_parts(10)).unwrap();
+        XBridge::update_issue_expired_time(Origin::root(), 10u64).unwrap();
 
         XBridge::force_update_exchange_rate(
             Origin::root(),
@@ -324,20 +320,20 @@ fn test_redeem_request() {
 
         XBridge::request_issue(Origin::signed(2), 3, 1, 100).unwrap();
         assert_err!(
-            redeem::Pallet::<Test>::request_redeem(
+            XBridge::request_redeem(
                 Origin::signed(2),
                 3,
                 1000,
                 "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".as_bytes().to_vec()
             ),
-            redeem::Error::<Test>::InsufficiantAssetsFunds
+            xbridge::Error::<Test>::InsufficiantAssetsFunds
         );
 
         t_register_btc().unwrap();
         XBridge::execute_issue(Origin::signed(2), 1, vec![], vec![], vec![]).unwrap();
 
         // request redeem
-        assert_ok!(Redeem::request_redeem(
+        assert_ok!(XBridge::request_redeem(
             Origin::signed(2),
             3,
             1,
@@ -347,7 +343,7 @@ fn test_redeem_request() {
         let vault = XBridge::get_vault_by_id(&3).unwrap();
         assert_eq!(vault.to_be_redeemed_tokens, 1);
 
-        let redeem_request = RedeemRequests::<Test>::get(&1).unwrap();
+        let redeem_request = xbridge::RedeemRequests::<Test>::get(&1).unwrap();
         assert_eq!(redeem_request.amount, 1);
         assert_eq!(redeem_request.status, RedeemRequestStatus::Processing);
 
@@ -358,7 +354,7 @@ fn test_redeem_request() {
         );
         assert_eq!(requester_locked_xbtc, 1);
 
-        assert_ok!(Redeem::execute_redeem(
+        assert_ok!(XBridge::execute_redeem(
             Origin::signed(1),
             1,
             vec![],
@@ -366,7 +362,7 @@ fn test_redeem_request() {
             vec![]
         ));
 
-        let redeem_request = RedeemRequests::<Test>::get(&1).unwrap();
+        let redeem_request = xbridge::RedeemRequests::<Test>::get(&1).unwrap();
         assert_eq!(redeem_request.amount, 1);
         assert_eq!(redeem_request.status, RedeemRequestStatus::Completed);
 
@@ -387,7 +383,7 @@ fn test_redeem_request() {
 #[test]
 fn test_calculate_required_collateral() {
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
-        XBridge::update_griefing_fee(Origin::root(), Percent::from_parts(10)).unwrap();
+        XBridge::update_issue_griefing_fee(Origin::root(), Percent::from_parts(10)).unwrap();
         assert_eq!(XBridge::calculate_required_collateral(100).unwrap(), 10000);
     })
 }
