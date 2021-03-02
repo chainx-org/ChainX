@@ -8,7 +8,6 @@ use frame_support::{construct_runtime, parameter_types, sp_io, traits::GenesisBu
 
 use super::issue::pallet as issue;
 use super::redeem::pallet as redeem;
-use super::vault::pallet as vault;
 use crate::pallet as xbridge;
 
 /// The AccountId alias in this test module.
@@ -78,10 +77,6 @@ impl xpallet_assets::Config for Test {
     type WeightInfo = ();
 }
 
-impl vault::Config for Test {
-    type Event = ();
-}
-
 impl issue::Config for Test {
     type Event = ();
     type TargetAssetId = BridgeTargetAssetId;
@@ -108,9 +103,8 @@ construct_runtime! {
             Balances: pallet_balances::{Module, Call, Event<T>},
             XAssets: xpallet_assets::{Module,Call, Event<T>, Config<T>},
             Issue: issue::{Module, Call, Event<T>, Config<T>},
-            Vault: vault::{Module, Call, Event<T>, Config<T>},
             Redeem: redeem::{Module, Call, Event<T>},
-            XBridge: xbridge::{Module, Call, Event<T>},
+            XBridge: xbridge::{Module, Call, Event<T>, Config<T>},
         }
 }
 
@@ -152,6 +146,11 @@ impl ExtBuilder {
                     decimal: exchange_decimal,
                 },
                 oracle_accounts: Default::default(),
+                liquidator_id: 100,
+                minimium_vault_collateral,
+                secure_threshold: 300,
+                premium_threshold: 250,
+                liquidation_threshold: 180,
             },
             &mut storage,
         );
@@ -161,16 +160,6 @@ impl ExtBuilder {
         }
         .assimilate_storage(&mut storage);
 
-        let _ = GenesisBuild::<Test>::assimilate_storage(
-            &vault::GenesisConfig {
-                liquidator_id: 100,
-                minimium_vault_collateral,
-                secure_threshold: 300,
-                premium_threshold: 250,
-                liquidation_threshold: 180,
-            },
-            &mut storage,
-        );
         sp_io::TestExternalities::from(storage)
     }
 }

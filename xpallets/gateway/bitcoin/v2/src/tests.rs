@@ -19,13 +19,12 @@ use crate::pallet as xbridge;
 use super::mock::*;
 
 fn t_register_vault(id: u64, collateral: u128, addr: &str) -> DispatchResultWithPostInfo {
-    Vault::register_vault(Origin::signed(id), collateral, addr.as_bytes().to_vec())
+    XBridge::register_vault(Origin::signed(id), collateral, addr.as_bytes().to_vec())
 }
 
 fn run_to_block(index: u64) {
     while System::block_number() < index {
         Redeem::on_finalize(System::block_number());
-        Vault::on_finalize(System::block_number());
         Issue::on_finalize(System::block_number());
         XBridge::on_finalize(System::block_number());
         System::on_finalize(System::block_number());
@@ -35,7 +34,6 @@ fn run_to_block(index: u64) {
         System::on_initialize(System::block_number());
         XBridge::on_initialize(System::block_number());
         Issue::on_initialize(System::block_number());
-        Vault::on_initialize(System::block_number());
         Redeem::on_initialize(System::block_number());
     }
 }
@@ -72,7 +70,7 @@ fn test_register_vault() {
         );
         assert_err!(
             t_register_vault(1, 10, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna"),
-            vault::Error::<Test>::InsufficientVaultCollateralAmount
+            xbridge::Error::<Test>::InsufficientVaultCollateralAmount
         );
         assert_ok!(t_register_vault(
             1,
@@ -81,11 +79,11 @@ fn test_register_vault() {
         ));
         assert_err!(
             t_register_vault(1, 200, "3LrrqZ2LtZxAcroVaYKgM6yDeRszV2sY1r"),
-            vault::Error::<Test>::VaultAlreadyRegistered
+            xbridge::Error::<Test>::VaultAlreadyRegistered
         );
         assert_err!(
             t_register_vault(2, 200, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna"),
-            vault::Error::<Test>::BtcAddressOccupied
+            xbridge::Error::<Test>::BtcAddressOccupied
         );
     })
 }
@@ -98,8 +96,8 @@ fn test_add_extra_collateral() {
     })
     .execute_with(|| {
         assert_err!(
-            Vault::add_extra_collateral(Origin::signed(1), 100),
-            vault::Error::<Test>::VaultNotFound
+            XBridge::add_extra_collateral(Origin::signed(1), 100),
+            xbridge::Error::<Test>::VaultNotFound
         );
         assert_ok!(t_register_vault(
             1,
@@ -107,10 +105,10 @@ fn test_add_extra_collateral() {
             "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna"
         ));
         assert_err!(
-            Vault::add_extra_collateral(Origin::signed(1), 10000),
+            XBridge::add_extra_collateral(Origin::signed(1), 10000),
             xbridge::Error::<Test>::InsufficientFunds
         );
-        assert_ok!(Vault::add_extra_collateral(Origin::signed(1), 100));
+        assert_ok!(XBridge::add_extra_collateral(Origin::signed(1), 100));
         let free_balance = Balances::free_balance(1);
         assert_eq!(free_balance, 9700);
     })
@@ -213,7 +211,7 @@ fn test_issue_request() {
         assert_eq!(issue_request.open_time, 0);
 
         // check vault's token status
-        let vault = Vault::get_vault_by_id(&issue_request.vault).unwrap();
+        let vault = XBridge::get_vault_by_id(&issue_request.vault).unwrap();
         assert_eq!(vault.to_be_issued_tokens, issue_request.btc_amount);
 
         t_register_btc().unwrap();
@@ -234,7 +232,7 @@ fn test_issue_request() {
         );
         assert_eq!(user_xbtc, 1);
 
-        let vault = Vault::get_vault_by_id(&issue_request.vault).unwrap();
+        let vault = XBridge::get_vault_by_id(&issue_request.vault).unwrap();
         assert_eq!(vault.issued_tokens, issue_request.btc_amount);
         assert_eq!(vault.to_be_issued_tokens, 0);
 
@@ -351,7 +349,7 @@ fn test_redeem_request() {
             "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".as_bytes().to_vec()
         ));
 
-        let vault = Vault::get_vault_by_id(&3).unwrap();
+        let vault = XBridge::get_vault_by_id(&3).unwrap();
         assert_eq!(vault.to_be_redeemed_tokens, 1);
 
         let redeem_request = RedeemRequests::<Test>::get(&1).unwrap();
@@ -385,7 +383,7 @@ fn test_redeem_request() {
         );
         assert_eq!(requester_locked_xbtc, 0);
 
-        let vault = Vault::get_vault_by_id(&3).unwrap();
+        let vault = XBridge::get_vault_by_id(&3).unwrap();
         assert_eq!(vault.to_be_redeemed_tokens, 0);
         assert_eq!(vault.issued_tokens, 0);
     })

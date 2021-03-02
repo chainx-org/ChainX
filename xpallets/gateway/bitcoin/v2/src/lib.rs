@@ -35,7 +35,7 @@ mod tests;
 #[allow(dead_code)]
 pub mod pallet {
     use sp_arithmetic::traits::SaturatedConversion;
-    use sp_std::{marker::PhantomData, vec::Vec};
+    use sp_std::{marker::PhantomData, str::from_utf8, vec::Vec};
 
     #[cfg(feature = "std")]
     use frame_support::traits::GenesisBuild;
@@ -43,21 +43,27 @@ pub mod pallet {
     use frame_support::{
         dispatch::{DispatchError, DispatchResult, DispatchResultWithPostInfo},
         ensure,
-        storage::types::{StorageValue, ValueQuery},
+        storage::types::{StorageMap, StorageValue, ValueQuery},
         traits::{Currency, Hooks, IsType, ReservableCurrency},
+        Blake2_128Concat, Twox64Concat,
     };
     use frame_system::{
         ensure_root, ensure_signed,
         pallet_prelude::{BlockNumberFor, OriginFor},
     };
 
-    use crate::types::{ErrorCode, Status, TradingPrice};
+    use crate::types::*;
 
-    pub type BalanceOf<T> = <<T as xpallet_assets::Config>::Currency as Currency<
+    pub(crate) type BalanceOf<T> = <<T as xpallet_assets::Config>::Currency as Currency<
         <T as frame_system::Config>::AccountId,
     >>::Balance;
 
-    pub type CurrencyOf<T> = <T as xpallet_assets::Config>::Currency;
+    pub(crate) type CurrencyOf<T> = <T as xpallet_assets::Config>::Currency;
+
+    #[allow(type_alias_bounds)]
+    pub(crate) type DefaultVault<T: Config> = Vault<T::AccountId, BlockNumberFor<T>, BalanceOf<T>>;
+
+    pub(crate) type AddrStr = Vec<u8>;
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(crate) trait Store)]
@@ -74,7 +80,7 @@ pub mod pallet {
             let height = Self::exchange_rate_update_time();
             let period = Self::exchange_rate_expired_period();
             if n - height > period {
-                <BridgeStatus<T>>::put(Status::Error(ErrorCode::EXCHANGE_RATE_EXPIRED));
+                BridgeStatus::<T>::put(Status::Error(ErrorCode::EXCHANGE_RATE_EXPIRED));
             };
             0u64.into()
         }
@@ -82,7 +88,16 @@ pub mod pallet {
         fn on_finalize(_: BlockNumberFor<T>) {
             // recover from error if all errors were solved.
             if let Status::Error(ErrorCode::NONE) = Self::bridge_status() {
-                <BridgeStatus<T>>::put(Status::Running);
+                BridgeStatus::<T>::put(Status::Running);
+            }
+
+            // check vaults' collateral ratio
+            if Self::is_bridge_running() {
+                for (id, vault) in Vaults::<T>::iter() {
+                    if Self::_check_vault_liquidated(&vault) {
+                        let _ = Self::liquidate_vault(&id);
+                    }
+                }
             }
         }
     }
@@ -139,6 +154,53 @@ pub mod pallet {
             Self::deposit_event(Event::<T>::OracleForceUpdated(oracles));
             Ok(().into())
         }
+
+        /// Register a vault.
+        #[pallet::weight(0)]
+        pub(crate) fn register_vault(
+            origin: OriginFor<T>,
+            collateral: BalanceOf<T>,
+            btc_address: AddrStr,
+        ) -> DispatchResultWithPostInfo {
+            let sender = ensure_signed(origin)?;
+            let btc_address = from_utf8(&btc_address)
+                .map_err(|_| Error::<T>::InvalidAddress)?
+                .parse()
+                .map_err(|_| Error::<T>::InvalidAddress)?;
+            ensure!(
+                collateral >= Self::minimium_vault_collateral(),
+                Error::<T>::InsufficientVaultCollateralAmount
+            );
+            ensure!(
+                !Self::vault_exists(&sender),
+                Error::<T>::VaultAlreadyRegistered
+            );
+            ensure!(
+                !Self::btc_address_exists(&btc_address),
+                Error::<T>::BtcAddressOccupied
+            );
+            Self::lock_collateral(&sender, collateral)?;
+            Self::increase_total_collateral(collateral);
+            Self::insert_btc_address(&btc_address, sender.clone());
+            let vault = Vault::new(sender.clone(), btc_address);
+            Self::insert_vault(&sender, vault.clone());
+            Self::deposit_event(Event::VaultRegistered(vault.id, collateral));
+            Ok(().into())
+        }
+
+        /// Add extra collateral for registered vault.
+        #[pallet::weight(0)]
+        pub(crate) fn add_extra_collateral(
+            origin: OriginFor<T>,
+            collateral: BalanceOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            let sender = ensure_signed(origin)?;
+            ensure!(Self::vault_exists(&sender), Error::<T>::VaultNotFound);
+            Self::lock_collateral(&sender, collateral)?;
+            Self::increase_total_collateral(collateral);
+            Self::deposit_event(Event::ExtraCollateralAdded(sender, collateral));
+            Ok(().into())
+        }
     }
 
     /// Events in xbridge module
@@ -155,11 +217,17 @@ pub mod pallet {
         /// Update oracles by root
         OracleForceUpdated(Vec<T::AccountId>),
         /// Collateral was slashed. [from, to, amount]
-        CollateralSlashed(T::AccountId, T::AccountId, BalanceOf<T>),
+        BridgeCollateralSlashed(T::AccountId, T::AccountId, BalanceOf<T>),
         // The collateral was released to the user successfully. [who, amount]
-        CollateralReleased(T::AccountId, BalanceOf<T>),
+        BridgeCollateralReleased(T::AccountId, BalanceOf<T>),
         // Update `ExchangeRateExpiredPeriod`
         ExchangeRateExpiredPeriodForceUpdated(BlockNumberFor<T>),
+        /// New vault has been registered.
+        VaultRegistered(<T as frame_system::Config>::AccountId, BalanceOf<T>),
+        /// Extra collateral was added to a vault.
+        ExtraCollateralAdded(<T as frame_system::Config>::AccountId, BalanceOf<T>),
+        /// Vault released collateral.
+        CollateralReleased(<T as frame_system::Config>::AccountId, BalanceOf<T>),
     }
 
     /// Errors for assets module
@@ -177,6 +245,20 @@ pub mod pallet {
         BridgeNotRunning,
         /// Try to calculate collateral ratio while has no issued_tokens
         NoIssuedTokens,
+        /// The amount in request is less than lower bound.
+        InsufficientVaultCollateralAmount,
+        /// Collateral is less than lower bound after extrinsic.
+        InsufficientVaultCollateral,
+        /// Requester has been vault.
+        VaultAlreadyRegistered,
+        /// Btc address in request was occupied by another vault.
+        BtcAddressOccupied,
+        /// Vault does not exist.
+        VaultNotFound,
+        /// Vault was inactive
+        VaultInactive,
+        /// BtcAddress invalid
+        InvalidAddress,
     }
 
     /// Total collateral locked by xbridge.
@@ -207,12 +289,62 @@ pub mod pallet {
     pub(crate) type ExchangeRateExpiredPeriod<T: Config> =
         StorageValue<_, BlockNumberFor<T>, ValueQuery>;
 
+    /// Mapping account to vault struct.
+    #[pallet::storage]
+    pub(crate) type Vaults<T: Config> = StorageMap<
+        _,
+        Blake2_128Concat,
+        T::AccountId,
+        Vault<T::AccountId, T::BlockNumber, BalanceOf<T>>,
+    >;
+
+    /// Mapping btc address to vault id.
+    #[pallet::storage]
+    pub(crate) type BtcAddresses<T: Config> = StorageMap<_, Twox64Concat, BtcAddress, T::AccountId>;
+
+    /// Lower bound for registering vault or withdrawing collateral.
+    #[pallet::storage]
+    #[pallet::getter(fn minimium_vault_collateral)]
+    pub(crate) type MinimiumVaultCollateral<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
+
+    /// Secure threshold for vault
+    /// eg, 200 means 200%.
+    #[pallet::storage]
+    #[pallet::getter(fn secure_threshold)]
+    pub(crate) type SecureThreshold<T: Config> = StorageValue<_, u16, ValueQuery>;
+
+    /// Secure threshold for vault
+    /// eg, 150 means 150%.
+    #[pallet::storage]
+    #[pallet::getter(fn premium_threshold)]
+    pub(crate) type PremiumThreshold<T: Config> = StorageValue<_, u16, ValueQuery>;
+
+    /// Secure threshold for vault.
+    /// eg, 100 means 100%.
+    #[pallet::storage]
+    #[pallet::getter(fn liquidation_threshold)]
+    pub(crate) type LiquidationThreshold<T: Config> = StorageValue<_, u16, ValueQuery>;
+
+    /// Specicial `SystemVault`
+    #[pallet::storage]
+    #[pallet::getter(fn liquidator)]
+    pub(crate) type Liquidator<T: Config> =
+        StorageValue<_, SystemVault<T::AccountId, BalanceOf<T>>, ValueQuery>;
+
+    /// Liquidator account id
+    #[pallet::storage]
+    #[pallet::getter(fn liquidator_id)]
+    pub(crate) type LiquidatorId<T: Config> = StorageValue<_, T::AccountId, ValueQuery>;
+
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
-        /// pcx/btc trading pair
-        pub exchange_rate: TradingPrice,
-        /// oracles allowed to update exchange_rate
-        pub oracle_accounts: Vec<T::AccountId>,
+        pub(crate) exchange_rate: TradingPrice,
+        pub(crate) oracle_accounts: Vec<T::AccountId>,
+        pub(crate) minimium_vault_collateral: u32,
+        pub(crate) secure_threshold: u16,
+        pub(crate) premium_threshold: u16,
+        pub(crate) liquidation_threshold: u16,
+        pub(crate) liquidator_id: T::AccountId,
     }
 
     #[cfg(feature = "std")]
@@ -221,6 +353,11 @@ pub mod pallet {
             Self {
                 exchange_rate: Default::default(),
                 oracle_accounts: Default::default(),
+                minimium_vault_collateral: Default::default(),
+                secure_threshold: 180,
+                premium_threshold: 250,
+                liquidation_threshold: 300,
+                liquidator_id: Default::default(),
             }
         }
     }
@@ -228,8 +365,19 @@ pub mod pallet {
     #[pallet::genesis_build]
     impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
         fn build(&self) {
+            let pcx: BalanceOf<T> = self.minimium_vault_collateral.into();
+            <MinimiumVaultCollateral<T>>::put(pcx);
+
             <ExchangeRate<T>>::put(self.exchange_rate.clone());
             <OracleAccounts<T>>::put(self.oracle_accounts.clone());
+            <SecureThreshold<T>>::put(self.secure_threshold);
+            <PremiumThreshold<T>>::put(self.premium_threshold);
+            <LiquidationThreshold<T>>::put(self.liquidation_threshold);
+            <Liquidator<T>>::put(SystemVault {
+                id: self.liquidator_id.clone(),
+                ..Default::default()
+            });
+            <LiquidatorId<T>>::put(self.liquidator_id.clone());
         }
     }
 
@@ -290,7 +438,7 @@ pub mod pallet {
             <CurrencyOf<T>>::resolve_creating(receiver, slashed);
             <CurrencyOf<T>>::reserve(receiver, amount)
                 .map_err(|_| Error::<T>::InsufficientFunds)?;
-            Self::deposit_event(Event::<T>::CollateralSlashed(
+            Self::deposit_event(Event::<T>::BridgeCollateralSlashed(
                 sender.clone(),
                 receiver.clone(),
                 amount,
@@ -307,7 +455,10 @@ pub mod pallet {
             );
             <CurrencyOf<T>>::unreserve(account, amount);
             <TotalCollateral<T>>::mutate(|total| *total -= amount);
-            Self::deposit_event(Event::<T>::CollateralReleased(account.clone(), amount));
+            Self::deposit_event(Event::<T>::BridgeCollateralReleased(
+                account.clone(),
+                amount,
+            ));
             Ok(())
         }
 
@@ -373,6 +524,87 @@ pub mod pallet {
 
         pub(crate) fn reserved_balance_of(who: &T::AccountId) -> BalanceOf<T> {
             CurrencyOf::<T>::reserved_balance(who)
+        }
+
+        #[inline]
+        pub fn insert_vault(
+            sender: &T::AccountId,
+            vault: Vault<T::AccountId, T::BlockNumber, BalanceOf<T>>,
+        ) {
+            <Vaults<T>>::insert(sender, vault);
+        }
+
+        #[inline]
+        pub fn insert_btc_address(address: &BtcAddress, vault_id: T::AccountId) {
+            <BtcAddresses<T>>::insert(address, vault_id);
+        }
+
+        #[inline]
+        pub fn vault_exists(id: &T::AccountId) -> bool {
+            <Vaults<T>>::contains_key(id)
+        }
+
+        #[inline]
+        pub fn btc_address_exists(address: &BtcAddress) -> bool {
+            <BtcAddresses<T>>::contains_key(address)
+        }
+
+        pub fn get_vault_by_id(
+            id: &T::AccountId,
+        ) -> Result<Vault<T::AccountId, T::BlockNumber, BalanceOf<T>>, DispatchError> {
+            match <Vaults<T>>::get(id) {
+                Some(vault) => Ok(vault),
+                None => Err(Error::<T>::VaultNotFound.into()),
+            }
+        }
+
+        pub fn get_active_vault_by_id(
+            id: &T::AccountId,
+        ) -> Result<Vault<T::AccountId, T::BlockNumber, BalanceOf<T>>, DispatchError> {
+            let vault = Self::get_vault_by_id(id)?;
+            if vault.status == VaultStatus::Active {
+                Ok(vault)
+            } else {
+                Err(Error::<T>::VaultInactive.into())
+            }
+        }
+
+        /// Liquidate vault and mark it as `Liquidated`
+        ///
+        /// Liquidated vault cannot be updated.
+        pub(crate) fn liquidate_vault(id: &T::AccountId) -> Result<(), DispatchError> {
+            <Vaults<T>>::mutate(id, |vault| match vault {
+                Some(ref mut vault) => {
+                    if vault.status == VaultStatus::Active {
+                        vault.status = VaultStatus::Liquidated;
+                        Ok(())
+                    } else {
+                        Err(Error::<T>::VaultInactive)
+                    }
+                }
+                None => Err(Error::<T>::VaultNotFound),
+            })?;
+
+            let vault = Self::get_vault_by_id(id)?;
+            let collateral = CurrencyOf::<T>::reserved_balance(&vault.id);
+            Self::slash_collateral(&vault.id, &Self::liquidator_id(), collateral)?;
+
+            <Liquidator<T>>::mutate(|liquidator| {
+                liquidator.issued_tokens += vault.issued_tokens;
+                liquidator.to_be_issued_tokens += vault.to_be_issued_tokens;
+                liquidator.to_be_redeemed_tokens += vault.to_be_redeemed_tokens;
+            });
+            Ok(())
+        }
+
+        pub(crate) fn _check_vault_liquidated(vault: &DefaultVault<T>) -> bool {
+            if vault.issued_tokens == 0.into() {
+                return false;
+            }
+            let collateral = CurrencyOf::<T>::reserved_balance(&vault.id);
+            Self::calculate_collateral_ratio(vault.issued_tokens, collateral)
+                .map(|collateral_ratio| collateral_ratio < Self::liquidation_threshold())
+                .unwrap_or(false)
         }
     }
 }

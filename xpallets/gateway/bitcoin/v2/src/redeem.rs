@@ -21,10 +21,8 @@ pub mod pallet {
     use xpallet_assets::AssetType;
 
     // Import vault,issue,assets code.
-    use crate::issue::pallet as issue;
     use crate::pallet::{self as xbridge, BalanceOf};
     use crate::types::RedeemRequestStatus;
-    use crate::vault::pallet as vault;
 
     type RedeemRequest<T> = crate::types::RedeemRequest<
         <T as frame_system::Config>::AccountId,
@@ -42,7 +40,7 @@ pub mod pallet {
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + issue::Config {
+    pub trait Config: frame_system::Config + xbridge::Config {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
 
@@ -72,7 +70,7 @@ pub mod pallet {
 
             // Ensure this vault can work.
             let height = <frame_system::Pallet<T>>::block_number();
-            let vault = vault::Pallet::<T>::get_active_vault_by_id(&vault_id)?;
+            let vault = xbridge::Pallet::<T>::get_active_vault_by_id(&vault_id)?;
             ensure!(
                 redeem_amount <= vault.issued_tokens,
                 Error::<T>::VaultTokenInsufficiant
@@ -87,7 +85,7 @@ pub mod pallet {
             );
 
             // Increase vault's to_be_redeemed_tokens
-            <vault::Vaults<T>>::mutate(&vault.id, |vault| {
+            xbridge::Vaults::<T>::mutate(&vault.id, |vault| {
                 if let Some(vault) = vault {
                     vault.to_be_redeemed_tokens += redeem_amount;
                 }
@@ -145,7 +143,7 @@ pub mod pallet {
             // TODO verify tx
             // TODO: premium redeem fee
 
-            <vault::Vaults<T>>::mutate(&request.vault, |vault| {
+            xbridge::Vaults::<T>::mutate(&request.vault, |vault| {
                 if let Some(vault) = vault {
                     vault.issued_tokens -= request.amount;
                     vault.to_be_redeemed_tokens -= request.amount;
@@ -189,7 +187,7 @@ pub mod pallet {
                 Error::<T>::RedeemRequestNotExpired
             );
 
-            let vault = vault::Pallet::<T>::get_active_vault_by_id(&request.vault)?;
+            let vault = xbridge::Pallet::<T>::get_active_vault_by_id(&request.vault)?;
             let worth_pcx = xbridge::Pallet::<T>::convert_to_pcx(request.amount)?;
 
             // Punish vault fee
@@ -197,7 +195,7 @@ pub mod pallet {
 
             if reimburse {
                 // Decrease vault tokens
-                vault::Vaults::<T>::mutate(&vault.id, |vault| {
+                xbridge::Vaults::<T>::mutate(&vault.id, |vault| {
                     if let Some(vault) = vault {
                         vault.to_be_redeemed_tokens -= request.amount;
                     }
@@ -241,7 +239,7 @@ pub mod pallet {
             let worth_pcx = xbridge::Pallet::<T>::convert_to_pcx(redeem_amount)?;
 
             // System vault give him pcx
-            let system_vault = <vault::Liquidator<T>>::get();
+            let system_vault = xbridge::Liquidator::<T>::get();
             xbridge::Pallet::<T>::slash_collateral(&system_vault.id, &sender, worth_pcx)?;
 
             // Send msg to user

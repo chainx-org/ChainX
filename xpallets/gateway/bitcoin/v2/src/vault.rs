@@ -27,17 +27,7 @@ pub mod pallet {
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::hooks]
-    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-        fn on_finalize(_: BlockNumberFor<T>) {
-            if xbridge::Pallet::<T>::is_bridge_running() {
-                for (id, vault) in <Vaults<T>>::iter() {
-                    if Self::_check_vault_liquidated(&vault) {
-                        let _ = Self::liquidate_vault(&id);
-                    }
-                }
-            }
-        }
-    }
+    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {

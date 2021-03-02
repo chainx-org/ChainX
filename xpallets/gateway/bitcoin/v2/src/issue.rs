@@ -40,7 +40,7 @@ pub mod pallet {
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + vault::Config {
+    pub trait Config: frame_system::Config + xbridge::Config {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type TargetAssetId: Get<AssetId>;
     }
@@ -64,7 +64,7 @@ pub mod pallet {
 
             let sender = ensure_signed(origin)?;
             let height = <frame_system::Pallet<T>>::block_number();
-            let vault = vault::Pallet::<T>::get_active_vault_by_id(&vault_id)?;
+            let vault = xbridge::Pallet::<T>::get_active_vault_by_id(&vault_id)?;
             let vault_collateral = xbridge::Pallet::<T>::reserved_balance_of(&vault_id);
 
             // check if vault is rich enough
@@ -74,7 +74,7 @@ pub mod pallet {
                     vault_collateral,
                 )?;
             ensure!(
-                collateral_ratio_after_requesting >= vault::Pallet::<T>::secure_threshold(),
+                collateral_ratio_after_requesting >= xbridge::Pallet::<T>::secure_threshold(),
                 Error::<T>::InsecureVault
             );
 
@@ -99,7 +99,7 @@ pub mod pallet {
                     ..Default::default()
                 },
             );
-            <vault::Vaults<T>>::mutate(&vault.id, |vault| {
+            xbridge::Vaults::<T>::mutate(&vault.id, |vault| {
                 if let Some(vault) = vault {
                     vault.to_be_issued_tokens += btc_amount;
                 }
@@ -141,7 +141,7 @@ pub mod pallet {
                 &issue_request.requester,
                 issue_request.btc_amount,
             )?;
-            <vault::Vaults<T>>::mutate(&issue_request.vault, |vault| {
+            xbridge::Vaults::<T>::mutate(&issue_request.vault, |vault| {
                 if let Some(vault) = vault {
                     vault.to_be_issued_tokens -= issue_request.btc_amount;
                     vault.issued_tokens += issue_request.btc_amount;
@@ -195,7 +195,7 @@ pub mod pallet {
                 issue_request.griefing_collateral,
             )?;
 
-            <vault::Vaults<T>>::mutate(&issue_request.vault, |vault| {
+            xbridge::Vaults::<T>::mutate(&issue_request.vault, |vault| {
                 if let Some(vault) = vault {
                     vault.to_be_issued_tokens -= issue_request.btc_amount;
                 }
@@ -351,7 +351,7 @@ pub mod pallet {
             btc_amount: BalanceOf<T>,
         ) -> Result<BalanceOf<T>, DispatchError> {
             let pcx_amount = xbridge::Pallet::<T>::convert_to_pcx(btc_amount)?;
-            let secure_threshold = vault::Pallet::<T>::secure_threshold();
+            let secure_threshold = xbridge::Pallet::<T>::secure_threshold();
             let slashed_collateral: u32 =
                 (pcx_amount.saturated_into::<u128>() * secure_threshold as u128 / 100) as u32;
             Ok(slashed_collateral.into())
