@@ -122,7 +122,6 @@ impl ExtBuilder {
         }: BuildConfig,
     ) -> sp_io::TestExternalities {
         use super::types::TradingPrice;
-        use sp_arithmetic::Percent;
 
         let mut storage = frame_system::GenesisConfig::default()
             .build_storage::<Test>()
@@ -140,8 +139,10 @@ impl ExtBuilder {
                 secure_threshold: 300,
                 premium_threshold: 250,
                 liquidation_threshold: 180,
-                issue_griefing_fee: Percent::from_parts(10),
-                expired_time: 3,
+                issue_griefing_fee: 10,
+                issue_expired_time: 3,
+                redeem_fee: 0u8,
+                redeem_expired_time: 3,
             },
             &mut storage,
         );

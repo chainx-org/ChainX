@@ -20,7 +20,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub(crate) mod types;
+pub mod types;
 
 #[cfg(test)]
 mod mock;
@@ -80,9 +80,6 @@ pub mod pallet {
         BalanceOf<T>,
     >;
 
-    //FIXME(wangyafei): use assiociated type.
-    const ASSET_ID: AssetId = 1;
-
     #[pallet::pallet]
     #[pallet::generate_store(pub(crate) trait Store)]
     pub struct Pallet<T>(PhantomData<T>);
@@ -124,6 +121,11 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Update exchange rate by oracle.
+        ///
+        /// The extrinsic only allows oracle accounts.
+        ///
+        /// *Relative Functions*:
+        /// [`force_update_exchange_rate`](crate::Pallet::force_update_exchange_rate)
         #[pallet::weight(0)]
         pub(crate) fn update_exchange_rate(
             origin: OriginFor<T>,
@@ -278,6 +280,10 @@ pub mod pallet {
             Ok(().into())
         }
 
+        /// Execute issue request in `IssueRequests`. It verifies `tx` provided and marks
+        /// `IssueRequest` as completed.
+        ///
+        /// The execute_issue can only called by signed origin.
         #[pallet::weight(0)]
         pub fn execute_issue(
             origin: OriginFor<T>,
@@ -288,7 +294,7 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             Self::ensure_bridge_running()?;
 
-            let _sender = ensure_signed(origin)?;
+            ensure_signed(origin)?;
 
             //TODO(wangyafei): verify tx
 
@@ -308,7 +314,7 @@ pub mod pallet {
 
             <xpallet_assets::Module<T>>::issue(
                 /*FIME(wangyafei): use associated type*/
-                &1,
+                &T::TargetAssetId::get(),
                 &issue_request.requester,
                 issue_request.btc_amount,
             )?;
@@ -572,7 +578,7 @@ pub mod pallet {
 
         /// Update expired time for requesting redeem
         #[pallet::weight(0)]
-        pub fn update_expired_time(
+        pub fn update_redeem_expired_time(
             origin: OriginFor<T>,
             expired_time: BlockNumberFor<T>,
         ) -> DispatchResultWithPostInfo {
@@ -607,6 +613,7 @@ pub mod pallet {
         ExtraCollateralAdded(<T as frame_system::Config>::AccountId, BalanceOf<T>),
         /// Vault released collateral.
         CollateralReleased(<T as frame_system::Config>::AccountId, BalanceOf<T>),
+
         // TODO(wangyafei): add details
         // An issue request was submitted and waiting user to excute.
         IssueRequestSubmitted,
@@ -824,15 +831,29 @@ pub mod pallet {
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
-        pub(crate) exchange_rate: TradingPrice,
-        pub(crate) oracle_accounts: Vec<T::AccountId>,
-        pub(crate) minimium_vault_collateral: u32,
-        pub(crate) secure_threshold: u16,
-        pub(crate) premium_threshold: u16,
-        pub(crate) liquidation_threshold: u16,
-        pub(crate) liquidator_id: T::AccountId,
-        pub(crate) issue_griefing_fee: Percent,
-        pub(crate) expired_time: BlockNumberFor<T>,
+        /// Trading pair of pcx/btc.
+        pub exchange_rate: TradingPrice,
+        /// Accounts that allow to update exchange rate.
+        pub oracle_accounts: Vec<T::AccountId>,
+        /// Lower bound of collateral for valut to register
+        pub minimium_vault_collateral: u32,
+        /// Threshold that allows to issue more X-BTC.
+        pub secure_threshold: u16,
+        /// Below which vault needs to pay more pcx when user requests redeem.
+        pub premium_threshold: u16,
+        /// Below which valut will be liquidated when finish building block.
+        pub liquidation_threshold: u16,
+        /// SystemVault's account id.
+        pub liquidator_id: T::AccountId,
+        /// Fee that needs to be locked while user requests issuing xbtc, and will be released when
+        /// the `IssueRequest` completed. It's proportional to `btc_amount` in `IssueRequest`.
+        pub issue_griefing_fee: u8,
+        /// Duration from `IssueRequest` opening to expired.
+        pub issue_expired_time: BlockNumberFor<T>,
+        /// Fixed fee that user shall lock when requesting redeem.
+        pub redeem_fee: u8,
+        /// Duration from `RedeemRequest` opening to expired.
+        pub redeem_expired_time: BlockNumberFor<T>,
     }
 
     #[cfg(feature = "std")]
@@ -847,7 +868,9 @@ pub mod pallet {
                 liquidation_threshold: 300,
                 liquidator_id: Default::default(),
                 issue_griefing_fee: Default::default(),
-                expired_time: Default::default(),
+                issue_expired_time: Default::default(),
+                redeem_fee: 0,
+                redeem_expired_time: Default::default(),
             }
         }
     }
@@ -868,8 +891,10 @@ pub mod pallet {
                 ..Default::default()
             });
             <LiquidatorId<T>>::put(self.liquidator_id.clone());
-            <IssueGriefingFee<T>>::put(self.issue_griefing_fee);
-            //FIXME(wangyafei): should put expired time?
+            <IssueGriefingFee<T>>::put(Percent::from_parts(self.issue_griefing_fee));
+            <IssueRequestExpiredTime<T>>::put(self.issue_expired_time);
+            <RedeemRequestExpiredTime<T>>::put(self.redeem_expired_time);
+            <RedeemFee<T>>::put(self.redeem_fee);
         }
     }
 
@@ -1174,7 +1199,7 @@ pub mod pallet {
         /// Lock XBTC
         fn lock_xbtc(user: &T::AccountId, count: BalanceOf<T>) -> DispatchResultWithPostInfo {
             xpallet_assets::Module::<T>::move_balance(
-                &ASSET_ID,
+                &T::TargetAssetId::get(),
                 &user,
                 AssetType::Usable,
                 &user,
@@ -1188,7 +1213,7 @@ pub mod pallet {
         /// Release XBTC
         fn release_xbtc(user: &T::AccountId, amount: BalanceOf<T>) -> DispatchResultWithPostInfo {
             xpallet_assets::Module::<T>::move_balance(
-                &ASSET_ID,
+                &T::TargetAssetId::get(),
                 &user,
                 AssetType::Locked,
                 &user,
@@ -1202,7 +1227,7 @@ pub mod pallet {
         /// Burn XBTC
         fn burn_xbtc(user: &T::AccountId, count: BalanceOf<T>) -> DispatchResultWithPostInfo {
             xpallet_assets::Module::<T>::move_balance(
-                &ASSET_ID,
+                &T::TargetAssetId::get(),
                 user,
                 AssetType::Locked,
                 user,
@@ -1210,13 +1235,21 @@ pub mod pallet {
                 count,
             )
             .map_err(|_| Error::<T>::InsufficiantAssetsFunds)?;
-            xpallet_assets::Module::<T>::destroy_reserved_withdrawal(&ASSET_ID, user, count)?;
+            xpallet_assets::Module::<T>::destroy_reserved_withdrawal(
+                &T::TargetAssetId::get(),
+                user,
+                count,
+            )?;
             Ok(().into())
         }
 
         /// User have XBTC count
         fn asset_balance_of(user: &T::AccountId) -> BalanceOf<T> {
-            xpallet_assets::Module::<T>::asset_balance_of(&user, &ASSET_ID, AssetType::Usable)
+            xpallet_assets::Module::<T>::asset_balance_of(
+                &user,
+                &T::TargetAssetId::get(),
+                AssetType::Usable,
+            )
         }
     }
 }

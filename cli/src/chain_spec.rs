@@ -22,6 +22,7 @@ use dev_runtime::constants::{currency::DOLLARS as DEV_DOLLARS, time::DAYS as DEV
 use xp_assets_registrar::Chain;
 use xp_protocol::{NetworkType, PCX, PCX_DECIMALS, X_BTC};
 use xpallet_gateway_bitcoin::{BtcParams, BtcTxVerifier};
+use xpallet_gateway_bitcoin_v2::types::TradingPrice;
 use xpallet_gateway_common::types::TrusteeInfoConfig;
 
 use crate::genesis::assets::{genesis_assets, init_assets, pcx, AssetParams};
@@ -412,7 +413,22 @@ fn build_genesis(
             max_withdrawal_count: 100,
             verifier: BtcTxVerifier::Recover,
         }),
-        xpallet_gateway_bitcoin_v2_vault: Some(Default::default()),
+        xpallet_gateway_bitcoin_v2: Some(dev::XGatewayBitcoinV2Config {
+            exchange_rate: TradingPrice {
+                price: 1,
+                decimal: 3,
+            },
+            oracle_accounts: Default::default(),
+            liquidator_id: get_account_id_from_seed::<sr25519::Public>("liquidator"),
+            minimium_vault_collateral: 1000,
+            secure_threshold: 300,
+            premium_threshold: 250,
+            liquidation_threshold: 180,
+            issue_griefing_fee: 10,
+            issue_expired_time: 10000,
+            redeem_fee: 0u8,
+            redeem_expired_time: 10000,
+        }),
         xpallet_mining_staking: Some(dev::XStakingConfig {
             validators,
             validator_count: 50,

@@ -305,7 +305,7 @@ fn test_redeem_request() {
     use super::types::TradingPrice;
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
         t_register_vault(3, 30000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
-        XBridge::update_expired_time(Origin::root(), 10u64).unwrap();
+        XBridge::update_redeem_expired_time(Origin::root(), 10u64).unwrap();
         XBridge::update_issue_griefing_fee(Origin::root(), Percent::from_parts(10)).unwrap();
         XBridge::update_issue_expired_time(Origin::root(), 10u64).unwrap();
 
