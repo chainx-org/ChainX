@@ -91,7 +91,7 @@ pub enum VaultStatus {
 
 impl Default for VaultStatus {
     fn default() -> Self {
-        VaultStatus::Active
+        Self::Active
     }
 }
 
