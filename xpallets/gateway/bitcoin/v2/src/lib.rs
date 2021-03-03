@@ -92,14 +92,36 @@ pub mod pallet {
     #[pallet::config]
     pub trait Config: frame_system::Config + xpallet_assets::Config {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+        /// Bitcoin asset id in `xpallet_assets` module.
         type TargetAssetId: Get<AssetId>;
+        /// Lower bound of vault's collateral.
+        type DustCollateral: Get<BalanceOf<Self>>;
+        /// Vault considered as secure when his collateral ratio is upper than this.
+        type SecureThreshold: Get<u16>;
+        /// Vault needs to pay additional fee to redeemer when his collateral ratio is below than
+        /// this.
+        type PremiumThreshold: Get<u16>;
+        /// Vault will be liquidated if his collateral ratio lower than this.
+        ///
+        /// See also [liquidating](#Liquidating)
+        type LiquidationThreshold: Get<u16>;
+        /// Duration from `IssueRequest` opened to expired.
+        type IssueRequestExpiredTime: Get<BlockNumberFor<Self>>;
+        /// Duration from `RedeemRequest` opened to expired.
+        type RedeemRequestExpiredTime: Get<BlockNumberFor<Self>>;
+        /// Duration from `ExchangeRate` last updated to expired.
+        type ExchangeRateExpiredPeriod: Get<BlockNumberFor<Self>>;
+        /// The minimum amount of btc that is accepted for redeem requests; any lower values would
+        /// risk the bitcoin client to reject the payment
+        type RedeemBtcDustValue: Get<BalanceOf<Self>>;
     }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn on_initialize(n: BlockNumberFor<T>) -> frame_support::weights::Weight {
             let height = Self::exchange_rate_update_time();
-            let period = Self::exchange_rate_expired_period();
+            let period = T::ExchangeRateExpiredPeriod::get();
             if n - height > period {
                 BridgeStatus::<T>::put(Status::Error(ErrorCode::EXCHANGE_RATE_EXPIRED));
             };
@@ -158,7 +180,7 @@ pub mod pallet {
                 .parse()
                 .map_err(|_| Error::<T>::InvalidAddress)?;
             ensure!(
-                collateral >= Self::minimium_vault_collateral(),
+                collateral >= T::DustCollateral::get(),
                 Error::<T>::InsufficientVaultCollateralAmount
             );
             ensure!(
@@ -215,7 +237,7 @@ pub mod pallet {
                 vault_collateral,
             )?;
             ensure!(
-                collateral_ratio_after_requesting >= Self::secure_threshold(),
+                collateral_ratio_after_requesting >= T::SecureThreshold::get(),
                 Error::<T>::InsecureVault
             );
 
@@ -272,7 +294,7 @@ pub mod pallet {
 
             let height = frame_system::Pallet::<T>::block_number();
             ensure!(
-                height - issue_request.open_time < Self::issue_request_expired_time(),
+                height - issue_request.open_time < T::IssueRequestExpiredTime::get(),
                 Error::<T>::IssueRequestExpired
             );
 
@@ -306,7 +328,7 @@ pub mod pallet {
                 .ok_or(Error::<T>::IssueRequestNotFound)?;
 
             let height = <frame_system::Pallet<T>>::block_number();
-            let expired_time = <IssueRequestExpiredTime<T>>::get();
+            let expired_time = T::IssueRequestExpiredTime::get();
             ensure!(
                 height - issue_request.open_time > expired_time,
                 Error::<T>::IssueRequestNotExpired
@@ -364,7 +386,7 @@ pub mod pallet {
             );
 
             // Only allow requests of amount above above the minimum
-            let dust_value = <RedeemBtcDustValue<T>>::get();
+            let dust_value = T::RedeemBtcDustValue::get();
             ensure!(
                 // this is the amount the vault will send (minus fee)
                 redeem_amount >= dust_value,
@@ -419,7 +441,7 @@ pub mod pallet {
 
             // Ensure this redeem not expired
             let height = <frame_system::Pallet<T>>::block_number();
-            let expired_time = <RedeemRequestExpiredTime<T>>::get();
+            let expired_time = T::RedeemRequestExpiredTime::get();
 
             ensure!(
                 height - request.open_time < expired_time,
@@ -461,7 +483,7 @@ pub mod pallet {
 
             // Ensure the redeem request is outdate
             let height = <frame_system::Pallet<T>>::block_number();
-            let expired_time = <RedeemRequestExpiredTime<T>>::get();
+            let expired_time = T::RedeemRequestExpiredTime::get();
             ensure!(
                 height - request.open_time > expired_time,
                 Error::<T>::RedeemRequestNotExpired
@@ -512,20 +534,6 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// Force update the exchange rate expired period.
-        #[pallet::weight(0)]
-        pub(crate) fn force_update_exchange_rate_expired_period(
-            origin: OriginFor<T>,
-            expired_period: BlockNumberFor<T>,
-        ) -> DispatchResultWithPostInfo {
-            ensure_root(origin)?;
-            ExchangeRateExpiredPeriod::<T>::put(expired_period);
-            Self::deposit_event(Event::<T>::ExchangeRateExpiredPeriodForceUpdated(
-                expired_period,
-            ));
-            Ok(().into())
-        }
-
         /// Force update oracles.
         #[pallet::weight(0)]
         pub(crate) fn force_update_oracles(
@@ -538,18 +546,6 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// Update expired time for requesting issue
-        #[pallet::weight(0)]
-        pub fn update_issue_expired_time(
-            origin: OriginFor<T>,
-            expired_time: BlockNumberFor<T>,
-        ) -> DispatchResultWithPostInfo {
-            ensure_root(origin)?;
-            <IssueRequestExpiredTime<T>>::put(expired_time);
-            Self::deposit_event(Event::<T>::ExpiredTimeUpdated);
-            Ok(().into())
-        }
-
         /// Update griefing fee for requesting issue
         #[pallet::weight(0)]
         pub fn update_issue_griefing_fee(
@@ -559,17 +555,6 @@ pub mod pallet {
             ensure_root(origin)?;
             <IssueGriefingFee<T>>::put(griefing_fee);
             Self::deposit_event(Event::<T>::GriefingFeeUpdated);
-            Ok(().into())
-        }
-
-        /// Update expired time for requesting redeem
-        #[pallet::weight(0)]
-        pub fn update_redeem_expired_time(
-            origin: OriginFor<T>,
-            expired_time: BlockNumberFor<T>,
-        ) -> DispatchResultWithPostInfo {
-            ensure_root(origin)?;
-            <RedeemRequestExpiredTime<T>>::put(expired_time);
             Ok(().into())
         }
     }
@@ -719,11 +704,6 @@ pub mod pallet {
     pub(crate) type ExchangeRateUpdateTime<T: Config> =
         StorageValue<_, BlockNumberFor<T>, ValueQuery>;
 
-    #[pallet::storage]
-    #[pallet::getter(fn exchange_rate_expired_period)]
-    pub(crate) type ExchangeRateExpiredPeriod<T: Config> =
-        StorageValue<_, BlockNumberFor<T>, ValueQuery>;
-
     /// Mapping account to vault struct.
     #[pallet::storage]
     pub(crate) type Vaults<T: Config> = StorageMap<
@@ -736,29 +716,6 @@ pub mod pallet {
     /// Mapping btc address to vault id.
     #[pallet::storage]
     pub(crate) type BtcAddresses<T: Config> = StorageMap<_, Twox64Concat, BtcAddress, T::AccountId>;
-
-    /// Lower bound for registering vault or withdrawing collateral.
-    #[pallet::storage]
-    #[pallet::getter(fn minimium_vault_collateral)]
-    pub(crate) type MinimiumVaultCollateral<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
-
-    /// Secure threshold for vault
-    /// eg, 200 means 200%.
-    #[pallet::storage]
-    #[pallet::getter(fn secure_threshold)]
-    pub(crate) type SecureThreshold<T: Config> = StorageValue<_, u16, ValueQuery>;
-
-    /// Secure threshold for vault
-    /// eg, 150 means 150%.
-    #[pallet::storage]
-    #[pallet::getter(fn premium_threshold)]
-    pub(crate) type PremiumThreshold<T: Config> = StorageValue<_, u16, ValueQuery>;
-
-    /// Secure threshold for vault.
-    /// eg, 100 means 100%.
-    #[pallet::storage]
-    #[pallet::getter(fn liquidation_threshold)]
-    pub(crate) type LiquidationThreshold<T: Config> = StorageValue<_, u16, ValueQuery>;
 
     /// Specicial `SystemVault`
     #[pallet::storage]
@@ -786,12 +743,6 @@ pub mod pallet {
     pub(crate) type IssueRequests<T: Config> =
         StorageMap<_, Twox64Concat, RequestId, IssueRequest<T>>;
 
-    /// Expired time for an `IssueRequest`
-    #[pallet::storage]
-    #[pallet::getter(fn issue_request_expired_time)]
-    pub(crate) type IssueRequestExpiredTime<T: Config> =
-        StorageValue<_, BlockNumberFor<T>, ValueQuery>;
-
     /// Redeem fee when use request redeem
     #[pallet::storage]
     #[pallet::getter(fn redeem_fee)]
@@ -802,20 +753,10 @@ pub mod pallet {
     #[pallet::storage]
     pub(crate) type RedeemRequestCount<T: Config> = StorageValue<_, RequestId, ValueQuery>;
 
-    /// The minimum amount of btc that is accepted for redeem requests; any lower values would
-    /// Risk the bitcoin client to reject the payment
-    #[pallet::storage]
-    pub(crate) type RedeemBtcDustValue<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
-
     /// Mapping from redeem id to `RedeemRequest`
     #[pallet::storage]
     pub(crate) type RedeemRequests<T: Config> =
         StorageMap<_, Twox64Concat, RequestId, RedeemRequest<T>>;
-
-    /// Expired time for an `RedeemRequest`
-    #[pallet::storage]
-    pub(crate) type RedeemRequestExpiredTime<T: Config> =
-        StorageValue<_, BlockNumberFor<T>, ValueQuery>;
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
@@ -850,6 +791,7 @@ pub mod pallet {
             Self {
                 exchange_rate: Default::default(),
                 oracle_accounts: Default::default(),
+                // FIXME(wangyafei): remove this
                 minimium_vault_collateral: Default::default(),
                 secure_threshold: 180,
                 premium_threshold: 250,
@@ -867,21 +809,15 @@ pub mod pallet {
     impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
         fn build(&self) {
             let pcx: BalanceOf<T> = self.minimium_vault_collateral.into();
-            <MinimiumVaultCollateral<T>>::put(pcx);
 
             <ExchangeRate<T>>::put(self.exchange_rate.clone());
             <OracleAccounts<T>>::put(self.oracle_accounts.clone());
-            <SecureThreshold<T>>::put(self.secure_threshold);
-            <PremiumThreshold<T>>::put(self.premium_threshold);
-            <LiquidationThreshold<T>>::put(self.liquidation_threshold);
             <Liquidator<T>>::put(SystemVault {
                 id: self.liquidator_id.clone(),
                 ..Default::default()
             });
             <LiquidatorId<T>>::put(self.liquidator_id.clone());
             <IssueGriefingFee<T>>::put(Percent::from_parts(self.issue_griefing_fee));
-            <IssueRequestExpiredTime<T>>::put(self.issue_expired_time);
-            <RedeemRequestExpiredTime<T>>::put(self.redeem_expired_time);
             <RedeemFee<T>>::put(self.redeem_fee);
         }
     }
@@ -1107,7 +1043,7 @@ pub mod pallet {
             }
             let collateral = CurrencyOf::<T>::reserved_balance(&vault.id);
             Self::calculate_collateral_ratio(vault.issued_tokens, collateral)
-                .map(|collateral_ratio| collateral_ratio < Self::liquidation_threshold())
+                .map(|collateral_ratio| collateral_ratio < T::LiquidationThreshold::get())
                 .unwrap_or(false)
         }
 
@@ -1145,7 +1081,7 @@ pub mod pallet {
             btc_amount: BalanceOf<T>,
         ) -> Result<BalanceOf<T>, DispatchError> {
             let pcx_amount = Self::convert_to_pcx(btc_amount)?;
-            let secure_threshold = Self::secure_threshold();
+            let secure_threshold = T::SecureThreshold::get();
             let slashed_collateral: u32 =
                 (pcx_amount.saturated_into::<u128>() * secure_threshold as u128 / 100) as u32;
             Ok(slashed_collateral.into())

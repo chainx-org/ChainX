@@ -45,7 +45,6 @@ impl frame_system::Config for Test {
 parameter_types! {
     pub const ExistentialDeposit: u64 = 0;
     pub const ChainXAssetId: u32 = 0;
-    pub const BridgeTargetAssetId: u32 = 1;
 }
 
 impl pallet_balances::Config for Test {
@@ -75,9 +74,29 @@ impl xpallet_assets::Config for Test {
     type WeightInfo = ();
 }
 
+parameter_types! {
+    pub const BridgeTargetAssetId: u32 = 1;
+    pub const DustCollateral: Balance = 1000;
+    pub const SecureThreshold: u16 = 300;
+    pub const PremiumThreshold: u16 = 250;
+    pub const LiquidationThreshold: u16 = 180;
+    pub const IssueRequestExpiredTime: BlockNumber = 10000;
+    pub const RedeemRequestExpiredTime: BlockNumber = 10000;
+    pub const ExchangeRateExpiredPeriod: BlockNumber = 10;
+    pub const RedeemBtcDustValue: Balance = 1;
+}
+
 impl pallet::Config for Test {
     type Event = ();
     type TargetAssetId = BridgeTargetAssetId;
+    type DustCollateral = DustCollateral;
+    type SecureThreshold = SecureThreshold;
+    type PremiumThreshold = PremiumThreshold;
+    type LiquidationThreshold = LiquidationThreshold;
+    type IssueRequestExpiredTime = IssueRequestExpiredTime;
+    type RedeemRequestExpiredTime = RedeemRequestExpiredTime;
+    type RedeemBtcDustValue = RedeemBtcDustValue;
+    type ExchangeRateExpiredPeriod = ExchangeRateExpiredPeriod;
 }
 
 type Block = frame_system::mocking::MockBlock<Test>;
