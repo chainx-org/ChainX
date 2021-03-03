@@ -430,11 +430,27 @@ impl pallet_session_historical::Config for Runtime {
 
 parameter_types! {
     pub const BridgeTargetAssetId: u8 = 1;
+    pub const DustCollateral: Balance = 1000;
+    pub const SecureThreshold: u16 = 300;
+    pub const PremiumThreshold: u16 = 250;
+    pub const LiquidationThreshold: u16 = 180;
+    pub const IssueRequestExpiredTime: BlockNumber = 10000;
+    pub const RedeemRequestExpiredTime: BlockNumber = 10000;
+    pub const ExchangeRateExpiredPeriod: BlockNumber = 10;
+    pub const RedeemBtcDustValue: Balance = 1;
 }
 
 impl xpallet_gateway_bitcoin_v2::Config for Runtime {
-    type TargetAssetId = BridgeTargetAssetId;
     type Event = Event;
+    type TargetAssetId = BridgeTargetAssetId;
+    type DustCollateral = DustCollateral;
+    type SecureThreshold = SecureThreshold;
+    type PremiumThreshold = PremiumThreshold;
+    type LiquidationThreshold = LiquidationThreshold;
+    type IssueRequestExpiredTime = IssueRequestExpiredTime;
+    type RedeemRequestExpiredTime = RedeemRequestExpiredTime;
+    type RedeemBtcDustValue = RedeemBtcDustValue;
+    type ExchangeRateExpiredPeriod = ExchangeRateExpiredPeriod;
 }
 
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
