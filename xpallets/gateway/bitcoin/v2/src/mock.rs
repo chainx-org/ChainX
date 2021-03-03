@@ -6,7 +6,7 @@ use sp_runtime::{
 
 use frame_support::{construct_runtime, parameter_types, sp_io, traits::GenesisBuild};
 
-use crate::pallet as xbridge;
+use crate::pallet;
 
 /// The AccountId alias in this test module.
 pub(crate) type AccountId = u64;
@@ -75,7 +75,7 @@ impl xpallet_assets::Config for Test {
     type WeightInfo = ();
 }
 
-impl xbridge::Config for Test {
+impl pallet::Config for Test {
     type Event = ();
     type TargetAssetId = BridgeTargetAssetId;
 }
@@ -92,7 +92,7 @@ construct_runtime! {
             System: frame_system::{Module, Call, Event<T>},
             Balances: pallet_balances::{Module, Call, Event<T>},
             XAssets: xpallet_assets::{Module,Call, Event<T>, Config<T>},
-            XBridge: xbridge::{Module, Call, Event<T>, Config<T>},
+            XGatewayBitcoin: pallet::{Module, Call, Event<T>, Config<T>},
         }
 }
 
@@ -128,7 +128,7 @@ impl ExtBuilder {
             .unwrap();
 
         let _ = GenesisBuild::<Test>::assimilate_storage(
-            &xbridge::GenesisConfig {
+            &pallet::GenesisConfig {
                 exchange_rate: TradingPrice {
                     price: exchange_price,
                     decimal: exchange_decimal,
