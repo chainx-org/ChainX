@@ -764,25 +764,13 @@ pub mod pallet {
         pub exchange_rate: TradingPrice,
         /// Accounts that allow to update exchange rate.
         pub oracle_accounts: Vec<T::AccountId>,
-        /// Lower bound of collateral for valut to register
-        pub minimium_vault_collateral: u32,
-        /// Threshold that allows to issue more X-BTC.
-        pub secure_threshold: u16,
-        /// Below which vault needs to pay more pcx when user requests redeem.
-        pub premium_threshold: u16,
-        /// Below which valut will be liquidated when finish building block.
-        pub liquidation_threshold: u16,
         /// SystemVault's account id.
         pub liquidator_id: T::AccountId,
         /// Fee that needs to be locked while user requests issuing xbtc, and will be released when
         /// the `IssueRequest` completed. It's proportional to `btc_amount` in `IssueRequest`.
         pub issue_griefing_fee: u8,
-        /// Duration from `IssueRequest` opening to expired.
-        pub issue_expired_time: BlockNumberFor<T>,
         /// Fixed fee that user shall lock when requesting redeem.
         pub redeem_fee: u8,
-        /// Duration from `RedeemRequest` opening to expired.
-        pub redeem_expired_time: BlockNumberFor<T>,
     }
 
     #[cfg(feature = "std")]
@@ -792,15 +780,9 @@ pub mod pallet {
                 exchange_rate: Default::default(),
                 oracle_accounts: Default::default(),
                 // FIXME(wangyafei): remove this
-                minimium_vault_collateral: Default::default(),
-                secure_threshold: 180,
-                premium_threshold: 250,
-                liquidation_threshold: 300,
                 liquidator_id: Default::default(),
                 issue_griefing_fee: Default::default(),
-                issue_expired_time: Default::default(),
                 redeem_fee: 0,
-                redeem_expired_time: Default::default(),
             }
         }
     }
@@ -808,8 +790,6 @@ pub mod pallet {
     #[pallet::genesis_build]
     impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
         fn build(&self) {
-            let pcx: BalanceOf<T> = self.minimium_vault_collateral.into();
-
             <ExchangeRate<T>>::put(self.exchange_rate.clone());
             <OracleAccounts<T>>::put(self.oracle_accounts.clone());
             <Liquidator<T>>::put(SystemVault {

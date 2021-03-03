@@ -49,11 +49,7 @@ fn t_register_btc() -> DispatchResult {
 #[test]
 #[allow(non_upper_case_globals)]
 fn test_register_vault() {
-    ExtBuilder::build(BuildConfig {
-        minimium_vault_collateral: 100,
-        ..Default::default()
-    })
-    .execute_with(|| {
+    ExtBuilder::build(BuildConfig::default()).execute_with(|| {
         const Alice: AccountId = 1;
         const Bob: AccountId = 2;
         assert_err!(
@@ -83,11 +79,7 @@ fn test_register_vault() {
 #[test]
 #[allow(non_upper_case_globals)]
 fn test_add_extra_collateral() {
-    ExtBuilder::build(BuildConfig {
-        minimium_vault_collateral: 100,
-        ..Default::default()
-    })
-    .execute_with(|| {
+    ExtBuilder::build(BuildConfig::default()).execute_with(|| {
         const Alice: AccountId = 1;
         assert_err!(
             XGatewayBitcoin::add_extra_collateral(Origin::signed(Alice), 100),

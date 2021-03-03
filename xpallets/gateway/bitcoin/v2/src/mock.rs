@@ -116,7 +116,6 @@ construct_runtime! {
 }
 
 pub struct BuildConfig {
-    pub(crate) minimium_vault_collateral: u32,
     pub(crate) exchange_price: u128,
     pub(crate) exchange_decimal: u8,
 }
@@ -124,7 +123,6 @@ pub struct BuildConfig {
 impl Default for BuildConfig {
     fn default() -> Self {
         Self {
-            minimium_vault_collateral: 1000,
             exchange_price: 1,
             exchange_decimal: 3,
         }
@@ -135,7 +133,6 @@ pub struct ExtBuilder;
 impl ExtBuilder {
     pub fn build(
         BuildConfig {
-            minimium_vault_collateral,
             exchange_price,
             exchange_decimal,
         }: BuildConfig,
@@ -154,14 +151,8 @@ impl ExtBuilder {
                 },
                 oracle_accounts: Default::default(),
                 liquidator_id: 100,
-                minimium_vault_collateral,
-                secure_threshold: 300,
-                premium_threshold: 250,
-                liquidation_threshold: 180,
                 issue_griefing_fee: 10,
-                issue_expired_time: 3,
                 redeem_fee: 0u8,
-                redeem_expired_time: 3,
             },
             &mut storage,
         );
