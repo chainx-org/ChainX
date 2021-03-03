@@ -23,7 +23,7 @@ pub enum Status {
 
 impl Default for Status {
     fn default() -> Self {
-        Status::Running
+        Self::Running
     }
 }
 
