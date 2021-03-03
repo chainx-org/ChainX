@@ -62,8 +62,6 @@ pub mod pallet {
     #[allow(type_alias_bounds)]
     pub(crate) type DefaultVault<T: Config> = Vault<T::AccountId, BlockNumberFor<T>, BalanceOf<T>>;
 
-    pub(crate) type AddrStr = Vec<u8>;
-
     pub(crate) type IssueRequest<T> = crate::types::IssueRequest<
         <T as frame_system::Config>::AccountId,
         <T as frame_system::Config>::BlockNumber,
@@ -107,6 +105,8 @@ pub mod pallet {
                 BridgeStatus::<T>::put(Status::Running);
             }
 
+            // FIXME the on_finalize hook should not do the heavy stuffs.
+            //
             // check vaults' collateral ratio
             if Self::is_bridge_running() {
                 for (id, vault) in Vaults::<T>::iter() {
@@ -138,50 +138,12 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// Force update the exchange rate.
-        #[pallet::weight(0)]
-        pub(crate) fn force_update_exchange_rate(
-            origin: OriginFor<T>,
-            exchange_rate: TradingPrice,
-        ) -> DispatchResultWithPostInfo {
-            ensure_root(origin)?;
-            Self::_update_exchange_rate(exchange_rate.clone())?;
-            Self::deposit_event(Event::<T>::ExchangeRateForceUpdated(exchange_rate));
-            Ok(().into())
-        }
-
-        /// Force update the exchange rate expired period.
-        #[pallet::weight(0)]
-        pub(crate) fn force_update_exchange_rate_expired_period(
-            origin: OriginFor<T>,
-            expired_period: BlockNumberFor<T>,
-        ) -> DispatchResultWithPostInfo {
-            ensure_root(origin)?;
-            ExchangeRateExpiredPeriod::<T>::put(expired_period);
-            Self::deposit_event(Event::<T>::ExchangeRateExpiredPeriodForceUpdated(
-                expired_period,
-            ));
-            Ok(().into())
-        }
-
-        /// Force update oracles.
-        #[pallet::weight(0)]
-        pub(crate) fn force_update_oracles(
-            origin: OriginFor<T>,
-            oracles: Vec<T::AccountId>,
-        ) -> DispatchResultWithPostInfo {
-            ensure_root(origin)?;
-            OracleAccounts::<T>::put(oracles.clone());
-            Self::deposit_event(Event::<T>::OracleForceUpdated(oracles));
-            Ok(().into())
-        }
-
         /// Register a vault.
         #[pallet::weight(0)]
         pub(crate) fn register_vault(
             origin: OriginFor<T>,
             collateral: BalanceOf<T>,
-            btc_address: AddrStr,
+            btc_address: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             let btc_address = from_utf8(&btc_address)
@@ -382,37 +344,13 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// Update expired time for requesting issue
-        #[pallet::weight(0)]
-        pub fn update_issue_expired_time(
-            origin: OriginFor<T>,
-            expired_time: BlockNumberFor<T>,
-        ) -> DispatchResultWithPostInfo {
-            ensure_root(origin)?;
-            <IssueRequestExpiredTime<T>>::put(expired_time);
-            Self::deposit_event(Event::<T>::ExpiredTimeUpdated);
-            Ok(().into())
-        }
-
-        /// Update griefing fee for requesting issue
-        #[pallet::weight(0)]
-        pub fn update_issue_griefing_fee(
-            origin: OriginFor<T>,
-            griefing_fee: Percent,
-        ) -> DispatchResultWithPostInfo {
-            ensure_root(origin)?;
-            <IssueGriefingFee<T>>::put(griefing_fee);
-            Self::deposit_event(Event::<T>::GriefingFeeUpdated);
-            Ok(().into())
-        }
-
         /// User request redeem
         #[pallet::weight(0)]
         pub fn request_redeem(
             origin: OriginFor<T>,
             vault_id: T::AccountId,
             redeem_amount: BalanceOf<T>,
-            btc_addr: AddrStr,
+            btc_addr: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             Self::ensure_chain_correct_status()?;
 
@@ -422,7 +360,7 @@ pub mod pallet {
                 .map_err(|_| Error::<T>::InvalidBtcAddress)?
                 .parse()
                 .map_err(|_| Error::<T>::InvalidBtcAddress)?;
-            let redeemer_balance = Self::asset_balance_of(&sender);
+            let redeemer_balance = Self::usable_xbtc_of(&sender);
             ensure!(
                 redeem_amount <= redeemer_balance,
                 Error::<T>::InsufficiantAssetsFunds
@@ -551,7 +489,7 @@ pub mod pallet {
             let worth_pcx = Self::convert_to_pcx(request.amount)?;
 
             // Punish vault fee
-            let punishment_fee: BalanceOf<T> = 0.into();
+            let punishment_fee: BalanceOf<T> = 0u32.into();
 
             if reimburse {
                 // Decrease vault tokens
@@ -573,6 +511,68 @@ pub mod pallet {
 
             Self::remove_redeem_request(request_id, RedeemRequestStatus::Cancelled);
             Self::deposit_event(Event::<T>::RedeemCancelled);
+            Ok(().into())
+        }
+
+        /// Force update the exchange rate.
+        #[pallet::weight(0)]
+        pub(crate) fn force_update_exchange_rate(
+            origin: OriginFor<T>,
+            exchange_rate: TradingPrice,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            Self::_update_exchange_rate(exchange_rate.clone())?;
+            Self::deposit_event(Event::<T>::ExchangeRateForceUpdated(exchange_rate));
+            Ok(().into())
+        }
+
+        /// Force update the exchange rate expired period.
+        #[pallet::weight(0)]
+        pub(crate) fn force_update_exchange_rate_expired_period(
+            origin: OriginFor<T>,
+            expired_period: BlockNumberFor<T>,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            ExchangeRateExpiredPeriod::<T>::put(expired_period);
+            Self::deposit_event(Event::<T>::ExchangeRateExpiredPeriodForceUpdated(
+                expired_period,
+            ));
+            Ok(().into())
+        }
+
+        /// Force update oracles.
+        #[pallet::weight(0)]
+        pub(crate) fn force_update_oracles(
+            origin: OriginFor<T>,
+            oracles: Vec<T::AccountId>,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            OracleAccounts::<T>::put(oracles.clone());
+            Self::deposit_event(Event::<T>::OracleForceUpdated(oracles));
+            Ok(().into())
+        }
+
+        /// Update expired time for requesting issue
+        #[pallet::weight(0)]
+        pub fn update_issue_expired_time(
+            origin: OriginFor<T>,
+            expired_time: BlockNumberFor<T>,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            <IssueRequestExpiredTime<T>>::put(expired_time);
+            Self::deposit_event(Event::<T>::ExpiredTimeUpdated);
+            Ok(().into())
+        }
+
+        /// Update griefing fee for requesting issue
+        #[pallet::weight(0)]
+        pub fn update_issue_griefing_fee(
+            origin: OriginFor<T>,
+            griefing_fee: Percent,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            <IssueGriefingFee<T>>::put(griefing_fee);
+            Self::deposit_event(Event::<T>::GriefingFeeUpdated);
             Ok(().into())
         }
 
@@ -706,6 +706,8 @@ pub mod pallet {
         InvalidBtcAddress,
         /// Vault issue token insufficient
         VaultTokenInsufficiant,
+        /// Error propagated from xpallet_assets.
+        AssetError,
     }
 
     /// Total collateral locked by xbridge.
@@ -926,8 +928,7 @@ pub mod pallet {
 
         #[inline]
         pub(crate) fn is_oracle(account: &T::AccountId) -> bool {
-            let oracles: Vec<T::AccountId> = Self::oracle_accounts();
-            oracles.contains(account)
+            Self::oracle_accounts().contains(account)
         }
 
         pub(crate) fn _update_exchange_rate(exchange_rate: TradingPrice) -> DispatchResult {
@@ -1115,7 +1116,7 @@ pub mod pallet {
         }
 
         pub(crate) fn _check_vault_liquidated(vault: &DefaultVault<T>) -> bool {
-            if vault.issued_tokens == 0.into() {
+            if vault.issued_tokens == 0u32.into() {
                 return false;
             }
             let collateral = CurrencyOf::<T>::reserved_balance(&vault.id);
@@ -1189,6 +1190,7 @@ pub mod pallet {
 
         /// Mark the request as removed
         fn remove_redeem_request(request_id: RequestId, status: RedeemRequestStatus) {
+            // TODO: remove this redeem request once it's finished/cancelled.
             <RedeemRequests<T>>::mutate(request_id, |request| {
                 if let Some(request) = request {
                     request.status = status;
@@ -1196,55 +1198,45 @@ pub mod pallet {
             });
         }
 
-        /// Lock XBTC
-        fn lock_xbtc(user: &T::AccountId, count: BalanceOf<T>) -> DispatchResultWithPostInfo {
+        fn move_xbtc(
+            from: &T::AccountId,
+            from_ty: AssetType,
+            to: &T::AccountId,
+            to_ty: AssetType,
+            amount: BalanceOf<T>,
+        ) -> Result<(), Error<T>> {
             xpallet_assets::Module::<T>::move_balance(
                 &T::TargetAssetId::get(),
-                &user,
-                AssetType::Usable,
-                &user,
-                AssetType::Locked,
-                count,
-            )
-            .map_err::<xpallet_assets::Error<T>, _>(Into::into)?;
-            Ok(().into())
-        }
-
-        /// Release XBTC
-        fn release_xbtc(user: &T::AccountId, amount: BalanceOf<T>) -> DispatchResultWithPostInfo {
-            xpallet_assets::Module::<T>::move_balance(
-                &T::TargetAssetId::get(),
-                &user,
-                AssetType::Locked,
-                &user,
-                AssetType::Usable,
+                from,
+                from_ty,
+                to,
+                to_ty,
                 amount,
             )
-            .map_err::<xpallet_assets::Error<T>, _>(Into::into)?;
-            Ok(().into())
+            .map_err(|_| Error::<T>::AssetError)
         }
 
-        /// Burn XBTC
-        fn burn_xbtc(user: &T::AccountId, count: BalanceOf<T>) -> DispatchResultWithPostInfo {
-            xpallet_assets::Module::<T>::move_balance(
-                &T::TargetAssetId::get(),
-                user,
-                AssetType::Locked,
-                user,
-                AssetType::ReservedWithdrawal,
-                count,
-            )
-            .map_err(|_| Error::<T>::InsufficiantAssetsFunds)?;
+        fn lock_xbtc(user: &T::AccountId, amount: BalanceOf<T>) -> Result<(), Error<T>> {
+            use AssetType::{ReservedWithdrawal, Usable};
+            Self::move_xbtc(user, Usable, user, ReservedWithdrawal, amount)
+        }
+
+        fn release_xbtc(user: &T::AccountId, amount: BalanceOf<T>) -> Result<(), Error<T>> {
+            use AssetType::{ReservedWithdrawal, Usable};
+            Self::move_xbtc(user, ReservedWithdrawal, user, Usable, amount)
+        }
+
+        fn burn_xbtc(user: &T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
             xpallet_assets::Module::<T>::destroy_reserved_withdrawal(
                 &T::TargetAssetId::get(),
                 user,
-                count,
+                amount,
             )?;
-            Ok(().into())
+            Ok(())
         }
 
-        /// User have XBTC count
-        fn asset_balance_of(user: &T::AccountId) -> BalanceOf<T> {
+        /// Returns the usable XBTC balance of `user`.
+        fn usable_xbtc_of(user: &T::AccountId) -> BalanceOf<T> {
             xpallet_assets::Module::<T>::asset_balance_of(
                 &user,
                 &T::TargetAssetId::get(),
