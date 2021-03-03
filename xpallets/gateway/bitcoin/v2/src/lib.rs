@@ -5,6 +5,13 @@
 //! Bitcoin Bridge provides decentralized functionalities to manage digital assets between
 //! Bitcoin and ChainX.
 //!
+//! - [`Pallet`]
+//! - [`Config`]
+//! - [`Call`]
+//!
+//! ## Overview
+//! TODO(wangyafei)
+//!
 //! ## Terminology:
 //!
 //! *collateral*: PCX that reserved by bridge, which backs X-BTC.
@@ -451,7 +458,7 @@ pub mod pallet {
             // Decrase user's XBTC amount.
             Self::burn_xbtc(&request.requester, request.amount)?;
 
-            Self::remove_redeem_request(request_id, RedeemRequestStatus::Completed);
+            Self::remove_redeem_request(request_id, RequestStatus::Completed);
 
             Self::deposit_event(Event::<T>::RedeemExecuted);
             Ok(().into())
@@ -473,7 +480,7 @@ pub mod pallet {
 
             // Ensure the redeem request right status
             ensure!(
-                request.status == RedeemRequestStatus::Processing,
+                request.status == RequestStatus::Processing,
                 Error::<T>::RedeemRequestProcessing
             );
 
@@ -509,7 +516,7 @@ pub mod pallet {
                 Self::release_xbtc_from_reserved_withdrawal(&request.requester, request.amount)?;
             }
 
-            Self::remove_redeem_request(request_id, RedeemRequestStatus::Cancelled);
+            Self::remove_redeem_request(request_id, RequestStatus::Cancelled);
             Self::deposit_event(Event::<T>::RedeemCancelled);
             Ok(().into())
         }
@@ -1189,7 +1196,7 @@ pub mod pallet {
         }
 
         /// Mark the request as removed
-        fn remove_redeem_request(request_id: RequestId, status: RedeemRequestStatus) {
+        fn remove_redeem_request(request_id: RequestId, status: RequestStatus) {
             // TODO: remove this redeem request once it's finished/cancelled.
             <RedeemRequests<T>>::mutate(request_id, |request| {
                 if let Some(request) = request {

@@ -136,9 +136,9 @@ impl<AccountId: Default, BlockNumber: Default, Balance: Default>
     }
 }
 
-#[derive(Encode, Decode, Clone, PartialEq)]
-#[cfg_attr(feature = "std", derive(Debug))]
-pub enum RedeemRequestStatus {
+#[derive(Encode, Decode, RuntimeDebug, Clone, PartialEq)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub enum RequestStatus {
     /// Redeem is accepted and vault will transfer btc
     Processing,
     /// Redeem is cancelled by redeemer
@@ -148,14 +148,14 @@ pub enum RedeemRequestStatus {
 }
 
 // Default value
-impl Default for RedeemRequestStatus {
+impl Default for RequestStatus {
     fn default() -> Self {
-        RedeemRequestStatus::Processing
+        RequestStatus::Processing
     }
 }
 
-#[derive(Encode, Decode, Default, Clone, PartialEq)]
-#[cfg_attr(feature = "std", derive(Debug))]
+#[derive(Encode, Decode, RuntimeDebug, Default, Clone, PartialEq)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct RedeemRequest<AccountId, BlockNumber, XBTC, PCX> {
     /// Vault id
     pub(crate) vault: AccountId,
@@ -170,14 +170,14 @@ pub struct RedeemRequest<AccountId, BlockNumber, XBTC, PCX> {
     /// Redeem fee amount
     pub(crate) redeem_fee: PCX,
     /// Request status
-    pub(crate) status: RedeemRequestStatus,
+    pub(crate) status: RequestStatus,
     /// If redeem is reimbursed by redeemer
     pub(crate) reimburse: bool,
 }
 
 /// Contains all informations while executing a issue request needed.
-#[derive(Encode, Decode, Default, Clone, PartialEq)]
-#[cfg_attr(feature = "std", derive(Debug, Deserialize, Serialize))]
+#[derive(Encode, Decode, RuntimeDebug, Default, Clone, PartialEq)]
+#[cfg_attr(feature = "std", derive(Deserialize, Serialize))]
 pub struct IssueRequest<AccountId, BlockNumber, XBTC, PCX> {
     /// Vault id
     pub(crate) vault: AccountId,

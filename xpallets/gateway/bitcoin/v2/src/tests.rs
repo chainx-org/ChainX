@@ -7,7 +7,7 @@ use frame_support::{
 };
 use frame_system::RawOrigin;
 
-use crate::types::RedeemRequestStatus;
+use crate::types::RequestStatus;
 
 use crate::pallet;
 
@@ -353,7 +353,7 @@ fn test_redeem_request() {
 
         let redeem_request = pallet::RedeemRequests::<Test>::get(&1).unwrap();
         assert_eq!(redeem_request.amount, 1);
-        assert_eq!(redeem_request.status, RedeemRequestStatus::Processing);
+        assert_eq!(redeem_request.status, RequestStatus::Processing);
 
         let requester_locked_xbtc = xpallet_assets::Module::<Test>::asset_balance_of(
             &2,
@@ -372,7 +372,7 @@ fn test_redeem_request() {
 
         let redeem_request = pallet::RedeemRequests::<Test>::get(&1).unwrap();
         assert_eq!(redeem_request.amount, 1);
-        assert_eq!(redeem_request.status, RedeemRequestStatus::Completed);
+        assert_eq!(redeem_request.status, RequestStatus::Completed);
 
         // check requester assets after executing
         let requester_locked_xbtc = xpallet_assets::Module::<Test>::asset_balance_of(
