@@ -136,24 +136,6 @@ impl<AccountId: Default, BlockNumber: Default, Balance: Default>
     }
 }
 
-#[derive(Encode, Decode, RuntimeDebug, Clone, PartialEq)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub enum RequestStatus {
-    /// Redeem is accepted and vault will transfer btc
-    Processing,
-    /// Redeem is cancelled by redeemer
-    Cancelled,
-    /// Redeem is compeleted
-    Completed,
-}
-
-// Default value
-impl Default for RequestStatus {
-    fn default() -> Self {
-        RequestStatus::Processing
-    }
-}
-
 #[derive(Encode, Decode, RuntimeDebug, Default, Clone, PartialEq)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct RedeemRequest<AccountId, BlockNumber, XBTC, PCX> {
@@ -169,8 +151,6 @@ pub struct RedeemRequest<AccountId, BlockNumber, XBTC, PCX> {
     pub(crate) btc_amount: XBTC,
     /// Redeem fee amount
     pub(crate) redeem_fee: PCX,
-    /// Request status
-    pub(crate) status: RequestStatus,
     /// If redeem is reimbursed by redeemer
     pub(crate) reimburse: bool,
 }
@@ -187,8 +167,6 @@ pub struct IssueRequest<AccountId, BlockNumber, XBTC, PCX> {
     pub(crate) requester: AccountId,
     /// Vault's btc address
     pub(crate) btc_address: BtcAddress,
-    /// Status of request
-    pub(crate) status: RequestStatus,
     /// Amount that user wants to issue
     pub(crate) btc_amount: XBTC,
     /// Collateral locked to avoid user griefing

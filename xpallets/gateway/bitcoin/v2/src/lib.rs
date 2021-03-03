@@ -270,8 +270,6 @@ pub mod pallet {
             let issue_request = Self::get_issue_request_by_id(request_id)
                 .ok_or(Error::<T>::IssueRequestNotFound)?;
 
-            Self::ensure_issue_request_not_dealt(&issue_request)?;
-
             let height = frame_system::Pallet::<T>::block_number();
             ensure!(
                 height - issue_request.open_time < Self::issue_request_expired_time(),
@@ -291,12 +289,8 @@ pub mod pallet {
                 }
             });
             Self::release_collateral(&issue_request.requester, issue_request.griefing_collateral)?;
+            IssueRequests::<T>::remove(&request_id);
 
-            IssueRequests::<T>::mutate(request_id, |issue_request| {
-                if let Some(issue_request) = issue_request {
-                    issue_request.status = RequestStatus::Completed;
-                }
-            });
             Self::deposit_event(Event::<T>::IssueRequestExecuted);
             Ok(().into())
         }
@@ -310,7 +304,6 @@ pub mod pallet {
 
             let issue_request = Self::get_issue_request_by_id(request_id)
                 .ok_or(Error::<T>::IssueRequestNotFound)?;
-            Self::ensure_issue_request_not_dealt(&issue_request)?;
 
             let height = <frame_system::Pallet<T>>::block_number();
             let expired_time = <IssueRequestExpiredTime<T>>::get();
@@ -335,12 +328,7 @@ pub mod pallet {
                 }
             });
 
-            IssueRequests::<T>::mutate(request_id, |issue_request| {
-                if let Some(issue_request) = issue_request {
-                    issue_request.status = RequestStatus::Cancelled;
-                }
-            });
-
+            IssueRequests::<T>::remove(&request_id);
             Self::deposit_event(Event::<T>::IssueRequestCancelled);
             Ok(().into())
         }
@@ -405,7 +393,6 @@ pub mod pallet {
                     btc_amount: redeem_amount,
                     // TODO(wangyafei): use storage value
                     redeem_fee: Default::default(),
-                    status: Default::default(),
                     reimburse: false,
                 },
             );
@@ -434,8 +421,6 @@ pub mod pallet {
             let height = <frame_system::Pallet<T>>::block_number();
             let expired_time = <RedeemRequestExpiredTime<T>>::get();
 
-            Self::ensure_redeem_request_not_dealt(&request)?;
-
             ensure!(
                 height - request.open_time < expired_time,
                 Error::<T>::RedeemRequestExpired
@@ -454,7 +439,7 @@ pub mod pallet {
             // Decrase user's XBTC amount.
             Self::burn_xbtc(&request.requester, request.btc_amount)?;
 
-            Self::remove_redeem_request(request_id, RequestStatus::Completed);
+            RedeemRequests::<T>::remove(&request_id);
 
             Self::deposit_event(Event::<T>::RedeemExecuted);
             Ok(().into())
@@ -473,8 +458,6 @@ pub mod pallet {
             let request =
                 <RedeemRequests<T>>::get(request_id).ok_or(Error::<T>::RedeemRequestNotFound)?;
             ensure!(request.requester == sender, Error::<T>::UnauthorizedUser);
-
-            Self::ensure_redeem_request_not_dealt(&request)?;
 
             // Ensure the redeem request is outdate
             let height = <frame_system::Pallet<T>>::block_number();
@@ -511,7 +494,8 @@ pub mod pallet {
                 )?;
             }
 
-            Self::remove_redeem_request(request_id, RequestStatus::Cancelled);
+            RedeemRequests::<T>::remove(&request_id);
+
             Self::deposit_event(Event::<T>::RedeemCancelled);
             Ok(().into())
         }
@@ -1018,26 +1002,6 @@ pub mod pallet {
             Ok(())
         }
 
-        #[inline]
-        pub(crate) fn ensure_issue_request_not_dealt(request: &IssueRequest<T>) -> DispatchResult {
-            ensure!(
-                request.status == RequestStatus::Processing,
-                Error::<T>::RequestDealt
-            );
-            Ok(())
-        }
-
-        #[inline]
-        pub(crate) fn ensure_redeem_request_not_dealt(
-            request: &RedeemRequest<T>,
-        ) -> DispatchResult {
-            ensure!(
-                request.status == RequestStatus::Processing,
-                Error::<T>::RequestDealt
-            );
-            Ok(())
-        }
-
         /// Clarify `ExchangeRateExpired` is solved and recover from this error.
         ///
         /// Dangerous! Ensure this error truly solved is caller's responsibility.
@@ -1208,16 +1172,6 @@ pub mod pallet {
         /// Get `RedeemssueRequest` from id
         pub(crate) fn get_redeem_request_by_id(request_id: RequestId) -> Option<RedeemRequest<T>> {
             <RedeemRequests<T>>::get(request_id)
-        }
-
-        /// Mark the request as removed
-        fn remove_redeem_request(request_id: RequestId, status: RequestStatus) {
-            // TODO: remove this redeem request once it's finished/cancelled.
-            <RedeemRequests<T>>::mutate(request_id, |request| {
-                if let Some(request) = request {
-                    request.status = status;
-                }
-            });
         }
 
         fn move_xbtc(
