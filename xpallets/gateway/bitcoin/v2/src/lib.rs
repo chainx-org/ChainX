@@ -390,7 +390,7 @@ pub mod pallet {
             });
 
             // Lock redeem's xtbc
-            Self::lock_xbtc(&sender, redeem_amount)?;
+            Self::reserve_xbtc_to_withdrawal(&sender, redeem_amount)?;
 
             // Generate redeem request identify and insert it to record
             let request_id = Self::get_next_redeem_id();
@@ -506,7 +506,7 @@ pub mod pallet {
                     worth_pcx + punishment_fee,
                 )?;
             } else {
-                Self::release_xbtc(&request.requester, request.amount)?;
+                Self::release_xbtc_from_reserved_withdrawal(&request.requester, request.amount)?;
             }
 
             Self::remove_redeem_request(request_id, RedeemRequestStatus::Cancelled);
@@ -1216,12 +1216,18 @@ pub mod pallet {
             .map_err(|_| Error::<T>::AssetError)
         }
 
-        fn lock_xbtc(user: &T::AccountId, amount: BalanceOf<T>) -> Result<(), Error<T>> {
+        fn reserve_xbtc_to_withdrawal(
+            user: &T::AccountId,
+            amount: BalanceOf<T>,
+        ) -> Result<(), Error<T>> {
             use AssetType::{ReservedWithdrawal, Usable};
             Self::move_xbtc(user, Usable, user, ReservedWithdrawal, amount)
         }
 
-        fn release_xbtc(user: &T::AccountId, amount: BalanceOf<T>) -> Result<(), Error<T>> {
+        fn release_xbtc_from_reserved_withdrawal(
+            user: &T::AccountId,
+            amount: BalanceOf<T>,
+        ) -> Result<(), Error<T>> {
             use AssetType::{ReservedWithdrawal, Usable};
             Self::move_xbtc(user, ReservedWithdrawal, user, Usable, amount)
         }

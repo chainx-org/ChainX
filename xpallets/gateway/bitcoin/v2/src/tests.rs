@@ -350,7 +350,7 @@ fn test_redeem_request() {
         let requester_locked_xbtc = xpallet_assets::Module::<Test>::asset_balance_of(
             &2,
             &BridgeTargetAssetId::get(),
-            xpallet_assets::AssetType::Locked,
+            xpallet_assets::AssetType::ReservedWithdrawal,
         );
         assert_eq!(requester_locked_xbtc, 1);
 
