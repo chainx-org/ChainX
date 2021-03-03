@@ -436,7 +436,7 @@ parameter_types! {
     pub const LiquidationThreshold: u16 = 180;
     pub const IssueRequestExpiredTime: BlockNumber = 10000;
     pub const RedeemRequestExpiredTime: BlockNumber = 10000;
-    pub const ExchangeRateExpiredPeriod: BlockNumber = 10;
+    pub const ExchangeRateExpiredPeriod: BlockNumber = 10000;
     pub const RedeemBtcDustValue: Balance = 1;
 }
 
