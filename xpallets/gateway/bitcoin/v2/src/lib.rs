@@ -270,10 +270,7 @@ pub mod pallet {
             let issue_request = Self::get_issue_request_by_id(request_id)
                 .ok_or(Error::<T>::IssueRequestNotFound)?;
 
-            ensure!(
-                !issue_request.completed && !issue_request.cancelled,
-                Error::<T>::IssueRequestDealt
-            );
+            Self::ensure_issue_request_not_dealt(&issue_request)?;
 
             let height = frame_system::Pallet::<T>::block_number();
             ensure!(
@@ -297,10 +294,10 @@ pub mod pallet {
 
             IssueRequests::<T>::mutate(request_id, |issue_request| {
                 if let Some(issue_request) = issue_request {
-                    issue_request.completed = true
+                    issue_request.status = RequestStatus::Completed;
                 }
             });
-            Self::deposit_event(Event::<T>::IssueRequestExcuted);
+            Self::deposit_event(Event::<T>::IssueRequestExecuted);
             Ok(().into())
         }
 
@@ -313,10 +310,7 @@ pub mod pallet {
 
             let issue_request = Self::get_issue_request_by_id(request_id)
                 .ok_or(Error::<T>::IssueRequestNotFound)?;
-            ensure!(
-                !issue_request.completed && !issue_request.cancelled,
-                Error::<T>::IssueRequestDealt
-            );
+            Self::ensure_issue_request_not_dealt(&issue_request)?;
 
             let height = <frame_system::Pallet<T>>::block_number();
             let expired_time = <IssueRequestExpiredTime<T>>::get();
@@ -343,7 +337,7 @@ pub mod pallet {
 
             IssueRequests::<T>::mutate(request_id, |issue_request| {
                 if let Some(issue_request) = issue_request {
-                    issue_request.cancelled = true
+                    issue_request.status = RequestStatus::Cancelled;
                 }
             });
 
@@ -408,7 +402,7 @@ pub mod pallet {
                     open_time: height,
                     requester: sender,
                     btc_address: btc_addr,
-                    amount: redeem_amount,
+                    btc_amount: redeem_amount,
                     // TODO(wangyafei): use storage value
                     redeem_fee: Default::default(),
                     status: Default::default(),
@@ -440,6 +434,8 @@ pub mod pallet {
             let height = <frame_system::Pallet<T>>::block_number();
             let expired_time = <RedeemRequestExpiredTime<T>>::get();
 
+            Self::ensure_redeem_request_not_dealt(&request)?;
+
             ensure!(
                 height - request.open_time < expired_time,
                 Error::<T>::RedeemRequestExpired
@@ -450,13 +446,13 @@ pub mod pallet {
 
             Vaults::<T>::mutate(&request.vault, |vault| {
                 if let Some(vault) = vault {
-                    vault.issued_tokens -= request.amount;
-                    vault.to_be_redeemed_tokens -= request.amount;
+                    vault.issued_tokens -= request.btc_amount;
+                    vault.to_be_redeemed_tokens -= request.btc_amount;
                 }
             });
 
             // Decrase user's XBTC amount.
-            Self::burn_xbtc(&request.requester, request.amount)?;
+            Self::burn_xbtc(&request.requester, request.btc_amount)?;
 
             Self::remove_redeem_request(request_id, RequestStatus::Completed);
 
@@ -466,7 +462,7 @@ pub mod pallet {
 
         /// User cancle redeem
         #[pallet::weight(0)]
-        pub fn cancle_redeem(
+        pub fn cancel_redeem(
             origin: OriginFor<T>,
             request_id: RequestId,
             reimburse: bool,
@@ -478,11 +474,7 @@ pub mod pallet {
                 <RedeemRequests<T>>::get(request_id).ok_or(Error::<T>::RedeemRequestNotFound)?;
             ensure!(request.requester == sender, Error::<T>::UnauthorizedUser);
 
-            // Ensure the redeem request right status
-            ensure!(
-                request.status == RequestStatus::Processing,
-                Error::<T>::RedeemRequestProcessing
-            );
+            Self::ensure_redeem_request_not_dealt(&request)?;
 
             // Ensure the redeem request is outdate
             let height = <frame_system::Pallet<T>>::block_number();
@@ -493,7 +485,7 @@ pub mod pallet {
             );
 
             let vault = Self::get_active_vault_by_id(&request.vault)?;
-            let worth_pcx = Self::convert_to_pcx(request.amount)?;
+            let worth_pcx = Self::convert_to_pcx(request.btc_amount)?;
 
             // Punish vault fee
             let punishment_fee: BalanceOf<T> = 0u32.into();
@@ -502,7 +494,7 @@ pub mod pallet {
                 // Decrease vault tokens
                 Vaults::<T>::mutate(&vault.id, |vault| {
                     if let Some(vault) = vault {
-                        vault.to_be_redeemed_tokens -= request.amount;
+                        vault.to_be_redeemed_tokens -= request.btc_amount;
                     }
                 });
 
@@ -513,7 +505,10 @@ pub mod pallet {
                     worth_pcx + punishment_fee,
                 )?;
             } else {
-                Self::release_xbtc_from_reserved_withdrawal(&request.requester, request.amount)?;
+                Self::release_xbtc_from_reserved_withdrawal(
+                    &request.requester,
+                    request.btc_amount,
+                )?;
             }
 
             Self::remove_redeem_request(request_id, RequestStatus::Cancelled);
@@ -625,7 +620,7 @@ pub mod pallet {
         // An issue request was submitted and waiting user to excute.
         IssueRequestSubmitted,
         // `IssueRequest` excuted.
-        IssueRequestExcuted,
+        IssueRequestExecuted,
         // `IssueRequest` cancelled.`
         IssueRequestCancelled,
         // Root updated `IssueRequestExpiredTime`.
@@ -685,8 +680,8 @@ pub mod pallet {
         IssueRequestExpired,
         /// Vault colateral ratio was below than `SecureThreshold`
         InsecureVault,
-        /// `IssueRequest` has been excuted or cancelled
-        IssueRequestDealt,
+        /// `IssueRequest` or `RedeemRequest` has been executed or cancelled
+        RequestDealt,
         /// Redeem request id is not exsit
         RedeemRequestNotFound,
         /// Redeem request cancelled for forced redeem when it's not expired.
@@ -1019,6 +1014,26 @@ pub mod pallet {
             ensure!(
                 Self::bridge_status() == Status::Running,
                 Error::<T>::BridgeNotRunning
+            );
+            Ok(())
+        }
+
+        #[inline]
+        pub(crate) fn ensure_issue_request_not_dealt(request: &IssueRequest<T>) -> DispatchResult {
+            ensure!(
+                request.status == RequestStatus::Processing,
+                Error::<T>::RequestDealt
+            );
+            Ok(())
+        }
+
+        #[inline]
+        pub(crate) fn ensure_redeem_request_not_dealt(
+            request: &RedeemRequest<T>,
+        ) -> DispatchResult {
+            ensure!(
+                request.status == RequestStatus::Processing,
+                Error::<T>::RequestDealt
             );
             Ok(())
         }

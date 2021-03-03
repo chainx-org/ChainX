@@ -166,7 +166,7 @@ pub struct RedeemRequest<AccountId, BlockNumber, XBTC, PCX> {
     /// Vault's btc address
     pub(crate) btc_address: BtcAddress,
     /// Amount that user wants to redeem
-    pub(crate) amount: XBTC,
+    pub(crate) btc_amount: XBTC,
     /// Redeem fee amount
     pub(crate) redeem_fee: PCX,
     /// Request status
@@ -187,10 +187,8 @@ pub struct IssueRequest<AccountId, BlockNumber, XBTC, PCX> {
     pub(crate) requester: AccountId,
     /// Vault's btc address
     pub(crate) btc_address: BtcAddress,
-    /// Wheather request finished
-    pub(crate) completed: bool,
-    /// Wheather request cancelled
-    pub(crate) cancelled: bool,
+    /// Status of request
+    pub(crate) status: RequestStatus,
     /// Amount that user wants to issue
     pub(crate) btc_amount: XBTC,
     /// Collateral locked to avoid user griefing

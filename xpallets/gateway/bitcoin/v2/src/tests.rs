@@ -236,7 +236,7 @@ fn test_issue_request() {
 
         assert_err!(
             XGatewayBitcoin::execute_issue(Origin::signed(1), 1, vec![], vec![], vec![],),
-            pallet::Error::<Test>::IssueRequestDealt
+            pallet::Error::<Test>::RequestDealt
         );
     })
 }
@@ -352,7 +352,7 @@ fn test_redeem_request() {
         assert_eq!(vault.to_be_redeemed_tokens, 1);
 
         let redeem_request = pallet::RedeemRequests::<Test>::get(&1).unwrap();
-        assert_eq!(redeem_request.amount, 1);
+        assert_eq!(redeem_request.btc_amount, 1);
         assert_eq!(redeem_request.status, RequestStatus::Processing);
 
         let requester_locked_xbtc = xpallet_assets::Module::<Test>::asset_balance_of(
@@ -371,7 +371,7 @@ fn test_redeem_request() {
         ));
 
         let redeem_request = pallet::RedeemRequests::<Test>::get(&1).unwrap();
-        assert_eq!(redeem_request.amount, 1);
+        assert_eq!(redeem_request.btc_amount, 1);
         assert_eq!(redeem_request.status, RequestStatus::Completed);
 
         // check requester assets after executing
