@@ -97,7 +97,6 @@ pub mod pallet {
         type TargetAssetId: Get<AssetId>;
         /// Lower bound of vault's collateral.
         #[pallet::constant]
-        #[pallet::metadata(BalanceOf = "Balance")]
         type DustCollateral: Get<BalanceOf<Self>>;
         /// Vault considered as secure when his collateral ratio is upper than this.
         #[pallet::constant]
