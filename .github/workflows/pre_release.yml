@@ -11,12 +11,12 @@ jobs:
     name: Prepare wasm
     runs-on: ubuntu-latest
     container:
-      image: chainxorg/srtool:nightly-2020-09-30
+      image: chainxorg/srtool:nightly-2020-10-27
       volumes:
         - ${{ github.workspace }}:/build
     env:
       PACKAGE: chainx-runtime
-      RUSTC_VERSION: nightly-2020-09-30
+      RUSTC_VERSION: nightly-2020-10-27
 
     steps:
     - uses: actions/checkout@v2
@@ -95,7 +95,7 @@ jobs:
     - name: Install Rust toolchain
       uses: actions-rs/toolchain@v1
       with:
-        toolchain: nightly-2020-09-30
+        toolchain: stable
         target: wasm32-unknown-unknown
         profile: minimal
         override: true
