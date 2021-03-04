@@ -413,7 +413,7 @@ fn build_genesis(
             max_withdrawal_count: 100,
             verifier: BtcTxVerifier::Recover,
         }),
-        xpallet_gateway_bitcoin_v2: Some(dev::XGatewayBitcoinV2Config {
+        xpallet_gateway_bitcoin_v2_pallet: Some(dev::XGatewayBitcoinV2Config {
             exchange_rate: TradingPrice {
                 price: 1,
                 decimal: 3,

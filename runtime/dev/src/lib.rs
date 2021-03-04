@@ -51,7 +51,7 @@ use xpallet_mining_asset::{MinerLedger, MiningAssetInfo, MiningDividendInfo};
 use xpallet_mining_staking::{NominatorInfo, NominatorLedger, ValidatorInfo};
 use xpallet_support::traits::MultisigAddressFor;
 
-use xpallet_gateway_bitcoin_v2::pallet as xpallet_gateway_bitcoin_v2;
+use xpallet_gateway_bitcoin_v2::pallet as xpallet_gateway_bitcoin_v2_pallet;
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
@@ -440,7 +440,7 @@ parameter_types! {
     pub const RedeemBtcDustValue: Balance = 1;
 }
 
-impl xpallet_gateway_bitcoin_v2::Config for Runtime {
+impl xpallet_gateway_bitcoin_v2_pallet::Config for Runtime {
     type Event = Event;
     type TargetAssetId = BridgeTargetAssetId;
     type DustCollateral = DustCollateral;
@@ -999,7 +999,7 @@ construct_runtime!(
         XGatewayRecords: xpallet_gateway_records::{Module, Call, Storage, Event<T>},
         XGatewayCommon: xpallet_gateway_common::{Module, Call, Storage, Event<T>, Config<T>},
         XGatewayBitcoin: xpallet_gateway_bitcoin::{Module, Call, Storage, Event<T>, Config<T>},
-        XGatewayBitcoinV2: xpallet_gateway_bitcoin_v2::{Module, Call, Storage, Event<T>, Config<T>},
+        XGatewayBitcoinV2: xpallet_gateway_bitcoin_v2_pallet::{Module, Call, Storage, Event<T>, Config<T>},
 
         // DEX
         XSpot: xpallet_dex_spot::{Module, Call, Storage, Event<T>, Config<T>},
