@@ -51,10 +51,7 @@ use xpallet_mining_asset::{MinerLedger, MiningAssetInfo, MiningDividendInfo};
 use xpallet_mining_staking::{NominatorInfo, NominatorLedger, ValidatorInfo};
 use xpallet_support::traits::MultisigAddressFor;
 
-use xpallet_gateway_bitcoin_v2::assets::pallet as xpallet_gateway_bitcoin_v2_assets;
-use xpallet_gateway_bitcoin_v2::issue::pallet as xpallet_gateway_bitcoin_v2_issue;
-use xpallet_gateway_bitcoin_v2::redeem::pallet as xpallet_gateway_bitcoin_v2_redeem;
-use xpallet_gateway_bitcoin_v2::vault::pallet as xpallet_gateway_bitcoin_v2_vault;
+use xpallet_gateway_bitcoin_v2::pallet as xpallet_gateway_bitcoin_v2_pallet;
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
@@ -433,20 +430,27 @@ impl pallet_session_historical::Config for Runtime {
 
 parameter_types! {
     pub const BridgeTargetAssetId: u8 = 1;
+    pub const DustCollateral: Balance = 1000;
+    pub const SecureThreshold: u16 = 300;
+    pub const PremiumThreshold: u16 = 250;
+    pub const LiquidationThreshold: u16 = 180;
+    pub const IssueRequestExpiredTime: BlockNumber = 10000;
+    pub const RedeemRequestExpiredTime: BlockNumber = 10000;
+    pub const ExchangeRateExpiredPeriod: BlockNumber = 10000;
+    pub const RedeemBtcDustValue: Balance = 1;
 }
 
-impl xpallet_gateway_bitcoin_v2_issue::Config for Runtime {
+impl xpallet_gateway_bitcoin_v2_pallet::Config for Runtime {
+    type Event = Event;
     type TargetAssetId = BridgeTargetAssetId;
-    type Event = Event;
-}
-impl xpallet_gateway_bitcoin_v2_redeem::Config for Runtime {
-    type Event = Event;
-}
-impl xpallet_gateway_bitcoin_v2_vault::Config for Runtime {
-    type Event = Event;
-}
-impl xpallet_gateway_bitcoin_v2_assets::Config for Runtime {
-    type Event = Event;
+    type DustCollateral = DustCollateral;
+    type SecureThreshold = SecureThreshold;
+    type PremiumThreshold = PremiumThreshold;
+    type LiquidationThreshold = LiquidationThreshold;
+    type IssueRequestExpiredTime = IssueRequestExpiredTime;
+    type RedeemRequestExpiredTime = RedeemRequestExpiredTime;
+    type RedeemBtcDustValue = RedeemBtcDustValue;
+    type ExchangeRateExpiredPeriod = ExchangeRateExpiredPeriod;
 }
 
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
@@ -995,10 +999,7 @@ construct_runtime!(
         XGatewayRecords: xpallet_gateway_records::{Module, Call, Storage, Event<T>},
         XGatewayCommon: xpallet_gateway_common::{Module, Call, Storage, Event<T>, Config<T>},
         XGatewayBitcoin: xpallet_gateway_bitcoin::{Module, Call, Storage, Event<T>, Config<T>},
-        XGatewayBitcoinV2Issue: xpallet_gateway_bitcoin_v2_issue::{Module, Call, Storage, Event<T>},
-        XGatewayBitcoinV2Redeem: xpallet_gateway_bitcoin_v2_redeem::{Module, Call, Storage, Event<T>},
-        XGatewayBitcoinV2Vault: xpallet_gateway_bitcoin_v2_vault::{Module, Call, Storage, Event<T>, Config<T>},
-        XGatewayBitcoinV2Assets: xpallet_gateway_bitcoin_v2_assets::{Module, Call, Storage, Event<T>},
+        XGatewayBitcoinV2: xpallet_gateway_bitcoin_v2_pallet::{Module, Call, Storage, Event<T>, Config<T>},
 
         // DEX
         XSpot: xpallet_dex_spot::{Module, Call, Storage, Event<T>, Config<T>},

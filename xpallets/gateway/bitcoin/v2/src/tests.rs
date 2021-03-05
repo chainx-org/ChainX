@@ -1,4 +1,3 @@
-use redeem::RedeemRequests;
 use sp_arithmetic::Percent;
 
 use frame_support::traits::Hooks;
@@ -8,34 +7,23 @@ use frame_support::{
 };
 use frame_system::RawOrigin;
 
-use crate::redeem::types::RedeemRequestStatus;
-
-use super::assets::pallet as assets;
-use super::issue::pallet as issue;
-use super::redeem::pallet as redeem;
-use super::vault::pallet as vault;
+use crate::pallet;
 
 use super::mock::*;
 
 fn t_register_vault(id: u64, collateral: u128, addr: &str) -> DispatchResultWithPostInfo {
-    Vault::register_vault(Origin::signed(id), collateral, addr.as_bytes().to_vec())
+    XGatewayBitcoin::register_vault(Origin::signed(id), collateral, addr.as_bytes().to_vec())
 }
 
 fn run_to_block(index: u64) {
     while System::block_number() < index {
-        Redeem::on_finalize(System::block_number());
-        Assets::on_finalize(System::block_number());
-        Vault::on_finalize(System::block_number());
-        Issue::on_finalize(System::block_number());
+        XGatewayBitcoin::on_finalize(System::block_number());
         System::on_finalize(System::block_number());
 
         System::set_block_number(System::block_number() + 1);
 
         System::on_initialize(System::block_number());
-        Issue::on_initialize(System::block_number());
-        Vault::on_initialize(System::block_number());
-        Assets::on_initialize(System::block_number());
-        Redeem::on_initialize(System::block_number());
+        XGatewayBitcoin::on_initialize(System::block_number());
     }
 }
 
@@ -59,67 +47,67 @@ fn t_register_btc() -> DispatchResult {
 }
 
 #[test]
+#[allow(non_upper_case_globals)]
 fn test_register_vault() {
-    ExtBuilder::build(BuildConfig {
-        minimium_vault_collateral: 100,
-        ..Default::default()
-    })
-    .execute_with(|| {
+    ExtBuilder::build(BuildConfig::default()).execute_with(|| {
+        const Alice: AccountId = 1;
+        const Bob: AccountId = 2;
         assert_err!(
-            t_register_vault(1, 20000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna"),
-            assets::Error::<Test>::InsufficientFunds
+            t_register_vault(Alice, 20000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna"),
+            pallet::Error::<Test>::InsufficientFunds
         );
         assert_err!(
-            t_register_vault(1, 10, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna"),
-            vault::Error::<Test>::InsufficientVaultCollateralAmount
+            t_register_vault(Alice, 10, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna"),
+            pallet::Error::<Test>::InsufficientVaultCollateralAmount
         );
         assert_ok!(t_register_vault(
-            1,
-            200,
+            Alice,
+            2000,
             "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna"
         ));
         assert_err!(
-            t_register_vault(1, 200, "3LrrqZ2LtZxAcroVaYKgM6yDeRszV2sY1r"),
-            vault::Error::<Test>::VaultAlreadyRegistered
+            t_register_vault(Alice, 2000, "3LrrqZ2LtZxAcroVaYKgM6yDeRszV2sY1r"),
+            pallet::Error::<Test>::VaultAlreadyRegistered
         );
         assert_err!(
-            t_register_vault(2, 200, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna"),
-            vault::Error::<Test>::BtcAddressOccupied
+            t_register_vault(Bob, 2000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna"),
+            pallet::Error::<Test>::BtcAddressOccupied
         );
     })
 }
 
 #[test]
+#[allow(non_upper_case_globals)]
 fn test_add_extra_collateral() {
-    ExtBuilder::build(BuildConfig {
-        minimium_vault_collateral: 100,
-        ..Default::default()
-    })
-    .execute_with(|| {
+    ExtBuilder::build(BuildConfig::default()).execute_with(|| {
+        const Alice: AccountId = 1;
         assert_err!(
-            Vault::add_extra_collateral(Origin::signed(1), 100),
-            vault::Error::<Test>::VaultNotFound
+            XGatewayBitcoin::add_extra_collateral(Origin::signed(Alice), 100),
+            pallet::Error::<Test>::VaultNotFound
         );
         assert_ok!(t_register_vault(
-            1,
-            200,
+            Alice,
+            2000,
             "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna"
         ));
         assert_err!(
-            Vault::add_extra_collateral(Origin::signed(1), 10000),
-            assets::Error::<Test>::InsufficientFunds
+            XGatewayBitcoin::add_extra_collateral(Origin::signed(Alice), 10000),
+            pallet::Error::<Test>::InsufficientFunds
         );
-        assert_ok!(Vault::add_extra_collateral(Origin::signed(1), 100));
-        let free_balance = Balances::free_balance(1);
-        assert_eq!(free_balance, 9700);
+        assert_ok!(XGatewayBitcoin::add_extra_collateral(
+            Origin::signed(Alice),
+            2000
+        ));
+        let free_balance = Balances::free_balance(Alice);
+        assert_eq!(free_balance, 6000);
     })
 }
 
 #[test]
 fn test_update_exchange_rate() {
-    use super::assets::types::TradingPrice;
+    use crate::types::TradingPrice;
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
-        let exchange_rate = Assets::exchange_rate();
+        let exchange_rate = XGatewayBitcoin::exchange_rate();
         assert_eq!(exchange_rate.price, 1);
         assert_eq!(exchange_rate.decimal, 3);
 
@@ -129,27 +117,28 @@ fn test_update_exchange_rate() {
         };
 
         assert_err!(
-            Assets::update_exchange_rate(Origin::signed(2), new_exchange_rate.clone()),
-            assets::Error::<Test>::OperationForbidden
+            XGatewayBitcoin::update_exchange_rate(Origin::signed(2), new_exchange_rate.clone()),
+            pallet::Error::<Test>::OperationForbidden
         );
-        assert_ok!(Assets::force_update_oracles(Origin::root(), vec![0]));
-        assert_ok!(Assets::update_exchange_rate(
+        assert_ok!(XGatewayBitcoin::force_update_oracles(
+            Origin::root(),
+            vec![0]
+        ));
+        assert_ok!(XGatewayBitcoin::update_exchange_rate(
             Origin::signed(0),
             new_exchange_rate.clone()
         ));
-        let exchange_rate = Assets::exchange_rate();
+        let exchange_rate = XGatewayBitcoin::exchange_rate();
         assert_eq!(exchange_rate, new_exchange_rate);
     })
 }
 
 #[test]
 fn test_bridge_needs_to_update_exchange_rate() {
-    use crate::assets::types::{ErrorCode, Status, TradingPrice};
+    use crate::types::{ErrorCode, Status, TradingPrice};
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
-        assert_eq!(Assets::bridge_status(), Status::Running);
-
-        assets::ExchangeRateExpiredPeriod::<Test>::put(2);
-        Assets::force_update_exchange_rate(
+        assert_eq!(XGatewayBitcoin::bridge_status(), Status::Running);
+        XGatewayBitcoin::force_update_exchange_rate(
             RawOrigin::Root.into(),
             TradingPrice {
                 price: 1u128,
@@ -157,16 +146,17 @@ fn test_bridge_needs_to_update_exchange_rate() {
             },
         )
         .unwrap();
-        assert_eq!(Assets::bridge_status(), Status::Running);
+        assert_eq!(XGatewayBitcoin::bridge_status(), Status::Running);
 
-        run_to_block(3);
+        System::set_block_number(10000);
+        run_to_block(10003);
 
         assert_eq!(
-            Assets::bridge_status(),
+            XGatewayBitcoin::bridge_status(),
             Status::Error(ErrorCode::EXCHANGE_RATE_EXPIRED)
         );
 
-        Assets::force_update_exchange_rate(
+        XGatewayBitcoin::force_update_exchange_rate(
             RawOrigin::Root.into(),
             TradingPrice {
                 price: 1u128,
@@ -175,19 +165,19 @@ fn test_bridge_needs_to_update_exchange_rate() {
         )
         .unwrap();
 
-        run_to_block(4);
-        assert_eq!(Assets::bridge_status(), Status::Running);
+        run_to_block(10004);
+        assert_eq!(XGatewayBitcoin::bridge_status(), Status::Running);
     })
 }
 
 #[test]
 fn test_issue_request() {
-    use super::assets::types::TradingPrice;
+    use super::types::TradingPrice;
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
         t_register_vault(3, 30000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
-        Issue::update_expired_time(Origin::root(), 10u64).unwrap();
-        Issue::update_griefing_fee(Origin::root(), Percent::from_parts(10)).unwrap();
-        Assets::force_update_exchange_rate(
+        XGatewayBitcoin::update_issue_griefing_fee(Origin::root(), Percent::from_parts(10))
+            .unwrap();
+        XGatewayBitcoin::force_update_exchange_rate(
             Origin::root(),
             TradingPrice {
                 price: 1,
@@ -198,27 +188,27 @@ fn test_issue_request() {
 
         // request
         assert_err!(
-            Issue::request_issue(Origin::signed(2), 3, 1, 2),
-            issue::Error::<Test>::InsufficientGriefingCollateral
+            XGatewayBitcoin::request_issue(Origin::signed(2), 3, 1, 2),
+            pallet::Error::<Test>::InsufficientGriefingCollateral
         );
-        assert_ok!(Issue::request_issue(Origin::signed(2), 3, 1, 300));
+        assert_ok!(XGatewayBitcoin::request_issue(Origin::signed(2), 3, 1, 300));
 
         let reserved_balance = <<Test as xpallet_assets::Config>::Currency>::reserved_balance(2);
         assert_eq!(reserved_balance, 300);
-        let issue_request = Issue::get_issue_request_by_id(1).unwrap();
+        let issue_request = XGatewayBitcoin::get_issue_request_by_id(1).unwrap();
         assert_eq!(issue_request.griefing_collateral, 300);
         assert_eq!(issue_request.requester, 2);
         assert_eq!(issue_request.vault, 3);
         assert_eq!(issue_request.open_time, 0);
 
         // check vault's token status
-        let vault = Vault::get_vault_by_id(&issue_request.vault).unwrap();
+        let vault = XGatewayBitcoin::get_vault_by_id(&issue_request.vault).unwrap();
         assert_eq!(vault.to_be_issued_tokens, issue_request.btc_amount);
 
         t_register_btc().unwrap();
 
         // execute issue_request
-        assert_ok!(Issue::execute_issue(
+        assert_ok!(XGatewayBitcoin::execute_issue(
             Origin::signed(1),
             1,
             vec![],
@@ -233,13 +223,13 @@ fn test_issue_request() {
         );
         assert_eq!(user_xbtc, 1);
 
-        let vault = Vault::get_vault_by_id(&issue_request.vault).unwrap();
+        let vault = XGatewayBitcoin::get_vault_by_id(&issue_request.vault).unwrap();
         assert_eq!(vault.issued_tokens, issue_request.btc_amount);
         assert_eq!(vault.to_be_issued_tokens, 0);
 
         assert_err!(
-            Issue::execute_issue(Origin::signed(1), 1, vec![], vec![], vec![],),
-            issue::Error::<Test>::IssueRequestDealt
+            XGatewayBitcoin::execute_issue(Origin::signed(1), 1, vec![], vec![], vec![],),
+            pallet::Error::<Test>::IssueRequestNotFound
         );
     })
 }
@@ -247,24 +237,22 @@ fn test_issue_request() {
 #[test]
 fn test_cancel_issue_request() {
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
-        issue::Pallet::<Test>::update_griefing_fee(RawOrigin::Root.into(), Percent::from_parts(10))
+        XGatewayBitcoin::update_issue_griefing_fee(RawOrigin::Root.into(), Percent::from_parts(10))
             .unwrap();
-        issue::Pallet::<Test>::update_expired_time(RawOrigin::Root.into(), 10).unwrap();
-
         t_register_vault(3, 20000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
-        Issue::request_issue(Origin::signed(1), 3, 1, 100).unwrap();
+        XGatewayBitcoin::request_issue(Origin::signed(1), 3, 1, 100).unwrap();
 
-        System::set_block_number(5);
+        System::set_block_number(5000);
         assert_err!(
-            Issue::cancel_issue(Origin::signed(1), 1),
-            issue::Error::<Test>::IssueRequestNotExpired
+            XGatewayBitcoin::cancel_issue(Origin::signed(1), 1),
+            pallet::Error::<Test>::IssueRequestNotExpired
         );
 
-        System::set_block_number(20);
-        assert_ok!(Issue::cancel_issue(Origin::signed(1), 1));
+        System::set_block_number(10020);
+        assert_ok!(XGatewayBitcoin::cancel_issue(Origin::signed(1), 1));
 
-        assert_eq!(<assets::CurrencyOf<Test>>::reserved_balance(3), 17000);
-        assert_eq!(<assets::CurrencyOf<Test>>::reserved_balance(1), 3000);
+        assert_eq!(<pallet::CurrencyOf<Test>>::reserved_balance(3), 17000);
+        assert_eq!(<pallet::CurrencyOf<Test>>::reserved_balance(1), 3000);
         assert_eq!(Balances::free_balance(1), 10000);
     })
 }
@@ -273,11 +261,11 @@ fn test_cancel_issue_request() {
 #[test]
 fn test_lock_collateral() {
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
-        assert_ok!(Assets::lock_collateral(&1, 200));
-        assert_eq!(<assets::CurrencyOf<Test>>::reserved_balance(1), 200);
+        assert_ok!(XGatewayBitcoin::lock_collateral(&1, 200));
+        assert_eq!(<pallet::CurrencyOf<Test>>::reserved_balance(1), 200);
         assert_err!(
-            Assets::lock_collateral(&1, 100_000),
-            assets::Error::<Test>::InsufficientFunds
+            XGatewayBitcoin::lock_collateral(&1, 100_000),
+            pallet::Error::<Test>::InsufficientFunds
         );
     });
 }
@@ -285,41 +273,40 @@ fn test_lock_collateral() {
 #[test]
 fn test_slash_collateral() {
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
-        Assets::lock_collateral(&1, 200).unwrap();
+        XGatewayBitcoin::lock_collateral(&1, 200).unwrap();
         assert_err!(
-            Assets::slash_collateral(&1, &2, 300),
-            assets::Error::<Test>::InsufficientCollateral
+            XGatewayBitcoin::slash_collateral(&1, &2, 300),
+            pallet::Error::<Test>::InsufficientCollateral
         );
-        assert_ok!(Assets::slash_collateral(&1, &2, 200));
-        assert_eq!(<assets::CurrencyOf<Test>>::reserved_balance(1), 0);
-        assert_eq!(<assets::CurrencyOf<Test>>::reserved_balance(2), 200);
+        assert_ok!(XGatewayBitcoin::slash_collateral(&1, &2, 200));
+        assert_eq!(<pallet::CurrencyOf<Test>>::reserved_balance(1), 0);
+        assert_eq!(<pallet::CurrencyOf<Test>>::reserved_balance(2), 200);
     });
 }
 
 #[test]
 fn test_release_collateral() {
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
-        Assets::lock_collateral(&1, 200).unwrap();
-        assert_eq!(<assets::CurrencyOf<Test>>::reserved_balance(1), 200);
-        assert_ok!(Assets::release_collateral(&1, 200));
-        assert_eq!(<assets::CurrencyOf<Test>>::reserved_balance(1), 0);
+        XGatewayBitcoin::lock_collateral(&1, 200).unwrap();
+        assert_eq!(<pallet::CurrencyOf<Test>>::reserved_balance(1), 200);
+        assert_ok!(XGatewayBitcoin::release_collateral(&1, 200));
+        assert_eq!(<pallet::CurrencyOf<Test>>::reserved_balance(1), 0);
         assert_err!(
-            assets::Pallet::<Test>::release_collateral(&1, 200),
-            assets::Error::<Test>::InsufficientCollateral
+            pallet::Pallet::<Test>::release_collateral(&1, 200),
+            pallet::Error::<Test>::InsufficientCollateral
         );
     })
 }
 
 #[test]
 fn test_redeem_request() {
-    use super::assets::types::TradingPrice;
+    use super::types::TradingPrice;
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
         t_register_vault(3, 30000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
-        Issue::update_expired_time(Origin::root(), 10u64).unwrap();
-        Issue::update_griefing_fee(Origin::root(), Percent::from_parts(10)).unwrap();
-        Redeem::update_expired_time(Origin::root(), 10u64).unwrap();
+        XGatewayBitcoin::update_issue_griefing_fee(Origin::root(), Percent::from_parts(10))
+            .unwrap();
 
-        Assets::force_update_exchange_rate(
+        XGatewayBitcoin::force_update_exchange_rate(
             Origin::root(),
             TradingPrice {
                 price: 1,
@@ -328,53 +315,49 @@ fn test_redeem_request() {
         )
         .unwrap();
 
-        Issue::request_issue(Origin::signed(2), 3, 1, 100).unwrap();
+        XGatewayBitcoin::request_issue(Origin::signed(2), 3, 1, 100).unwrap();
         assert_err!(
-            redeem::Pallet::<Test>::request_redeem(
+            XGatewayBitcoin::request_redeem(
                 Origin::signed(2),
                 3,
                 1000,
                 "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".as_bytes().to_vec()
             ),
-            redeem::Error::<Test>::InsufficiantAssetsFunds
+            pallet::Error::<Test>::InsufficiantAssetsFunds
         );
 
         t_register_btc().unwrap();
-        Issue::execute_issue(Origin::signed(2), 1, vec![], vec![], vec![]).unwrap();
+        XGatewayBitcoin::execute_issue(Origin::signed(2), 1, vec![], vec![], vec![]).unwrap();
 
         // request redeem
-        assert_ok!(Redeem::request_redeem(
+        assert_ok!(XGatewayBitcoin::request_redeem(
             Origin::signed(2),
             3,
             1,
             "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".as_bytes().to_vec()
         ));
 
-        let vault = Vault::get_vault_by_id(&3).unwrap();
+        let vault = XGatewayBitcoin::get_vault_by_id(&3).unwrap();
         assert_eq!(vault.to_be_redeemed_tokens, 1);
 
-        let redeem_request = RedeemRequests::<Test>::get(&1).unwrap();
-        assert_eq!(redeem_request.amount, 1);
-        assert_eq!(redeem_request.status, RedeemRequestStatus::Processing);
+        let redeem_request = pallet::RedeemRequests::<Test>::get(&1).unwrap();
+        assert_eq!(redeem_request.btc_amount, 1);
 
         let requester_locked_xbtc = xpallet_assets::Module::<Test>::asset_balance_of(
             &2,
             &BridgeTargetAssetId::get(),
-            xpallet_assets::AssetType::Locked,
+            xpallet_assets::AssetType::ReservedWithdrawal,
         );
         assert_eq!(requester_locked_xbtc, 1);
 
-        assert_ok!(Redeem::execute_redeem(
+        assert_ok!(XGatewayBitcoin::execute_redeem(
             Origin::signed(1),
             1,
             vec![],
             vec![],
             vec![]
         ));
-
-        let redeem_request = RedeemRequests::<Test>::get(&1).unwrap();
-        assert_eq!(redeem_request.amount, 1);
-        assert_eq!(redeem_request.status, RedeemRequestStatus::Completed);
+        assert_eq!(pallet::RedeemRequests::<Test>::get(&1), None);
 
         // check requester assets after executing
         let requester_locked_xbtc = xpallet_assets::Module::<Test>::asset_balance_of(
@@ -384,7 +367,7 @@ fn test_redeem_request() {
         );
         assert_eq!(requester_locked_xbtc, 0);
 
-        let vault = Vault::get_vault_by_id(&3).unwrap();
+        let vault = XGatewayBitcoin::get_vault_by_id(&3).unwrap();
         assert_eq!(vault.to_be_redeemed_tokens, 0);
         assert_eq!(vault.issued_tokens, 0);
     })
@@ -393,14 +376,18 @@ fn test_redeem_request() {
 #[test]
 fn test_calculate_required_collateral() {
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
-        Issue::update_griefing_fee(Origin::root(), Percent::from_parts(10)).unwrap();
-        assert_eq!(Issue::calculate_required_collateral(100).unwrap(), 10000);
+        XGatewayBitcoin::update_issue_griefing_fee(Origin::root(), Percent::from_parts(10))
+            .unwrap();
+        assert_eq!(
+            XGatewayBitcoin::calculate_required_collateral(100).unwrap(),
+            10000
+        );
     })
 }
 
 #[test]
 fn test_calculate_collateral_ratio() {
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
-        assert_ok!(Assets::calculate_collateral_ratio(10, 40000));
+        assert_ok!(XGatewayBitcoin::calculate_collateral_ratio(10, 40000));
     })
 }
