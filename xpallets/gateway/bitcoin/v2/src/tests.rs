@@ -58,7 +58,7 @@ fn test_register_vault() {
         );
         assert_err!(
             t_register_vault(Alice, 10, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna"),
-            pallet::Error::<Test>::InsufficientVaultCollateralAmount
+            pallet::Error::<Test>::CollateralAmountTooSmall
         );
         assert_ok!(t_register_vault(
             Alice,
@@ -118,7 +118,7 @@ fn test_update_exchange_rate() {
 
         assert_err!(
             XGatewayBitcoin::update_exchange_rate(Origin::signed(2), new_exchange_rate.clone()),
-            pallet::Error::<Test>::OperationForbidden
+            pallet::Error::<Test>::NotOracle
         );
         assert_ok!(XGatewayBitcoin::force_update_oracles(
             Origin::root(),
@@ -289,10 +289,10 @@ fn test_release_collateral() {
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
         XGatewayBitcoin::lock_collateral(&1, 200).unwrap();
         assert_eq!(<pallet::CurrencyOf<Test>>::reserved_balance(1), 200);
-        assert_ok!(XGatewayBitcoin::release_collateral(&1, 200));
+        assert_ok!(XGatewayBitcoin::unlock_collateral(&1, 200));
         assert_eq!(<pallet::CurrencyOf<Test>>::reserved_balance(1), 0);
         assert_err!(
-            pallet::Pallet::<Test>::release_collateral(&1, 200),
+            pallet::Pallet::<Test>::unlock_collateral(&1, 200),
             pallet::Error::<Test>::InsufficientCollateral
         );
     })
