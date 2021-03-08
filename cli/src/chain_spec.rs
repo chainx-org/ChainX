@@ -421,7 +421,7 @@ fn build_genesis(
             oracle_accounts: Default::default(),
             liquidator_id: get_account_id_from_seed::<sr25519::Public>("liquidator"),
             issue_griefing_fee: 10,
-            redeem_fee: 0u8,
+            redeem_fee: 0u32.into(),
         }),
         xpallet_mining_staking: Some(dev::XStakingConfig {
             validators,

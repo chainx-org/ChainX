@@ -192,7 +192,7 @@ pub mod pallet {
                 Error::<T>::CollateralAmountTooSmall
             );
             ensure!(
-                !Self::vault_exists(&sender),
+                !<Vaults<T>>::contains_key(&sender),
                 Error::<T>::VaultAlreadyRegistered
             );
             let btc_address = Self::verify_btc_address(&btc_address)?;
@@ -214,7 +214,10 @@ pub mod pallet {
             collateral: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
-            ensure!(Self::vault_exists(&sender), Error::<T>::VaultNotFound);
+            ensure!(
+                <Vaults<T>>::contains_key(&sender),
+                Error::<T>::VaultNotFound
+            );
             Self::lock_collateral(&sender, collateral)?;
             Self::deposit_event(Event::ExtraCollateralAdded(sender, collateral));
             Ok(().into())
@@ -278,25 +281,27 @@ pub mod pallet {
             _merkle_proof: Vec<u8>,
             _raw_tx: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
-            Self::ensure_bridge_running()?;
             ensure_signed(origin)?;
 
+            Self::ensure_bridge_running()?;
             //TODO(wangyafei): verify tx
 
-            let issue_request = Self::get_issue_request_by_id(request_id)
-                .ok_or(Error::<T>::IssueRequestNotFound)?;
-            Self::ensure_issue_request_not_expired(&issue_request)?;
+            let request = Self::get_issue_request_by_id(request_id)?;
+            ensure!(
+                Self::get_issue_request_duration(&request) < T::IssueRequestExpiredTime::get(),
+                Error::<T>::IssueRequestExpired
+            );
 
             <xpallet_assets::Module<T>>::issue(
                 &T::TargetAssetId::get(),
-                &issue_request.requester,
-                issue_request.btc_amount,
+                &request.requester,
+                request.btc_amount,
             )?;
-            Self::unlock_collateral(&issue_request.requester, issue_request.griefing_collateral)?;
-            Vaults::<T>::mutate(&issue_request.vault, |vault| {
+            Self::unlock_collateral(&request.requester, request.griefing_collateral)?;
+            Vaults::<T>::mutate(&request.vault, |vault| {
                 if let Some(vault) = vault {
-                    vault.to_be_issued_tokens -= issue_request.btc_amount;
-                    vault.issued_tokens += issue_request.btc_amount;
+                    vault.to_be_issued_tokens -= request.btc_amount;
+                    vault.issued_tokens += request.btc_amount;
                 }
             });
             IssueRequests::<T>::remove(&request_id);
@@ -312,23 +317,21 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             ensure_signed(origin)?;
 
-            let issue_request = Self::get_issue_request_by_id(request_id)
-                .ok_or(Error::<T>::IssueRequestNotFound)?;
+            let request = Self::get_issue_request_by_id(request_id)?;
 
-            Self::ensure_issue_request_not_expired(&issue_request)?;
+            ensure!(
+                Self::get_issue_request_duration(&request) >= T::IssueRequestExpiredTime::get(),
+                Error::<T>::IssueRequestNotExpired
+            );
 
-            let slashed_collateral = Self::calculate_slashed_collateral(issue_request.btc_amount)?;
-            Self::slash_collateral(
-                &issue_request.vault,
-                &issue_request.requester,
-                slashed_collateral,
-            )?;
+            let slashed_collateral = Self::calculate_slashed_collateral(request.btc_amount)?;
+            Self::slash_collateral(&request.vault, &request.requester, slashed_collateral)?;
 
-            Self::unlock_collateral(&issue_request.requester, issue_request.griefing_collateral)?;
+            Self::unlock_collateral(&request.requester, request.griefing_collateral)?;
 
-            Vaults::<T>::mutate(&issue_request.vault, |vault| {
+            Vaults::<T>::mutate(&request.vault, |vault| {
                 if let Some(vault) = vault {
-                    vault.to_be_issued_tokens -= issue_request.btc_amount;
+                    vault.to_be_issued_tokens -= request.btc_amount;
                 }
             });
             IssueRequests::<T>::remove(&request_id);
@@ -390,8 +393,7 @@ pub mod pallet {
                     requester: sender,
                     btc_address,
                     btc_amount: redeem_amount,
-                    // TODO(wangyafei): use storage value
-                    redeem_fee: Default::default(),
+                    redeem_fee: RedeemFee::<T>::get(),
                     reimburse: false,
                 },
             );
@@ -409,16 +411,29 @@ pub mod pallet {
             _raw_tx: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             ensure_signed(origin)?;
+
             Self::ensure_bridge_running()?;
 
             let request =
                 <RedeemRequests<T>>::get(request_id).ok_or(Error::<T>::RedeemRequestNotFound)?;
-            Self::ensure_redeem_request_not_expired(&request)?;
+
+            ensure!(
+                Self::get_redeem_request_duration(&request) < T::RedeemRequestExpiredTime::get(),
+                Error::<T>::RedeemRequestExpired
+            );
+            let vault = Self::get_active_vault_by_id(&request.vault)?;
 
             // TODO verify tx
-            // TODO: premium redeem fee
+            let collateral = CurrencyOf::<T>::reserved_balance(&vault.id);
+            let current_collateral_ratio =
+                Self::calculate_collateral_ratio(vault.issued_tokens, collateral)?;
 
-            Vaults::<T>::mutate(&request.vault, |vault| {
+            if current_collateral_ratio < T::PremiumThreshold::get() {
+                let premium_fee = Self::premium_fee();
+                Self::slash_collateral(&vault.id, &request.requester, premium_fee)?;
+            }
+
+            Vaults::<T>::mutate(&vault.id, |vault| {
                 if let Some(vault) = vault {
                     vault.issued_tokens -= request.btc_amount;
                     vault.to_be_redeemed_tokens -= request.btc_amount;
@@ -447,7 +462,10 @@ pub mod pallet {
                 <RedeemRequests<T>>::get(request_id).ok_or(Error::<T>::RedeemRequestNotFound)?;
 
             ensure!(request.requester == sender, Error::<T>::InvalidRequester);
-            Self::ensure_redeem_request_not_expired(&request)?;
+            ensure!(
+                Self::get_redeem_request_duration(&request) >= T::RedeemRequestExpiredTime::get(),
+                Error::<T>::RedeemRequestNotExpired
+            );
 
             let vault = Self::get_active_vault_by_id(&request.vault)?;
             let worth_pcx = Self::convert_to_pcx(request.btc_amount)?;
@@ -517,7 +535,7 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
             <IssueGriefingFee<T>>::put(griefing_fee);
-            Self::deposit_event(Event::<T>::GriefingFeeUpdated);
+            Self::deposit_event(Event::<T>::GriefingFeeUpdated(griefing_fee));
             Ok(().into())
         }
     }
@@ -559,14 +577,8 @@ pub mod pallet {
         RedeemExecuted(RequestId),
         /// Cancel redeem is accepted
         RedeemCancelled(RequestId),
-        /// Liquidation redeem is accepted
-        RedeemLiquidated,
-        /// Root updated `IssueRequestExpiredTime`.
-        ExpiredTimeUpdated,
         /// Root updated `IssueGriefingFee`.
-        GriefingFeeUpdated,
-        /// Current chain status is not right
-        ChainStatusError,
+        GriefingFeeUpdated(Percent),
     }
 
     /// Errors for assets module
@@ -707,7 +719,12 @@ pub mod pallet {
     /// Redeem fee when use request redeem
     #[pallet::storage]
     #[pallet::getter(fn redeem_fee)]
-    pub(crate) type RedeemFee<T: Config> = StorageValue<_, u8, ValueQuery>;
+    pub(crate) type RedeemFee<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
+
+    /// Slashed when excuting redeem if vault's collateral is below than `PremiumThreshold`
+    #[pallet::storage]
+    #[pallet::getter(fn premium_fee)]
+    pub(crate) type PremiumFee<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>; /*TODO(wangyafei): use fixed currently*/
 
     /// Auto-increament id to identify each redeem request.
     /// Also presents total amount of created requests.
@@ -731,7 +748,7 @@ pub mod pallet {
         /// the `IssueRequest` completed. It's proportional to `btc_amount` in `IssueRequest`.
         pub issue_griefing_fee: u8,
         /// Fixed fee that user shall lock when requesting redeem.
-        pub redeem_fee: u8,
+        pub redeem_fee: BalanceOf<T>,
     }
 
     #[cfg(feature = "std")]
@@ -742,7 +759,7 @@ pub mod pallet {
                 oracle_accounts: Default::default(),
                 liquidator_id: Default::default(),
                 issue_griefing_fee: Default::default(),
-                redeem_fee: 0,
+                redeem_fee: Default::default(),
             }
         }
     }
@@ -779,22 +796,14 @@ pub mod pallet {
                 .map_err(|_| Error::<T>::InvalidAddress)
         }
 
-        fn ensure_issue_request_not_expired(request: &IssueRequest<T>) -> DispatchResult {
+        fn get_issue_request_duration(request: &IssueRequest<T>) -> BlockNumberFor<T> {
             let current_block = frame_system::Pallet::<T>::block_number();
-            ensure!(
-                current_block - request.open_time < T::IssueRequestExpiredTime::get(),
-                Error::<T>::IssueRequestExpired
-            );
-            Ok(())
+            current_block - request.open_time
         }
 
-        fn ensure_redeem_request_not_expired(request: &RedeemRequest<T>) -> DispatchResult {
+        fn get_redeem_request_duration(request: &RedeemRequest<T>) -> BlockNumberFor<T> {
             let current_block = frame_system::Pallet::<T>::block_number();
-            ensure!(
-                current_block - request.open_time < T::IssueRequestExpiredTime::get(),
-                Error::<T>::RedeemRequestExpired
-            );
-            Ok(())
+            current_block - request.open_time
         }
 
         fn collateral_ratio_of(
@@ -924,11 +933,6 @@ pub mod pallet {
             }
         }
 
-        #[inline]
-        pub fn vault_exists(id: &T::AccountId) -> bool {
-            <Vaults<T>>::contains_key(id)
-        }
-
         pub fn get_vault_by_id(
             id: &T::AccountId,
         ) -> Result<Vault<T::AccountId, T::BlockNumber, BalanceOf<T>>, DispatchError> {
@@ -977,17 +981,11 @@ pub mod pallet {
             Ok(())
         }
 
-        /// generate secure key from account id
-        pub(crate) fn get_next_issue_id() -> RequestId {
-            <IssueRequestCount<T>>::mutate(|n| {
-                *n += 1;
-                *n
-            })
-        }
-
         /// Get `IssueRequest` from id
-        pub(crate) fn get_issue_request_by_id(request_id: RequestId) -> Option<IssueRequest<T>> {
-            <IssueRequests<T>>::get(request_id)
+        pub(crate) fn get_issue_request_by_id(
+            request_id: RequestId,
+        ) -> Result<IssueRequest<T>, DispatchError> {
+            <IssueRequests<T>>::get(request_id).ok_or(Error::<T>::IssueRequestNotFound.into())
         }
 
         /// Calculate minimium required collateral for a `IssueRequest`
@@ -1011,6 +1009,14 @@ pub mod pallet {
             let slashed_collateral: u32 =
                 (pcx_amount.saturated_into::<u128>() * secure_threshold as u128 / 100) as u32;
             Ok(slashed_collateral.into())
+        }
+
+        /// generate secure key from account id
+        pub(crate) fn get_next_issue_id() -> RequestId {
+            <IssueRequestCount<T>>::mutate(|n| {
+                *n += 1;
+                *n
+            })
         }
 
         /// Generate secure key from account id
