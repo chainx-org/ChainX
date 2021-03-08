@@ -228,41 +228,32 @@ pub mod pallet {
             origin: OriginFor<T>,
             vault_id: T::AccountId,
             btc_amount: BalanceOf<T>,
-            collateral: BalanceOf<T>,
+            griefing_collateral: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
-            Self::ensure_bridge_running()?;
             let sender = ensure_signed(origin)?;
-            let height = <frame_system::Pallet<T>>::block_number();
-            let vault = Self::get_active_vault_by_id(&vault_id)?;
-            let vault_collateral = CurrencyOf::<T>::reserved_balance(&vault_id);
 
-            // check if vault is rich enough
-            let collateral_ratio_after_requesting = Self::calculate_collateral_ratio(
-                vault.issued_tokens + vault.to_be_issued_tokens + btc_amount,
-                vault_collateral,
-            )?;
+            Self::ensure_bridge_running()?;
+            let (vault, collateral_ratio_later) = Self::collateral_ratio_of(&vault_id, btc_amount)?;
             ensure!(
-                collateral_ratio_after_requesting >= T::SecureThreshold::get(),
+                collateral_ratio_later >= T::SecureThreshold::get(),
                 Error::<T>::InsecureVault
             );
-
-            let required_collateral = Self::calculate_required_collateral(btc_amount)?;
             ensure!(
-                collateral >= required_collateral,
+                griefing_collateral >= Self::calculate_required_collateral(btc_amount)?,
                 Error::<T>::InsufficientGriefingCollateral
             );
 
-            Self::lock_collateral(&sender, collateral)?;
+            Self::lock_collateral(&sender, griefing_collateral)?;
             let request_id = Self::get_next_issue_id();
             IssueRequests::<T>::insert(
                 request_id,
                 IssueRequest::<T> {
-                    vault: vault.id.clone(),
-                    open_time: height,
+                    vault: vault_id.clone(),
+                    open_time: <frame_system::Pallet<T>>::block_number(),
                     requester: sender,
                     btc_address: vault.wallet,
                     btc_amount,
-                    griefing_collateral: collateral,
+                    griefing_collateral,
                     ..Default::default()
                 },
             );
@@ -294,7 +285,7 @@ pub mod pallet {
 
             let issue_request = Self::get_issue_request_by_id(request_id)
                 .ok_or(Error::<T>::IssueRequestNotFound)?;
-            Self::ensure_request_not_expired(&issue_request)?;
+            Self::ensure_issue_request_not_expired(&issue_request)?;
 
             <xpallet_assets::Module<T>>::issue(
                 &T::TargetAssetId::get(),
@@ -323,7 +314,8 @@ pub mod pallet {
 
             let issue_request = Self::get_issue_request_by_id(request_id)
                 .ok_or(Error::<T>::IssueRequestNotFound)?;
-            Self::ensure_request_not_expired(&issue_request)?;
+
+            Self::ensure_issue_request_not_expired(&issue_request)?;
 
             let slashed_collateral = Self::calculate_slashed_collateral(issue_request.btc_amount)?;
             Self::slash_collateral(
@@ -341,7 +333,7 @@ pub mod pallet {
             });
             IssueRequests::<T>::remove(&request_id);
 
-            Self::deposit_event(Event::<T>::IssueRequestCancelled);
+            Self::deposit_event(Event::<T>::IssueRequestCancelled(request_id));
             Ok(().into())
         }
 
@@ -353,35 +345,30 @@ pub mod pallet {
             redeem_amount: BalanceOf<T>,
             btc_addr: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
+            let sender = ensure_signed(origin)?;
+
             Self::ensure_bridge_running()?;
 
-            // Verify redeemer asset
-            let sender = ensure_signed(origin)?;
-            let btc_addr = from_utf8(&btc_addr)
-                .map_err(|_| Error::<T>::InvalidBtcAddress)?
-                .parse()
-                .map_err(|_| Error::<T>::InvalidBtcAddress)?;
-            let redeemer_balance = Self::usable_xbtc_of(&sender);
             ensure!(
-                redeem_amount <= redeemer_balance,
+                redeem_amount <= Self::usable_xbtc_of(&sender),
                 Error::<T>::InsufficiantAssetsFunds
             );
 
             // Ensure this vault can work.
-            let height = <frame_system::Pallet<T>>::block_number();
             let vault = Self::get_active_vault_by_id(&vault_id)?;
             ensure!(
                 redeem_amount <= vault.issued_tokens,
-                Error::<T>::VaultTokenInsufficiant
+                Error::<T>::RedeemAmountTooLarge
             );
 
             // Only allow requests of amount above above the minimum
-            let dust_value = T::RedeemBtcDustValue::get();
             ensure!(
                 // this is the amount the vault will send (minus fee)
-                redeem_amount >= dust_value,
+                redeem_amount >= T::RedeemBtcDustValue::get(),
                 Error::<T>::AmountBelowDustAmount
             );
+
+            let btc_address = Self::verify_btc_address(&btc_addr)?;
 
             // Increase vault's to_be_redeemed_tokens
             Vaults::<T>::mutate(&vault.id, |vault| {
@@ -399,9 +386,9 @@ pub mod pallet {
                 request_id,
                 RedeemRequest::<T> {
                     vault: vault_id,
-                    open_time: height,
+                    open_time: <frame_system::Pallet<T>>::block_number(),
                     requester: sender,
-                    btc_address: btc_addr,
+                    btc_address,
                     btc_amount: redeem_amount,
                     // TODO(wangyafei): use storage value
                     redeem_fee: Default::default(),
@@ -424,31 +411,20 @@ pub mod pallet {
             ensure_signed(origin)?;
             Self::ensure_bridge_running()?;
 
-            let RedeemRequest::<T> {
-                open_time,
-                vault,
-                btc_amount,
-                requester,
-                ..
-            } = <RedeemRequests<T>>::get(request_id).ok_or(Error::<T>::RedeemRequestNotFound)?;
-
-            let request_duration = <frame_system::Pallet<T>>::block_number() - open_time;
-            let expired_time = T::RedeemRequestExpiredTime::get();
-            ensure!(
-                request_duration < expired_time,
-                Error::<T>::RedeemRequestExpired
-            );
+            let request =
+                <RedeemRequests<T>>::get(request_id).ok_or(Error::<T>::RedeemRequestNotFound)?;
+            Self::ensure_redeem_request_not_expired(&request)?;
 
             // TODO verify tx
             // TODO: premium redeem fee
 
-            Vaults::<T>::mutate(&vault, |vault| {
+            Vaults::<T>::mutate(&request.vault, |vault| {
                 if let Some(vault) = vault {
-                    vault.issued_tokens -= btc_amount;
-                    vault.to_be_redeemed_tokens -= btc_amount;
+                    vault.issued_tokens -= request.btc_amount;
+                    vault.to_be_redeemed_tokens -= request.btc_amount;
                 }
             });
-            Self::burn_xbtc(&requester, btc_amount)?;
+            Self::burn_xbtc(&request.requester, request.btc_amount)?;
             RedeemRequests::<T>::remove(&request_id);
 
             Self::deposit_event(Event::<T>::RedeemExecuted(request_id));
@@ -467,24 +443,14 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
 
-            // Ensure sender is is redeem's owner
             let request =
                 <RedeemRequests<T>>::get(request_id).ok_or(Error::<T>::RedeemRequestNotFound)?;
-            ensure!(request.requester == sender, Error::<T>::UnauthorizedUser);
 
-            // Ensure the redeem request is outdate
-            let height = <frame_system::Pallet<T>>::block_number();
-            let expired_time = T::RedeemRequestExpiredTime::get();
-            ensure!(
-                height - request.open_time > expired_time,
-                Error::<T>::RedeemRequestNotExpired
-            );
+            ensure!(request.requester == sender, Error::<T>::InvalidRequester);
+            Self::ensure_redeem_request_not_expired(&request)?;
 
             let vault = Self::get_active_vault_by_id(&request.vault)?;
             let worth_pcx = Self::convert_to_pcx(request.btc_amount)?;
-
-            // Punish vault fee
-            let punishment_fee: BalanceOf<T> = 0u32.into();
 
             if reimburse {
                 // Decrease vault tokens
@@ -493,6 +459,9 @@ pub mod pallet {
                         vault.to_be_redeemed_tokens -= request.btc_amount;
                     }
                 });
+
+                // Punish vault fee
+                let punishment_fee: BalanceOf<T> = 0u32.into();
 
                 // Vault give pcx to sender
                 Self::slash_collateral(
@@ -509,7 +478,7 @@ pub mod pallet {
 
             RedeemRequests::<T>::remove(&request_id);
 
-            Self::deposit_event(Event::<T>::RedeemCancelled);
+            Self::deposit_event(Event::<T>::RedeemCancelled(request_id));
             Ok(().into())
         }
 
@@ -583,21 +552,21 @@ pub mod pallet {
         /// `IssueRequest` excuted.
         IssueRequestExecuted(RequestId),
         /// `IssueRequest` cancelled.`
-        IssueRequestCancelled,
+        IssueRequestCancelled(RequestId),
+        /// Redeem request is accepted
+        NewRedeemRequest(RequestId),
+        /// Execute redeem is accepted
+        RedeemExecuted(RequestId),
+        /// Cancel redeem is accepted
+        RedeemCancelled(RequestId),
+        /// Liquidation redeem is accepted
+        RedeemLiquidated,
         /// Root updated `IssueRequestExpiredTime`.
         ExpiredTimeUpdated,
         /// Root updated `IssueGriefingFee`.
         GriefingFeeUpdated,
         /// Current chain status is not right
         ChainStatusError,
-        /// Redeem request is accepted
-        NewRedeemRequest(RequestId),
-        /// Cancel redeem is accepted
-        RedeemCancelled,
-        /// Liquidation redeem is accepted
-        RedeemLiquidated,
-        /// Execute redeem is accepted
-        RedeemExecuted(RequestId),
     }
 
     /// Errors for assets module
@@ -652,7 +621,7 @@ pub mod pallet {
         /// Vault is under Liquidation
         VaultLiquidated,
         /// Actioner is not the request's owner
-        UnauthorizedUser,
+        InvalidRequester,
         /// Redeem amount is to low
         AmountBelowDustAmount,
         /// Redeem amount is not correct
@@ -668,7 +637,7 @@ pub mod pallet {
         /// Invalid btc address
         InvalidBtcAddress,
         /// Vault issue token insufficient
-        VaultTokenInsufficiant,
+        RedeemAmountTooLarge,
         /// Error propagated from xpallet_assets.
         AssetError,
     }
@@ -803,7 +772,6 @@ pub mod pallet {
             Ok(result.saturated_into())
         }
 
-        #[inline]
         fn verify_btc_address(address: &[u8]) -> Result<BtcAddress, Error<T>> {
             from_utf8(address)
                 .map_err(|_| Error::<T>::InvalidAddress)?
@@ -811,13 +779,39 @@ pub mod pallet {
                 .map_err(|_| Error::<T>::InvalidAddress)
         }
 
-        fn ensure_request_not_expired(request: &IssueRequest<T>) -> DispatchResult {
-            let height = frame_system::Pallet::<T>::block_number();
+        fn ensure_issue_request_not_expired(request: &IssueRequest<T>) -> DispatchResult {
+            let current_block = frame_system::Pallet::<T>::block_number();
             ensure!(
-                height - request.open_time < T::IssueRequestExpiredTime::get(),
+                current_block - request.open_time < T::IssueRequestExpiredTime::get(),
                 Error::<T>::IssueRequestExpired
             );
             Ok(())
+        }
+
+        fn ensure_redeem_request_not_expired(request: &RedeemRequest<T>) -> DispatchResult {
+            let current_block = frame_system::Pallet::<T>::block_number();
+            ensure!(
+                current_block - request.open_time < T::IssueRequestExpiredTime::get(),
+                Error::<T>::RedeemRequestExpired
+            );
+            Ok(())
+        }
+
+        fn collateral_ratio_of(
+            vault_id: &T::AccountId,
+            btc_amount: BalanceOf<T>,
+        ) -> Result<(Vault<T::AccountId, T::BlockNumber, BalanceOf<T>>, u16), DispatchError>
+        {
+            let vault = Self::get_active_vault_by_id(vault_id)?;
+            let vault_collateral = CurrencyOf::<T>::reserved_balance(vault_id);
+
+            // check if vault is rich enough
+            let collateral_ratio_after_requesting = Self::calculate_collateral_ratio(
+                vault.issued_tokens + vault.to_be_issued_tokens + btc_amount,
+                vault_collateral,
+            )?;
+
+            Ok((vault, collateral_ratio_after_requesting))
         }
 
         pub(crate) fn lock_collateral(
@@ -928,11 +922,6 @@ pub mod pallet {
                     <BridgeStatus<T>>::put(Status::Error(error_codes))
                 }
             }
-        }
-
-        #[inline]
-        pub fn insert_btc_address(address: &BtcAddress, vault_id: T::AccountId) {
-            <BtcAddresses<T>>::insert(address, vault_id);
         }
 
         #[inline]
