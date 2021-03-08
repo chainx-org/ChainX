@@ -152,7 +152,7 @@ impl ExtBuilder {
                 oracle_accounts: Default::default(),
                 liquidator_id: 100,
                 issue_griefing_fee: 10,
-                redeem_fee: 0u8,
+                redeem_fee: 0u32.into(),
             },
             &mut storage,
         );
