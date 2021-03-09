@@ -211,7 +211,9 @@ where
     io.extend_with(XGatewayRecordsApi::to_delegate(XGatewayRecords::new(
         client.clone(),
     )));
-    io.extend_with(XGatewayCommonApi::to_delegate(XGatewayCommon::new(client)));
+    io.extend_with(XGatewayCommonApi::to_delegate(XGatewayCommon::new(
+        client.clone(),
+    )));
     io
 }
 

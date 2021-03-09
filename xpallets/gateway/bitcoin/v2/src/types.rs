@@ -79,6 +79,7 @@ impl TradingPrice {
 }
 
 #[derive(Encode, Decode, Clone, PartialEq)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub enum VaultStatus {
     /// Vault is ready to serve issue and redeem request, unless it was banned.
@@ -105,6 +106,7 @@ pub struct SystemVault<AccountId, Balance> {
 }
 
 #[derive(Encode, Decode, Default, Clone, PartialEq)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct Vault<AccountId, BlockNumber, Balance> {
     /// Account identifier of the Vault

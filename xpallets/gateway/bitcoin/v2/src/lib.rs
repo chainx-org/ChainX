@@ -55,6 +55,8 @@ pub mod pallet {
         pallet_prelude::{BlockNumberFor, OriginFor},
     };
 
+    use light_bitcoin::keys::DisplayLayout;
+
     use chainx_primitives::AssetId;
     use xpallet_assets::AssetType;
 
@@ -789,6 +791,15 @@ pub mod pallet {
             Ok(result.saturated_into())
         }
 
+        pub fn convert_to_btc(pcx_amount: BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError> {
+            //TODO(wangyafei): add lower bound?
+            let exchange_rate = Self::exchange_rate();
+            let result = exchange_rate
+                .convert_to_btc(pcx_amount.saturated_into())
+                .ok_or(Error::<T>::ArithmeticError)?;
+            Ok(result.saturated_into())
+        }
+
         fn verify_btc_address(address: &[u8]) -> Result<BtcAddress, Error<T>> {
             from_utf8(address)
                 .map_err(|_| Error::<T>::InvalidAddress)?
@@ -1095,6 +1106,37 @@ pub mod pallet {
             <ExchangeRateUpdateTime<T>>::put(height);
             Self::recover_from_exchange_rate_expired();
             Ok(())
+        }
+
+        fn _calculate_vault_token_upper_bound(
+            vault_id: &T::AccountId,
+        ) -> Result<BalanceOf<T>, DispatchError> {
+            let vault_collateral = CurrencyOf::<T>::reserved_balance(vault_id);
+            let secure_collateral = 100u128
+                .checked_mul(vault_collateral.saturated_into())
+                .and_then(|c| c.checked_div(u128::from(T::SecureThreshold::get())))
+                .ok_or(Error::<T>::ArithmeticError)?;
+            Self::convert_to_btc(secure_collateral.saturated_into())
+        }
+
+        //rpc use
+        pub fn get_first_matched_vault(
+            xbtc_amount: BalanceOf<T>,
+        ) -> Option<(T::AccountId, Vec<u8>)> {
+            Vaults::<T>::iter()
+                .take_while(|(vault_id, vault)| {
+                    if let Ok(token_upper_bound) =
+                        Self::_calculate_vault_token_upper_bound(vault_id)
+                    {
+                        token_upper_bound > vault.issued_tokens
+                            && token_upper_bound - vault.issued_tokens > xbtc_amount
+                    } else {
+                        false
+                    }
+                })
+                .take(1)
+                .map(|(vault_id, vault)| (vault_id, vault.wallet.layout().to_vec()))
+                .next()
         }
     }
 }

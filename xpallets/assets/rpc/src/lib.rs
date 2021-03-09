@@ -42,8 +42,7 @@ where
     Balance: Display + FromStr,
 {
     /// Return all assets with AssetTypes for an account (exclude native token(PCX)). The returned map would not contains the assets which is not existed for this account but existed in valid assets list.
-    #[rpc(name = "xassets_getAssetsByAccount")]
-    fn assets_by_account(
+    #[rpc(name = "xassets_getAssetsByAccount")] fn assets_by_account(
         &self,
         who: AccountId,
         at: Option<BlockHash>,
