@@ -56,8 +56,6 @@ pub mod pallet {
     };
     use light_bitcoin::keys::{Address as BtcAddress, DisplayLayout};
 
-    use light_bitcoin::keys::DisplayLayout;
-
     use chainx_primitives::AssetId;
     use xpallet_assets::AssetType;
 
@@ -1137,7 +1135,7 @@ pub mod pallet {
                     }
                 })
                 .take(1)
-                .map(|(vault_id, vault)| (vault_id, vault.wallet.layout().to_vec()))
+                .map(|(vault_id, vault)| (vault_id, vault.wallet))
                 .next()
         }
     }
