@@ -9536,6 +9536,7 @@ name = "xpallet-gateway-bitcoin-v2"
 version = "2.0.1"
 dependencies = [
  "bitflags",
+ "bs58 0.3.1",
  "chainx-primitives",
  "frame-support",
  "frame-system",

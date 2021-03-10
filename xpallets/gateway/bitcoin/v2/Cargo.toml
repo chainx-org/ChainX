@@ -8,6 +8,7 @@ edition = "2018"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
+bs58 = { version = "0.3", default-features = false, features = ["alloc"] }
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
 impl-trait-for-tuples = "0.2.0"
 serde = { version = "1.0.101", optional = true, features = ["derive"] }
@@ -42,6 +43,7 @@ pallet-balances = "2.0.1"
 default = ["std"]
 std = [
   "codec/std",
+  "bs58/std",
   "serde",
   "sha2/std",
   "sp-arithmetic/std",

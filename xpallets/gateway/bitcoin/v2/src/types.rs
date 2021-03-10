@@ -1,12 +1,13 @@
+use sp_std::vec::Vec;
+
 use bitflags::bitflags;
 use codec::{Decode, Encode};
-use light_bitcoin::keys::Address;
 use sp_runtime::RuntimeDebug;
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
-pub type BtcAddress = Address;
+pub type BtcAddrStr = Vec<u8>;
 
 /// Bridge status
 #[derive(Encode, Decode, RuntimeDebug, Clone, Eq, PartialEq)]
@@ -116,7 +117,7 @@ pub struct Vault<AccountId, BlockNumber, Balance> {
     /// Number of tokens pending redeem
     pub to_be_redeemed_tokens: Balance,
     /// Bitcoin address of this Vault (P2PKH, P2SH, P2PKH, P2WSH)
-    pub wallet: BtcAddress,
+    pub wallet: BtcAddrStr,
     /// Block height until which this Vault is banned from being
     /// used for Issue, Redeem (except during automatic liquidation) and Replace .
     pub banned_until: Option<BlockNumber>,
@@ -127,7 +128,7 @@ pub struct Vault<AccountId, BlockNumber, Balance> {
 impl<AccountId: Default, BlockNumber: Default, Balance: Default>
     Vault<AccountId, BlockNumber, Balance>
 {
-    pub(crate) fn new(id: AccountId, address: BtcAddress) -> Self {
+    pub(crate) fn new(id: AccountId, address: BtcAddrStr) -> Self {
         Self {
             id,
             wallet: address,
@@ -146,7 +147,7 @@ pub struct RedeemRequest<AccountId, BlockNumber, XBTC, PCX> {
     /// Who requests redeem
     pub(crate) requester: AccountId,
     /// Vault's btc address
-    pub(crate) btc_address: BtcAddress,
+    pub(crate) btc_address: BtcAddrStr,
     /// Amount that user wants to redeem
     pub(crate) btc_amount: XBTC,
     /// Redeem fee amount
@@ -166,7 +167,7 @@ pub struct IssueRequest<AccountId, BlockNumber, XBTC, PCX> {
     /// Who requests issue
     pub(crate) requester: AccountId,
     /// Vault's btc address
-    pub(crate) btc_address: BtcAddress,
+    pub(crate) btc_address: BtcAddrStr,
     /// Amount that user wants to issue
     pub(crate) btc_amount: XBTC,
     /// Collateral locked to avoid user griefing
