@@ -214,7 +214,7 @@ where
     io.extend_with(XGatewayCommonApi::to_delegate(XGatewayCommon::new(
         client.clone(),
     )));
-    // TODO: intergate bitcoin v2 api
+    // TODO: integrate bitcoin v2 api
     io
 }
 
