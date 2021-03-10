@@ -1,0 +1,34 @@
+[package]
+name = "xpallet-gateway-bitcoin-v2-rpc-runtime-api"
+version = "0.1.0"
+authors = ["The ChainX Authors"]
+edition = "2018"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+
+# Substrate primitives
+sp-api = { version = "2.0.1", default-features = false }
+sp-std = { version = "2.0.1", default-features = false }
+
+# ChainX primitives
+chainx-primitives = { path = "../../../../../../primitives", default-features = false }
+
+# ChainX pallets
+xpallet-gateway-bitcoin-v2 = { path = "../../", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+  "codec/std",
+  # Substrate primitives
+  "sp-api/std",
+  "sp-std/std",
+  # ChainX primitives
+  "chainx-primitives/std",
+  # ChainX pallets
+  "xpallet-gateway-bitcoin-v2/std",
+]

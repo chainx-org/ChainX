@@ -60,3 +60,5 @@ xpallet-mining-staking-rpc = { path = "../xpallets/mining/staking/rpc" }
 xpallet-mining-staking-rpc-runtime-api = { path = "../xpallets/mining/staking/rpc/runtime-api" }
 xpallet-transaction-fee-rpc = { path = "../xpallets/transaction-fee/rpc" }
 xpallet-transaction-fee-rpc-runtime-api = { path = "../xpallets/transaction-fee/rpc/runtime-api" }
+xpallet-gateway-bitcoin-v2-rpc = { path = "../xpallets/gateway/bitcoin/v2/rpc" }
+xpallet-gateway-bitcoin-v2-rpc-runtime-api = { path = "../xpallets/gateway/bitcoin/v2/rpc/runtime-api" }

@@ -50,6 +50,7 @@ malan-runtime = { path = "../runtime/malan" }
 xpallet-assets-rpc-runtime-api = { path = "../xpallets/assets/rpc/runtime-api" }
 xpallet-dex-spot-rpc-runtime-api = { path = "../xpallets/dex/spot/rpc/runtime-api" }
 xpallet-gateway-common-rpc-runtime-api = { path = "../xpallets/gateway/common/rpc/runtime-api" }
+xpallet-gateway-bitcoin-v2-rpc-runtime-api = { path = "../xpallets/gateway/bitcoin/v2/rpc/runtime-api" }
 xpallet-gateway-records-rpc-runtime-api = { path = "../xpallets/gateway/records/rpc/runtime-api" }
 xpallet-mining-asset-rpc-runtime-api = { path = "../xpallets/mining/asset/rpc/runtime-api" }
 xpallet-mining-staking-rpc-runtime-api = { path = "../xpallets/mining/staking/rpc/runtime-api" }
