@@ -1,0 +1,25 @@
+[package]
+name = "xpallet-gateway-bitcoin-v2-rpc"
+version = "0.1.0"
+authors = ["Alan WANG <alan1995wang@outlook.com>"]
+edition = "2018"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "2.0.0" }
+jsonrpc-core = "15.0.0"
+jsonrpc-core-client = "15.0.0"
+jsonrpc-derive = "15.0.0"
+
+# Substrate primitives
+sp-api = "2.0.1"
+sp-blockchain = "2.0.1"
+sp-runtime = "2.0.1"
+
+# ChainX primitives
+xp-rpc = { path = "../../../../../primitives/rpc" }
+
+# ChainX pallets api
+xpallet-gateway-bitcoin-v2-rpc-runtime-api = { path = "./runtime-api" }
