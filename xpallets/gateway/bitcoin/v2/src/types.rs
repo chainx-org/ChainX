@@ -108,7 +108,6 @@ pub struct SystemVault<AccountId, Balance> {
 #[derive(Encode, Decode, Default, Clone, PartialEq)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct Vault<AccountId, BlockNumber, Balance> {
     /// Account identifier of the Vault
