@@ -54,7 +54,7 @@ pub mod pallet {
         ensure_root, ensure_signed,
         pallet_prelude::{BlockNumberFor, OriginFor},
     };
-    use light_bitcoin::keys::{Address as BtcAddress, DisplayLayout};
+    use light_bitcoin::keys::Address;
 
     use chainx_primitives::AssetId;
     use xpallet_assets::AssetType;
@@ -690,7 +690,7 @@ pub mod pallet {
 
     /// Mapping btc address to vault id.
     #[pallet::storage]
-    pub(crate) type BtcAddresses<T: Config> = StorageMap<_, Twox64Concat, BtcAddrStr, T::AccountId>;
+    pub(crate) type BtcAddresses<T: Config> = StorageMap<_, Twox64Concat, BtcAddress, T::AccountId>;
 
     /// Specicial `SystemVault`
     #[pallet::storage]
@@ -800,7 +800,7 @@ pub mod pallet {
             Ok(result.saturated_into())
         }
 
-        fn verify_btc_address(address: &[u8]) -> Result<BtcAddress, Error<T>> {
+        fn verify_btc_address(address: &[u8]) -> Result<Address, Error<T>> {
             from_utf8(address)
                 .map_err(|_| Error::<T>::InvalidAddress)?
                 .parse()
