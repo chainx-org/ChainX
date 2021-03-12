@@ -1,12 +1,13 @@
+use sp_std::vec::Vec;
+
 use bitflags::bitflags;
 use codec::{Decode, Encode};
-use light_bitcoin::keys::Address;
 use sp_runtime::RuntimeDebug;
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
-pub type BtcAddress = Address;
+pub type BtcAddress = Vec<u8>;
 
 /// Bridge status
 #[derive(Encode, Decode, RuntimeDebug, Clone, Eq, PartialEq)]

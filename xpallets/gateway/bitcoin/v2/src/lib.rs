@@ -54,8 +54,7 @@ pub mod pallet {
         ensure_root, ensure_signed,
         pallet_prelude::{BlockNumberFor, OriginFor},
     };
-
-    use light_bitcoin::keys::DisplayLayout;
+    use light_bitcoin::keys::Address;
 
     use chainx_primitives::AssetId;
     use xpallet_assets::AssetType;
@@ -197,7 +196,8 @@ pub mod pallet {
                 !<Vaults<T>>::contains_key(&sender),
                 Error::<T>::VaultAlreadyRegistered
             );
-            let btc_address = Self::verify_btc_address(&btc_address)?;
+            Self::verify_btc_address(&btc_address)?;
+
             ensure!(
                 !<BtcAddresses<T>>::contains_key(&btc_address),
                 Error::<T>::BtcAddressOccupied
@@ -348,7 +348,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             vault_id: T::AccountId,
             redeem_amount: BalanceOf<T>,
-            btc_addr: Vec<u8>,
+            btc_address: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
 
@@ -373,7 +373,7 @@ pub mod pallet {
                 Error::<T>::AmountBelowDustAmount
             );
 
-            let btc_address = Self::verify_btc_address(&btc_addr)?;
+            Self::verify_btc_address(&btc_address)?;
 
             // Increase vault's to_be_redeemed_tokens
             Vaults::<T>::mutate(&vault.id, |vault| {
@@ -800,7 +800,7 @@ pub mod pallet {
             Ok(result.saturated_into())
         }
 
-        fn verify_btc_address(address: &[u8]) -> Result<BtcAddress, Error<T>> {
+        fn verify_btc_address(address: &[u8]) -> Result<Address, Error<T>> {
             from_utf8(address)
                 .map_err(|_| Error::<T>::InvalidAddress)?
                 .parse()
@@ -1135,7 +1135,7 @@ pub mod pallet {
                     }
                 })
                 .take(1)
-                .map(|(vault_id, vault)| (vault_id, vault.wallet.layout().to_vec()))
+                .map(|(vault_id, vault)| (vault_id, vault.wallet))
                 .next()
         }
     }
