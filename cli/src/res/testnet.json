@@ -1,0 +1,38 @@
+{
+  "name": "ChainX",
+  "id": "chainx",
+  "chainType": "Live",
+  "bootNodes": [
+    "/dns/p2p.1.chainx.org/tcp/20222/p2p/12D3KooWMMGD6eyLDgoTPnmGrawn9gkjtsZGLACJXqVCUbe6R6bD",
+    "/dns/p2p.2.chainx.org/tcp/20222/p2p/12D3KooWC1tFLBFVw47S2nfD7Nzhg5hBMUvsnz4nqpr82zfTYWaH",
+    "/dns/p2p.3.chainx.org/tcp/20222/p2p/12D3KooWPthFY8xDDyM5X9PWZwNfioqP5EShiTKyVv5899H22WBT"
+  ],
+  "telemetryEndpoints": [
+    [
+      "/dns/telemetry.chainx.org/tcp/443/x-parity-wss/%2Fsubmit%2F",
+      0
+    ],
+    [
+      "/dns/telemetry.polkadot.io/tcp/443/x-parity-wss/%2Fsubmit%2F",
+      0
+    ]
+  ],
+  "protocolId": "pcx",
+  "properties": {
+    "network": "Mainnet",
+    "ss58Format": 44,
+    "tokenDecimals": 8,
+    "tokenSymbol": "PCX"
+  },
+  "forkBlocks": null,
+  "badBlocks": null,
+  "consensusEngine": null,
+  "lightSyncState": null,
+  "genesis": {
+    "raw": {
+      "top": {
+      },
+      "childrenDefault": {}
+    }
+  }
+}
