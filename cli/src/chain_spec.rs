@@ -260,54 +260,45 @@ pub fn testnet_config() -> Result<TestnetChainSpec, String> {
     use sp_core::crypto::UncheckedInto;
 
     let wasm_binary =
-        dev::WASM_BINARY.ok_or_else(|| "Development wasm binary not available".to_string())?;
+        testnet::WASM_BINARY.ok_or_else(|| "Development wasm binary not available".to_string())?;
     let endowed_balance = 50 * DEV_DOLLARS;
 
     let root_key: AccountId =
-        hex!["ead76b30c2f8c4bb01537cec7095314c1eb0351e4e3b3e605192a28114050737"].into();
+        hex!["ecdfeb7930b5d59a026e234e7e43f8c0a21a2aa9a20b136f66f55b65a402330b"].into();
 
-    let validator1: AccountId =
-        hex!["80935ef6a7ee41195bec0f089f34893acaae558b3ca70b9bee327071bf3af46d"].into();
-
-    let validator2: AccountId =
-        hex!["6a68563143332f4df5adabe739744e4744a9d2cc96bfd66434b016775b10dc6b"].into();
-
-    let babe1: BabeId =
-        hex!["3c05aebeb9e9740fc49fba44d36958cfebaed238a15e5d215d20c3b858c58d16"].unchecked_into();
-    let babe2: BabeId =
-        hex!["d8d09f57c3ba6ab33c1ffda74aa70af40eade733d77c642a7159e2621c591203"].unchecked_into();
-
-    let grandpa1: GrandpaId =
-        hex!["b3d7b25de30f345bfb40e0fb78f86acc36a7edc045615d5dee2cb9539faa8219"].unchecked_into();
-    let grandpa2: GrandpaId =
-        hex!["6f13f7e727ef6b4094b346e351e66242b51fbbb6a2eac532b55389f1314d2d11"].unchecked_into();
-
-    let im_online1: ImOnlineId =
-        hex!["aac2440bfa090b89b151bd32e664cf3a77646040d58beeca4c66a8727d78fa4c"].unchecked_into();
-    let im_online2: ImOnlineId =
-        hex!["c8bc5af37ae86784b073d2b88133cae60c268c31a1c2b108c92d3d16fc3a7d77"].unchecked_into();
-
-    let authority_discovery1: AuthorityDiscoveryId =
-        hex!["b491a4f377891c48b05b3caaa8344612b4bbd0833be3074affd96eb3ccc8a71c"].unchecked_into();
-    let authority_discovery2: AuthorityDiscoveryId =
-        hex!["d234f68df98ebdaae5574c8b1ac8862176856c16839f198942640d35d65a1067"].unchecked_into();
-
-    let initial_authorities: Vec<AuthorityKeysTuple> = vec![
+    let group1: AuthorityKeysTuple = (
         (
-            (validator1, b"validator1".to_vec()),
-            babe1,
-            grandpa1,
-            im_online1,
-            authority_discovery1,
+            // 5HgEo72erMXVvriHBQWHeTKvDTjemYSDTawfSNx4jEzcLUgp
+            hex!["f846e7a559fddbf68704051c728b99b561fe206f4c8e684dcbf76c97cefe5c5f"].into(),
+            b"Validator1".to_vec(),
         ),
+        // 5HQBX6RTXZskjTjAcq6q8M6xV9a1oBeKspmguwqDbnYnJEY8
+        hex!["ec07f343ea88ac2639c1890adac7473616c138440c939f7ccadf1152f940ae15"].unchecked_into(),
+        // 5DyoG8Qm5wCrpDTShTuHQmCae77oj9vdVeLphfEd5CNC5Ji5
+        hex!["54ba6ed80edca6c3233dc0a8880c41f0f08ccf9d38812d5ef62af07d1a30f66d"].unchecked_into(),
+        // 5Fet39XDWTutm3nYXE5gZ4V31en8k46GTi8MuPua1t6BHRPz
+        hex!["9ec550b7c7eecf83a4791f4be18d447f30c5a67359d4e551952f4179aef58b57"].unchecked_into(),
+        // 5Ew3YegPqSYdnepKox6ZF2Xd6yqJuzCL6oedxVoRA76yJWRR
+        hex!["7edd04710c4d69cae9b21df79fa3b445b513fe135373bb25a6b794903b741358"].unchecked_into(),
+    );
+
+    let group2: AuthorityKeysTuple = (
         (
-            (validator2, b"validator2".to_vec()),
-            babe2,
-            grandpa2,
-            im_online2,
-            authority_discovery2,
+            // 5CFmnqTfRBbTWrUTe2UiJWzdbpdCRL9xLgXZBA9mL5U9pHFm
+            hex!["0870f1350d5f139b5adaec90c812b22fb5d03c43250631511a1ca0fbbfe0102e"].into(),
+            b"Validator2".to_vec(),
         ),
-    ];
+        // 5FHufR5mRkrs4Y1WXHr8vFq974ffURp9z7N563KxyfZjesz6
+        hex!["8ec6a213a4cbb23dd4f0c3875a34f6e51a445b2ddc290056425b3f2380428e1f"].unchecked_into(),
+        // 5FZKz5gNfCDiRNReyTY3RfZ1JZXdewSrQy2Ecf2BVi3M7obg
+        hex!["9a89304fb713266fcbbb5359d5dfa6474e87d41fbc08147b441b1009442d1ae6"].unchecked_into(),
+        // 5HYW4dBmrvnVg94rvydDvVDbvBkuHs1qySKN64pTKmDHvMme
+        hex!["f260563f74e4ee46f25fc81250b15082ef1d5ac07a843eaaa0f3cb661500f962"].unchecked_into(),
+        // 5E4gdBEfbcpe2aKx7Qq3x7uC9DwdCah2TbgfceM9UFeJxG1z
+        hex!["5874514c0563d4990916293e0059dfb2379d657e8df40936f1da24c7af8b7c64"].unchecked_into(),
+    );
+
+    let initial_authorities: Vec<AuthorityKeysTuple> = vec![group1, group2];
 
     let mut endowed = BTreeMap::new();
     let endowed_info = initial_authorities

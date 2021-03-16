@@ -12,7 +12,7 @@ if [[ -z "${SECRET}" ]]; then
   exit 1
 fi
 
-CHAIN=mainnet
+CHAIN=testnet
 DIR="keys"
 CHAINX=../../target/release/chainx
 
