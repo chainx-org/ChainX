@@ -189,7 +189,7 @@ pub struct NewFullBase<RuntimeApi, Executor> {
 
 /// Creates a full service from the configuration.
 pub fn new_full_base<RuntimeApi, Executor>(
-    config: Configuration,
+    mut config: Configuration,
 ) -> Result<NewFullBase<RuntimeApi, Executor>, ServiceError>
 where
     RuntimeApi:
@@ -212,7 +212,10 @@ where
 
     let shared_voter_state = rpc_setup;
 
-    #[cfg(feature = "cli")]
+    config
+        .network
+        .extra_sets
+        .push(sc_finality_grandpa::grandpa_peers_set_config());
     config.network.request_response_protocols.push(
         sc_finality_grandpa_warp_sync::request_response_config_for_chain(
             &config,
