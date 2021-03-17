@@ -996,6 +996,7 @@ dependencies = [
  "sc-consensus-slots",
  "sc-executor",
  "sc-finality-grandpa",
+ "sc-finality-grandpa-warp-sync",
  "sc-network",
  "sc-rpc",
  "sc-service",
