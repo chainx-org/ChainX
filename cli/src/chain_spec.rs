@@ -298,7 +298,23 @@ pub fn testnet_config() -> Result<TestnetChainSpec, String> {
         hex!["5874514c0563d4990916293e0059dfb2379d657e8df40936f1da24c7af8b7c64"].unchecked_into(),
     );
 
-    let initial_authorities: Vec<AuthorityKeysTuple> = vec![group1, group2];
+    let group3: AuthorityKeysTuple = (
+        (
+            // 5FNmuoZsRWaHmHzahDfK4mw6BpidDSutQA1d3AzneH7BkzVm
+            hex!["927cc3c92eb8e3a69f230e8d2dbf059dbe3bc7a1c401429a6eee8b6800b2136f"].into(),
+            b"Validator3".to_vec(),
+        ),
+        // 5DjtPGb9K5cTAKGCm88632MSMXCKcgkMVeT2y9tWrgMryjEU
+        hex!["4a1e3e47fa7f3d3e69ceeb1a05194d724b69956ea1b8d921c99213f1ff719741"].unchecked_into(),
+        // 5EuUJDGLhBauqATpNySvWCwEt5dYRXQ22Yfx1AnkvgSSKnsD
+        hex!["7da9d8971d8c8abcd8bd29e07ea4a5d1194cc0c3132d7552b7a35913da1515ac"].unchecked_into(),
+        // 5FyRt1xVaiP2kRC8z974DWX4tZYGeaiQFc7XHbRHoQfGzSHC
+        hex!["aceaec9c3ba03b47008effd0b8f987878cc73fdb32c7eecf0a0ba1bef7a4f717"].unchecked_into(),
+        // 5DfPE2d857PfRFb7wMdMaVaATnyBDnXfiL21iWnYKKM8e7Gu
+        hex!["46af1a4635ffcd9e08aa12631c48d27f99fb70a2a1ec670b0e4cf5a309ba352c"].unchecked_into(),
+    );
+
+    let initial_authorities: Vec<AuthorityKeysTuple> = vec![group1];
 
     let mut endowed = BTreeMap::new();
     let endowed_info = initial_authorities
@@ -330,8 +346,11 @@ pub fn testnet_config() -> Result<TestnetChainSpec, String> {
             // "/dns/p2p.testnet-3.chainx.org/tcp/30335/p2p/12D3KooWLuxACVFoeddQ4ja68C7Y4qNrXtpBC9gx7akRPacnvoJe".to_string().try_into().expect("must be valid bootnode"),
         ],
         Some(
-            TelemetryEndpoints::new(vec![(CHAINX_TELEMETRY_URL.to_string(), 0)])
-                .expect("Testnet telemetry url is valid; qed"),
+            TelemetryEndpoints::new(vec![
+                (CHAINX_TELEMETRY_URL.to_string(), 0),
+                (POLKADOT_TELEMETRY_URL.to_string(), 1),
+            ])
+            .expect("Testnet telemetry url is valid; qed"),
         ),
         Some("chainx-testnet"),
         Some(as_properties(NetworkType::Testnet)),
