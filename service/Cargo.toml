@@ -17,6 +17,7 @@ sc-consensus-babe = "0.8.0"
 sc-consensus-slots = "0.8.0"
 sc-executor = "0.8.0"
 sc-finality-grandpa = "0.8.0"
+sc-finality-grandpa-warp-sync = { git = "https://github.com/paritytech/substrate", rev = "f14488dfca012659297d2b4676fab91c179095dd" }
 sc-network = "0.8.0"
 sc-rpc = "2.0.1"
 sc-transaction-pool = "2.0.1"
