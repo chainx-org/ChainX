@@ -213,7 +213,10 @@ where
 
     let shared_voter_state = rpc_setup;
 
-    config.network.extra_sets.push(sc_finality_grandpa::grandpa_peers_set_config());
+    config
+        .network
+        .extra_sets
+        .push(sc_finality_grandpa::grandpa_peers_set_config());
     config.network.request_response_protocols.push(
         sc_finality_grandpa_warp_sync::request_response_config_for_chain(
             &config,
