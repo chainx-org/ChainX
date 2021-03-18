@@ -6,8 +6,8 @@ edition = "2018"
 
 [dependencies]
 # Substrate primitives
-sp-arithmetic = { version = "2.0.1", default-features = false }
-sp-runtime = { version = "2.0.1", default-features = false }
+sp-arithmetic = { version = "3.0.0", default-features = false }
+sp-runtime = { version = "3.0.0", default-features = false }
 
 # ChainX primitives
 chainx-primitives = { path = "../../../primitives", default-features = false }

@@ -9,7 +9,7 @@ use xpallet_mining_staking_rpc_runtime_api::VoteWeight;
 /// A set of APIs that chainx-like runtimes must implement.
 pub trait RuntimeApiCollection:
     sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
-    + sp_api::ApiExt<Block, Error = sp_blockchain::Error>
+    + sp_api::ApiExt<Block>
     + sp_consensus_babe::BabeApi<Block>
     + sp_finality_grandpa::GrandpaApi<Block>
     + sp_block_builder::BlockBuilder<Block>
@@ -53,7 +53,7 @@ where
 impl<Api> RuntimeApiCollection for Api
 where
     Api: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
-        + sp_api::ApiExt<Block, Error = sp_blockchain::Error>
+        + sp_api::ApiExt<Block>
         + sp_consensus_babe::BabeApi<Block>
         + sp_finality_grandpa::GrandpaApi<Block>
         + sp_block_builder::BlockBuilder<Block>

@@ -15,57 +15,58 @@ smallvec = "1.4.1"
 static_assertions = "1.1.0"
 
 # Substrate primitives
-sp-api = { version = "2.0.1", default-features = false }
-sp-authority-discovery = { version = "2.0.1", default-features = false }
-sp-block-builder = { version = "2.0.1", default-features = false }
-sp-consensus-babe = { version = "0.8.1", default-features = false }
-sp-core = { version = "2.0.1", default-features = false }
-sp-inherents = { version = "2.0.1", default-features = false }
-sp-io = { version = "2.0.1", default-features = false }
-sp-offchain = { version = "2.0.1", default-features = false }
-sp-runtime = { version = "2.0.1", default-features = false }
-sp-session = { version = "2.0.1", default-features = false }
-sp-std = { version = "2.0.1", default-features = false }
-sp-transaction-pool = { version = "2.0.1", default-features = false }
-sp-version = { version = "2.0.1", default-features = false }
+sp-api = { version = "3.0.0", default-features = false }
+sp-authority-discovery = { version = "3.0.0", default-features = false }
+sp-block-builder = { version = "3.0.0", default-features = false }
+sp-consensus-babe = { version = "0.9.0", default-features = false }
+sp-core = { version = "3.0.0", default-features = false }
+sp-inherents = { version = "3.0.0", default-features = false }
+sp-io = { version = "3.0.0", default-features = false }
+sp-offchain = { version = "3.0.0", default-features = false }
+sp-runtime = { version = "3.0.0", default-features = false }
+sp-session = { version = "3.0.0", default-features = false }
+sp-std = { version = "3.0.0", default-features = false }
+sp-transaction-pool = { version = "3.0.0", default-features = false }
+sp-version = { version = "3.0.0", default-features = false }
 
 # Substrate pallets
-frame-executive = { version = "2.0.1", default-features = false }
-frame-support = { version = "2.0.1", default-features = false }
-frame-system = { version = "2.0.1", default-features = false }
-frame-system-rpc-runtime-api = { version = "2.0.1", default-features = false }
-pallet-authority-discovery = { version = "2.0.1", default-features = false }
-pallet-authorship = { version = "2.0.1", default-features = false }
-pallet-babe = { version = "2.0.1", default-features = false }
-pallet-balances = { version = "2.0.1", default-features = false }
-pallet-bounties = { git = "https://github.com/paritytech/substrate", rev = "f14488dfca012659297d2b4676fab91c179095dd", default-features = false }
-pallet-collective = { version = "2.0.1", default-features = false }
-pallet-democracy = { version = "2.0.1", default-features = false }
+frame-executive = { version = "3.0.0", default-features = false }
+frame-support = { version = "3.0.0", default-features = false }
+frame-system = { version = "3.0.0", default-features = false }
+frame-system-rpc-runtime-api = { version = "3.0.0", default-features = false }
+pallet-authority-discovery = { version = "3.0.0", default-features = false }
+pallet-authorship = { version = "3.0.0", default-features = false }
+pallet-babe = { version = "3.0.0", default-features = false }
+pallet-balances = { version = "3.0.0", default-features = false }
+pallet-bounties = { version = "3.0.0", default-features = false }
+pallet-collective = { version = "3.0.0", default-features = false }
+pallet-democracy = { version = "3.0.0", default-features = false }
 pallet-elections-phragmen = { version = "3.0.0", default-features = false }
-pallet-grandpa = { version = "2.0.1", default-features = false }
-pallet-identity = { version = "2.0.1", default-features = false }
-pallet-im-online = { version = "2.0.1", default-features = false }
-pallet-indices = { version = "2.0.1", default-features = false }
-pallet-membership = { version = "2.0.1", default-features = false }
-pallet-multisig = { version = "2.0.1", default-features = false }
-pallet-offences = { version = "2.0.1", default-features = false }
-pallet-randomness-collective-flip = { version = "2.0.1", default-features = false }
-pallet-scheduler = { version = "2.0.1", default-features = false }
-pallet-session = { version = "2.0.1", default-features = false, features = ["historical"] }
-pallet-sudo = { version = "2.0.1", default-features = false }
-pallet-timestamp = { version = "2.0.1", default-features = false }
-pallet-tips = { git = "https://github.com/paritytech/substrate", rev = "f14488dfca012659297d2b4676fab91c179095dd", default-features = false }
-pallet-transaction-payment = { version = "2.0.1", default-features = false }
-pallet-transaction-payment-rpc-runtime-api = { version = "2.0.1", default-features = false }
-pallet-treasury = { version = "2.0.1", default-features = false }
-pallet-utility = { version = "2.0.1", default-features = false }
+pallet-grandpa = { version = "3.0.0", default-features = false }
+pallet-identity = { version = "3.0.0", default-features = false }
+pallet-im-online = { version = "3.0.0", default-features = false }
+pallet-indices = { version = "3.0.0", default-features = false }
+pallet-membership = { version = "3.0.0", default-features = false }
+pallet-multisig = { version = "3.0.0", default-features = false }
+pallet-offences = { version = "3.0.0", default-features = false }
+pallet-proxy = { version = "3.0.0", default-features = false }
+pallet-randomness-collective-flip = { version = "3.0.0", default-features = false }
+pallet-scheduler = { version = "3.0.0", default-features = false }
+pallet-session = { version = "3.0.0", default-features = false, features = ["historical"] }
+pallet-sudo = { version = "3.0.0", default-features = false }
+pallet-timestamp = { version = "3.0.0", default-features = false }
+pallet-tips = { version = "3.0.0", default-features = false }
+pallet-transaction-payment = { version = "3.0.0", default-features = false }
+pallet-transaction-payment-rpc-runtime-api = { version = "3.0.0", default-features = false }
+pallet-treasury = { version = "3.0.0", default-features = false }
+pallet-utility = { version = "3.0.0", default-features = false }
 
-frame-benchmarking = { version = "2.0.1", default-features = false, optional = true }
-frame-system-benchmarking = { version = "2.0.1", default-features = false, optional = true }
+frame-benchmarking = { version = "3.0.0", default-features = false, optional = true }
+frame-system-benchmarking = { version = "3.0.0", default-features = false, optional = true }
 
 # Orml
-orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "8c150f34a5b305103438e93337e1b9e7868dd1f3", default-features = false }
-orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "8c150f34a5b305103438e93337e1b9e7868dd1f3", default-features = false }
+orml-traits = { version = "0.4.0", default-features = false }
+orml-currencies = { version = "0.4.0", default-features = false }
 
 # ChainX primitives
 chainx-primitives = { path = "../../primitives", default-features = false }
@@ -106,85 +107,84 @@ substrate-wasm-builder = "3.0.0"
 [features]
 default = ["std", "pallet-session/historical"]
 std = [
-  "codec/std",
-  "serde",
-  # Substrate primitives
-  "sp-api/std",
-  "sp-authority-discovery/std",
-  "sp-block-builder/std",
-  "sp-consensus-babe/std",
-  "sp-core/std",
-  "sp-inherents/std",
-  "sp-io/std",
-  "sp-offchain/std",
-  "sp-runtime/std",
-  "sp-session/std",
-  "sp-std/std",
-  "sp-transaction-pool/std",
-  "sp-version/std",
-  # Substrate pallets
-  "frame-executive/std",
-  "frame-support/std",
-  "frame-system/std",
-  "frame-system-rpc-runtime-api/std",
-  "pallet-authority-discovery/std",
-  "pallet-authorship/std",
-  "pallet-babe/std",
-  "pallet-balances/std",
-  "pallet-bounties/std",
-  "pallet-collective/std",
-  "pallet-democracy/std",
-  "pallet-elections-phragmen/std",
-  "pallet-grandpa/std",
-  "pallet-identity/std",
-  "pallet-im-online/std",
-  "pallet-indices/std",
-  "pallet-membership/std",
-  "pallet-multisig/std",
-  "pallet-offences/std",
-  "pallet-randomness-collective-flip/std",
-  "pallet-scheduler/std",
-  "pallet-session/std",
-  "pallet-sudo/std",
-  "pallet-timestamp/std",
-  "pallet-tips/std",
-  "pallet-transaction-payment/std",
-  "pallet-transaction-payment-rpc-runtime-api/std",
-  "pallet-treasury/std",
-  "pallet-utility/std",
-  # Orml
-  "orml-traits/std",
-  "orml-currencies/std",
-  # ChainX primitives
-  "chainx-primitives/std",
-  "chainx-runtime-common/std",
-  "xp-gateway-bitcoin/std",
-  "xp-logging/std",
-  "xp-mining-staking/std",
-  "xp-protocol/std",
-  "xp-runtime/std",
-  # ChainX pallets
-  "xpallet-assets/std",
-  "xpallet-assets-registrar/std",
-  "xpallet-assets-rpc-runtime-api/std",
-  "xpallet-dex-spot/std",
-  "xpallet-dex-spot-rpc-runtime-api/std",
-  "xpallet-gateway-bitcoin/std",
-  "xpallet-gateway-bitcoin-v2/std",
-  "xpallet-gateway-bitcoin-v2-rpc-runtime-api/std",
-  "xpallet-gateway-common/std",
-  "xpallet-gateway-common-rpc-runtime-api/std",
-  "xpallet-gateway-records/std",
-  "xpallet-gateway-records-rpc-runtime-api/std",
-  "xpallet-genesis-builder/std",
-  "xpallet-mining-asset/std",
-  "xpallet-mining-asset-rpc-runtime-api/std",
-  "xpallet-mining-staking/std",
-  "xpallet-mining-staking-rpc-runtime-api/std",
-  "xpallet-system/std",
-  "xpallet-support/std",
-  "xpallet-transaction-fee/std",
-  "xpallet-transaction-fee-rpc-runtime-api/std",
+    "codec/std",
+    "serde",
+    # Substrate primitives
+    "sp-api/std",
+    "sp-authority-discovery/std",
+    "sp-block-builder/std",
+    "sp-consensus-babe/std",
+    "sp-core/std",
+    "sp-inherents/std",
+    "sp-io/std",
+    "sp-offchain/std",
+    "sp-runtime/std",
+    "sp-session/std",
+    "sp-std/std",
+    "sp-transaction-pool/std",
+    "sp-version/std",
+    # Substrate pallets
+    "frame-executive/std",
+    "frame-support/std",
+    "frame-system/std",
+    "frame-system-rpc-runtime-api/std",
+    "pallet-authority-discovery/std",
+    "pallet-authorship/std",
+    "pallet-babe/std",
+    "pallet-balances/std",
+    "pallet-bounties/std",
+    "pallet-collective/std",
+    "pallet-democracy/std",
+    "pallet-elections-phragmen/std",
+    "pallet-grandpa/std",
+    "pallet-identity/std",
+    "pallet-im-online/std",
+    "pallet-indices/std",
+    "pallet-membership/std",
+    "pallet-multisig/std",
+    "pallet-offences/std",
+    "pallet-proxy/std",
+    "pallet-randomness-collective-flip/std",
+    "pallet-scheduler/std",
+    "pallet-session/std",
+    "pallet-sudo/std",
+    "pallet-timestamp/std",
+    "pallet-tips/std",
+    "pallet-transaction-payment/std",
+    "pallet-transaction-payment-rpc-runtime-api/std",
+    "pallet-treasury/std",
+    "pallet-utility/std",
+    # Orml
+    "orml-traits/std",
+    "orml-currencies/std",
+    # ChainX primitives
+    "chainx-primitives/std",
+    "chainx-runtime-common/std",
+    "xp-gateway-bitcoin/std",
+    "xp-logging/std",
+    "xp-mining-staking/std",
+    "xp-protocol/std",
+    "xp-runtime/std",
+    # ChainX pallets
+    "xpallet-assets/std",
+    "xpallet-assets-registrar/std",
+    "xpallet-assets-rpc-runtime-api/std",
+    "xpallet-dex-spot/std",
+    "xpallet-dex-spot-rpc-runtime-api/std",
+    "xpallet-gateway-bitcoin/std",
+    "xpallet-gateway-common/std",
+    "xpallet-gateway-common-rpc-runtime-api/std",
+    "xpallet-gateway-records/std",
+    "xpallet-gateway-records-rpc-runtime-api/std",
+    "xpallet-genesis-builder/std",
+    "xpallet-mining-asset/std",
+    "xpallet-mining-asset-rpc-runtime-api/std",
+    "xpallet-mining-staking/std",
+    "xpallet-mining-staking-rpc-runtime-api/std",
+    "xpallet-system/std",
+    "xpallet-support/std",
+    "xpallet-transaction-fee/std",
+    "xpallet-transaction-fee-rpc-runtime-api/std",
 ]
 runtime-benchmarks = [
   "hex-literal",

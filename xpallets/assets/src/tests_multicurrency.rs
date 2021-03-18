@@ -1,7 +1,9 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use crate::mock::*;
-use crate::*;
+use crate::{
+    mock::{btc, Balance, Event, ExtBuilder, System, Test, XAssets, XAssetsErr, ALICE, BOB, X_BTC},
+    AssetType,
+};
 
 use frame_support::{assert_noop, assert_ok, traits::LockIdentifier};
 
@@ -217,7 +219,7 @@ fn transfer_should_work() {
         assert_eq!(XAssets::free_balance(X_BTC, &BOB), 150);
         assert_eq!(XAssets::total_issuance(&X_BTC), 200 + 800);
 
-        let transferred_event = MetaEvent::assets(RawEvent::Moved(
+        let transferred_event = Event::xpallet_assets(crate::Event::<Test>::Moved(
             X_BTC,
             ALICE,
             AssetType::Usable,
