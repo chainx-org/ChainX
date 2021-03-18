@@ -10,7 +10,7 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-use codec::Encode;
+use codec::{Decode, Encode};
 use static_assertions::const_assert;
 
 use sp_api::impl_runtime_apis;
@@ -31,7 +31,7 @@ use sp_runtime::{
         InvalidTransaction, TransactionPriority, TransactionSource, TransactionValidity,
         TransactionValidityError, ValidTransaction,
     },
-    ApplyExtrinsicResult, DispatchError, ModuleId, Perbill, Percent, Permill,
+    ApplyExtrinsicResult, DispatchError, ModuleId, Perbill, Percent, Permill, RuntimeDebug,
 };
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 #[cfg(feature = "std")]
@@ -57,7 +57,7 @@ use xpallet_gateway_bitcoin_v2::pallet as xpallet_gateway_bitcoin_v2_pallet;
 pub use frame_support::{
     construct_runtime, debug, parameter_types,
     traits::{
-        Currency, Filter, Imbalance, InstanceFilter, KeyOwnerProofSystem, LockIdentifier,
+        Currency, Filter, Get, Imbalance, InstanceFilter, KeyOwnerProofSystem, LockIdentifier,
         OnUnbalanced, Randomness,
     },
     weights::{
@@ -180,7 +180,7 @@ parameter_types! {
         * MaximumBlockWeight::get();
     pub const MaximumBlockLength: u32 = 5 * 1024 * 1024;
     pub const Version: RuntimeVersion = VERSION;
-    pub const SS58Prefix: u8 = 0;
+    pub const SS58Prefix: u8 = xp_protocol::TESTNET_ADDRESS_FORMAT_ID;
 }
 
 const_assert!(
@@ -274,6 +274,16 @@ parameter_types! {
     pub const ExpectedBlockTime: Moment = MILLISECS_PER_BLOCK;
 }
 
+pub struct ReportLongevity;
+
+impl Get<u64> for ReportLongevity {
+    fn get() -> u64 {
+        xpallet_mining_staking::BondingDuration::<Runtime>::get() as u64
+            * xpallet_mining_staking::SessionsPerEra::get() as u64
+            * EpochDuration::get()
+    }
+}
+
 impl pallet_babe::Config for Runtime {
     type EpochDuration = EpochDuration;
     type ExpectedBlockTime = ExpectedBlockTime;
@@ -292,7 +302,7 @@ impl pallet_babe::Config for Runtime {
     )>>::IdentificationTuple;
 
     type HandleEquivocation =
-        pallet_babe::EquivocationHandler<Self::KeyOwnerIdentification, Offences>;
+        pallet_babe::EquivocationHandler<Self::KeyOwnerIdentification, Offences, ReportLongevity>;
 
     type WeightInfo = ();
 }
@@ -814,6 +824,115 @@ impl pallet_identity::Config for Runtime {
     type WeightInfo = pallet_identity::weights::SubstrateWeight<Runtime>;
 }
 
+parameter_types! {
+    // One storage item; key size 32, value size 8; .
+    pub const ProxyDepositBase: Balance = deposit(1, 8);
+    // Additional storage item size of 33 bytes.
+    pub const ProxyDepositFactor: Balance = deposit(0, 33);
+    pub const MaxProxies: u16 = 32;
+    pub const AnnouncementDepositBase: Balance = deposit(1, 8);
+    pub const AnnouncementDepositFactor: Balance = deposit(0, 66);
+    pub const MaxPending: u16 = 32;
+}
+
+/// The type used to represent the kinds of proxying allowed.
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, RuntimeDebug)]
+pub enum ProxyType {
+    Any = 0,
+    NonTransfer = 1,
+    Governance = 2,
+    Staking = 3,
+    IdentityJudgement = 4,
+    CancelProxy = 5,
+}
+
+impl Default for ProxyType {
+    fn default() -> Self {
+        Self::Any
+    }
+}
+
+impl InstanceFilter<Call> for ProxyType {
+    fn filter(&self, c: &Call) -> bool {
+        match self {
+            ProxyType::Any => true,
+            ProxyType::NonTransfer => matches!(
+                c,
+                Call::System(..)
+                    | Call::Scheduler(..)
+                    | Call::Babe(..)
+                    | Call::Timestamp(..)
+                    | Call::Indices(pallet_indices::Call::claim(..))
+                    | Call::Indices(pallet_indices::Call::free(..))
+                    | Call::Indices(pallet_indices::Call::freeze(..))
+                    // Specifically omitting Indices `transfer`, `force_transfer`
+                    // Specifically omitting the entire Balances pallet
+                    | Call::Authorship(..)
+                    | Call::XStaking(..)
+                    | Call::Offences(..)
+                    | Call::Session(..)
+                    | Call::Grandpa(..)
+                    | Call::ImOnline(..)
+                    | Call::AuthorityDiscovery(..)
+                    | Call::Democracy(..)
+                    | Call::Council(..)
+                    | Call::TechnicalCommittee(..)
+                    | Call::Elections(..)
+                    | Call::TechnicalMembership(..)
+                    | Call::Treasury(..)
+                    | Call::Utility(..)
+                    | Call::Identity(..)
+                    | Call::Proxy(..)
+                    | Call::Multisig(..)
+            ),
+            ProxyType::Governance => matches!(
+                c,
+                Call::Democracy(..)
+                    | Call::Council(..)
+                    | Call::TechnicalCommittee(..)
+                    | Call::Elections(..)
+                    | Call::Treasury(..)
+                    | Call::Utility(..)
+            ),
+            ProxyType::Staking => matches!(
+                c,
+                Call::XStaking(..) | Call::Session(..) | Call::Utility(..)
+            ),
+            ProxyType::IdentityJudgement => matches!(
+                c,
+                Call::Identity(pallet_identity::Call::provide_judgement(..)) | Call::Utility(..)
+            ),
+            ProxyType::CancelProxy => {
+                matches!(c, Call::Proxy(pallet_proxy::Call::reject_announcement(..)))
+            }
+        }
+    }
+    fn is_superset(&self, o: &Self) -> bool {
+        match (self, o) {
+            (x, y) if x == y => true,
+            (ProxyType::Any, _) => true,
+            (_, ProxyType::Any) => false,
+            (ProxyType::NonTransfer, _) => true,
+            _ => false,
+        }
+    }
+}
+
+impl pallet_proxy::Config for Runtime {
+    type Event = Event;
+    type Call = Call;
+    type Currency = Balances;
+    type ProxyType = ProxyType;
+    type ProxyDepositBase = ProxyDepositBase;
+    type ProxyDepositFactor = ProxyDepositFactor;
+    type MaxProxies = MaxProxies;
+    type WeightInfo = pallet_proxy::weights::SubstrateWeight<Runtime>;
+    type MaxPending = MaxPending;
+    type CallHasher = BlakeTwo256;
+    type AnnouncementDepositBase = AnnouncementDepositBase;
+    type AnnouncementDepositFactor = AnnouncementDepositFactor;
+}
+
 ///////////////////////////////////////////
 // orml
 ///////////////////////////////////////////
@@ -955,7 +1074,7 @@ construct_runtime!(
         Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
 
         // Must be before session.
-        Babe: pallet_babe::{Module, Call, Storage, Config, Inherent, ValidateUnsigned},
+        Babe: pallet_babe::{Module, Call, Storage, Config, ValidateUnsigned},
 
         Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
         Indices: pallet_indices::{Module, Call, Storage, Config<T>, Event<T>},
@@ -1017,6 +1136,8 @@ construct_runtime!(
 
         // Put Sudo last so that the extrinsic ordering stays the same once it's removed.
         Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
+
+        Proxy: pallet_proxy::{Module, Call, Storage, Event<T>},
     }
 );
 

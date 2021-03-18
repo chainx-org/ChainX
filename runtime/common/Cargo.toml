@@ -15,13 +15,13 @@ smallvec = "1.4.1"
 static_assertions = "1.1.0"
 
 # Substrate primitives
-sp-runtime = { version = "2.0.1", default-features = false }
+sp-runtime = { version = "3.0.0", default-features = false }
 
 # Substrate pallets
-frame-support = { version = "2.0.1", default-features = false }
-frame-system = { version = "2.0.1", default-features = false }
-pallet-balances = { version = "2.0.1", default-features = false }
-pallet-transaction-payment = { version = "2.0.1", default-features = false }
+frame-support = { version = "3.0.0", default-features = false }
+frame-system = { version = "3.0.0", default-features = false }
+pallet-balances = { version = "3.0.0", default-features = false }
+pallet-transaction-payment = { version = "3.0.0", default-features = false }
 
 # ChainX primitives
 chainx-primitives = { path = "../../primitives", default-features = false }
