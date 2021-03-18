@@ -6414,7 +6414,8 @@ dependencies = [
 [[package]]
 name = "sc-finality-grandpa-warp-sync"
 version = "0.9.0"
-source = "git+https://github.com/paritytech/substrate?rev=e6ac7e72c2251b8a23454c8cf0e3a2ad2c1ed566#e6ac7e72c2251b8a23454c8cf0e3a2ad2c1ed566"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "85b011dfabcba967cc5e68a80036481ea460c1b2f3b92197e89c8adc6acf820d"
 dependencies = [
  "derive_more",
  "futures 0.3.13",
