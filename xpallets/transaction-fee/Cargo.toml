@@ -12,13 +12,13 @@ codec = { package = "parity-scale-codec", version = "2.0.0", default-features = 
 serde = { version = "1.0.101", optional = true }
 
 # Substrate primitives
-sp-runtime = { version = "2.0.1", default-features = false }
-sp-std = { version = "2.0.1", default-features = false }
+sp-runtime = { version = "3.0.0", default-features = false }
+sp-std = { version = "3.0.0", default-features = false }
 
 # Substrate pallets
-frame-support = { version = "2.0.1", default-features = false }
-frame-system = { version = "2.0.1", default-features = false }
-pallet-transaction-payment = { version = "2.0.1", default-features = false }
+frame-support = { version = "3.0.0", default-features = false }
+frame-system = { version = "3.0.0", default-features = false }
+pallet-transaction-payment = { version = "3.0.0", default-features = false }
 
 [features]
 default = ["std"]

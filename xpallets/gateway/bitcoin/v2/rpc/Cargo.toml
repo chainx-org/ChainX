@@ -14,9 +14,9 @@ jsonrpc-core-client = "15.0.0"
 jsonrpc-derive = "15.0.0"
 
 # Substrate primitives
-sp-api = "2.0.1"
-sp-blockchain = "2.0.1"
-sp-runtime = "2.0.1"
+sp-api = "3.0.0"
+sp-blockchain = "3.0.0"
+sp-runtime = "3.0.0"
 
 # ChainX primitives
 xp-rpc = { path = "../../../../../primitives/rpc" }

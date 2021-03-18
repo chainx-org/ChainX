@@ -8,9 +8,9 @@ edition = "2018"
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false }
 
 # Substrate primitives
-sp-core = { version = "2.0.1", default-features = false }
-sp-runtime = { version = "2.0.1", default-features = false }
-sp-runtime-interface = { version = "2.0.1", default-features = false }
+sp-core = { version = "3.0.0", default-features = false }
+sp-runtime = { version = "3.0.0", default-features = false }
+sp-runtime-interface = { version = "3.0.0", default-features = false }
 
 [dev-dependencies]
 hex = "0.4"

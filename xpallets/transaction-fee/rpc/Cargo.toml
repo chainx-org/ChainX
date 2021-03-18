@@ -9,19 +9,19 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "2.0.0" }
-jsonrpc-core = "15.0.0"
-jsonrpc-core-client = "15.0.0"
-jsonrpc-derive = "15.0.0"
+jsonrpc-core = "15.1.0"
+jsonrpc-core-client = "15.1.0"
+jsonrpc-derive = "15.1.0"
 serde = { version = "1.0.101", features = ["derive"] }
 
 # Substrate primitives
-sp-api = "2.0.1"
-sp-blockchain = "2.0.1"
-sp-core = "2.0.1"
-sp-runtime = "2.0.1"
+sp-api = "3.0.0"
+sp-blockchain = "3.0.0"
+sp-core = "3.0.0"
+sp-runtime = "3.0.0"
 
 # Substrate pallets
-pallet-transaction-payment-rpc = "2.0.1"
+pallet-transaction-payment-rpc = "3.0.0"
 
 xp-rpc = { path = "../../../primitives/rpc" }
 

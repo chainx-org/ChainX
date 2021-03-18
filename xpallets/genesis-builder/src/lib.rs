@@ -53,7 +53,7 @@ decl_storage! {
 mod genesis {
     pub mod balances {
         use crate::Config;
-        use frame_support::{traits::StoredMap, StorageValue};
+        use frame_support::traits::StoredMap;
         use pallet_balances::AccountData;
         use xp_genesis_builder::{BalancesParams, FreeBalanceInfo, WellknownAccounts};
         use xp_protocol::X_BTC;
