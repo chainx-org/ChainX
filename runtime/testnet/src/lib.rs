@@ -31,7 +31,7 @@ use sp_runtime::{
         InvalidTransaction, TransactionPriority, TransactionSource, TransactionValidity,
         TransactionValidityError, ValidTransaction,
     },
-    ApplyExtrinsicResult, DispatchError, ModuleId, Perbill, Percent, Permill, RuntimeDebug
+    ApplyExtrinsicResult, DispatchError, ModuleId, Perbill, Percent, Permill, RuntimeDebug,
 };
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 #[cfg(feature = "std")]
@@ -57,8 +57,8 @@ use xpallet_gateway_bitcoin_v2::pallet as xpallet_gateway_bitcoin_v2_pallet;
 pub use frame_support::{
     construct_runtime, debug, parameter_types,
     traits::{
-        Currency, Filter, Imbalance, InstanceFilter, KeyOwnerProofSystem, LockIdentifier,
-        OnUnbalanced, Randomness, Get
+        Currency, Filter, Get, Imbalance, InstanceFilter, KeyOwnerProofSystem, LockIdentifier,
+        OnUnbalanced, Randomness,
     },
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
@@ -379,8 +379,6 @@ impl pallet_proxy::Config for Runtime {
     type AnnouncementDepositBase = AnnouncementDepositBase;
     type AnnouncementDepositFactor = AnnouncementDepositFactor;
 }
-
-
 
 impl pallet_sudo::Config for Runtime {
     type Event = Event;
