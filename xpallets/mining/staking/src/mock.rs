@@ -1,8 +1,8 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use crate::*;
-use crate::{Config, Module};
-use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
+use crate::Config;
+use crate::{self as xpallet_mining_staking, *};
+use frame_support::parameter_types;
 use sp_core::H256;
 use sp_runtime::{
     testing::{Header, UintAuthorityId},
@@ -23,45 +23,34 @@ pub(crate) type AccountIndex = u64;
 pub(crate) type BlockNumber = u64;
 pub(crate) type Balance = u128;
 
-impl_outer_origin! {
-    pub enum Origin for Test {}
-}
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
+type Block = frame_system::mocking::MockBlock<Test>;
 
-mod staking {
-    // Re-export needed for `impl_outer_event!`.
-    pub use super::super::*;
-}
-
-use frame_system as system;
-use pallet_balances as balances;
-use pallet_session as session;
-
-impl_outer_event! {
-    pub enum MetaEvent for Test {
-        system<T>,
-        balances<T>,
-        session,
-        staking<T>,
+frame_support::construct_runtime!(
+    pub enum Test where
+        Block = Block,
+        NodeBlock = Block,
+        UncheckedExtrinsic = UncheckedExtrinsic,
+    {
+        System: frame_system::{Module, Call, Config, Storage, Event<T>},
+        Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
+        Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
+        Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
+        XStaking: xpallet_mining_staking::{Module, Call, Storage, Event<T>, Config<T>},
     }
-}
-
-// For testing the pallet, we construct most of a mock runtime. This means
-// first constructing a configuration type (`Test`) which `impl`s each of the
-// configuration traits of pallets we want to use.
-#[derive(Clone, Eq, PartialEq, Debug)]
-pub struct Test;
+);
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
     pub const SS58Prefix: u8 = 42;
 }
 
-impl system::Config for Test {
+impl frame_system::Config for Test {
     type BaseCallFilter = ();
     type BlockWeights = ();
     type BlockLength = ();
     type Origin = Origin;
-    type Call = ();
+    type Call = Call;
     type Index = AccountIndex;
     type BlockNumber = u64;
     type Hash = H256;
@@ -69,11 +58,11 @@ impl system::Config for Test {
     type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = MetaEvent;
+    type Event = Event;
     type BlockHashCount = BlockHashCount;
     type DbWeight = ();
     type Version = ();
-    type PalletInfo = ();
+    type PalletInfo = PalletInfo;
     type AccountData = pallet_balances::AccountData<Balance>;
     type OnNewAccount = ();
     type OnKilledAccount = ();
@@ -91,7 +80,7 @@ impl Get<Balance> for ExistentialDeposit {
 impl pallet_balances::Config for Test {
     type MaxLocks = ();
     type Balance = Balance;
-    type Event = MetaEvent;
+    type Event = Event;
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
@@ -168,7 +157,7 @@ impl pallet_session::Config for Test {
     type Keys = SessionKeys;
     type ShouldEndSession = pallet_session::PeriodicSessions<Period, Offset>;
     type SessionHandler = (OtherSessionHandler,);
-    type Event = MetaEvent;
+    type Event = Event;
     type ValidatorId = AccountId;
     type ValidatorIdOf = ();
     type DisabledValidatorsThreshold = DisabledValidatorsThreshold;
@@ -203,7 +192,7 @@ parameter_types! {
 
 impl Config for Test {
     type Currency = Balances;
-    type Event = MetaEvent;
+    type Event = Event;
     type AssetMining = ();
     type MigrationSessionOffset = MigrationSessionOffset;
     type SessionDuration = SessionDuration;
@@ -260,7 +249,7 @@ impl ExtBuilder {
 
         let validators = vec![1, 2, 3, 4];
 
-        let _ = GenesisConfig::<Test> {
+        let _ = xpallet_mining_staking::GenesisConfig::<Test> {
             validators: vec![
                 (1, b"1 ".to_vec(), 10),
                 (2, b"2 ".to_vec(), 20),
@@ -317,9 +306,9 @@ impl ExtBuilder {
     }
 }
 
-pub type System = frame_system::Module<Test>;
-pub type Balances = pallet_balances::Module<Test>;
+// pub type System = frame_system::Module<Test>;
+// pub type Balances = pallet_balances::Module<Test>;
 // pub type XAssets = xpallet_assets::Module<Test>;
-pub type Session = pallet_session::Module<Test>;
-pub type Timestamp = pallet_timestamp::Module<Test>;
-pub type XStaking = Module<Test>;
+// pub type Session = pallet_session::Module<Test>;
+// pub type Timestamp = pallet_timestamp::Module<Test>;
+// pub type XStaking = Module<Test>;

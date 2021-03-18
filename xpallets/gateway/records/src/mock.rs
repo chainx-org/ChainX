@@ -1,6 +1,6 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use frame_support::{impl_outer_origin, parameter_types, sp_io};
+use frame_support::{parameter_types, sp_io};
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
@@ -12,7 +12,7 @@ pub use xp_protocol::{X_BTC, X_ETH};
 use xpallet_assets::AssetRestrictions;
 use xpallet_assets_registrar::AssetInfo;
 
-use crate::*;
+use crate::{self as xpallet_gateway_records, *};
 
 /// The AccountId alias in this test module.
 pub(crate) type AccountId = u64;
@@ -20,12 +20,22 @@ pub(crate) type BlockNumber = u64;
 pub(crate) type Balance = u128;
 pub(crate) type Amount = i128;
 
-impl_outer_origin! {
-    pub enum Origin for Test {}
-}
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
+type Block = frame_system::mocking::MockBlock<Test>;
 
-#[derive(Clone, Eq, PartialEq)]
-pub struct Test;
+frame_support::construct_runtime!(
+    pub enum Test where
+        Block = Block,
+        NodeBlock = Block,
+        UncheckedExtrinsic = UncheckedExtrinsic,
+    {
+        System: frame_system::{Module, Call, Config, Storage, Event<T>},
+        Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
+        XAssetsRegistrar: xpallet_assets_registrar::{Module, Call, Storage, Event, Config},
+        XAssets: xpallet_assets::{Module, Call, Storage, Event<T>, Config<T>},
+        XGatewayRecords: xpallet_gateway_records::{Module, Call, Storage, Event<T>},
+    }
+);
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
@@ -37,7 +47,7 @@ impl frame_system::Config for Test {
     type BlockWeights = ();
     type BlockLength = ();
     type Origin = Origin;
-    type Call = ();
+    type Call = Call;
     type Index = u64;
     type BlockNumber = BlockNumber;
     type Hash = H256;
@@ -49,7 +59,7 @@ impl frame_system::Config for Test {
     type BlockHashCount = BlockHashCount;
     type DbWeight = ();
     type Version = ();
-    type PalletInfo = ();
+    type PalletInfo = PalletInfo;
     type AccountData = pallet_balances::AccountData<Balance>;
     type OnNewAccount = ();
     type OnKilledAccount = ();
@@ -97,10 +107,6 @@ impl Config for Test {
     type WeightInfo = ();
 }
 
-pub type System = frame_system::Module<Test>;
-pub type Balances = pallet_balances::Module<Test>;
-pub type XAssets = xpallet_assets::Module<Test>;
-pub type XRecords = Module<Test>;
 pub type XRecordsErr = Error<Test>;
 
 pub(crate) fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {

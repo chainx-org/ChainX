@@ -8,13 +8,12 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 
-use frame_support::{impl_outer_event, impl_outer_origin, parameter_types, sp_io};
+use frame_support::{parameter_types, sp_io};
 
 use chainx_primitives::AssetId;
 pub use xp_protocol::X_BTC;
 
-use crate::*;
-use crate::{Config, Module};
+use crate::{self as xpallet_assets, AssetInfo, AssetRestrictions, Chain, Config, Error};
 
 /// The AccountId alias in this test module.
 pub(crate) type AccountId = u64;
@@ -22,30 +21,21 @@ pub(crate) type BlockNumber = u64;
 pub(crate) type Balance = u128;
 pub(crate) type Amount = i128;
 
-impl_outer_origin! {
-    pub enum Origin for Test {}
-}
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
+type Block = frame_system::mocking::MockBlock<Test>;
 
-use frame_system as system;
-mod assets {
-    // Re-export needed for `impl_outer_event!`.
-    pub use super::super::*;
-}
-
-impl_outer_event! {
-    pub enum MetaEvent for Test {
-        system<T>,
-        pallet_balances<T>,
-        xpallet_assets_registrar,
-        assets<T>,
+frame_support::construct_runtime!(
+    pub enum Test where
+        Block = Block,
+        NodeBlock = Block,
+        UncheckedExtrinsic = UncheckedExtrinsic,
+    {
+        System: frame_system::{Module, Call, Config, Storage, Event<T>},
+        Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
+        XAssetsRegistrar: xpallet_assets_registrar::{Module, Call, Config, Storage, Event},
+        XAssets: xpallet_assets::{Module, Call, Config<T>, Storage, Event<T>},
     }
-}
-
-// For testing the pallet, we construct most of a mock runtime. This means
-// first constructing a configuration type (`Test`) which `impl`s each of the
-// configuration traits of pallets we want to use.
-#[derive(Clone, Eq, PartialEq, Debug)]
-pub struct Test;
+);
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
@@ -57,7 +47,7 @@ impl frame_system::Config for Test {
     type BlockWeights = ();
     type BlockLength = ();
     type Origin = Origin;
-    type Call = ();
+    type Call = Call;
     type Index = u64;
     type BlockNumber = BlockNumber;
     type Hash = H256;
@@ -65,11 +55,11 @@ impl frame_system::Config for Test {
     type AccountId = u64;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = MetaEvent;
+    type Event = Event;
     type BlockHashCount = BlockHashCount;
     type DbWeight = ();
     type Version = ();
-    type PalletInfo = ();
+    type PalletInfo = PalletInfo;
     type AccountData = pallet_balances::AccountData<Balance>;
     type OnNewAccount = ();
     type OnKilledAccount = ();
@@ -83,7 +73,7 @@ impl pallet_balances::Config for Test {
     type MaxLocks = ();
     type Balance = Balance;
     type DustRemoval = ();
-    type Event = MetaEvent;
+    type Event = Event;
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
     type WeightInfo = ();
@@ -94,14 +84,14 @@ parameter_types! {
 }
 
 impl xpallet_assets_registrar::Config for Test {
-    type Event = MetaEvent;
+    type Event = Event;
     type NativeAssetId = ChainXAssetId;
     type RegistrarHandler = ();
     type WeightInfo = ();
 }
 
 impl Config for Test {
-    type Event = MetaEvent;
+    type Event = Event;
     type Currency = Balances;
     type Amount = Amount;
     type TreasuryAccount = ();
@@ -155,7 +145,7 @@ impl ExtBuilder {
         }
         .assimilate_storage::<Test>(&mut storage);
 
-        let _ = GenesisConfig::<Test> {
+        let _ = xpallet_assets::GenesisConfig::<Test> {
             assets_restrictions,
             endowed,
         }
@@ -188,9 +178,6 @@ impl ExtBuilder {
     }
 }
 
-pub type System = frame_system::Module<Test>;
-pub type Balances = pallet_balances::Module<Test>;
-pub type XAssets = Module<Test>;
 pub type XAssetsErr = Error<Test>;
 
 pub const ALICE: AccountId = 1;
