@@ -993,9 +993,9 @@ parameter_types! {
     pub const SecureThreshold: u16 = 300;
     pub const PremiumThreshold: u16 = 250;
     pub const LiquidationThreshold: u16 = 180;
-    pub const IssueRequestExpiredTime: BlockNumber = 10000;
-    pub const RedeemRequestExpiredTime: BlockNumber = 10000;
-    pub const ExchangeRateExpiredPeriod: BlockNumber = 10000;
+    pub const IssueRequestExpiredTime: BlockNumber = 120;
+    pub const RedeemRequestExpiredTime: BlockNumber = 120;
+    pub const ExchangeRateExpiredPeriod: BlockNumber = 100000;
     pub const RedeemBtcDustValue: Balance = 1;
 }
 
