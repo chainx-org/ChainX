@@ -8159,7 +8159,7 @@ version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "chainx-runtime-common",
- "frame-benchmarking",
+ "frame-benchmarking 3.1.0",
  "frame-executive",
  "frame-support",
  "frame-system",
@@ -8183,6 +8183,7 @@ dependencies = [
  "pallet-membership",
  "pallet-multisig",
  "pallet-offences",
+ "pallet-proxy",
  "pallet-randomness-collective-flip",
  "pallet-scheduler",
  "pallet-session",

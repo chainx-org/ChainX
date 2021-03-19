@@ -1133,6 +1133,8 @@ construct_runtime!(
 
         Bounties: pallet_bounties::{Module, Call, Storage, Event<T>} = 38,
         Tips: pallet_tips::{Module, Call, Storage, Event<T>} = 39,
+
+        // make order right
         XGatewayBitcoinV2: xpallet_gateway_bitcoin_v2_pallet::{Module, Call, Storage, Event<T>, Config<T>} = 40,
     }
 );
