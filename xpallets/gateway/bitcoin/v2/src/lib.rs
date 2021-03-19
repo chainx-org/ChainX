@@ -233,7 +233,6 @@ pub mod pallet {
             origin: OriginFor<T>,
             vault_id: T::AccountId,
             btc_amount: BalanceOf<T>,
-            griefing_collateral: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
 
@@ -243,10 +242,8 @@ pub mod pallet {
                 collateral_ratio_later >= T::SecureThreshold::get(),
                 Error::<T>::InsecureVault
             );
-            ensure!(
-                griefing_collateral >= Self::calculate_required_collateral(btc_amount)?,
-                Error::<T>::InsufficientGriefingCollateral
-            );
+
+            let griefing_collateral = Self::calculate_required_collateral(btc_amount)?;
 
             Self::lock_collateral(&sender, griefing_collateral)?;
             let request_id = Self::get_next_issue_id();
