@@ -65,8 +65,8 @@ frame-benchmarking = { version = "3.0.0", default-features = false, optional = t
 frame-system-benchmarking = { version = "3.0.0", default-features = false, optional = true }
 
 # Orml
-orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "8c150f34a5b305103438e93337e1b9e7868dd1f3", default-features = false }
-orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "8c150f34a5b305103438e93337e1b9e7868dd1f3", default-features = false }
+orml-traits = { version = "0.4.0", default-features = false }
+orml-currencies = { version = "0.4.0", default-features = false }
 
 # ChainX primitives
 chainx-primitives = { path = "../../primitives", default-features = false }
@@ -106,6 +106,7 @@ xpallet-transaction-fee-rpc-runtime-api = { path = "../../xpallets/transaction-f
 substrate-wasm-builder = "3.0.0"
 
 [features]
+default = ["std", "pallet-session/historical"]
 std = [
     "codec/std",
     "serde",
@@ -184,7 +185,6 @@ std = [
     "xpallet-transaction-fee/std",
     "xpallet-transaction-fee-rpc-runtime-api/std",
 ]
-default = ["std", "pallet-session/historical"]
 runtime-benchmarks = [
   "hex-literal",
   "frame-benchmarking",

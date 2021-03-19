@@ -104,6 +104,7 @@ xpallet-transaction-fee-rpc-runtime-api = { path = "../../xpallets/transaction-f
 substrate-wasm-builder = "3.0.0"
 
 [features]
+default = ["std", "pallet-session/historical"]
 std = [
     "codec/std",
     "serde",
@@ -183,7 +184,6 @@ std = [
     "xpallet-transaction-fee/std",
     "xpallet-transaction-fee-rpc-runtime-api/std",
 ]
-default = ["std", "pallet-session/historical"]
 runtime-benchmarks = [
   "hex-literal",
   "frame-benchmarking",
