@@ -1121,7 +1121,7 @@ pub mod pallet {
             xbtc_amount: BalanceOf<T>,
         ) -> Option<(T::AccountId, Vec<u8>)> {
             Vaults::<T>::iter()
-                .take_while(|(vault_id, vault)| {
+                .filter(|(vault_id, vault)| {
                     if let Ok(token_upper_bound) =
                         Self::_calculate_vault_token_upper_bound(vault_id)
                     {

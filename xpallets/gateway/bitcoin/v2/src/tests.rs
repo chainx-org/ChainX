@@ -171,6 +171,21 @@ fn test_bridge_needs_to_update_exchange_rate() {
 }
 
 #[test]
+fn test_match_vault() {
+    ExtBuilder::build(BuildConfig::default()).execute_with(|| {
+        const Alice: AccountId = 1u64;
+        const Bob: AccountId = 2u64;
+        t_register_vault(Alice, 10000, "3LrrqZ2LtZxAcroVaYKgM6yDeRszV2sY1r").unwrap();
+        t_register_vault(Bob, 20000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
+        let vault = XGatewayBitcoin::get_first_matched_vault(2);
+        assert_eq!(vault.unwrap().0, Alice);
+        XGatewayBitcoin::request_issue(Origin::signed(3), Alice, 3).unwrap();
+        let vault = XGatewayBitcoin::get_first_matched_vault(3);
+        assert_eq!(vault.unwrap().0, Bob);
+    })
+}
+
+#[test]
 fn test_issue_request() {
     use super::types::TradingPrice;
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
