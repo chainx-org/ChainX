@@ -82,6 +82,23 @@
             "type": "Option<Depth<RpcPrice<Price>, RpcBalance<Balance>>>"
         }
     },
+    "xgatewayBitcoinV2": {
+        "getFirstMatchedVault": {
+            "description": "Some description",
+            "params": [
+                {
+                    "name": "xbtc_amount",
+                    "type": "Balance"
+                },
+                {
+                    "name": "at",
+                    "type": "Hash",
+                    "isOptional": true
+                }
+            ],
+            "type": "Option<(AccountId, Vec<u8>)>"
+        }
+    },
     "xgatewaycommon": {
         "boundAddrs": {
             "description": "Get bound addrs for an accountid",
