@@ -545,6 +545,7 @@ pub mod pallet {
     /// move/transfer balance, etc, have happened.
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
+    #[pallet::metadata(T::AccountId = "AccountId", BalanceOf<T> = "Balance", BlockNumberFor<T> = "BlockNumber")]
     pub enum Event<T: Config> {
         /// Update exchange rate by oracle
         ExchangeRateUpdated(T::AccountId, TradingPrice),
@@ -559,11 +560,11 @@ pub mod pallet {
         /// Update `ExchangeRateExpiredPeriod`
         ExchangeRateExpiredPeriodForceUpdated(BlockNumberFor<T>),
         /// New vault has been registered.
-        VaultRegistered(<T as frame_system::Config>::AccountId, BalanceOf<T>),
+        VaultRegistered(T::AccountId, BalanceOf<T>),
         /// Extra collateral was added to a vault.
-        ExtraCollateralAdded(<T as frame_system::Config>::AccountId, BalanceOf<T>),
+        ExtraCollateralAdded(T::AccountId, BalanceOf<T>),
         /// Vault released collateral.
-        CollateralReleased(<T as frame_system::Config>::AccountId, BalanceOf<T>),
+        CollateralReleased(T::AccountId, BalanceOf<T>),
         /// An issue request was submitted and waiting user to excute.
         NewIssueRequest(RequestId),
         /// `IssueRequest` excuted.
