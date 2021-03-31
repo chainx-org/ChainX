@@ -545,7 +545,7 @@ pub mod pallet {
     /// move/transfer balance, etc, have happened.
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
-    #[pallet::metadata(T::AccountId = "AccountId", BalanceOf<T> = "Balance", BlockNumberFor<T> = "BlockNumber")]
+    #[pallet::metadata(T::AccountId = "AccountId", BalanceOf<T> = "Balance", BlockNumberFor<T> = "BlockNumber", Vec<T::AccountId>="Vec<AccountId>")]
     pub enum Event<T: Config> {
         /// Update exchange rate by oracle
         ExchangeRateUpdated(T::AccountId, TradingPrice),
