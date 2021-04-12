@@ -310,10 +310,10 @@ fn test_cancel_extract_request() {
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
         t_register_vault(3, 30000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
 
-        assert_ok!(XGatewayBitcoin::request_extract(Origin::signed(3), 1, 300));
+        assert_ok!(XGatewayBitcoin::request_extract(Origin::signed(3), 1, 0));
 
         let extract_request = XGatewayBitcoin::get_extract_request_by_id(1).unwrap();
-        assert_eq!(extract_request.pcx_amount, 300);
+        assert_eq!(extract_request.pcx_amount, 0);
         assert_eq!(extract_request.requester, 3);
         assert_eq!(extract_request.pot, 1);
         assert_eq!(extract_request.open_time, 0);
