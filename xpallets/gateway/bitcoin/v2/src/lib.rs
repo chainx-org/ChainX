@@ -47,7 +47,7 @@ pub mod pallet {
         dispatch::{DispatchError, DispatchResult, DispatchResultWithPostInfo},
         ensure,
         storage::types::{StorageMap, StorageValue, ValueQuery},
-        traits::{Currency, Get, Hooks, IsType, ReservableCurrency, ExistenceRequirement},
+        traits::{Currency, ExistenceRequirement, Get, Hooks, IsType, ReservableCurrency},
         Blake2_128Concat, Twox64Concat,
     };
     use frame_system::{
@@ -213,7 +213,10 @@ pub mod pallet {
             Self::lock_collateral(&sender, collateral)?;
             <BtcAddresses<T>>::insert(&btc_address, sender.clone());
             let block_height = <frame_system::Pallet<T>>::block_number();
-            <Vaults<T>>::insert(&sender, Vault::new(sender.clone(), btc_address, block_height));
+            <Vaults<T>>::insert(
+                &sender,
+                Vault::new(sender.clone(), btc_address, block_height),
+            );
             Self::deposit_event(Event::VaultRegistered(sender, collateral));
             Ok(().into())
         }
@@ -364,7 +367,7 @@ pub mod pallet {
             let sender = ensure_signed(origin)?;
 
             Self::ensure_bridge_running()?;
-            
+
             // Only allow requests of amount above above the minimum
             ensure!(
                 // this is the amount the vault will send (minus fee)
@@ -529,10 +532,7 @@ pub mod pallet {
             // Ensure the extract_amount is not beyond the vault has
             let interest = Self::get_interest(&sender, &pot_id)?;
             // Ensure the pcx_amount requested is not beyond the interest can be extracted
-            ensure!(
-                extract_amount <= interest,
-                Error::<T>::BeyondInterest
-            );
+            ensure!(extract_amount <= interest, Error::<T>::BeyondInterest);
             // Get the request id
             let request_id = Self::get_next_extract_id();
             // Insert the request to ExtractRequests Map
@@ -561,7 +561,8 @@ pub mod pallet {
 
             Self::ensure_bridge_running()?;
 
-            let request = <ExtractRequests<T>>::get(&request_id).ok_or(Error::<T>::ExtractRequestNotFound)?;
+            let request =
+                <ExtractRequests<T>>::get(&request_id).ok_or(Error::<T>::ExtractRequestNotFound)?;
 
             ensure!(
                 Self::get_extract_request_duration(&request) < T::ExtractRequestExpiredTime::get(),
@@ -592,7 +593,8 @@ pub mod pallet {
 
             Self::ensure_bridge_running()?;
 
-            let request = <ExtractRequests<T>>::get(&request_id).ok_or(Error::<T>::ExtractRequestNotFound)?;
+            let request =
+                <ExtractRequests<T>>::get(&request_id).ok_or(Error::<T>::ExtractRequestNotFound)?;
 
             ensure!(
                 Self::get_extract_request_duration(&request) >= T::ExtractRequestExpiredTime::get(),
@@ -847,7 +849,7 @@ pub mod pallet {
     /// Mapping from issue id to `IssueRequest`
     #[pallet::storage]
     pub(crate) type ExtractRequests<T: Config> =
-    StorageMap<_, Twox64Concat, RequestId, ExtractRequest<T>>;
+        StorageMap<_, Twox64Concat, RequestId, ExtractRequest<T>>;
 
     /// Redeem fee when use request redeem
     #[pallet::storage]
@@ -1028,10 +1030,7 @@ pub mod pallet {
         ) -> DispatchResult {
             // Get the pot balance that can be extract
             let pot_balance = <CurrencyOf<T>>::total_balance(pot);
-            ensure!(
-                pot_balance >= amount,
-                Error::<T>::InsufficientInterest
-            );
+            ensure!(pot_balance >= amount, Error::<T>::InsufficientInterest);
             // Transfer pot with vault
             <CurrencyOf<T>>::transfer(pot, vault, amount, ExistenceRequirement::KeepAlive)?;
             Self::deposit_event(Event::<T>::ExtractInterested(
@@ -1306,13 +1305,17 @@ pub mod pallet {
         }
 
         // Get a vault's interest that can be extracted
-        pub fn get_interest(vault_id: &T::AccountId, pot_id: &T::AccountId) -> Result<BalanceOf<T>,DispatchError> {
+        pub fn get_interest(
+            vault_id: &T::AccountId,
+            pot_id: &T::AccountId,
+        ) -> Result<BalanceOf<T>, DispatchError> {
             // Get the current vault's coin_age
             let current_block: BlockNumberFor<T> = <frame_system::Pallet<T>>::block_number();
             Vaults::<T>::mutate(vault_id, |vault| {
                 if let Some(vault) = vault {
-                    vault.coin_age =
-                        vault.coin_age + (*&current_block - vault.block_height).saturated_into::<u64>() * vault.issued_tokens.saturated_into::<u64>();
+                    vault.coin_age = vault.coin_age
+                        + (*&current_block - vault.block_height).saturated_into::<u64>()
+                            * vault.issued_tokens.saturated_into::<u64>();
                     vault.block_height = current_block;
                 }
             });
@@ -1326,8 +1329,9 @@ pub mod pallet {
             Vaults::<T>::mutate(vault_id, |vault| {
                 if let Some(vault) = vault {
                     if total_coin_age != 0 {
-                        vault.interest =
-                            vault.interest + (vault.coin_age.saturated_into::<BalanceOf<T>>()* total_interest) / total_coin_age.saturated_into();
+                        vault.interest = vault.interest
+                            + (vault.coin_age.saturated_into::<BalanceOf<T>>() * total_interest)
+                                / total_coin_age.saturated_into();
                     }
                 }
             });

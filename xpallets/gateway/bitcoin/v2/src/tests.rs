@@ -301,10 +301,7 @@ fn test_extract_request() {
         assert_eq!(extract_request.pot, 2);
         assert_eq!(extract_request.open_time, 0);
 
-        assert_ok!(XGatewayBitcoin::execute_extract(
-            Origin::signed(3),
-            1
-        ));
+        assert_ok!(XGatewayBitcoin::execute_extract(Origin::signed(3), 1));
     })
 }
 
