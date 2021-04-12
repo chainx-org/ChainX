@@ -9664,6 +9664,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "sp-version",
+ "time",
  "xp-protocol",
  "xpallet-assets",
  "xpallet-assets-registrar",

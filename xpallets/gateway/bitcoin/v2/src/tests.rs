@@ -211,6 +211,7 @@ fn test_issue_request() {
         assert_ok!(XGatewayBitcoin::execute_issue(
             Origin::signed(1),
             1,
+            2,
             vec![],
             vec![],
             vec![],
@@ -228,8 +229,101 @@ fn test_issue_request() {
         assert_eq!(vault.to_be_issued_tokens, 0);
 
         assert_err!(
-            XGatewayBitcoin::execute_issue(Origin::signed(1), 1, vec![], vec![], vec![],),
+            XGatewayBitcoin::execute_issue(Origin::signed(1), 1, 2, vec![], vec![], vec![],),
             pallet::Error::<Test>::IssueRequestNotFound
+        );
+    })
+}
+
+#[test]
+fn test_extract_request() {
+    ExtBuilder::build(BuildConfig::default()).execute_with(|| {
+        // Issue
+        t_register_vault(3, 30000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
+        // request
+        assert_err!(
+            XGatewayBitcoin::request_issue(Origin::signed(2), 3, 1, 2),
+            pallet::Error::<Test>::InsufficientGriefingCollateral
+        );
+        assert_ok!(XGatewayBitcoin::request_issue(Origin::signed(2), 3, 1, 300));
+
+        let reserved_balance = <<Test as xpallet_assets::Config>::Currency>::reserved_balance(2);
+        assert_eq!(reserved_balance, 300);
+        let issue_request = XGatewayBitcoin::get_issue_request_by_id(1).unwrap();
+        assert_eq!(issue_request.griefing_collateral, 300);
+        assert_eq!(issue_request.requester, 2);
+        assert_eq!(issue_request.vault, 3);
+        assert_eq!(issue_request.open_time, 0);
+
+        // check vault's token status
+        let vault = XGatewayBitcoin::get_vault_by_id(&issue_request.vault).unwrap();
+        assert_eq!(vault.to_be_issued_tokens, issue_request.btc_amount);
+
+        t_register_btc().unwrap();
+
+        // execute issue_request
+        assert_ok!(XGatewayBitcoin::execute_issue(
+            Origin::signed(1),
+            1,
+            2,
+            vec![],
+            vec![],
+            vec![],
+        ));
+
+        let user_xbtc = xpallet_assets::Module::<Test>::asset_balance_of(
+            &issue_request.requester,
+            &BridgeTargetAssetId::get(),
+            xpallet_assets::AssetType::Usable,
+        );
+
+        assert_eq!(user_xbtc, 1);
+
+        let vault = XGatewayBitcoin::get_vault_by_id(&issue_request.vault).unwrap();
+        assert_eq!(vault.issued_tokens, issue_request.btc_amount);
+        assert_eq!(vault.to_be_issued_tokens, 0);
+
+        assert_err!(
+            XGatewayBitcoin::execute_issue(Origin::signed(1), 1, 2, vec![], vec![], vec![],),
+            pallet::Error::<Test>::IssueRequestNotFound
+        );
+
+        let interest = XGatewayBitcoin::get_interest(&3, &2).unwrap();
+        println!("interest = {:#?}", interest);
+
+        //Extract
+        assert_ok!(XGatewayBitcoin::request_extract(Origin::signed(3), 2, 0));
+        let reserved_balance = <<Test as xpallet_assets::Config>::Currency>::reserved_balance(3);
+        assert_eq!(reserved_balance, 30000);
+        let extract_request = XGatewayBitcoin::get_extract_request_by_id(1).unwrap();
+        assert_eq!(extract_request.pcx_amount, 0);
+        assert_eq!(extract_request.requester, 3);
+        assert_eq!(extract_request.pot, 2);
+        assert_eq!(extract_request.open_time, 0);
+
+        assert_ok!(XGatewayBitcoin::execute_extract(
+            Origin::signed(3),
+            1
+        ));
+    })
+}
+
+#[test]
+fn test_cancel_extract_request() {
+    ExtBuilder::build(BuildConfig::default()).execute_with(|| {
+        t_register_vault(3, 30000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
+
+        assert_ok!(XGatewayBitcoin::request_extract(Origin::signed(3), 1, 300));
+
+        let extract_request = XGatewayBitcoin::get_extract_request_by_id(1).unwrap();
+        assert_eq!(extract_request.pcx_amount, 300);
+        assert_eq!(extract_request.requester, 3);
+        assert_eq!(extract_request.pot, 1);
+        assert_eq!(extract_request.open_time, 0);
+
+        assert_err!(
+            XGatewayBitcoin::cancel_extract(Origin::signed(3), 1),
+            pallet::Error::<Test>::ExtractRequestNotExpired
         );
     })
 }
@@ -327,7 +421,7 @@ fn test_redeem_request() {
         );
 
         t_register_btc().unwrap();
-        XGatewayBitcoin::execute_issue(Origin::signed(2), 1, vec![], vec![], vec![]).unwrap();
+        XGatewayBitcoin::execute_issue(Origin::signed(2), 1, 2, vec![], vec![], vec![]).unwrap();
 
         // request redeem
         assert_ok!(XGatewayBitcoin::request_redeem(
@@ -353,6 +447,7 @@ fn test_redeem_request() {
         assert_ok!(XGatewayBitcoin::execute_redeem(
             Origin::signed(1),
             1,
+            2,
             vec![],
             vec![],
             vec![]

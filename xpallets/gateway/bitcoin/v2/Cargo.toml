@@ -14,6 +14,7 @@ impl-trait-for-tuples = "0.2.0"
 serde = { version = "1.0.101", optional = true, features = ["derive"] }
 sha2 = { version = "0.8.0", default-features = false }
 bitflags = { version = "1.2.1", default-features = false }
+time = { version = "0.1.44", default-features = false }
 
 # Substrate
 sp-arithmetic = { version = "3.0.0", default-features = false }
@@ -25,6 +26,7 @@ sp-std = { version = "3.0.0", default-features = false }
 sp-version = { version = "3.0.0", default-features = false }
 frame-support = { version = "3.0.0", default-features = false }
 frame-system = { version = "3.0.0", default-features = false }
+
 
 # ChainX pallet
 xpallet-assets = { path = "../../../assets", default-features = false }

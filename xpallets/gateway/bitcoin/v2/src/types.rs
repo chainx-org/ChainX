@@ -126,15 +126,22 @@ pub struct Vault<AccountId, BlockNumber, Balance> {
     pub banned_until: Option<BlockNumber>,
     /// Current status of the vault
     pub status: VaultStatus,
+    /// The block height of the vault to calculate the coin_age
+    pub block_height: BlockNumber,
+    /// The interest of the vault
+    pub interest: Balance,
+    /// The coin_age of the vault
+    pub coin_age: u64,
 }
 
 impl<AccountId: Default, BlockNumber: Default, Balance: Default>
     Vault<AccountId, BlockNumber, Balance>
 {
-    pub(crate) fn new(id: AccountId, address: BtcAddress) -> Self {
+    pub(crate) fn new(id: AccountId, address: BtcAddress, block_height: BlockNumber) -> Self {
         Self {
             id,
             wallet: address,
+            block_height,
             ..Default::default()
         }
     }
@@ -175,6 +182,20 @@ pub struct IssueRequest<AccountId, BlockNumber, XBTC, PCX> {
     pub(crate) btc_amount: XBTC,
     /// Collateral locked to avoid user griefing
     pub(crate) griefing_collateral: PCX,
+}
+
+/// Contains all informations while executing a issue request needed.
+#[derive(Encode, Decode, RuntimeDebug, Default, Clone, PartialEq)]
+#[cfg_attr(feature = "std", derive(Deserialize, Serialize))]
+pub struct ExtractRequest<AccountId, BlockNumber, PCX> {
+    /// Vault id
+    pub(crate) pot: AccountId,
+    /// Block height when the issue requested
+    pub(crate) open_time: BlockNumber,
+    /// Who requests issue
+    pub(crate) requester: AccountId,
+    /// Collateral locked to avoid user griefing
+    pub(crate) pcx_amount: PCX,
 }
 
 #[cfg(test)]

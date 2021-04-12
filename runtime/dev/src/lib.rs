@@ -446,6 +446,7 @@ parameter_types! {
     pub const LiquidationThreshold: u16 = 180;
     pub const IssueRequestExpiredTime: BlockNumber = 10000;
     pub const RedeemRequestExpiredTime: BlockNumber = 10000;
+    pub const ExtractRequestExpiredTime: BlockNumber = 10000;
     pub const ExchangeRateExpiredPeriod: BlockNumber = 10000;
     pub const RedeemBtcDustValue: Balance = 1;
 }
@@ -459,6 +460,7 @@ impl xpallet_gateway_bitcoin_v2_pallet::Config for Runtime {
     type LiquidationThreshold = LiquidationThreshold;
     type IssueRequestExpiredTime = IssueRequestExpiredTime;
     type RedeemRequestExpiredTime = RedeemRequestExpiredTime;
+    type ExtractRequestExpiredTime = ExtractRequestExpiredTime;
     type RedeemBtcDustValue = RedeemBtcDustValue;
     type ExchangeRateExpiredPeriod = ExchangeRateExpiredPeriod;
 }

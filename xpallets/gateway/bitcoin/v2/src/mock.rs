@@ -84,6 +84,7 @@ parameter_types! {
     pub const RedeemRequestExpiredTime: BlockNumber = 10000;
     pub const ExchangeRateExpiredPeriod: BlockNumber = 10;
     pub const RedeemBtcDustValue: Balance = 1;
+    pub const ExtractRequestExpiredTime: BlockNumber = 10000;
 }
 
 impl pallet::Config for Test {
@@ -97,6 +98,7 @@ impl pallet::Config for Test {
     type RedeemRequestExpiredTime = RedeemRequestExpiredTime;
     type RedeemBtcDustValue = RedeemBtcDustValue;
     type ExchangeRateExpiredPeriod = ExchangeRateExpiredPeriod;
+    type ExtractRequestExpiredTime = ExtractRequestExpiredTime;
 }
 
 type Block = frame_system::mocking::MockBlock<Test>;

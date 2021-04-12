@@ -47,7 +47,7 @@ pub mod pallet {
         dispatch::{DispatchError, DispatchResult, DispatchResultWithPostInfo},
         ensure,
         storage::types::{StorageMap, StorageValue, ValueQuery},
-        traits::{Currency, Get, Hooks, IsType, ReservableCurrency},
+        traits::{Currency, Get, Hooks, IsType, ReservableCurrency, ExistenceRequirement},
         Blake2_128Concat, Twox64Concat,
     };
     use frame_system::{
@@ -86,6 +86,12 @@ pub mod pallet {
         BalanceOf<T>,
     >;
 
+    pub(crate) type ExtractRequest<T> = crate::types::ExtractRequest<
+        <T as frame_system::Config>::AccountId,
+        <T as frame_system::Config>::BlockNumber,
+        BalanceOf<T>,
+    >;
+
     #[pallet::pallet]
     #[pallet::generate_store(pub(crate) trait Store)]
     pub struct Pallet<T>(PhantomData<T>);
@@ -115,6 +121,8 @@ pub mod pallet {
         type IssueRequestExpiredTime: Get<BlockNumberFor<Self>>;
         /// Duration from `RedeemRequest` opened to expired.
         type RedeemRequestExpiredTime: Get<BlockNumberFor<Self>>;
+        /// Duration from `ExtractRequest` opened to expired.
+        type ExtractRequestExpiredTime: Get<BlockNumberFor<Self>>;
         /// Duration from `ExchangeRate` last updated to expired.
         #[pallet::constant]
         type ExchangeRateExpiredPeriod: Get<BlockNumberFor<Self>>;
@@ -204,7 +212,8 @@ pub mod pallet {
             );
             Self::lock_collateral(&sender, collateral)?;
             <BtcAddresses<T>>::insert(&btc_address, sender.clone());
-            <Vaults<T>>::insert(&sender, Vault::new(sender.clone(), btc_address));
+            let block_height = <frame_system::Pallet<T>>::block_number();
+            <Vaults<T>>::insert(&sender, Vault::new(sender.clone(), btc_address, block_height));
             Self::deposit_event(Event::VaultRegistered(sender, collateral));
             Ok(().into())
         }
@@ -279,6 +288,7 @@ pub mod pallet {
         pub fn execute_issue(
             origin: OriginFor<T>,
             request_id: RequestId,
+            pot_id: T::AccountId,
             _tx_id: Vec<u8>,
             _merkle_proof: Vec<u8>,
             _raw_tx: Vec<u8>,
@@ -300,6 +310,7 @@ pub mod pallet {
                 request.btc_amount,
             )?;
             Self::unlock_collateral(&request.requester, request.griefing_collateral)?;
+            Self::get_interest(&request.vault, &pot_id)?;
             Vaults::<T>::mutate(&request.vault, |vault| {
                 if let Some(vault) = vault {
                     vault.to_be_issued_tokens -= request.btc_amount;
@@ -408,6 +419,7 @@ pub mod pallet {
         pub fn execute_redeem(
             origin: OriginFor<T>,
             request_id: RequestId,
+            pot_id: T::AccountId,
             _tx_id: Vec<u8>,
             _merkle_proof: Vec<u8>,
             _raw_tx: Vec<u8>,
@@ -417,7 +429,7 @@ pub mod pallet {
             Self::ensure_bridge_running()?;
 
             let request =
-                <RedeemRequests<T>>::get(request_id).ok_or(Error::<T>::RedeemRequestNotFound)?;
+                <RedeemRequests<T>>::get(&request_id).ok_or(Error::<T>::RedeemRequestNotFound)?;
 
             ensure!(
                 Self::get_redeem_request_duration(&request) < T::RedeemRequestExpiredTime::get(),
@@ -435,6 +447,7 @@ pub mod pallet {
                 Self::slash_collateral(&vault.id, &request.requester, premium_fee)?;
             }
 
+            Self::get_interest(&request.vault, &pot_id)?;
             Vaults::<T>::mutate(&vault.id, |vault| {
                 if let Some(vault) = vault {
                     vault.issued_tokens -= request.btc_amount;
@@ -461,7 +474,7 @@ pub mod pallet {
             let sender = ensure_signed(origin)?;
 
             let request =
-                <RedeemRequests<T>>::get(request_id).ok_or(Error::<T>::RedeemRequestNotFound)?;
+                <RedeemRequests<T>>::get(&request_id).ok_or(Error::<T>::RedeemRequestNotFound)?;
 
             ensure!(request.requester == sender, Error::<T>::InvalidRequester);
             ensure!(
@@ -499,6 +512,96 @@ pub mod pallet {
             RedeemRequests::<T>::remove(&request_id);
 
             Self::deposit_event(Event::<T>::RedeemCancelled(request_id));
+            Ok(().into())
+        }
+
+        /// User request extract
+        #[pallet::weight(0)]
+        pub(crate) fn request_extract(
+            origin: OriginFor<T>,
+            pot_id: T::AccountId,
+            extract_amount: BalanceOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            // Ensure sender has signed
+            let sender = ensure_signed(origin)?;
+            // Ensure the bridge is running
+            Self::ensure_bridge_running()?;
+            // Ensure the extract_amount is not beyond the vault has
+            let interest = Self::get_interest(&sender, &pot_id)?;
+            // Ensure the pcx_amount requested is not beyond the interest can be extracted
+            ensure!(
+                extract_amount <= interest,
+                Error::<T>::BeyondInterest
+            );
+            // Get the request id
+            let request_id = Self::get_next_extract_id();
+            // Insert the request to ExtractRequests Map
+            ExtractRequests::<T>::insert(
+                request_id,
+                ExtractRequest::<T> {
+                    pot: pot_id,
+                    open_time: <frame_system::Pallet<T>>::block_number(),
+                    requester: sender,
+                    pcx_amount: extract_amount,
+                    ..Default::default()
+                },
+            );
+            // Deposit the extracting request event
+            Self::deposit_event(Event::<T>::NewExtractRequest(request_id));
+            Ok(().into())
+        }
+
+        /// Execute extract request
+        #[pallet::weight(0)]
+        pub(crate) fn execute_extract(
+            origin: OriginFor<T>,
+            request_id: RequestId,
+        ) -> DispatchResultWithPostInfo {
+            ensure_signed(origin)?;
+
+            Self::ensure_bridge_running()?;
+
+            let request = <ExtractRequests<T>>::get(&request_id).ok_or(Error::<T>::ExtractRequestNotFound)?;
+
+            ensure!(
+                Self::get_extract_request_duration(&request) < T::ExtractRequestExpiredTime::get(),
+                Error::<T>::ExtractRequestExpired
+            );
+            // reset coin_age
+            Vaults::<T>::mutate(&request.requester, |vault| {
+                if let Some(vault) = vault {
+                    vault.coin_age = 0;
+                    vault.block_height = <frame_system::Pallet<T>>::block_number();
+                }
+            });
+            // Extract interest for pot
+            Self::extract_interest(&request.pot, &request.requester, request.pcx_amount)?;
+            ExtractRequests::<T>::remove(&request_id);
+
+            Self::deposit_event(Event::<T>::ExtractExecuted(request_id));
+            Ok(().into())
+        }
+
+        /// Cancel extract request
+        #[pallet::weight(0)]
+        pub(crate) fn cancel_extract(
+            origin: OriginFor<T>,
+            request_id: RequestId,
+        ) -> DispatchResultWithPostInfo {
+            ensure_signed(origin)?;
+
+            Self::ensure_bridge_running()?;
+
+            let request = <ExtractRequests<T>>::get(&request_id).ok_or(Error::<T>::ExtractRequestNotFound)?;
+
+            ensure!(
+                Self::get_extract_request_duration(&request) >= T::ExtractRequestExpiredTime::get(),
+                Error::<T>::ExtractRequestNotExpired
+            );
+
+            ExtractRequests::<T>::remove(&request_id);
+
+            Self::deposit_event(Event::<T>::ExtractCancelled(request_id));
             Ok(().into())
         }
 
@@ -581,6 +684,14 @@ pub mod pallet {
         RedeemCancelled(RequestId),
         /// Root updated `IssueGriefingFee`.
         GriefingFeeUpdated(Percent),
+        /// Extract request is accepted
+        NewExtractRequest(RequestId),
+        /// Extract request is executed
+        ExtractExecuted(RequestId),
+        /// Cancel extract is accepted
+        ExtractCancelled(RequestId),
+        /// Extract interest
+        ExtractInterested(T::AccountId, T::AccountId, BalanceOf<T>),
     }
 
     /// Errors for assets module
@@ -594,6 +705,8 @@ pub mod pallet {
         ArithmeticError,
         /// Account doesn't have enough collateral to be slashed.
         InsufficientCollateral,
+        /// Pot doesn't have enough interest to be extracted.
+        InsufficientInterest,
         /// Bridge was shutdown or in error.
         BridgeNotRunning,
         /// Try to calculate collateral ratio while has no issued_tokens
@@ -626,15 +739,21 @@ pub mod pallet {
         InsecureVault,
         /// `IssueRequest` or `RedeemRequest` has been executed or cancelled
         RequestDealt,
-        /// Redeem request id is not exsit
+        /// Redeem request id is not exist
         RedeemRequestNotFound,
         /// Redeem request cancelled for forced redeem when it's not expired.
         RedeemRequestNotExpired,
-        /// Redeem request is expierd
+        /// Redeem request is expired
         RedeemRequestExpired,
+        /// Extract request id is not exist
+        ExtractRequestNotFound,
+        /// Redeem request is expired
+        ExtractRequestExpired,
+        /// Extract request cancelled for forced redeem when it's not expired.
+        ExtractRequestNotExpired,
         /// Vault is under Liquidation
         VaultLiquidated,
-        /// Actioner is not the request's owner
+        /// Actor is not the request's owner
         InvalidRequester,
         /// Redeem amount is to low
         AmountBelowDustAmount,
@@ -654,6 +773,8 @@ pub mod pallet {
         RedeemAmountTooLarge,
         /// Error propagated from xpallet_assets.
         AssetError,
+        /// The request amount beyond the interest that can be extracted
+        BeyondInterest,
     }
 
     /// Total collateral locked by xbridge.
@@ -717,6 +838,16 @@ pub mod pallet {
     #[pallet::storage]
     pub(crate) type IssueRequests<T: Config> =
         StorageMap<_, Twox64Concat, RequestId, IssueRequest<T>>;
+
+    /// Auto-increament id to identify each issue request.
+    /// Also presents total amount of created requests.
+    #[pallet::storage]
+    pub(crate) type ExtractRequestCount<T: Config> = StorageValue<_, RequestId, ValueQuery>;
+
+    /// Mapping from issue id to `IssueRequest`
+    #[pallet::storage]
+    pub(crate) type ExtractRequests<T: Config> =
+    StorageMap<_, Twox64Concat, RequestId, ExtractRequest<T>>;
 
     /// Redeem fee when use request redeem
     #[pallet::storage]
@@ -817,6 +948,11 @@ pub mod pallet {
             current_block - request.open_time
         }
 
+        fn get_extract_request_duration(request: &ExtractRequest<T>) -> BlockNumberFor<T> {
+            let current_block = frame_system::Pallet::<T>::block_number();
+            current_block - request.open_time
+        }
+
         fn collateral_ratio_of(
             vault_id: &T::AccountId,
             btc_amount: BalanceOf<T>,
@@ -879,6 +1015,28 @@ pub mod pallet {
             Self::deposit_event(Event::<T>::CollateralSlashed(
                 sender.clone(),
                 receiver.clone(),
+                amount,
+            ));
+            Ok(().into())
+        }
+
+        /// Extract interest feom pot to vault
+        pub fn extract_interest(
+            pot: &T::AccountId,
+            vault: &T::AccountId,
+            amount: BalanceOf<T>,
+        ) -> DispatchResult {
+            // Get the pot balance that can be extract
+            let pot_balance = <CurrencyOf<T>>::total_balance(pot);
+            ensure!(
+                pot_balance >= amount,
+                Error::<T>::InsufficientInterest
+            );
+            // Transfer pot with vault
+            <CurrencyOf<T>>::transfer(pot, vault, amount, ExistenceRequirement::KeepAlive)?;
+            Self::deposit_event(Event::<T>::ExtractInterested(
+                pot.clone(),
+                vault.clone(),
                 amount,
             ));
             Ok(().into())
@@ -1038,6 +1196,14 @@ pub mod pallet {
             })
         }
 
+        /// Generate secure key from account id
+        pub(crate) fn get_next_extract_id() -> RequestId {
+            <ExtractRequestCount<T>>::mutate(|n| {
+                *n += 1;
+                *n
+            })
+        }
+
         fn move_xbtc(
             from: &T::AccountId,
             from_ty: AssetType,
@@ -1137,6 +1303,43 @@ pub mod pallet {
                 .take(1)
                 .map(|(vault_id, vault)| (vault_id, vault.wallet))
                 .next()
+        }
+
+        // Get a vault's interest that can be extracted
+        pub fn get_interest(vault_id: &T::AccountId, pot_id: &T::AccountId) -> Result<BalanceOf<T>,DispatchError> {
+            // Get the current vault's coin_age
+            let current_block: BlockNumberFor<T> = <frame_system::Pallet<T>>::block_number();
+            Vaults::<T>::mutate(vault_id, |vault| {
+                if let Some(vault) = vault {
+                    vault.coin_age =
+                        vault.coin_age + (*&current_block - vault.block_height).saturated_into::<u64>() * vault.issued_tokens.saturated_into::<u64>();
+                    vault.block_height = current_block;
+                }
+            });
+            // Get total coin_age in the system
+            let mut total_coin_age: u64 = 0;
+            for (_, vault) in Vaults::<T>::iter() {
+                total_coin_age += vault.coin_age;
+            }
+            // Get the interest of the vault
+            let total_interest: BalanceOf<T> = CurrencyOf::<T>::total_balance(pot_id);
+            Vaults::<T>::mutate(vault_id, |vault| {
+                if let Some(vault) = vault {
+                    if total_coin_age != 0 {
+                        vault.interest =
+                            vault.interest + (vault.coin_age.saturated_into::<BalanceOf<T>>()* total_interest) / total_coin_age.saturated_into();
+                    }
+                }
+            });
+            let vault = Self::get_vault_by_id(vault_id)?;
+
+            Ok(vault.interest.into())
+        }
+
+        pub(crate) fn get_extract_request_by_id(
+            request_id: RequestId,
+        ) -> Result<ExtractRequest<T>, DispatchError> {
+            <ExtractRequests<T>>::get(request_id).ok_or(Error::<T>::ExtractRequestNotFound.into())
         }
     }
 }
