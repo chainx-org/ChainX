@@ -233,7 +233,6 @@ pub mod pallet {
             origin: OriginFor<T>,
             vault_id: T::AccountId,
             btc_amount: BalanceOf<T>,
-            griefing_collateral: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
 
@@ -243,10 +242,8 @@ pub mod pallet {
                 collateral_ratio_later >= T::SecureThreshold::get(),
                 Error::<T>::InsecureVault
             );
-            ensure!(
-                griefing_collateral >= Self::calculate_required_collateral(btc_amount)?,
-                Error::<T>::InsufficientGriefingCollateral
-            );
+
+            let griefing_collateral = Self::calculate_required_collateral(btc_amount)?;
 
             Self::lock_collateral(&sender, griefing_collateral)?;
             let request_id = Self::get_next_issue_id();
@@ -351,16 +348,13 @@ pub mod pallet {
             btc_address: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
-
             Self::ensure_bridge_running()?;
-            
             // Only allow requests of amount above above the minimum
             ensure!(
                 // this is the amount the vault will send (minus fee)
                 redeem_amount >= T::RedeemBtcDustValue::get(),
                 Error::<T>::AmountBelowDustAmount
             );
-
             ensure!(
                 redeem_amount <= Self::usable_xbtc_of(&sender),
                 Error::<T>::InsufficiantAssetsFunds
@@ -548,6 +542,7 @@ pub mod pallet {
     /// move/transfer balance, etc, have happened.
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
+    #[pallet::metadata(T::AccountId = "AccountId", BalanceOf<T> = "Balance", BlockNumberFor<T> = "BlockNumber", Vec<T::AccountId>="Vec<AccountId>")]
     pub enum Event<T: Config> {
         /// Update exchange rate by oracle
         ExchangeRateUpdated(T::AccountId, TradingPrice),
@@ -562,11 +557,11 @@ pub mod pallet {
         /// Update `ExchangeRateExpiredPeriod`
         ExchangeRateExpiredPeriodForceUpdated(BlockNumberFor<T>),
         /// New vault has been registered.
-        VaultRegistered(<T as frame_system::Config>::AccountId, BalanceOf<T>),
+        VaultRegistered(T::AccountId, BalanceOf<T>),
         /// Extra collateral was added to a vault.
-        ExtraCollateralAdded(<T as frame_system::Config>::AccountId, BalanceOf<T>),
+        ExtraCollateralAdded(T::AccountId, BalanceOf<T>),
         /// Vault released collateral.
-        CollateralReleased(<T as frame_system::Config>::AccountId, BalanceOf<T>),
+        CollateralReleased(T::AccountId, BalanceOf<T>),
         /// An issue request was submitted and waiting user to excute.
         NewIssueRequest(RequestId),
         /// `IssueRequest` excuted.
@@ -1124,12 +1119,13 @@ pub mod pallet {
             xbtc_amount: BalanceOf<T>,
         ) -> Option<(T::AccountId, Vec<u8>)> {
             Vaults::<T>::iter()
-                .take_while(|(vault_id, vault)| {
+                .filter(|(vault_id, vault)| {
                     if let Ok(token_upper_bound) =
                         Self::_calculate_vault_token_upper_bound(vault_id)
                     {
                         token_upper_bound > vault.issued_tokens
-                            && token_upper_bound - vault.issued_tokens > xbtc_amount
+                            && token_upper_bound - vault.issued_tokens - vault.to_be_issued_tokens
+                                > xbtc_amount
                     } else {
                         false
                     }

@@ -22,7 +22,12 @@ pub trait RuntimeApiCollection:
     + xpallet_assets_rpc_runtime_api::XAssetsApi<Block, AccountId, Balance>
     + xpallet_dex_spot_rpc_runtime_api::XSpotApi<Block, AccountId, Balance, BlockNumber, Balance>
     + xpallet_gateway_common_rpc_runtime_api::XGatewayCommonApi<Block, AccountId, Balance>
-    + xpallet_gateway_records_rpc_runtime_api::XGatewayRecordsApi<
+    + xpallet_gateway_bitcoin_v2_rpc_runtime_api::XGatewayBitcoinV2Api<
+        Block,
+        AccountId,
+        BlockNumber,
+        Balance,
+    > + xpallet_gateway_records_rpc_runtime_api::XGatewayRecordsApi<
         Block,
         AccountId,
         Balance,
@@ -61,7 +66,12 @@ where
         + xpallet_assets_rpc_runtime_api::XAssetsApi<Block, AccountId, Balance>
         + xpallet_dex_spot_rpc_runtime_api::XSpotApi<Block, AccountId, Balance, BlockNumber, Balance>
         + xpallet_gateway_common_rpc_runtime_api::XGatewayCommonApi<Block, AccountId, Balance>
-        + xpallet_gateway_records_rpc_runtime_api::XGatewayRecordsApi<
+        + xpallet_gateway_bitcoin_v2_rpc_runtime_api::XGatewayBitcoinV2Api<
+            Block,
+            AccountId,
+            BlockNumber,
+            Balance,
+        > + xpallet_gateway_records_rpc_runtime_api::XGatewayRecordsApi<
             Block,
             AccountId,
             Balance,

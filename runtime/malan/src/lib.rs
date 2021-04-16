@@ -51,6 +51,7 @@ use xpallet_mining_asset::{MinerLedger, MiningAssetInfo, MiningDividendInfo};
 use xpallet_mining_staking::{NominatorInfo, NominatorLedger, ValidatorInfo};
 use xpallet_support::traits::MultisigAddressFor;
 
+use xpallet_gateway_bitcoin_v2::pallet as xpallet_gateway_bitcoin_v2_pallet;
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
     construct_runtime, debug, parameter_types,
@@ -982,6 +983,31 @@ impl xpallet_gateway_bitcoin::Config for Runtime {
     type WeightInfo = xpallet_gateway_bitcoin::weights::SubstrateWeight<Runtime>;
 }
 
+parameter_types! {
+    pub const BridgeTargetAssetId: u8 = 1;
+    pub const DustCollateral: Balance = 1000;
+    pub const SecureThreshold: u16 = 300;
+    pub const PremiumThreshold: u16 = 250;
+    pub const LiquidationThreshold: u16 = 180;
+    pub const IssueRequestExpiredTime: BlockNumber = 10000;
+    pub const RedeemRequestExpiredTime: BlockNumber = 10000;
+    pub const ExchangeRateExpiredPeriod: BlockNumber = 10000;
+    pub const RedeemBtcDustValue: Balance = 1;
+}
+
+impl xpallet_gateway_bitcoin_v2_pallet::Config for Runtime {
+    type Event = Event;
+    type TargetAssetId = BridgeTargetAssetId;
+    type DustCollateral = DustCollateral;
+    type SecureThreshold = SecureThreshold;
+    type PremiumThreshold = PremiumThreshold;
+    type LiquidationThreshold = LiquidationThreshold;
+    type IssueRequestExpiredTime = IssueRequestExpiredTime;
+    type RedeemRequestExpiredTime = RedeemRequestExpiredTime;
+    type RedeemBtcDustValue = RedeemBtcDustValue;
+    type ExchangeRateExpiredPeriod = ExchangeRateExpiredPeriod;
+}
+
 impl xpallet_dex_spot::Config for Runtime {
     type Event = Event;
     type Price = Balance;
@@ -1113,6 +1139,8 @@ construct_runtime!(
 
         Bounties: pallet_bounties::{Module, Call, Storage, Event<T>} = 38,
         Tips: pallet_tips::{Module, Call, Storage, Event<T>} = 39,
+
+        XGatewayBitcoinV2: xpallet_gateway_bitcoin_v2_pallet::{Module, Call, Storage, Event<T>, Config<T>} = 40,
     }
 );
 
@@ -1461,6 +1489,12 @@ impl_runtime_apis! {
             // check multisig address
             let _ = XGatewayCommon::generate_multisig_addr(chain, &info)?;
             Ok(info)
+        }
+    }
+
+    impl xpallet_gateway_bitcoin_v2_rpc_runtime_api::XGatewayBitcoinV2Api<Block, AccountId, BlockNumber, Balance> for Runtime {
+        fn get_first_matched_vault(xbtc_amount: Balance) -> Option<(AccountId, Vec<u8>)> {
+            XGatewayBitcoinV2::get_first_matched_vault(xbtc_amount)
         }
     }
 

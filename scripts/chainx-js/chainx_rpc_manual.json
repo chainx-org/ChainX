@@ -1,48 +1,65 @@
 {
-    "xassets": {
-        "getAssets": {
-            "description": "get all assets balance and infos",
-            "params": [
-                {
-                    "name": "at",
-                    "type": "Hash",
-                    "isOptional": true
-                }
-            ],
-            "type": "BTreeMap<AssetId, RpcTotalAssetInfo>"
+  "xassets": {
+    "getAssets": {
+      "description": "get all assets balance and infos",
+      "params": [
+        {
+          "name": "at",
+          "type": "Hash",
+          "isOptional": true
         }
-    },
-    "xminingasset": {
-        "getDividendByAccount": {
-            "description": "Get the asset mining dividends info given the asset miner AccountId.",
-            "params": [
-                {
-                    "name": "who",
-                    "type": "AccountId"
-                },
-                {
-                    "name": "at",
-                    "type": "Hash",
-                    "isOptional": true
-                }
-            ],
-            "type": "BTreeMap<AssetId, RpcMiningDividendInfo>"
-        }
-    },
-    "xfee": {
-        "queryDetails": {
-            "description": "get the fee details of extrinsic",
-            "params": [
-                {
-                    "name": "encoded_xt",
-                    "type": "Bytes"
-                },
-                {
-                    "name": "at",
-                    "type": "Option<BlockHash>"
-                }
-            ],
-            "type": "RpcFeeDetails"
-        }
+      ],
+      "type": "BTreeMap<AssetId, RpcTotalAssetInfo>"
     }
+  },
+  "xminingasset": {
+    "getDividendByAccount": {
+      "description": "Get the asset mining dividends info given the asset miner AccountId.",
+      "params": [
+        {
+          "name": "who",
+          "type": "AccountId"
+        },
+        {
+          "name": "at",
+          "type": "Hash",
+          "isOptional": true
+        }
+      ],
+      "type": "BTreeMap<AssetId, RpcMiningDividendInfo>"
+    }
+  },
+  "xfee": {
+    "queryDetails": {
+      "description": "get the fee details of extrinsic",
+      "params": [
+        {
+          "name": "encoded_xt",
+          "type": "Bytes"
+        },
+        {
+          "name": "at",
+          "type": "Option<BlockHash>"
+        }
+      ],
+      "type": "RpcFeeDetails"
+    }
+  },
+  "xgatewayBitcoinV2": {
+    "getFirstMatchedVault": {
+      "description": "Some description",
+      "params": [
+        {
+          "name": "xbtc_amount",
+          "type": "Balance"
+        },
+        {
+          "name": "at",
+          "type": "Hash",
+          "isOptional": true
+        }
+      ],
+      "type": "Option<(AccountId, Vec<u8>)>"
+    }
+  }
 }

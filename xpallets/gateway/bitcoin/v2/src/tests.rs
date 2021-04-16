@@ -171,6 +171,21 @@ fn test_bridge_needs_to_update_exchange_rate() {
 }
 
 #[test]
+fn test_match_vault() {
+    ExtBuilder::build(BuildConfig::default()).execute_with(|| {
+        const Alice: AccountId = 1u64;
+        const Bob: AccountId = 2u64;
+        t_register_vault(Alice, 10000, "3LrrqZ2LtZxAcroVaYKgM6yDeRszV2sY1r").unwrap();
+        t_register_vault(Bob, 20000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
+        let vault = XGatewayBitcoin::get_first_matched_vault(2);
+        assert_eq!(vault.unwrap().0, Alice);
+        XGatewayBitcoin::request_issue(Origin::signed(3), Alice, 3).unwrap();
+        let vault = XGatewayBitcoin::get_first_matched_vault(3);
+        assert_eq!(vault.unwrap().0, Bob);
+    })
+}
+
+#[test]
 fn test_issue_request() {
     use super::types::TradingPrice;
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
@@ -186,17 +201,12 @@ fn test_issue_request() {
         )
         .unwrap();
 
-        // request
-        assert_err!(
-            XGatewayBitcoin::request_issue(Origin::signed(2), 3, 1, 2),
-            pallet::Error::<Test>::InsufficientGriefingCollateral
-        );
-        assert_ok!(XGatewayBitcoin::request_issue(Origin::signed(2), 3, 1, 300));
+        assert_ok!(XGatewayBitcoin::request_issue(Origin::signed(2), 3, 1));
 
         let reserved_balance = <<Test as xpallet_assets::Config>::Currency>::reserved_balance(2);
-        assert_eq!(reserved_balance, 300);
+        assert_eq!(reserved_balance, 10);
         let issue_request = XGatewayBitcoin::get_issue_request_by_id(1).unwrap();
-        assert_eq!(issue_request.griefing_collateral, 300);
+        assert_eq!(issue_request.griefing_collateral, 10);
         assert_eq!(issue_request.requester, 2);
         assert_eq!(issue_request.vault, 3);
         assert_eq!(issue_request.open_time, 0);
@@ -240,7 +250,7 @@ fn test_cancel_issue_request() {
         XGatewayBitcoin::update_issue_griefing_fee(RawOrigin::Root.into(), Percent::from_parts(10))
             .unwrap();
         t_register_vault(3, 20000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
-        XGatewayBitcoin::request_issue(Origin::signed(1), 3, 1, 100).unwrap();
+        XGatewayBitcoin::request_issue(Origin::signed(1), 3, 1).unwrap();
 
         System::set_block_number(5000);
         assert_err!(
@@ -315,7 +325,7 @@ fn test_redeem_request() {
         )
         .unwrap();
 
-        XGatewayBitcoin::request_issue(Origin::signed(2), 3, 1, 100).unwrap();
+        XGatewayBitcoin::request_issue(Origin::signed(2), 3, 1).unwrap();
         assert_err!(
             XGatewayBitcoin::request_redeem(
                 Origin::signed(2),

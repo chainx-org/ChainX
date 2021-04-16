@@ -144,19 +144,19 @@ impl<AccountId: Default, BlockNumber: Default, Balance: Default>
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct RedeemRequest<AccountId, BlockNumber, XBTC, PCX> {
     /// Vault id
-    pub(crate) vault: AccountId,
+    pub vault: AccountId,
     /// Block height when the redeem requested
-    pub(crate) open_time: BlockNumber,
+    pub open_time: BlockNumber,
     /// Who requests redeem
-    pub(crate) requester: AccountId,
-    /// Vault's btc address
-    pub(crate) btc_address: BtcAddress,
+    pub requester: AccountId,
+    /// Requester's btc address
+    pub btc_address: BtcAddress,
     /// Amount that user wants to redeem
-    pub(crate) btc_amount: XBTC,
+    pub btc_amount: XBTC,
     /// Redeem fee amount
-    pub(crate) redeem_fee: PCX,
+    pub redeem_fee: PCX,
     /// If redeem is reimbursed by redeemer
-    pub(crate) reimburse: bool,
+    pub reimburse: bool,
 }
 
 /// Contains all informations while executing a issue request needed.
@@ -164,17 +164,17 @@ pub struct RedeemRequest<AccountId, BlockNumber, XBTC, PCX> {
 #[cfg_attr(feature = "std", derive(Deserialize, Serialize))]
 pub struct IssueRequest<AccountId, BlockNumber, XBTC, PCX> {
     /// Vault id
-    pub(crate) vault: AccountId,
+    pub vault: AccountId,
     /// Block height when the issue requested
-    pub(crate) open_time: BlockNumber,
+    pub open_time: BlockNumber,
     /// Who requests issue
-    pub(crate) requester: AccountId,
+    pub requester: AccountId,
     /// Vault's btc address
-    pub(crate) btc_address: BtcAddress,
+    pub btc_address: BtcAddress,
     /// Amount that user wants to issue
-    pub(crate) btc_amount: XBTC,
+    pub btc_amount: XBTC,
     /// Collateral locked to avoid user griefing
-    pub(crate) griefing_collateral: PCX,
+    pub griefing_collateral: PCX,
 }
 
 #[cfg(test)]
