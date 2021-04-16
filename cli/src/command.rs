@@ -51,9 +51,8 @@ fn load_spec(id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
     Ok(match id {
         "" | "mainnet" => Box::new(chain_spec::mainnet_config()?),
         "dev" => Box::new(chain_spec::development_config()?),
-        "malan" => Box::new(chain_spec::malan_config()?),
+        "malan" | "testnet" => Box::new(chain_spec::malan_config()?),
         "local" => Box::new(chain_spec::local_testnet_config()?),
-        "testnet" => Box::new(chain_spec::testnet_config()?),
         "benchmarks" => {
             #[cfg(feature = "runtime-benchmarks")]
             {
@@ -87,13 +86,12 @@ pub fn run() -> sc_cli::Result<()> {
 
     // Try to enable the log rotation function if not a dev chain.
     if !cli.run.base.shared_params.dev {
-        //cli.try_init_logger()?;
+        cli.try_init_logger()?;
     }
 
     match &cli.subcommand {
         None => {
             let runner = cli.create_runner(&cli.run.base)?;
-            println!("{}", &runner.config().chain_spec.name());
             let chain_spec = &runner.config().chain_spec;
             set_default_ss58_version(chain_spec);
 
