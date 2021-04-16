@@ -349,6 +349,12 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             Self::ensure_bridge_running()?;
+            // Only allow requests of amount above above the minimum
+            ensure!(
+                // this is the amount the vault will send (minus fee)
+                redeem_amount >= T::RedeemBtcDustValue::get(),
+                Error::<T>::AmountBelowDustAmount
+            );
             ensure!(
                 redeem_amount <= Self::usable_xbtc_of(&sender),
                 Error::<T>::InsufficiantAssetsFunds
@@ -359,13 +365,6 @@ pub mod pallet {
             ensure!(
                 redeem_amount <= vault.issued_tokens,
                 Error::<T>::RedeemAmountTooLarge
-            );
-
-            // Only allow requests of amount above above the minimum
-            ensure!(
-                // this is the amount the vault will send (minus fee)
-                redeem_amount >= T::RedeemBtcDustValue::get(),
-                Error::<T>::AmountBelowDustAmount
             );
 
             Self::verify_btc_address(&btc_address)?;
