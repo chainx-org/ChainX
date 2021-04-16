@@ -7,6 +7,12 @@
             "Polkadot"
         ]
     },
+    "NetworkType": {
+        "_enum": [
+            "Mainnet",
+            "Testnet"
+        ]
+    },
     "AssetType": {
         "_enum": [
             "Usable",
@@ -28,14 +34,10 @@
             "Sell"
         ]
     },
-    "WithdrawalState": {
+    "LockedType": {
         "_enum": [
-            "Applying",
-            "Processing",
-            "NormalFinish",
-            "RootFinish",
-            "NormalCancel",
-            "RootCancel"
+            "Bonded",
+            "BondedWithdrawal"
         ]
     },
     "Memo": "Text",
@@ -46,20 +48,24 @@
         "decimals": "Decimals",
         "desc": "String"
     },
-    "Handicap": {
-        "highestBid": "Price",
-        "lowestAsk": "Price"
-    },
-    "CurrencyPair": {
-        "base": "AssetId",
-        "quote": "AssetId"
-    },
     "TradingPairProfile": {
         "id": "TradingPairId",
         "currencyPair": "CurrencyPair",
         "pipDecimals": "u32",
         "tickDecimals": "u32",
         "tradable": "bool"
+    },
+    "Order": {
+        "props": "OrderProperty",
+        "status": "OrderStatus",
+        "remaining": "Balance",
+        "executedIndices": "Vec<TradingHistoryIndex>",
+        "alreadyFilled": "Balance",
+        "lastUpdateAt": "BlockNumber"
+    },
+    "TradingPairInfo": {
+        "latestPrice": "Price",
+        "lastUpdated": "BlockNumber"
     },
     "OrderExecutedInfo": {
         "tradingHistoryIdx": "TradingHistoryIndex",
@@ -72,76 +78,124 @@
         "turnover": "Balance",
         "executedAt": "BlockNumber"
     },
-    "BtcRelayedTxInfo": {
-        "blockHash": "H256",
-        "merkleProof": "BtcPartialMerkleTree"
-    },
-    "BtcHeaderIndex": {
-        "hash": "H256",
+    "BtcHeaderInfo": {
+        "header": "BtcHeader",
         "height": "u32"
     },
-    "BtcTxState": {
-        "txType": "BtcTxType",
-        "result": "BtcTxResult"
+    "BtcParams": {
+        "maxBits": "u32",
+        "blockMaxFuture": "u32",
+        "targetTimespanSeconds": "u32",
+        "targetSpacingSeconds": "u32",
+        "retargetingFactor": "u32",
+        "retargetingInterval": "u32",
+        "minTimespan": "u32",
+        "maxTimespan": "u32"
     },
-    "TrusteeInfoConfig": {
-        "minTrusteeCount": "u32",
-        "maxTrusteeCount": "u32"
-    },
-    "GenericTrusteeSessionInfo": {
-        "trusteeList": "Vec<AccountId>",
-        "threshold": "u16",
-        "hotAddress": "Vec<u8>",
-        "coldAddress": "Vec<u8>"
-    },
-    "GenericTrusteeIntentionProps": {
-        "about": "Text",
-        "hotEntity": "Vec<u8>",
-        "coldEntity": "Vec<u8>"
-    },
-    "WithdrawalRecord": {
+    "MiningAssetInfo": {
         "assetId": "AssetId",
-        "applicant": "AccountId",
-        "balance": "Balance",
-        "addr": "AddrStr",
-        "ext": "Memo",
-        "height": "BlockNumber"
+        "miningPower": "FixedAssetPower",
+        "rewardPot": "AccountId",
+        "rewardPotBalance": "RpcBalance",
+        "lastTotalMiningWeight": "RpcMiningWeight",
+        "lastTotalMiningWeightUpdate": "BlockNumber"
     },
-    "ReferralId": "Text",
+    "MiningDividendInfo": {
+        "own": "Balance",
+        "other": "Balance",
+        "insufficientStake": "Balance"
+    },
+    "AssetLedger": {
+        "lastTotalMiningWeight": "MiningWeight",
+        "lastTotalMiningWeightUpdate": "BlockNumber"
+    },
+    "MinerLedger": {
+        "lastMiningWeight": "MiningWeight",
+        "lastMiningWeightUpdate": "BlockNumber",
+        "lastClaim": "Option<BlockNumber>"
+    },
+    "ClaimRestriction": {
+        "stakingRequirement": "StakingRequirement",
+        "frequencyLimit": "BlockNumber"
+    },
+    "NominatorInfo": {
+        "lastRebond": "Option<BlockNumber>"
+    },
+    "BondRequirement": {
+        "selfBonded": "Balance",
+        "total": "Balance"
+    },
+    "Unbonded": {
+        "value": "Balance",
+        "lockedUntil": "BlockNumber"
+    },
+    "ValidatorLedger": {
+        "totalNomination": "Balance",
+        "lastTotalVoteWeight": "VoteWeight",
+        "lastTotalVoteWeightUpdate": "BlockNumber"
+    },
+    "NominatorLedger": {
+        "nomination": "Balance",
+        "lastVoteWeight": "VoteWeight",
+        "lastVoteWeightUpdate": "BlockNumber",
+        "unbondedChunks": "Vec<Unbonded>"
+    },
+    "ValidatorProfile": {
+        "registeredAt": "BlockNumber",
+        "isChilled": "bool",
+        "lastChilled": "Option<BlockNumber>",
+        "referralId": "ReferralId"
+    },
+    "GlobalDistribution": {
+        "treasury": "u32",
+        "mining": "u32"
+    },
+    "MiningDistribution": {
+        "asset": "u32",
+        "staking": "u32"
+    },
+    "InclusionFee": {
+        "baseFee": "Balance",
+        "lenFee": "Balance",
+        "adjustedWeightFee": "Balance"
+    },
+    "FeeDetails": {
+        "inclusionFee": "Option<InclusionFee<Balance>>",
+        "extraFee": "Balance",
+        "tip": "Balance",
+        "finalFee": "Balance"
+    },
+    "UnbondedIndex": "u32",
+    "Token": "Text",
+    "Desc": "Text",
     "AddrStr": "Text",
-    "ChainAddress": "Vec<u8>",
+    "HandicapInfo": "Handicap",
     "Price": "u128",
     "OrderId": "u64",
     "TradingPairId": "u32",
-    "PriceFluctuation": "u32",
-    "WithdrawalRecordId": "u32",
-    "Token": "Text",
-    "Decimals": "u8",
-    "Desc": "Text",
-    "AssetId": "u32",
     "TradingHistoryIndex": "u64",
-    "BtcTxType": {
+    "PriceFluctuation": "u32",
+    "BtcAddress": "Text",
+    "FixedAssetPower": "u32",
+    "StakingRequirement": "u32",
+    "Decimals": "u8",
+    "CurrencyPair": {
+        "base": "AssetId",
+        "quote": "AssetId"
+    },
+    "OrderStatus": {
         "_enum": [
-            "Withdrawal",
-            "Deposit",
-            "HotAndCold",
-            "TrusteeTransition",
-            "Irrelevance"
+            "Created",
+            "PartialFill",
+            "Filled",
+            "PartialFillAndCanceled",
+            "Canceled"
         ]
     },
-    "BtcTxResult": {
-        "_enum": [
-            "Success",
-            "Failure"
-        ]
-    },
-    "AmountOf": "Amount",
-    "AssetRestrictions": {
-        "bits": "u32"
-    },
-    "Amount": "i128",
-    "CurrencyIdOf": "AssetId",
-    "CurrencyId": "AssetId",
+    "AssetId": "u32",
+    "MiningWeight": "u128",
+    "VoteWeight": "u128",
+    "ReferralId": "Text",
     "AssetRestriction": {
         "_enum": [
             "Move",
@@ -152,19 +206,24 @@
             "DestroyFree"
         ]
     },
-    "NetworkType": {
+    "AssetRestrictions": {
+        "bits": "u32"
+    },
+    "BtcHeader": "Vec<u8>",
+    "BtcNetwork": {
         "_enum": [
             "Mainnet",
             "Testnet"
         ]
     },
-    "Order": {
-        "props": "OrderProperty",
-        "status": "OrderStatus",
-        "remaining": "Balance",
-        "executedIndices": "Vec<TradingHistoryIndex>",
-        "alreadyFilled": "Balance",
-        "lastUpdateAt": "BlockNumber"
+    "OrderInfo": "Order",
+    "Amount": "i128",
+    "AmountOf": "Amount",
+    "CurrencyIdOf": "AssetId",
+    "CurrencyId": "AssetId",
+    "Handicap": {
+        "highestBid": "Price",
+        "lowestAsk": "Price"
     },
     "OrderProperty": {
         "id": "OrderId",
@@ -182,20 +241,45 @@
         "isOnline": "bool",
         "restrictions": "AssetRestrictions"
     },
-    "NominatorLedger": {
-        "nomination": "Balance",
-        "lastVoteWeight": "VoteWeight",
-        "lastVoteWeightUpdate": "BlockNumber",
-        "unbondedChunks": "Vec<Unbonded>"
+    "WithdrawalRecordId": "u32",
+    "WithdrawalState": {
+        "_enum": [
+            "Applying",
+            "Processing",
+            "NormalFinish",
+            "RootFinish",
+            "NormalCancel",
+            "RootCancel"
+        ]
     },
-    "Unbonded": {
-        "value": "Balance",
-        "lockedUntil": "BlockNumber"
+    "WithdrawalRecord": {
+        "assetId": "AssetId",
+        "applicant": "AccountId",
+        "balance": "Balance",
+        "addr": "AddrStr",
+        "ext": "Memo",
+        "height": "BlockNumber"
     },
     "WithdrawalLimit": {
         "minimalWithdrawal": "Balance",
         "fee": "Balance"
     },
+    "TrusteeInfoConfig": {
+        "minTrusteeCount": "u32",
+        "maxTrusteeCount": "u32"
+    },
+    "GenericTrusteeIntentionProps": {
+        "about": "Text",
+        "hotEntity": "Vec<u8>",
+        "coldEntity": "Vec<u8>"
+    },
+    "GenericTrusteeSessionInfo": {
+        "trusteeList": "Vec<AccountId>",
+        "threshold": "u16",
+        "hotAddress": "Vec<u8>",
+        "coldAddress": "Vec<u8>"
+    },
+    "ChainAddress": "Vec<u8>",
     "BtcTrusteeType": "Vec<u8>",
     "BtcTrusteeAddrInfo": {
         "addr": "BtcAddress",
@@ -212,16 +296,35 @@
         "hotAddress": "BtcTrusteeAddrInfo",
         "coldAddress": "BtcTrusteeAddrInfo"
     },
-    "BtcNetwork": {
-        "_enum": [
-            "Mainnet",
-            "Testnet"
-        ]
-    },
-    "BtcAddress": "Text",
-    "BtcHeader": "Vec<u8>",
     "BtcTransaction": "Vec<u8>",
     "BtcPartialMerkleTree": "Vec<u8>",
+    "BtcRelayedTxInfo": {
+        "blockHash": "H256",
+        "merkleProof": "BtcPartialMerkleTree"
+    },
+    "BtcHeaderIndex": {
+        "hash": "H256",
+        "height": "u32"
+    },
+    "BtcTxResult": {
+        "_enum": [
+            "Success",
+            "Failure"
+        ]
+    },
+    "BtcTxState": {
+        "txType": "BtcTxType",
+        "result": "BtcTxResult"
+    },
+    "BtcTxType": {
+        "_enum": [
+            "Withdrawal",
+            "Deposit",
+            "HotAndCold",
+            "TrusteeTransition",
+            "Irrelevance"
+        ]
+    },
     "BtcDepositCache": {
         "txid": "H256",
         "balance": "u64"
@@ -319,14 +422,6 @@
         "tickDecimals": "u32",
         "tradable": "bool"
     },
-    "MiningAssetInfo": {
-        "assetId": "AssetId",
-        "miningPower": "FixedAssetPower",
-        "rewardPot": "AccountId",
-        "rewardPotBalance": "RpcBalance",
-        "lastTotalMiningWeight": "RpcMiningWeight",
-        "lastTotalMiningWeightUpdate": "BlockNumber"
-    },
     "Depth": {
         "asks": "Vec<(RpcPrice, RpcBalance)>",
         "bids": "Vec<(RpcPrice, RpcBalance)>"
@@ -338,14 +433,10 @@
     },
     "String": "Text",
     "Balance": "u128",
-    "MiningWeight": "u128",
-    "VoteWeight": "u128",
     "RpcPrice": "String",
     "RpcBalance": "String",
     "RpcMiningWeight": "String",
     "RpcVoteWeight": "String",
-    "OrderInfo": "Order",
-    "HandicapInfo": "Handicap",
     "FullIdentification": "ValidatorId",
     "WithdrawalRecordOf": "WithdrawalRecord"
 }
