@@ -348,9 +348,7 @@ pub mod pallet {
             btc_address: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
-
             Self::ensure_bridge_running()?;
-
             ensure!(
                 redeem_amount <= Self::usable_xbtc_of(&sender),
                 Error::<T>::InsufficiantAssetsFunds
@@ -1127,7 +1125,8 @@ pub mod pallet {
                         Self::_calculate_vault_token_upper_bound(vault_id)
                     {
                         token_upper_bound > vault.issued_tokens
-                            && token_upper_bound - vault.issued_tokens - vault.to_be_issued_tokens > xbtc_amount
+                            && token_upper_bound - vault.issued_tokens - vault.to_be_issued_tokens
+                                > xbtc_amount
                     } else {
                         false
                     }
