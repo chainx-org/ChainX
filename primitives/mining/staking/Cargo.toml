@@ -13,16 +13,13 @@ sp-std = { version = "3.0.0", default-features = false }
 chainx-primitives = { path = "../../../primitives", default-features = false }
 xp-mining-common = { path = "../common", default-features = false }
 
-# 3rd part
-impl-trait-for-tuples = "0.2.1"
-
 [features]
 default = ["std"]
 std = [
-  # Substrate primitives
-  "sp-runtime/std",
-  "sp-std/std",
-  # ChainX primitives
-  "chainx-primitives/std",
-  "xp-mining-common/std",
+    # Substrate primitives
+    "sp-runtime/std",
+    "sp-std/std",
+    # ChainX primitives
+    "chainx-primitives/std",
+    "xp-mining-common/std",
 ]
