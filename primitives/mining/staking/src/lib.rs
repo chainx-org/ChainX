@@ -37,7 +37,7 @@ pub trait AssetMining<Balance: Copy + Clone> {
     }
 }
 
-#[impl_for_tuples(1, 5)]
+#[impl_for_tuples(5)]
 impl<Balance: Copy + Clone> AssetMining<Balance> for TupleIdentifier {
     fn asset_mining_power() -> Vec<(AssetId, MiningPower)> {
         let mut result = vec![];
@@ -48,12 +48,4 @@ impl<Balance: Copy + Clone> AssetMining<Balance> for TupleIdentifier {
     fn reward(asset_id: AssetId, reward_value: Balance) {
         for_tuples!( #(TupleIdentifier::reward(asset_id, reward_value);)* )
     }
-}
-
-impl<Balance: Copy + Clone> AssetMining<Balance> for () {
-    fn asset_mining_power() -> Vec<(AssetId, MiningPower)> {
-        Vec::new()
-    }
-
-    fn reward(_: AssetId, _: Balance) {}
 }
