@@ -13,4 +13,3 @@ pub enum BridgeSubPot {
     Vault,
     User,
 }
-

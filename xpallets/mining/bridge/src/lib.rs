@@ -14,13 +14,13 @@ pub use impls::BridgeRewardPotAccountDeterminer;
 pub mod pallet {
     use sp_std::marker::PhantomData;
 
-    use frame_support::traits::{Hooks, IsType, Get};
+    use frame_support::traits::{Get, Hooks, IsType};
     use frame_system::pallet_prelude::BlockNumberFor;
 
+    use chainx_primitives::AssetId;
     use xp_mining_common::RewardPotAccountFor;
     use xp_mining_staking::MiningPower;
     use xpallet_assets::BalanceOf;
-    use chainx_primitives::AssetId;
 
     use crate::types::BridgeSubPot;
 
@@ -37,23 +37,22 @@ pub mod pallet {
         /// Fixed mining power for target asset.
         type TargetAssetMiningPower: Get<MiningPower>;
         /// Reward pot account getter.
-        type DetermineRewardPotAccount: RewardPotAccountFor<Self::AccountId, (AssetId, BridgeSubPot)>;
+        type DetermineRewardPotAccount: RewardPotAccountFor<
+            Self::AccountId,
+            (AssetId, BridgeSubPot),
+        >;
     }
-
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
     #[pallet::call]
-    impl<T: Config> Pallet<T> {
-                
-    }
+    impl<T: Config> Pallet<T> {}
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     #[pallet::metadata(T::AccountId = "AccountId", BalanceOf<T> = "Balance", BlockNumberFor<T> = "BlockNumber")]
-    pub enum Event<T: Config> 
-    {
+    pub enum Event<T: Config> {
         /// An asset miner claimed the mining reward. [claimer, asset_id, amount]
         Claimed(T::AccountId, AssetId, BalanceOf<T>),
         /// Issue new balance to the reward pot. [reward_pot_account, amount]
@@ -62,7 +61,6 @@ pub mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
-       PlaceHolder 
+        PlaceHolder,
     }
 }
-

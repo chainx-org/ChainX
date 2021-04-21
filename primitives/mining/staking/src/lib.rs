@@ -7,9 +7,9 @@
 
 use chainx_primitives::AssetId;
 
-use sp_std::{vec, prelude::Vec};
+use sp_std::{prelude::Vec, vec};
 
-use impl_trait_for_tuples::{impl_for_tuples};
+use impl_trait_for_tuples::impl_for_tuples;
 
 /// Simple index type with which we can count sessions.
 pub type SessionIndex = u32;
@@ -37,7 +37,7 @@ pub trait AssetMining<Balance: Copy + Clone> {
     }
 }
 
-#[impl_for_tuples(1,5)]
+#[impl_for_tuples(1, 5)]
 impl<Balance: Copy + Clone> AssetMining<Balance> for TupleIdentifier {
     fn asset_mining_power() -> Vec<(AssetId, MiningPower)> {
         let mut result = vec![];
@@ -46,7 +46,7 @@ impl<Balance: Copy + Clone> AssetMining<Balance> for TupleIdentifier {
     }
 
     fn reward(asset_id: AssetId, reward_value: Balance) {
-       for_tuples!( #(TupleIdentifier::reward(asset_id, reward_value);)* ) 
+        for_tuples!( #(TupleIdentifier::reward(asset_id, reward_value);)* )
     }
 }
 

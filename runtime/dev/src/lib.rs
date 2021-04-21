@@ -51,8 +51,8 @@ use xpallet_mining_asset::{MinerLedger, MiningAssetInfo, MiningDividendInfo};
 use xpallet_mining_staking::{NominatorInfo, NominatorLedger, ValidatorInfo};
 use xpallet_support::traits::MultisigAddressFor;
 
-use xpallet_mining_bridge::pallet as xpallet_mining_bridge_pallet;
 use xpallet_gateway_bitcoin_v2::pallet as xpallet_gateway_bitcoin_v2_pallet;
+use xpallet_mining_bridge::pallet as xpallet_mining_bridge_pallet;
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
@@ -463,7 +463,6 @@ impl xpallet_gateway_bitcoin_v2_pallet::Config for Runtime {
     type RedeemBtcDustValue = RedeemBtcDustValue;
     type ExchangeRateExpiredPeriod = ExchangeRateExpiredPeriod;
 }
-
 
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
 where
@@ -1060,8 +1059,9 @@ impl xpallet_mining_bridge_pallet::Config for Runtime {
     type Event = Event;
     type TargetAssetId = BridgeTargetAssetId;
     type TargetAssetMiningPower = BridgeTargetAssetFixedMiningPower;
-    type DetermineRewardPotAccount = xpallet_mining_bridge::BridgeRewardPotAccountDeterminer<Runtime>;
-} 
+    type DetermineRewardPotAccount =
+        xpallet_mining_bridge::BridgeRewardPotAccountDeterminer<Runtime>;
+}
 
 impl xpallet_mining_asset::Config for Runtime {
     type Event = Event;

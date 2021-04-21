@@ -1,17 +1,17 @@
 use sp_std::{vec, vec::Vec};
 
+use codec::Encode;
+use frame_support::traits::{Currency, Get};
 use sp_arithmetic::traits::{SaturatedConversion, Saturating};
-use frame_support::traits::{Get, Currency};
 use sp_core::crypto::UncheckedFrom;
 use sp_runtime::traits::Hash;
-use codec::Encode;
 
 use chainx_primitives::AssetId;
 use xp_mining_common::RewardPotAccountFor;
 use xp_mining_staking::MiningPower;
 use xpallet_assets::BalanceOf;
 
-use crate::pallet::{Pallet, Config, Event};
+use crate::pallet::{Config, Event, Pallet};
 use crate::types::BridgeSubPot;
 
 impl<T: Config> Pallet<T> {
@@ -28,11 +28,12 @@ impl<T: Config> Pallet<T> {
 impl<T: Config> xp_mining_staking::AssetMining<BalanceOf<T>> for Pallet<T> {
     fn asset_mining_power() -> Vec<(AssetId, MiningPower)> {
         let total_issuance = xpallet_assets::Module::<T>::total_issuance(&T::TargetAssetId::get());
-        vec![(T::TargetAssetId::get(), 
-               T::TargetAssetMiningPower::get().saturating_mul(
-                        total_issuance.saturated_into()
-                    ).saturated_into::<MiningPower>()
-            )]
+        vec![(
+            T::TargetAssetId::get(),
+            T::TargetAssetMiningPower::get()
+                .saturating_mul(total_issuance.saturated_into())
+                .saturated_into::<MiningPower>(),
+        )]
     }
 
     fn reward(asset_id: AssetId, reward_value: BalanceOf<T>) {
@@ -40,13 +41,20 @@ impl<T: Config> xp_mining_staking::AssetMining<BalanceOf<T>> for Pallet<T> {
         // Reward
         // | ---> User Pot(90%)
         // | ---> Vault Pot(10%)
-        let user_reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(&(asset_id, BridgeSubPot::User));
+        let user_reward_pot =
+            T::DetermineRewardPotAccount::reward_pot_account_for(&(asset_id, BridgeSubPot::User));
         T::Currency::deposit_creating(&user_reward_pot, user_reward);
 
-        let vault_reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(&(asset_id, BridgeSubPot::Vault));
+        let vault_reward_pot =
+            T::DetermineRewardPotAccount::reward_pot_account_for(&(asset_id, BridgeSubPot::Vault));
         T::Currency::deposit_creating(&vault_reward_pot, vault_reward);
 
-        Self::deposit_event(Event::<T>::Minted(user_reward_pot, user_reward, vault_reward_pot, vault_reward));
+        Self::deposit_event(Event::<T>::Minted(
+            user_reward_pot,
+            user_reward,
+            vault_reward_pot,
+            vault_reward,
+        ));
     }
 }
 
