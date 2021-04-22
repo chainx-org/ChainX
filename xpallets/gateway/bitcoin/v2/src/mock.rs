@@ -75,7 +75,8 @@ impl xpallet_assets::Config for Test {
 }
 
 parameter_types! {
-    pub const BridgeTargetAssetId: u32 = 1;
+    pub const BridgeTargetAssetId: u32 = xp_protocol::E_BTC;
+    pub const BridgeTokenAssetId: u32 = xp_protocol::S_BTC;
     pub const DustCollateral: Balance = 1000;
     pub const SecureThreshold: u16 = 300;
     pub const PremiumThreshold: u16 = 250;
@@ -89,6 +90,7 @@ parameter_types! {
 impl pallet::Config for Test {
     type Event = ();
     type TargetAssetId = BridgeTargetAssetId;
+    type TokenAssetId = BridgeTokenAssetId;
     type DustCollateral = DustCollateral;
     type SecureThreshold = SecureThreshold;
     type PremiumThreshold = PremiumThreshold;

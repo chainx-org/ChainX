@@ -30,20 +30,50 @@ fn run_to_block(index: u64) {
 fn t_register_btc() -> DispatchResult {
     type XAssetsRegistrar = xpallet_assets_registrar::Module<Test>;
     type XAssets = xpallet_assets::Module<Test>;
-    let btc_asset = (
-        xp_protocol::X_BTC,
-        xpallet_assets_registrar::AssetInfo::new::<Test>(
-            b"X-BTC".to_vec(),
-            b"X-BTC".to_vec(),
-            xpallet_assets_registrar::Chain::Bitcoin,
-            8,
-            b"ChainX's cross-chain Bitcoin".to_vec(),
-        )
-        .unwrap(),
-        xpallet_assets::AssetRestrictions::empty(),
-    );
-    XAssetsRegistrar::register(RawOrigin::Root.into(), btc_asset.0, btc_asset.1, true, true)?;
-    XAssets::set_asset_limit(RawOrigin::Root.into(), btc_asset.0, btc_asset.2)
+    let assets = vec![
+        (
+            xp_protocol::X_BTC,
+            xpallet_assets_registrar::AssetInfo::new::<Test>(
+                b"X-BTC".to_vec(),
+                b"X-BTC".to_vec(),
+                xpallet_assets_registrar::Chain::Bitcoin,
+                xp_protocol::BTC_DECIMALS,
+                b"ChainX's cross-chain Bitcoin".to_vec(),
+            )
+            .unwrap(),
+            xpallet_assets::AssetRestrictions::empty(),
+        ),
+        (
+            xp_protocol::E_BTC,
+            xpallet_assets_registrar::AssetInfo::new::<Test>(
+                b"E-BTC".to_vec(),
+                b"E-BTC".to_vec(),
+                xpallet_assets_registrar::Chain::Bitcoin,
+                xp_protocol::BTC_DECIMALS,
+                b"ChainX's cross-chain Bitcoin".to_vec(),
+            )
+            .unwrap(),
+            xpallet_assets::AssetRestrictions::empty(),
+        ),
+        (
+            xp_protocol::S_BTC,
+            xpallet_assets_registrar::AssetInfo::new::<Test>(
+                b"S-BTC".to_vec(),
+                b"S-BTC".to_vec(),
+                xpallet_assets_registrar::Chain::Bitcoin,
+                xp_protocol::BTC_DECIMALS,
+                b"ChainX's cross-chain Bitcoin".to_vec(),
+            )
+            .unwrap(),
+            xpallet_assets::AssetRestrictions::empty(),
+        ),
+    ];
+
+    for (id, info, restrictions) in assets.into_iter() {
+        XAssetsRegistrar::register(RawOrigin::Root.into(), id, info, true, true)?;
+        XAssets::set_asset_limit(RawOrigin::Root.into(), id, restrictions)?;
+    }
+    Ok(())
 }
 
 #[test]
@@ -234,7 +264,10 @@ fn test_issue_request() {
         assert_eq!(user_xbtc, 1);
 
         let vault = XGatewayBitcoin::get_vault_by_id(&issue_request.vault).unwrap();
-        assert_eq!(vault.issued_tokens, issue_request.btc_amount);
+        assert_eq!(
+            XGatewayBitcoin::issued_tokens_of(&issue_request.vault),
+            issue_request.btc_amount
+        );
         assert_eq!(vault.to_be_issued_tokens, 0);
 
         assert_err!(
@@ -309,23 +342,14 @@ fn test_release_collateral() {
 }
 
 #[test]
-fn test_redeem_request() {
-    use super::types::TradingPrice;
+fn test_redeem_request_err_with_insufficiant_assets_funds() {
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
         t_register_vault(3, 30000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
-        XGatewayBitcoin::update_issue_griefing_fee(Origin::root(), Percent::from_parts(10))
-            .unwrap();
+        t_register_btc().unwrap();
 
-        XGatewayBitcoin::force_update_exchange_rate(
-            Origin::root(),
-            TradingPrice {
-                price: 1,
-                decimal: 2,
-            },
-        )
-        .unwrap();
+        XAssets::issue(&BridgeTokenAssetId::get(), &3, 1).unwrap();
+        XAssets::issue(&BridgeTargetAssetId::get(), &2, 1).unwrap();
 
-        XGatewayBitcoin::request_issue(Origin::signed(2), 3, 1).unwrap();
         assert_err!(
             XGatewayBitcoin::request_redeem(
                 Origin::signed(2),
@@ -335,11 +359,18 @@ fn test_redeem_request() {
             ),
             pallet::Error::<Test>::InsufficiantAssetsFunds
         );
+    })
+}
 
+#[test]
+fn test_redeem_request_ok() {
+    ExtBuilder::build(BuildConfig::default()).execute_with(|| {
+        t_register_vault(3, 30000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
         t_register_btc().unwrap();
-        XGatewayBitcoin::execute_issue(Origin::signed(2), 1, vec![], vec![], vec![]).unwrap();
 
-        // request redeem
+        XAssets::issue(&BridgeTokenAssetId::get(), &3, 1).unwrap();
+        XAssets::issue(&BridgeTargetAssetId::get(), &2, 1).unwrap();
+
         assert_ok!(XGatewayBitcoin::request_redeem(
             Origin::signed(2),
             3,
@@ -359,6 +390,25 @@ fn test_redeem_request() {
             xpallet_assets::AssetType::ReservedWithdrawal,
         );
         assert_eq!(requester_locked_xbtc, 1);
+    });
+}
+
+#[test]
+fn test_redeem_execute() {
+    ExtBuilder::build(BuildConfig::default()).execute_with(|| {
+        t_register_vault(3, 30000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
+        t_register_btc().unwrap();
+
+        XAssets::issue(&BridgeTokenAssetId::get(), &3, 1).unwrap();
+        XAssets::issue(&BridgeTargetAssetId::get(), &2, 1).unwrap();
+
+        XGatewayBitcoin::request_redeem(
+            Origin::signed(2),
+            3,
+            1,
+            "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".as_bytes().to_vec(),
+        )
+        .unwrap();
 
         assert_ok!(XGatewayBitcoin::execute_redeem(
             Origin::signed(1),
@@ -367,19 +417,24 @@ fn test_redeem_request() {
             vec![],
             vec![]
         ));
+
+        // Request is removed.
         assert_eq!(pallet::RedeemRequests::<Test>::get(&1), None);
 
-        // check requester assets after executing
+        // Check requester assets after executing.
         let requester_locked_xbtc = xpallet_assets::Module::<Test>::asset_balance_of(
             &2,
             &BridgeTargetAssetId::get(),
-            xpallet_assets::AssetType::Locked,
+            xpallet_assets::AssetType::ReservedWithdrawal,
         );
         assert_eq!(requester_locked_xbtc, 0);
 
+        // Vault's to-be-redeem-tokens decreased.
         let vault = XGatewayBitcoin::get_vault_by_id(&3).unwrap();
         assert_eq!(vault.to_be_redeemed_tokens, 0);
-        assert_eq!(vault.issued_tokens, 0);
+
+        // Vault's issued_tokens decreased.
+        assert_eq!(XGatewayBitcoin::issued_tokens_of(&3), 0);
     })
 }
 
