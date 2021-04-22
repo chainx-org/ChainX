@@ -1545,7 +1545,6 @@ dependencies = [
  "xpallet-genesis-builder",
  "xpallet-mining-asset",
  "xpallet-mining-asset-rpc-runtime-api",
- "xpallet-mining-bridge",
  "xpallet-mining-staking",
  "xpallet-mining-staking-rpc-runtime-api",
  "xpallet-support",
@@ -9451,7 +9450,6 @@ name = "xp-mining-staking"
 version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
- "impl-trait-for-tuples 0.2.1",
  "sp-runtime",
  "sp-std",
  "xp-mining-common",
@@ -9888,36 +9886,6 @@ dependencies = [
  "sp-api",
  "sp-std",
  "xpallet-mining-asset",
-]
-
-[[package]]
-name = "xpallet-mining-bridge"
-version = "2.0.8-1"
-dependencies = [
- "chainx-primitives",
- "env_logger",
- "frame-benchmarking 3.1.0",
- "frame-support",
- "frame-system",
- "pallet-balances",
- "pallet-session",
- "pallet-timestamp",
- "parity-scale-codec",
- "serde",
- "sp-arithmetic",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
- "xp-logging",
- "xp-mining-common",
- "xp-mining-staking",
- "xp-protocol",
- "xpallet-assets",
- "xpallet-assets-registrar",
- "xpallet-gateway-bitcoin-v2",
- "xpallet-mining-staking",
- "xpallet-support",
 ]
 
 [[package]]

@@ -1,6 +1,6 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use xp_protocol::{BTC_DECIMALS, PCX, PCX_DECIMALS, X_BTC, X_BTC_2};
+use xp_protocol::{BTC_DECIMALS, PCX, PCX_DECIMALS, X_BTC};
 
 use chainx_runtime::{AssetId, AssetInfo, AssetRestrictions, Chain, Runtime};
 
@@ -39,21 +39,6 @@ pub(crate) fn pcx() -> (AssetId, AssetInfo, AssetRestrictions) {
     )
 }
 
-pub(crate) fn xbtc2() -> (AssetId, AssetInfo, AssetRestrictions) {
-    (
-        X_BTC_2,
-        AssetInfo::new::<Runtime>(
-            b"XBTC2".to_vec(),
-            b"ChainX Bitcoin via Xbridge".to_vec(),
-            Chain::Bitcoin,
-            BTC_DECIMALS,
-            b"ChainX's Cross-chain Bitcoin".to_vec(),
-        )
-        .unwrap(),
-        AssetRestrictions::DESTROY_USABLE,
-    )
-}
-
 pub(crate) fn xbtc() -> (AssetId, AssetInfo, AssetRestrictions) {
     (
         X_BTC,
@@ -73,11 +58,9 @@ pub(crate) fn xbtc() -> (AssetId, AssetInfo, AssetRestrictions) {
 pub(crate) fn genesis_assets() -> Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)> {
     let pcx = pcx();
     let btc = xbtc();
-    let btc2 = xbtc2();
     let assets = vec![
         (pcx.0, pcx.1, pcx.2, true, false),
         (btc.0, btc.1, btc.2, true, true),
-        (btc2.0, btc2.1, btc2.2, true, true),
     ];
     assets
 }

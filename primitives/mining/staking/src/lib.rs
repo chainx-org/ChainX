@@ -6,10 +6,7 @@
 //! approaches in general. Definitions related to sessions, slashing, etc go here.
 
 use chainx_primitives::AssetId;
-
-use sp_std::{prelude::Vec, vec};
-
-use impl_trait_for_tuples::impl_for_tuples;
+use sp_std::prelude::Vec;
 
 /// Simple index type with which we can count sessions.
 pub type SessionIndex = u32;
@@ -21,7 +18,7 @@ pub type UnbondedIndex = u32;
 pub type MiningPower = u128;
 
 /// Trait to retrieve and operate on Asset Mining participants in Staking.
-pub trait AssetMining<Balance: Copy + Clone> {
+pub trait AssetMining<Balance> {
     /// Collects the mining power of all mining assets.
     fn asset_mining_power() -> Vec<(AssetId, MiningPower)>;
 
@@ -37,15 +34,10 @@ pub trait AssetMining<Balance: Copy + Clone> {
     }
 }
 
-#[impl_for_tuples(5)]
-impl<Balance: Copy + Clone> AssetMining<Balance> for TupleIdentifier {
+impl<Balance> AssetMining<Balance> for () {
     fn asset_mining_power() -> Vec<(AssetId, MiningPower)> {
-        let mut result = vec![];
-        for_tuples!( #( result.extend(TupleIdentifier::asset_mining_power()); )* );
-        result
+        Vec::new()
     }
 
-    fn reward(asset_id: AssetId, reward_value: Balance) {
-        for_tuples!( #(TupleIdentifier::reward(asset_id, reward_value);)* )
-    }
+    fn reward(_: AssetId, _: Balance) {}
 }

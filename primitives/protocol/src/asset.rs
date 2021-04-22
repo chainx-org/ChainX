@@ -39,10 +39,6 @@ pub const PCX_DECIMALS: Decimals = 8;
 
 /// BTC asset in ChainX backed by the Mainnet Bitcoin.
 pub const X_BTC: AssetId = 1;
-
-/// BTC asset in ChainX which issued from xbridge.
-pub const X_BTC_2: AssetId = 11;
-
 /// Decimals of BTC.
 pub const BTC_DECIMALS: Decimals = 8;
 /// Reserved since this symbol had been used in legacy ChainX 1.0.

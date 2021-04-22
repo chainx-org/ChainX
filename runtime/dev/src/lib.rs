@@ -52,7 +52,6 @@ use xpallet_mining_staking::{NominatorInfo, NominatorLedger, ValidatorInfo};
 use xpallet_support::traits::MultisigAddressFor;
 
 use xpallet_gateway_bitcoin_v2::pallet as xpallet_gateway_bitcoin_v2_pallet;
-use xpallet_mining_bridge::pallet as xpallet_mining_bridge_pallet;
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
@@ -440,7 +439,7 @@ impl pallet_session_historical::Config for Runtime {
 }
 
 parameter_types! {
-    pub const BridgeTargetAssetId: u8 = 11;
+    pub const BridgeTargetAssetId: u8 = 1;
     pub const DustCollateral: Balance = 1000;
     pub const SecureThreshold: u16 = 300;
     pub const PremiumThreshold: u16 = 250;
@@ -448,7 +447,7 @@ parameter_types! {
     pub const IssueRequestExpiredTime: BlockNumber = 10000;
     pub const RedeemRequestExpiredTime: BlockNumber = 10000;
     pub const ExchangeRateExpiredPeriod: BlockNumber = 10000;
-    pub const RedeemBtcDustValue: Balance = 1000;
+    pub const RedeemBtcDustValue: Balance = 1;
 }
 
 impl xpallet_gateway_bitcoin_v2_pallet::Config for Runtime {
@@ -1037,7 +1036,7 @@ impl xpallet_mining_staking::Config for Runtime {
     type MaximumReferralId = MaximumReferralId;
     type SessionInterface = Self;
     type TreasuryAccount = SimpleTreasuryAccount;
-    type AssetMining = (XMiningAsset, XMiningBridge);
+    type AssetMining = XMiningAsset;
     type DetermineRewardPotAccount =
         xpallet_mining_staking::SimpleValidatorRewardPotAccountDeterminer<Runtime>;
     type WeightInfo = xpallet_mining_staking::weights::SubstrateWeight<Runtime>;
@@ -1049,18 +1048,6 @@ impl xpallet_mining_asset::GatewayInterface<AccountId> for ReferralGetter {
         use xpallet_gateway_common::traits::ReferralBinding;
         XGatewayCommon::referral(&asset_id, who)
     }
-}
-
-parameter_types! {
-    pub const BridgeTargetAssetFixedMiningPower: u128 = 400;
-}
-
-impl xpallet_mining_bridge_pallet::Config for Runtime {
-    type Event = Event;
-    type TargetAssetId = BridgeTargetAssetId;
-    type TargetAssetMiningPower = BridgeTargetAssetFixedMiningPower;
-    type DetermineRewardPotAccount =
-        xpallet_mining_bridge::BridgeRewardPotAccountDeterminer<Runtime>;
 }
 
 impl xpallet_mining_asset::Config for Runtime {
@@ -1126,7 +1113,6 @@ construct_runtime!(
         // Mining, must be after XAssets.
         XStaking: xpallet_mining_staking::{Module, Call, Storage, Event<T>, Config<T>},
         XMiningAsset: xpallet_mining_asset::{Module, Call, Storage, Event<T>, Config<T>},
-        XMiningBridge: xpallet_mining_bridge_pallet::{Module, Call, Storage, Event<T>},
 
         // Crypto gateway stuff.
         XGatewayRecords: xpallet_gateway_records::{Module, Call, Storage, Event<T>},
