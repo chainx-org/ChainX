@@ -1,6 +1,6 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use xp_protocol::{BTC_DECIMALS, PCX, PCX_DECIMALS, X_BTC};
+use xp_protocol::{BTC_DECIMALS, E_BTC, PCX, PCX_DECIMALS, S_BTC, X_BTC};
 
 use chainx_runtime::{AssetId, AssetInfo, AssetRestrictions, Chain, Runtime};
 
@@ -53,14 +53,46 @@ pub(crate) fn xbtc() -> (AssetId, AssetInfo, AssetRestrictions) {
         AssetRestrictions::DESTROY_USABLE,
     )
 }
+pub(crate) fn ebtc() -> (AssetId, AssetInfo, AssetRestrictions) {
+    (
+        E_BTC,
+        AssetInfo::new::<Runtime>(
+            b"EBTC".to_vec(),
+            b"ChainX Bitcoin from chainx bridge".to_vec(),
+            Chain::Bitcoin,
+            BTC_DECIMALS,
+            b"ChainX Bridge's Cross-chain Bitcoin".to_vec(),
+        )
+        .unwrap(),
+        AssetRestrictions::DESTROY_USABLE,
+    )
+}
+pub(crate) fn sbtc() -> (AssetId, AssetInfo, AssetRestrictions) {
+    (
+        S_BTC,
+        AssetInfo::new::<Runtime>(
+            b"XBTC".to_vec(),
+            b"ChainX Bitcoin".to_vec(),
+            Chain::Bitcoin,
+            BTC_DECIMALS,
+            b"ChainX's Cross-chain Bitcoin".to_vec(),
+        )
+        .unwrap(),
+        AssetRestrictions::empty(),
+    )
+}
 
 // asset_id, asset_info, asset_restrictions, is_online, has_mining_rights
 pub(crate) fn genesis_assets() -> Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)> {
     let pcx = pcx();
     let btc = xbtc();
+    let ebtc = ebtc();
+    let sbtc = sbtc();
     let assets = vec![
         (pcx.0, pcx.1, pcx.2, true, false),
         (btc.0, btc.1, btc.2, true, true),
+        (ebtc.0, ebtc.1, ebtc.2, true, true),
+        (sbtc.0, sbtc.1, sbtc.2, true, true),
     ];
     assets
 }
