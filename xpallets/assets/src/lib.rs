@@ -243,7 +243,10 @@ decl_module! {
 
 // others
 impl<T: Config> Module<T> {
-    fn set_asset_restrictions(
+    /// Set asset restrictions
+    ///
+    /// Forbidden some operations for target asset
+    pub fn set_asset_restrictions(
         asset_id: AssetId,
         restrictions: AssetRestrictions,
     ) -> DispatchResult {

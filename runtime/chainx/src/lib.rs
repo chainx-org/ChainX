@@ -980,7 +980,8 @@ impl xpallet_gateway_bitcoin::Config for Runtime {
 }
 
 parameter_types! {
-    pub const BridgeTargetAssetId: u8 = 1;
+    pub const BridgeTargetAssetId: u32 = C_BTC;
+    pub const BridgeTokenAssetId: u32 = S_BTC;
     pub const DustCollateral: Balance = 1000;
     pub const SecureThreshold: u16 = 300;
     pub const PremiumThreshold: u16 = 250;
@@ -994,6 +995,7 @@ parameter_types! {
 impl xpallet_gateway_bitcoin_v2_pallet::Config for Runtime {
     type Event = Event;
     type TargetAssetId = BridgeTargetAssetId;
+    type TokenAssetId = BridgeTokenAssetId;
     type DustCollateral = DustCollateral;
     type SecureThreshold = SecureThreshold;
     type PremiumThreshold = PremiumThreshold;

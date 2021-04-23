@@ -68,7 +68,7 @@ pub mod pallet {
     pub(crate) type CurrencyOf<T> = <T as xpallet_assets::Config>::Currency;
 
     #[allow(type_alias_bounds)]
-    pub(crate) type DefaultVault<T: Config> = Vault<T::AccountId, BlockNumberFor<T>, BalanceOf<T>>;
+    pub(crate) type DefaultVault<T: Config> = Vault<BlockNumberFor<T>, BalanceOf<T>>;
 
     pub(crate) type IssueRequest<T> = crate::types::IssueRequest<
         <T as frame_system::Config>::AccountId,
@@ -95,7 +95,13 @@ pub mod pallet {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
         /// Bitcoin asset id in `xpallet_assets` module.
+        #[pallet::constant]
         type TargetAssetId: Get<AssetId>;
+        /// Shadow asset for target asset.
+        ///
+        /// Shadow asset is a read-only asset. It only indicates owner has interest for asset mining.
+        #[pallet::constant]
+        type TokenAssetId: Get<AssetId>;
         /// Lower bound of vault's collateral.
         #[pallet::constant]
         type DustCollateral: Get<BalanceOf<Self>>;
@@ -133,15 +139,6 @@ pub mod pallet {
                 BridgeStatus::<T>::put(Status::Error(ErrorCode::EXCHANGE_RATE_EXPIRED));
             };
 
-            //TODO(wangyafei): test weight
-            // check vaults' collateral ratio
-            if Self::is_bridge_running() {
-                for (id, vault) in Vaults::<T>::iter() {
-                    if Self::_check_vault_liquidated(&vault) {
-                        let _ = Self::liquidate_vault(&id);
-                    }
-                }
-            }
             0u64.into()
         }
 
@@ -204,7 +201,7 @@ pub mod pallet {
             );
             Self::lock_collateral(&sender, collateral)?;
             <BtcAddresses<T>>::insert(&btc_address, sender.clone());
-            <Vaults<T>>::insert(&sender, Vault::new(sender.clone(), btc_address));
+            <Vaults<T>>::insert(&sender, Vault::new(btc_address));
             Self::deposit_event(Event::VaultRegistered(sender, collateral));
             Ok(().into())
         }
@@ -237,16 +234,18 @@ pub mod pallet {
             let sender = ensure_signed(origin)?;
 
             Self::ensure_bridge_running()?;
-            let (vault, collateral_ratio_later) = Self::collateral_ratio_of(&vault_id, btc_amount)?;
+            let collateral_ratio_later =
+                Self::collateral_ratio_with_inc_amount(&vault_id, btc_amount)?;
             ensure!(
                 collateral_ratio_later >= T::SecureThreshold::get(),
                 Error::<T>::InsecureVault
             );
 
             let griefing_collateral = Self::calculate_required_collateral(btc_amount)?;
-
             Self::lock_collateral(&sender, griefing_collateral)?;
+
             let request_id = Self::get_next_issue_id();
+            let vault = Self::get_active_vault_by_id(&vault_id)?;
             IssueRequests::<T>::insert(
                 request_id,
                 IssueRequest::<T> {
@@ -259,7 +258,7 @@ pub mod pallet {
                     ..Default::default()
                 },
             );
-            Vaults::<T>::mutate(&vault.id, |vault| {
+            Vaults::<T>::mutate(&vault_id, |vault| {
                 if let Some(vault) = vault {
                     vault.to_be_issued_tokens += btc_amount;
                 }
@@ -300,9 +299,13 @@ pub mod pallet {
             Vaults::<T>::mutate(&request.vault, |vault| {
                 if let Some(vault) = vault {
                     vault.to_be_issued_tokens -= request.btc_amount;
-                    vault.issued_tokens += request.btc_amount;
                 }
             });
+            xpallet_assets::Module::<T>::issue(
+                &T::TokenAssetId::get(),
+                &request.vault,
+                request.btc_amount,
+            )?;
             IssueRequests::<T>::remove(&request_id);
 
             Self::deposit_event(Event::<T>::IssueRequestExecuted(request_id));
@@ -361,18 +364,19 @@ pub mod pallet {
             );
 
             // Ensure this vault can work.
-            let vault = Self::get_active_vault_by_id(&vault_id)?;
+            Self::get_active_vault_by_id(&vault_id)?;
             ensure!(
-                redeem_amount <= vault.issued_tokens,
+                redeem_amount <= Self::issued_tokens_of(&vault_id),
                 Error::<T>::RedeemAmountTooLarge
             );
 
             Self::verify_btc_address(&btc_address)?;
 
             // Increase vault's to_be_redeemed_tokens
-            Vaults::<T>::mutate(&vault.id, |vault| {
+            Vaults::<T>::mutate(&vault_id, |vault| {
+                //vault exists; qed.
                 if let Some(vault) = vault {
-                    vault.to_be_redeemed_tokens += redeem_amount;
+                    vault.to_be_redeemed_tokens += redeem_amount
                 }
             });
 
@@ -417,25 +421,30 @@ pub mod pallet {
                 Self::get_redeem_request_duration(&request) < T::RedeemRequestExpiredTime::get(),
                 Error::<T>::RedeemRequestExpired
             );
-            let vault = Self::get_active_vault_by_id(&request.vault)?;
+            Self::get_active_vault_by_id(&request.vault)?;
 
             // TODO verify tx
-            let collateral = CurrencyOf::<T>::reserved_balance(&vault.id);
-            let current_collateral_ratio =
-                Self::calculate_collateral_ratio(vault.issued_tokens, collateral)?;
+            let collateral = CurrencyOf::<T>::reserved_balance(&request.vault);
+            let current_collateral_ratio = Self::calculate_collateral_ratio(
+                Self::issued_tokens_of(&request.vault),
+                collateral,
+            )?;
 
             if current_collateral_ratio < T::PremiumThreshold::get() {
                 let premium_fee = Self::premium_fee();
-                Self::slash_collateral(&vault.id, &request.requester, premium_fee)?;
+                Self::slash_collateral(&request.vault, &request.requester, premium_fee)?;
             }
 
-            Vaults::<T>::mutate(&vault.id, |vault| {
+            Vaults::<T>::mutate(&request.vault, |vault| {
                 if let Some(vault) = vault {
-                    vault.issued_tokens -= request.btc_amount;
                     vault.to_be_redeemed_tokens -= request.btc_amount;
                 }
             });
+
+            //FIXME(wangyafei): Them should be both succeed or failed.
+            Self::burn_token(&request.vault, request.btc_amount)?;
             Self::burn_xbtc(&request.requester, request.btc_amount)?;
+
             RedeemRequests::<T>::remove(&request_id);
 
             Self::deposit_event(Event::<T>::RedeemExecuted(request_id));
@@ -463,12 +472,12 @@ pub mod pallet {
                 Error::<T>::RedeemRequestNotExpired
             );
 
-            let vault = Self::get_active_vault_by_id(&request.vault)?;
+            Self::get_active_vault_by_id(&request.vault)?;
             let worth_pcx = Self::convert_to_pcx(request.btc_amount)?;
 
             if reimburse {
                 // Decrease vault tokens
-                Vaults::<T>::mutate(&vault.id, |vault| {
+                Vaults::<T>::mutate(&request.vault, |vault| {
                     if let Some(vault) = vault {
                         vault.to_be_redeemed_tokens -= request.btc_amount;
                     }
@@ -676,12 +685,8 @@ pub mod pallet {
 
     /// Mapping account to vault struct.
     #[pallet::storage]
-    pub(crate) type Vaults<T: Config> = StorageMap<
-        _,
-        Blake2_128Concat,
-        T::AccountId,
-        Vault<T::AccountId, T::BlockNumber, BalanceOf<T>>,
-    >;
+    pub(crate) type Vaults<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, Vault<T::BlockNumber, BalanceOf<T>>>;
 
     /// Mapping btc address to vault id.
     #[pallet::storage]
@@ -777,6 +782,57 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
+        /// Getter for vault's collateral.
+        ///
+        /// Ensure `id` is vault  is caller's responsibility.
+        /// Error:
+        /// - `VaultNotFound` if `vault_id` doesn't exist.
+        #[inline]
+        pub fn collateral_of(vault_id: &T::AccountId) -> BalanceOf<T> {
+            CurrencyOf::<T>::reserved_balance(vault_id)
+        }
+
+        /// Getter for vault's issued tokens.
+        ///
+        /// Ensure `id` is vault  is caller's responsibility.
+        /// Error:
+        /// - `VaultNotFound` if `vault_id` doesn't exist.
+        #[inline]
+        pub fn issued_tokens_of(vault_id: &T::AccountId) -> BalanceOf<T> {
+            xpallet_assets::Module::<T>::usable_balance(vault_id, &T::TokenAssetId::get())
+        }
+
+        //TODO:
+        // 1. shall we need to check vault existence?
+        // 2. change reture type.
+        fn collateral_ratio_with_inc_amount(
+            vault_id: &T::AccountId,
+            btc_amount: BalanceOf<T>,
+        ) -> Result<u16, DispatchError> {
+            let vault = Self::get_active_vault_by_id(vault_id)?;
+            // check if vault is rich enough
+            let collateral_ratio_after_requesting = Self::calculate_collateral_ratio(
+                Self::issued_tokens_of(vault_id) + vault.to_be_issued_tokens + btc_amount,
+                Self::collateral_of(vault_id),
+            )?;
+
+            Ok(collateral_ratio_after_requesting)
+        }
+
+        #[inline]
+        fn get_issue_request_duration(request: &IssueRequest<T>) -> BlockNumberFor<T> {
+            let current_block = frame_system::Pallet::<T>::block_number();
+            current_block - request.open_time
+        }
+
+        #[inline]
+        fn get_redeem_request_duration(request: &RedeemRequest<T>) -> BlockNumberFor<T> {
+            let current_block = frame_system::Pallet::<T>::block_number();
+            current_block - request.open_time
+        }
+    }
+
+    impl<T: Config> Pallet<T> {
         pub fn convert_to_pcx(btc_amount: BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError> {
             //TODO(wangyafei): add lower bound?
             let exchange_rate = Self::exchange_rate();
@@ -801,34 +857,9 @@ pub mod pallet {
                 .parse()
                 .map_err(|_| Error::<T>::InvalidAddress)
         }
+    }
 
-        fn get_issue_request_duration(request: &IssueRequest<T>) -> BlockNumberFor<T> {
-            let current_block = frame_system::Pallet::<T>::block_number();
-            current_block - request.open_time
-        }
-
-        fn get_redeem_request_duration(request: &RedeemRequest<T>) -> BlockNumberFor<T> {
-            let current_block = frame_system::Pallet::<T>::block_number();
-            current_block - request.open_time
-        }
-
-        fn collateral_ratio_of(
-            vault_id: &T::AccountId,
-            btc_amount: BalanceOf<T>,
-        ) -> Result<(Vault<T::AccountId, T::BlockNumber, BalanceOf<T>>, u16), DispatchError>
-        {
-            let vault = Self::get_active_vault_by_id(vault_id)?;
-            let vault_collateral = CurrencyOf::<T>::reserved_balance(vault_id);
-
-            // check if vault is rich enough
-            let collateral_ratio_after_requesting = Self::calculate_collateral_ratio(
-                vault.issued_tokens + vault.to_be_issued_tokens + btc_amount,
-                vault_collateral,
-            )?;
-
-            Ok((vault, collateral_ratio_after_requesting))
-        }
-
+    impl<T: Config> Pallet<T> {
         pub(crate) fn lock_collateral(
             sender: &T::AccountId,
             amount: BalanceOf<T>,
@@ -869,6 +900,7 @@ pub mod pallet {
             let (slashed, _) = <CurrencyOf<T>>::slash_reserved(sender, amount);
 
             <CurrencyOf<T>>::resolve_creating(receiver, slashed);
+            //FIXME(wangyafei): why need this
             <CurrencyOf<T>>::reserve(receiver, amount)
                 .map_err(|_| Error::<T>::InsufficientFunds)?;
             Self::deposit_event(Event::<T>::CollateralSlashed(
@@ -879,11 +911,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// Get if the bridge running
-        pub fn is_bridge_running() -> bool {
-            Self::bridge_status() == Status::Running
-        }
-
+        //FIXME(wangyafei): Update logic
         pub fn calculate_collateral_ratio(
             issued_tokens: BalanceOf<T>,
             collateral: BalanceOf<T>,
@@ -904,87 +932,6 @@ pub mod pallet {
                 .ok_or(Error::<T>::ArithmeticError)?;
             //FIXME(wangyafei): should use try_into?
             Ok(collateral_ratio as u16)
-        }
-
-        #[inline]
-        pub(crate) fn ensure_bridge_running() -> DispatchResult {
-            ensure!(
-                Self::bridge_status() == Status::Running,
-                Error::<T>::BridgeNotRunning
-            );
-            Ok(())
-        }
-
-        /// Clarify `ExchangeRateExpired` is solved and recover from this error.
-        ///
-        /// Dangerous! Ensure this error truly solved is caller's responsibility.
-        pub(crate) fn recover_from_exchange_rate_expired() {
-            if let Status::Error(mut error_codes) = Self::bridge_status() {
-                if error_codes.contains(ErrorCode::EXCHANGE_RATE_EXPIRED) {
-                    error_codes.remove(ErrorCode::EXCHANGE_RATE_EXPIRED);
-                    <BridgeStatus<T>>::put(Status::Error(error_codes))
-                }
-            }
-        }
-
-        /// Clarify `Liquidating` is solved and recover from this error.
-        ///
-        /// Dangerous! Ensure this error truly solved is caller's responsibility.
-        pub(crate) fn recover_from_liquidating() {
-            if let Status::Error(mut error_codes) = Self::bridge_status() {
-                if error_codes.contains(ErrorCode::LIQUIDATING) {
-                    error_codes.remove(ErrorCode::LIQUIDATING);
-                    <BridgeStatus<T>>::put(Status::Error(error_codes))
-                }
-            }
-        }
-
-        pub fn get_vault_by_id(
-            id: &T::AccountId,
-        ) -> Result<Vault<T::AccountId, T::BlockNumber, BalanceOf<T>>, DispatchError> {
-            match <Vaults<T>>::get(id) {
-                Some(vault) => Ok(vault),
-                None => Err(Error::<T>::VaultNotFound.into()),
-            }
-        }
-
-        pub fn get_active_vault_by_id(
-            id: &T::AccountId,
-        ) -> Result<Vault<T::AccountId, T::BlockNumber, BalanceOf<T>>, DispatchError> {
-            let vault = Self::get_vault_by_id(id)?;
-            if vault.status == VaultStatus::Active {
-                Ok(vault)
-            } else {
-                Err(Error::<T>::VaultInactive.into())
-            }
-        }
-
-        /// Liquidate vault and mark it as `Liquidated`
-        ///
-        /// Liquidated vault cannot be updated.
-        pub(crate) fn liquidate_vault(id: &T::AccountId) -> Result<(), DispatchError> {
-            <Vaults<T>>::mutate(id, |vault| match vault {
-                Some(ref mut vault) => {
-                    if vault.status == VaultStatus::Active {
-                        vault.status = VaultStatus::Liquidated;
-                        Ok(())
-                    } else {
-                        Err(Error::<T>::VaultInactive)
-                    }
-                }
-                None => Err(Error::<T>::VaultNotFound),
-            })?;
-
-            let vault = Self::get_vault_by_id(id)?;
-            let collateral = CurrencyOf::<T>::reserved_balance(&vault.id);
-            Self::slash_collateral(&vault.id, &Self::liquidator_id(), collateral)?;
-
-            <Liquidator<T>>::mutate(|liquidator| {
-                liquidator.issued_tokens += vault.issued_tokens;
-                liquidator.to_be_issued_tokens += vault.to_be_issued_tokens;
-                liquidator.to_be_redeemed_tokens += vault.to_be_redeemed_tokens;
-            });
-            Ok(())
         }
 
         /// Get `IssueRequest` from id
@@ -1084,16 +1031,6 @@ pub mod pallet {
             )
         }
 
-        fn _check_vault_liquidated(vault: &DefaultVault<T>) -> bool {
-            if vault.issued_tokens == 0u32.into() {
-                return false;
-            }
-            let collateral = CurrencyOf::<T>::reserved_balance(&vault.id);
-            Self::calculate_collateral_ratio(vault.issued_tokens, collateral)
-                .map(|collateral_ratio| collateral_ratio < T::LiquidationThreshold::get())
-                .unwrap_or(false)
-        }
-
         fn _update_exchange_rate(exchange_rate: TradingPrice) -> DispatchResult {
             // TODO: sanity check?
             <ExchangeRate<T>>::put(exchange_rate);
@@ -1123,8 +1060,10 @@ pub mod pallet {
                     if let Ok(token_upper_bound) =
                         Self::_calculate_vault_token_upper_bound(vault_id)
                     {
-                        token_upper_bound > vault.issued_tokens
-                            && token_upper_bound - vault.issued_tokens - vault.to_be_issued_tokens
+                        token_upper_bound > Self::issued_tokens_of(vault_id)
+                            && token_upper_bound
+                                - Self::issued_tokens_of(vault_id)
+                                - vault.to_be_issued_tokens
                                 > xbtc_amount
                     } else {
                         false
@@ -1133,6 +1072,95 @@ pub mod pallet {
                 .take(1)
                 .map(|(vault_id, vault)| (vault_id, vault.wallet))
                 .next()
+        }
+    }
+    impl<T: Config> Pallet<T> {
+        fn burn_token(vault_id: &T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
+            xpallet_assets::Module::<T>::destroy_usable(&T::TokenAssetId::get(), vault_id, amount)
+        }
+    }
+
+    // Getter and Checker
+    impl<T: Config> Pallet<T> {
+        /// Get if the bridge running
+        pub fn is_bridge_running() -> bool {
+            Self::bridge_status() == Status::Running
+        }
+
+        #[inline]
+        pub(crate) fn ensure_bridge_running() -> DispatchResult {
+            ensure!(
+                Self::bridge_status() == Status::Running,
+                Error::<T>::BridgeNotRunning
+            );
+            Ok(())
+        }
+
+        pub fn get_vault_by_id(
+            id: &T::AccountId,
+        ) -> Result<Vault<T::BlockNumber, BalanceOf<T>>, DispatchError> {
+            match <Vaults<T>>::get(id) {
+                Some(vault) => Ok(vault),
+                None => Err(Error::<T>::VaultNotFound.into()),
+            }
+        }
+
+        pub fn get_active_vault_by_id(
+            id: &T::AccountId,
+        ) -> Result<Vault<T::BlockNumber, BalanceOf<T>>, DispatchError> {
+            let vault = Self::get_vault_by_id(id)?;
+            if vault.status == VaultStatus::Active {
+                Ok(vault)
+            } else {
+                Err(Error::<T>::VaultInactive.into())
+            }
+        }
+
+        /// Check `id` is vault or system_vault.
+        pub fn check_is_vault(id: &T::AccountId) -> bool {
+            if id == &Self::liquidator_id() {
+                true
+            } else {
+                Vaults::<T>::contains_key(id)
+            }
+        }
+
+        #[inline]
+        pub fn change_vault_status(vault_id: &T::AccountId, statue: VaultStatus) -> DispatchResult {
+            // Change vault type
+            <Vaults<T>>::mutate(vault_id, |vault| match vault {
+                Some(ref mut vault) => {
+                    vault.status = VaultStatus::Liquidated;
+                    Ok(())
+                }
+                None => Err(Error::<T>::VaultNotFound.into()),
+            })
+        }
+    }
+
+    impl<T: Config> Pallet<T> {
+        /// Clarify `ExchangeRateExpired` is solved and recover from this error.
+        ///
+        /// Dangerous! Ensure this error truly solved is caller's responsibility.
+        pub(crate) fn recover_from_exchange_rate_expired() {
+            if let Status::Error(mut error_codes) = Self::bridge_status() {
+                if error_codes.contains(ErrorCode::EXCHANGE_RATE_EXPIRED) {
+                    error_codes.remove(ErrorCode::EXCHANGE_RATE_EXPIRED);
+                    <BridgeStatus<T>>::put(Status::Error(error_codes))
+                }
+            }
+        }
+
+        /// Clarify `Liquidating` is solved and recover from this error.
+        ///
+        /// Dangerous! Ensure this error truly solved is caller's responsibility.
+        pub(crate) fn recover_from_liquidating() {
+            if let Status::Error(mut error_codes) = Self::bridge_status() {
+                if error_codes.contains(ErrorCode::LIQUIDATING) {
+                    error_codes.remove(ErrorCode::LIQUIDATING);
+                    <BridgeStatus<T>>::put(Status::Error(error_codes))
+                }
+            }
         }
     }
 }

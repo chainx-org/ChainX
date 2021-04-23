@@ -1,9 +1,9 @@
 use sp_std::vec::Vec;
 
-use bitflags::bitflags;
 use codec::{Decode, Encode};
-use sp_runtime::RuntimeDebug;
+use sp_runtime::{traits::AtLeast32BitUnsigned, RuntimeDebug};
 
+use bitflags::bitflags;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
@@ -102,7 +102,6 @@ impl Default for VaultStatus {
 pub struct SystemVault<AccountId, Balance> {
     pub(crate) id: AccountId,
     pub(crate) to_be_issued_tokens: Balance,
-    pub(crate) issued_tokens: Balance,
     pub(crate) to_be_redeemed_tokens: Balance,
 }
 
@@ -110,13 +109,9 @@ pub struct SystemVault<AccountId, Balance> {
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 #[cfg_attr(feature = "std", derive(Debug))]
-pub struct Vault<AccountId, BlockNumber, Balance> {
-    /// Account identifier of the Vault
-    pub id: AccountId,
+pub struct Vault<BlockNumber, Balance> {
     /// Number of tokens pending issue
     pub to_be_issued_tokens: Balance,
-    /// Number of issued tokens
-    pub issued_tokens: Balance,
     /// Number of tokens pending redeem
     pub to_be_redeemed_tokens: Balance,
     /// Bitcoin address of this Vault (P2PKH, P2SH, P2PKH, P2WSH)
@@ -128,12 +123,9 @@ pub struct Vault<AccountId, BlockNumber, Balance> {
     pub status: VaultStatus,
 }
 
-impl<AccountId: Default, BlockNumber: Default, Balance: Default>
-    Vault<AccountId, BlockNumber, Balance>
-{
-    pub(crate) fn new(id: AccountId, address: BtcAddress) -> Self {
+impl<BlockNumber: Default, Balance: Default> Vault<BlockNumber, Balance> {
+    pub(crate) fn new(address: BtcAddress) -> Self {
         Self {
-            id,
             wallet: address,
             ..Default::default()
         }
