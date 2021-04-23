@@ -984,7 +984,7 @@ impl xpallet_gateway_bitcoin::Config for Runtime {
 }
 
 parameter_types! {
-    pub const BridgeTargetAssetId: u32 = E_BTC;
+    pub const BridgeTargetAssetId: u32 = C_BTC;
     pub const BridgeTokenAssetId: u32 = S_BTC;
     pub const DustCollateral: Balance = 1000;
     pub const SecureThreshold: u16 = 300;

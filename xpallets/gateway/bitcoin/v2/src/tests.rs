@@ -44,7 +44,7 @@ fn t_register_btc() -> DispatchResult {
             xpallet_assets::AssetRestrictions::empty(),
         ),
         (
-            xp_protocol::E_BTC,
+            xp_protocol::C_BTC,
             xpallet_assets_registrar::AssetInfo::new::<Test>(
                 b"E-BTC".to_vec(),
                 b"E-BTC".to_vec(),

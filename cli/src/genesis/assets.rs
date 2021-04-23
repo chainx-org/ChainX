@@ -1,6 +1,6 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use xp_protocol::{BTC_DECIMALS, E_BTC, PCX, PCX_DECIMALS, S_BTC, X_BTC};
+use xp_protocol::{BTC_DECIMALS, C_BTC, PCX, PCX_DECIMALS, S_BTC, X_BTC};
 
 use chainx_runtime::{AssetId, AssetInfo, AssetRestrictions, Chain, Runtime};
 
@@ -55,7 +55,7 @@ pub(crate) fn xbtc() -> (AssetId, AssetInfo, AssetRestrictions) {
 }
 pub(crate) fn ebtc() -> (AssetId, AssetInfo, AssetRestrictions) {
     (
-        E_BTC,
+        C_BTC,
         AssetInfo::new::<Runtime>(
             b"EBTC".to_vec(),
             b"ChainX Bitcoin from chainx bridge".to_vec(),

@@ -20,7 +20,7 @@ use chainx_primitives::{AccountId, AssetId, Balance, ReferralId, Signature};
 use chainx_runtime::constants::currency::DOLLARS;
 use dev_runtime::constants::{currency::DOLLARS as DEV_DOLLARS, time::DAYS as DEV_DAYS};
 use xp_assets_registrar::Chain;
-use xp_protocol::{NetworkType, E_BTC, PCX, PCX_DECIMALS, S_BTC, X_BTC};
+use xp_protocol::{NetworkType, C_BTC, PCX, PCX_DECIMALS, S_BTC, X_BTC};
 use xpallet_gateway_bitcoin::{BtcParams, BtcTxVerifier};
 use xpallet_gateway_bitcoin_v2::types::TradingPrice;
 use xpallet_gateway_common::types::TrusteeInfoConfig;
@@ -435,7 +435,7 @@ fn build_genesis(
         }),
         xpallet_mining_asset: Some(dev::XMiningAssetConfig {
             claim_restrictions: vec![(X_BTC, (10, DEV_DAYS * 7))],
-            mining_power_map: vec![(X_BTC, 400), (E_BTC, 360), (S_BTC, 40)],
+            mining_power_map: vec![(X_BTC, 400), (C_BTC, 360), (S_BTC, 40)],
         }),
         xpallet_dex_spot: Some(dev::XSpotConfig {
             trading_pairs: vec![(PCX, X_BTC, 9, 2, 100000, true)],
