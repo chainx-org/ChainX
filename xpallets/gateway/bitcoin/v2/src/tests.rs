@@ -46,11 +46,11 @@ fn t_register_btc() -> DispatchResult {
         (
             xp_protocol::C_BTC,
             xpallet_assets_registrar::AssetInfo::new::<Test>(
-                b"E-BTC".to_vec(),
-                b"E-BTC".to_vec(),
+                b"C-BTC".to_vec(),
+                b"C-BTC".to_vec(),
                 xpallet_assets_registrar::Chain::Bitcoin,
                 xp_protocol::BTC_DECIMALS,
-                b"ChainX's cross-chain Bitcoin".to_vec(),
+                b"Bridge ChainX's cross-chain Bitcoin".to_vec(),
             )
             .unwrap(),
             xpallet_assets::AssetRestrictions::empty(),
@@ -62,7 +62,7 @@ fn t_register_btc() -> DispatchResult {
                 b"S-BTC".to_vec(),
                 xpallet_assets_registrar::Chain::Bitcoin,
                 xp_protocol::BTC_DECIMALS,
-                b"ChainX's cross-chain Bitcoin".to_vec(),
+                b"Shadow token of C-BTC".to_vec(),
             )
             .unwrap(),
             xpallet_assets::AssetRestrictions::empty(),
