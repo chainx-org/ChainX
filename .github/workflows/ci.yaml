@@ -10,7 +10,7 @@ env:
   RUSTUP_MAX_RETRIES: 10
 
 jobs:
-  rust:
+  Format:
     name: Rust
     runs-on: ${{ matrix.os }}
 
@@ -49,11 +49,113 @@ jobs:
     - if: matrix.os == 'ubuntu-latest'
       run: cargo clippy
 
-    - name: Test
-      run: cargo test --workspace -- --test-threads 1
+  Compile:
+    name: Rust
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: nightly-2020-09-30
+        target: wasm32-unknown-unknown
+        profile: minimal
+        override: true
+        components: rustfmt, rust-src, clippy
+
+    - if: matrix.os == 'ubuntu-latest'
+      run: sudo chown -R $(whoami):$(id -ng) ~/.cargo/
+
+    - uses: actions/cache@v2
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Compile
       run: cargo test --no-run
 
+  RuntimeBenchmarks:
+    name: Rust
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: nightly-2020-09-30
+        target: wasm32-unknown-unknown
+        profile: minimal
+        override: true
+        components: rustfmt, rust-src, clippy
+
+    - if: matrix.os == 'ubuntu-latest'
+      run: sudo chown -R $(whoami):$(id -ng) ~/.cargo/
+
+    - uses: actions/cache@v2
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
     - name: Runtime benchmarks
       run: cargo build --features runtime-benchmarks
+
+  Test:
+    name: Rust
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: nightly-2020-09-30
+        target: wasm32-unknown-unknown
+        profile: minimal
+        override: true
+        components: rustfmt, rust-src, clippy
+
+    - if: matrix.os == 'ubuntu-latest'
+      run: sudo chown -R $(whoami):$(id -ng) ~/.cargo/
+
+    - uses: actions/cache@v2
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+    - if: matrix.os == 'ubuntu-latest'
+      run: cargo clippy
+
+    - name: Test
+      run: cargo test --workspace -- --test-threads 1
