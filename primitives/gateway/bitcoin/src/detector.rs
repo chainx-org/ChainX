@@ -13,7 +13,7 @@ use light_bitcoin::{
 };
 
 use crate::{
-    types::{BtcDepositInfo, BtcTxMetaType},
+    types::{BtcDepositInfo, BtcTxMetaType, TrusteePair},
     utils::{
         extract_addr_from_transaction, extract_opreturn_data, extract_output_addr, is_trustee_addr,
     },
@@ -57,8 +57,8 @@ impl BtcTxTypeDetector {
         tx: &Transaction,
         prev_tx: Option<&Transaction>,
         extract_account: Extractor,
-        current_trustee_pair: (Address, Address),
-        last_trustee_pair: Option<(Address, Address)>,
+        current_trustee_pair: TrusteePair,
+        last_trustee_pair: Option<TrusteePair>,
     ) -> BtcTxMetaType<AccountId>
     where
         AccountId: Debug,
@@ -145,7 +145,7 @@ impl BtcTxTypeDetector {
         tx: &Transaction,
         input_addr: Option<Address>,
         extract_account: Extractor,
-        current_trustee_pair: (Address, Address),
+        current_trustee_pair: TrusteePair,
     ) -> BtcTxMetaType<AccountId>
     where
         AccountId: Debug,
@@ -177,7 +177,7 @@ impl BtcTxTypeDetector {
         &self,
         tx: &Transaction,
         extract_account: Extractor,
-        current_trustee_pair: (Address, Address),
+        current_trustee_pair: TrusteePair,
     ) -> (Option<(AccountId, Option<ReferralId>)>, u64)
     where
         AccountId: Debug,
