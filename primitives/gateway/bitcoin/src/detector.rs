@@ -372,7 +372,7 @@ mod tests {
         const DEPOSIT_COLD_ADDR: &str = "3FLBhPfEqmw4Wn5EQMeUzPLrQtJMprgwnw";
         let btc_tx_detector = BtcTxTypeDetector::new(Network::Mainnet, 0);
 
-        let hot_pair = (
+        let current_trustee_pair = (
             DEPOSIT_HOT_ADDR.parse::<Address>().unwrap(),
             DEPOSIT_COLD_ADDR.parse::<Address>().unwrap(),
         );
@@ -380,7 +380,7 @@ mod tests {
             let got = btc_tx_detector.parse_deposit_transaction_outputs(
                 &tx,
                 OpReturnExtractor::extract_account,
-                hot_pair,
+                current_trustee_pair,
             );
             assert_eq!(got, expect);
         }
