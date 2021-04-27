@@ -111,6 +111,18 @@ impl<T: Config> Module<T> {
         to: &T::AccountId,
         value: BalanceOf<T>,
     ) -> DispatchResult {
+        // FIXME: https://github.com/paritytech/substrate/issues/7992
+        //
+        // The account `to` definitely exists so this should always succeed.
+        // This is equivalent to unreserve(from, value) + transfer(from, to, value)
+        //
+        // <T as xpallet_assets::Config>::Currency::repatriate_reserved(
+        // from,
+        // to,
+        // value,
+        // frame_support::traits::BalanceStatus::Free,
+        // )?;
+
         <T as xpallet_assets::Config>::Currency::unreserve(from, value);
         <T as xpallet_assets::Config>::Currency::transfer(
             from,
@@ -119,18 +131,6 @@ impl<T: Config> Module<T> {
             frame_support::traits::ExistenceRequirement::KeepAlive,
         )?;
 
-        // FIXME bug in new Substrate?
-        //
-        // The account `to` definitely exists so this should always succeed.
-        // This is equivalent to unreserve(from, value) + transfer(from, to, value)
-        /*
-        <T as xpallet_assets::Config>::Currency::repatriate_reserved(
-            from,
-            to,
-            value,
-            frame_support::traits::BalanceStatus::Free,
-        )?;
-        */
         NativeReserves::<T>::mutate(from, |reserved| *reserved -= value);
         Ok(())
     }
