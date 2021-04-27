@@ -36,16 +36,13 @@ pub fn process_tx<T: Trait>(
     current_trustee_pair: (Address, Address),
     last_trustee_pair: Option<(Address, Address)>,
 ) -> BtcTxState {
-    let btc_tx_detector = BtcTxTypeDetector::new(
-        network,
-        min_deposit,
-        current_trustee_pair,
-        last_trustee_pair,
-    );
+    let btc_tx_detector = BtcTxTypeDetector::new(network, min_deposit);
     let meta_type = btc_tx_detector.detect_transaction_type::<T::AccountId, _>(
         &tx,
         prev_tx.as_ref(),
         T::AccountExtractor::extract_account,
+        current_trustee_pair,
+        last_trustee_pair,
     );
 
     let tx_type = meta_type.ref_into();

@@ -99,18 +99,18 @@ fn mock_detect_transaction_type<T: Trait>(
     tx: &Transaction,
     prev_tx: Option<&Transaction>,
 ) -> BtcTxMetaType<T::AccountId> {
-    let btc_tx_detector = BtcTxTypeDetector::new(
-        Network::Mainnet,
-        0,
-        (
-            DEPOSIT_HOT_ADDR.parse::<Address>().unwrap(),
-            DEPOSIT_COLD_ADDR.parse::<Address>().unwrap(),
-        ),
-        None,
+    let btc_tx_detector = BtcTxTypeDetector::new(Network::Mainnet, 0);
+    let current_trustee_pair = (
+        DEPOSIT_HOT_ADDR.parse::<Address>().unwrap(),
+        DEPOSIT_COLD_ADDR.parse::<Address>().unwrap(),
     );
-    btc_tx_detector.detect_transaction_type::<T::AccountId, _>(tx, prev_tx, |script| {
-        T::AccountExtractor::extract_account(script)
-    })
+    btc_tx_detector.detect_transaction_type::<T::AccountId, _>(
+        tx,
+        prev_tx,
+        |script| T::AccountExtractor::extract_account(script),
+        current_trustee_pair,
+        None,
+    )
 }
 
 #[test]
