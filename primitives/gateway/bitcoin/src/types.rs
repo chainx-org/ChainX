@@ -10,6 +10,9 @@ use chainx_primitives::ReferralId;
 
 use light_bitcoin::keys::Address;
 
+/// (hot trustee address, cold trustee address)
+pub type TrusteePair = (Address, Address);
+
 /// The bitcoin transaction type.
 #[doc(hidden)]
 #[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
