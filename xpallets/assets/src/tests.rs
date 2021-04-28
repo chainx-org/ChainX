@@ -12,8 +12,6 @@ use crate::{
     AssetBalance, AssetErr, AssetInfo, AssetRestrictions, AssetType, Chain, Config,
     TotalAssetBalance,
 };
-// pub use crate::mock::*;
-// use crate::*;
 
 #[test]
 fn test_genesis() {

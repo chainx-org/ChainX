@@ -265,6 +265,7 @@ impl<T: Config> Module<T> {
 
 // asset related
 impl<T: Config> Module<T> {
+    /// Returns a map of all registered assets by far.
     pub fn total_asset_infos() -> BTreeMap<AssetId, TotalAssetInfo<BalanceOf<T>>> {
         xpallet_assets_registrar::Module::<T>::asset_infos()
             .filter_map(|(id, info)| {
@@ -287,6 +288,7 @@ impl<T: Config> Module<T> {
             .collect()
     }
 
+    /// Retutrns the invalid asset info of `who`.
     pub fn valid_assets_of(
         who: &T::AccountId,
     ) -> BTreeMap<AssetId, BTreeMap<AssetType, BalanceOf<T>>> {
@@ -296,8 +298,9 @@ impl<T: Config> Module<T> {
             .collect()
     }
 
-    pub fn can_do(id: &AssetId, limit: AssetRestrictions) -> bool {
-        !Self::asset_restrictions_of(id).contains(limit)
+    /// Retutrns whether `restriction` is applied for given asset `id`.
+    pub fn can_do(id: &AssetId, restriction: AssetRestrictions) -> bool {
+        !Self::asset_restrictions_of(id).contains(restriction)
     }
 
     // can do wrapper
@@ -370,11 +373,12 @@ impl<T: Config> Module<T> {
     }
 
     pub fn total_reserved_balance(who: &T::AccountId, id: &AssetId) -> BalanceOf<T> {
+        use AssetType::{Reserved, ReservedDexSpot, ReservedWithdrawal};
+
         let total_balances = Self::asset_balance(who, id);
         let balance_for = |ty: AssetType| total_balances.get(&ty).copied().unwrap_or_default();
-        balance_for(AssetType::Reserved)
-            + balance_for(AssetType::ReservedWithdrawal)
-            + balance_for(AssetType::ReservedDexSpot)
+
+        balance_for(Reserved) + balance_for(ReservedWithdrawal) + balance_for(ReservedDexSpot)
     }
 }
 
