@@ -6,8 +6,8 @@
 
 mod header;
 pub mod trustee;
-mod tx;
-mod types;
+pub mod tx;
+pub mod types;
 pub mod weights;
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
@@ -40,7 +40,8 @@ pub use light_bitcoin::{
 use light_bitcoin::{
     chain::Transaction,
     keys::{Address, DisplayLayout},
-    serialization::{deserialize, Reader},
+    merkle::PartialMerkleTree,
+    serialization::{deserialize, Deserializable, Reader},
 };
 
 use chainx_primitives::{AssetId, ReferralId};
@@ -471,7 +472,13 @@ impl<T: Config> Module<T> {
 
     /// Helper function for deserializing the slice of raw tx.
     #[inline]
-    fn deserialize_tx(input: &[u8]) -> Result<Transaction, Error<T>> {
+    pub fn deserialize_tx(input: &[u8]) -> Result<Transaction, Error<T>> {
+        deserialize(Reader::new(input)).map_err(|_| Error::<T>::DeserializeErr)
+    }
+
+    /// Helper function for deserializing the slice of raw tx.
+    #[inline]
+    pub fn deserialize_merkle_tree(input: &[u8]) -> Result<PartialMerkleTree, Error<T>> {
         deserialize(Reader::new(input)).map_err(|_| Error::<T>::DeserializeErr)
     }
 

@@ -32,6 +32,7 @@ xpallet-assets = { path = "../../../assets", default-features = false }
 xpallet-assets-registrar = { path = "../../../assets-registrar", default-features = false }
 chainx-primitives = { path = "../../../../primitives", default-features = false }
 xp-protocol = { path = "../../../../primitives/protocol", default-features = false }
+xgateway-bitcoin-v1 = { package = "xpallet-gateway-bitcoin", path = "../v1", default-features = false }
 
 
 # light-bitcoin
@@ -60,6 +61,7 @@ std = [
   "frame-system/std",
   "xpallet-assets/std",
   "xpallet-assets-registrar/std",
+  "xgateway-bitcoin-v1/std",
   # light-bitcoin
   "light-bitcoin/std",
   # Chainx primitives

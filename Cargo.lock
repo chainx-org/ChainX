@@ -9673,6 +9673,7 @@ dependencies = [
  "xp-protocol",
  "xpallet-assets",
  "xpallet-assets-registrar",
+ "xpallet-gateway-bitcoin",
 ]
 
 [[package]]

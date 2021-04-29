@@ -27,6 +27,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+mod rpc;
 pub mod types;
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
@@ -56,7 +57,12 @@ pub mod pallet {
         ensure_root, ensure_signed,
         pallet_prelude::{BlockNumberFor, OriginFor},
     };
-    use light_bitcoin::keys::Address;
+    use light_bitcoin::{
+        chain::Transaction as BtcTransaction,
+        keys::Address,
+        merkle::PartialMerkleTree,
+        serialization::{deserialize, Reader},
+    };
 
     use chainx_primitives::AssetId;
     use xpallet_assets::AssetType;
@@ -93,7 +99,9 @@ pub mod pallet {
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + xpallet_assets::Config {
+    pub trait Config:
+        frame_system::Config + xpallet_assets::Config + xgateway_bitcoin_v1::Config
+    {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
         /// Bitcoin asset id in `xpallet_assets` module.
@@ -170,7 +178,7 @@ pub mod pallet {
                 Self::oracle_accounts().contains(&sender),
                 Error::<T>::NotOracle
             );
-            Self::_update_exchange_rate(exchange_rate.clone())?;
+            Self::inner_update_exchange_rate(exchange_rate.clone())?;
             Self::deposit_event(Event::<T>::ExchangeRateUpdated(sender, exchange_rate));
             Ok(().into())
         }
@@ -277,14 +285,14 @@ pub mod pallet {
         pub fn execute_issue(
             origin: OriginFor<T>,
             request_id: RequestId,
-            _tx_id: Vec<u8>,
-            _merkle_proof: Vec<u8>,
-            _raw_tx: Vec<u8>,
+            block_hash: Vec<u8>,
+            merkle_proof: Vec<u8>,
+            raw_tx: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             ensure_signed(origin)?;
 
             Self::ensure_bridge_running()?;
-            //TODO(wangyafei): verify tx
+            Self::verify_transaction(block_hash, merkle_proof, raw_tx)?;
 
             let request = Self::get_issue_request_by_id(request_id)?;
             ensure!(
@@ -382,8 +390,8 @@ pub mod pallet {
                 }
             });
 
-            // Lock redeem's xtbc
-            Self::reserve_xbtc_to_withdrawal(&sender, redeem_amount)?;
+            // Lock redeem's target asset
+            Self::lock_target_asset(&sender, redeem_amount)?;
 
             // Generate redeem request identify and insert it to record
             let request_id = Self::get_next_redeem_id();
@@ -408,9 +416,9 @@ pub mod pallet {
         pub fn execute_redeem(
             origin: OriginFor<T>,
             request_id: RequestId,
-            _tx_id: Vec<u8>,
-            _merkle_proof: Vec<u8>,
-            _raw_tx: Vec<u8>,
+            block_hash: Vec<u8>,
+            merkle_proof: Vec<u8>,
+            raw_tx: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             ensure_signed(origin)?;
 
@@ -424,8 +432,8 @@ pub mod pallet {
                 Error::<T>::RedeemRequestExpired
             );
             Self::get_active_vault_by_id(&request.vault)?;
+            Self::verify_transaction(block_hash, merkle_proof, raw_tx)?;
 
-            // TODO verify tx
             let collateral = CurrencyOf::<T>::reserved_balance(&request.vault);
             let current_collateral_ratio = Self::calculate_collateral_ratio(
                 Self::issued_tokens_of(&request.vault),
@@ -443,7 +451,10 @@ pub mod pallet {
                 }
             });
 
-            //FIXME(wangyafei): Them should be both succeed or failed.
+            // Them should be both succeed or failed.
+            //
+            // We don't need to check one by one. Cause they were increased or decreased at the
+            // same time, and were both initialized by zero.
             Self::burn_token(&request.vault, request.btc_amount)?;
             Self::burn_xbtc(&request.requester, request.btc_amount)?;
 
@@ -495,10 +506,7 @@ pub mod pallet {
                     worth_pcx + punishment_fee,
                 )?;
             } else {
-                Self::release_xbtc_from_reserved_withdrawal(
-                    &request.requester,
-                    request.btc_amount,
-                )?;
+                Self::unlock_target_asset(&request.requester, request.btc_amount)?;
             }
 
             RedeemRequests::<T>::remove(&request_id);
@@ -515,7 +523,7 @@ pub mod pallet {
             exchange_rate: TradingPrice,
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
-            Self::_update_exchange_rate(exchange_rate.clone())?;
+            Self::inner_update_exchange_rate(exchange_rate.clone())?;
             Self::deposit_event(Event::<T>::ExchangeRateForceUpdated(exchange_rate));
             Ok(().into())
         }
@@ -596,7 +604,7 @@ pub mod pallet {
         NotOracle,
         /// Requester doesn't have enough pcx for collateral.
         InsufficientFunds,
-        /// Arithmetic underflow/overflow.
+        /// Arithmetic underflow/overflow
         ArithmeticError,
         /// Account doesn't have enough collateral to be slashed.
         InsufficientCollateral,
@@ -618,6 +626,14 @@ pub mod pallet {
         VaultInactive,
         /// BtcAddress invalid
         InvalidAddress,
+        /// BtcTransaction invalid
+        InvalidBtcTransaction,
+        /// Invalid merkle proof hex data
+        InvalidMerkleProof,
+        /// Invalid utf8 data
+        InvalidUtf8Data,
+        /// Cannot found btc header matching provided hash
+        NoMatchingBtcHeader,
         /// Collateral in request is less than griefing collateral
         InsufficientGriefingCollateral,
         /// No such `IssueRequest`
@@ -658,8 +674,6 @@ pub mod pallet {
         InvalidBtcAddress,
         /// Vault issue token insufficient
         RedeemAmountTooLarge,
-        /// Error propagated from xpallet_assets.
-        AssetError,
     }
 
     /// Total collateral locked by xbridge.
@@ -728,7 +742,7 @@ pub mod pallet {
     /// Slashed when excuting redeem if vault's collateral is below than `PremiumThreshold`
     #[pallet::storage]
     #[pallet::getter(fn premium_fee)]
-    pub(crate) type PremiumFee<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>; /*TODO(wangyafei): use fixed currently*/
+    pub(crate) type PremiumFee<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
     /// Auto-increament id to identify each redeem request.
     /// Also presents total amount of created requests.
@@ -804,9 +818,6 @@ pub mod pallet {
             xpallet_assets::Module::<T>::usable_balance(vault_id, &T::TokenAssetId::get())
         }
 
-        //TODO:
-        // 1. shall we need to check vault existence?
-        // 2. change reture type.
         fn collateral_ratio_with_inc_amount(
             vault_id: &T::AccountId,
             btc_amount: BalanceOf<T>,
@@ -836,7 +847,6 @@ pub mod pallet {
 
     impl<T: Config> Pallet<T> {
         pub fn convert_to_pcx(btc_amount: BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError> {
-            //TODO(wangyafei): add lower bound?
             let exchange_rate = Self::exchange_rate();
             let result = exchange_rate
                 .convert_to_pcx(btc_amount.saturated_into())
@@ -845,7 +855,6 @@ pub mod pallet {
         }
 
         pub fn convert_to_btc(pcx_amount: BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError> {
-            //TODO(wangyafei): add lower bound?
             let exchange_rate = Self::exchange_rate();
             let result = exchange_rate
                 .convert_to_btc(pcx_amount.saturated_into())
@@ -913,7 +922,10 @@ pub mod pallet {
             Ok(().into())
         }
 
-        //FIXME(wangyafei): Update logic
+        /// Calculate collateral ratio with given asset and collateral amount.
+        ///
+        /// - `issued_tokens`: amount of asset token.
+        /// - `collateral`: amount of collateral.
         pub fn calculate_collateral_ratio(
             issued_tokens: BalanceOf<T>,
             collateral: BalanceOf<T>,
@@ -926,13 +938,9 @@ pub mod pallet {
             let equivalence_collateral = exchange_rate
                 .convert_to_pcx(issued_tokens)
                 .ok_or(Error::<T>::ArithmeticError)?;
-            let raw_collateral: u128 = collateral.saturated_into();
-            let collateral_ratio = raw_collateral
-                .checked_mul(100)
-                .ok_or(Error::<T>::ArithmeticError)?
-                .checked_div(equivalence_collateral)
-                .ok_or(Error::<T>::ArithmeticError)?;
-            //FIXME(wangyafei): should use try_into?
+
+            let collateral_ratio =
+                collateral.saturating_mul(100) / equivalence_collateral.saturated_into::<u128>();
             Ok(collateral_ratio as u16)
         }
 
@@ -982,49 +990,33 @@ pub mod pallet {
             })
         }
 
-        fn move_xbtc(
-            from: &T::AccountId,
-            from_ty: AssetType,
-            to: &T::AccountId,
-            to_ty: AssetType,
-            amount: BalanceOf<T>,
-        ) -> Result<(), Error<T>> {
+        fn lock_target_asset(who: &T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
             xpallet_assets::Module::<T>::move_balance(
                 &T::TargetAssetId::get(),
-                from,
-                from_ty,
-                to,
-                to_ty,
+                who,
+                AssetType::Usable,
+                who,
+                AssetType::ReservedWithdrawal,
                 amount,
             )
-            .map_err(|_| Error::<T>::AssetError)
-        }
-
-        fn reserve_xbtc_to_withdrawal(
-            user: &T::AccountId,
-            amount: BalanceOf<T>,
-        ) -> Result<(), Error<T>> {
-            use AssetType::{ReservedWithdrawal, Usable};
-            Self::move_xbtc(user, Usable, user, ReservedWithdrawal, amount)
-        }
-
-        fn release_xbtc_from_reserved_withdrawal(
-            user: &T::AccountId,
-            amount: BalanceOf<T>,
-        ) -> Result<(), Error<T>> {
-            use AssetType::{ReservedWithdrawal, Usable};
-            Self::move_xbtc(user, ReservedWithdrawal, user, Usable, amount)
-        }
-
-        fn burn_xbtc(user: &T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
-            xpallet_assets::Module::<T>::destroy_reserved_withdrawal(
-                &T::TargetAssetId::get(),
-                user,
-                amount,
-            )?;
+            .map_err(|err| xpallet_assets::Error::<T>::from(err))?;
             Ok(())
         }
 
+        fn unlock_target_asset(who: &T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
+            xpallet_assets::Module::<T>::move_balance(
+                &T::TargetAssetId::get(),
+                who,
+                AssetType::ReservedWithdrawal,
+                who,
+                AssetType::Usable,
+                amount,
+            )
+            .map_err(|err| xpallet_assets::Error::<T>::from(err))?;
+            Ok(())
+        }
+
+        #[inline]
         fn usable_xbtc_of(user: &T::AccountId) -> BalanceOf<T> {
             xpallet_assets::Module::<T>::asset_balance_of(
                 &user,
@@ -1033,8 +1025,11 @@ pub mod pallet {
             )
         }
 
-        fn _update_exchange_rate(exchange_rate: TradingPrice) -> DispatchResult {
-            // TODO: sanity check?
+        fn inner_update_exchange_rate(exchange_rate: TradingPrice) -> DispatchResult {
+            ensure!(
+                exchange_rate.price > 0 && exchange_rate.decimal > 0,
+                Error::<T>::ArithmeticError
+            );
             <ExchangeRate<T>>::put(exchange_rate);
             let height = <frame_system::Pallet<T>>::block_number();
             <ExchangeRateUpdateTime<T>>::put(height);
@@ -1042,7 +1037,7 @@ pub mod pallet {
             Ok(())
         }
 
-        fn _calculate_vault_token_upper_bound(
+        pub(crate) fn _calculate_vault_token_upper_bound(
             vault_id: &T::AccountId,
         ) -> Result<BalanceOf<T>, DispatchError> {
             let vault_collateral = CurrencyOf::<T>::reserved_balance(vault_id);
@@ -1053,32 +1048,43 @@ pub mod pallet {
             Self::convert_to_btc(secure_collateral.saturated_into())
         }
 
-        //rpc use
-        pub fn get_first_matched_vault(
-            xbtc_amount: BalanceOf<T>,
-        ) -> Option<(T::AccountId, Vec<u8>)> {
-            Vaults::<T>::iter()
-                .filter(|(vault_id, vault)| {
-                    if let Ok(token_upper_bound) =
-                        Self::_calculate_vault_token_upper_bound(vault_id)
-                    {
-                        token_upper_bound > Self::issued_tokens_of(vault_id)
-                            && token_upper_bound
-                                - Self::issued_tokens_of(vault_id)
-                                - vault.to_be_issued_tokens
-                                > xbtc_amount
-                    } else {
-                        false
-                    }
-                })
-                .take(1)
-                .map(|(vault_id, vault)| (vault_id, vault.wallet))
-                .next()
+        pub(crate) fn verify_transaction(
+            block_hash: Vec<u8>,
+            merkle_proof: Vec<u8>,
+            raw_tx: Vec<u8>,
+        ) -> DispatchResult {
+            let block_hash = light_bitcoin::primitives::h256(
+                sp_std::str::from_utf8(&block_hash).map_err(|_| Error::<T>::InvalidUtf8Data)?,
+            );
+            let raw_tx: BtcTransaction =
+                deserialize(Reader::new(&raw_tx)).map_err(|_| Error::<T>::InvalidBtcTransaction)?;
+            let merkle_proof: PartialMerkleTree = deserialize(Reader::new(&merkle_proof))
+                .map_err(|_| Error::<T>::InvalidMerkleProof)?;
+            let tx = xgateway_bitcoin_v1::types::BtcRelayedTx {
+                block_hash,
+                raw: raw_tx,
+                merkle_proof,
+            };
+            let header_info = xgateway_bitcoin_v1::Module::<T>::headers(&block_hash)
+                .ok_or_else(|| Error::<T>::NoMatchingBtcHeader)?;
+            let merkle_root = header_info.header.merkle_root_hash;
+            xgateway_bitcoin_v1::tx::validate_transaction::<T>(&tx, merkle_root, None)
         }
     }
+
     impl<T: Config> Pallet<T> {
+        #[inline]
         fn burn_token(vault_id: &T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
             xpallet_assets::Module::<T>::destroy_usable(&T::TokenAssetId::get(), vault_id, amount)
+        }
+
+        #[inline]
+        fn burn_xbtc(user: &T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
+            xpallet_assets::Module::<T>::destroy_reserved_withdrawal(
+                &T::TargetAssetId::get(),
+                user,
+                amount,
+            )
         }
     }
 
@@ -1088,6 +1094,11 @@ pub mod pallet {
         pub fn is_bridge_running() -> bool {
             Self::bridge_status() == Status::Running
         }
+
+        /// Check `id` is vault or system_vault.
+        // pub fn check_is_vault(id: &T::AccountId) -> bool {
+        //     id == &Self::liquidator_id() || Vaults::<T>::contains_key(id)
+        // }
 
         #[inline]
         pub(crate) fn ensure_bridge_running() -> DispatchResult {
@@ -1101,10 +1112,7 @@ pub mod pallet {
         pub fn get_vault_by_id(
             id: &T::AccountId,
         ) -> Result<Vault<T::BlockNumber, BalanceOf<T>>, DispatchError> {
-            match <Vaults<T>>::get(id) {
-                Some(vault) => Ok(vault),
-                None => Err(Error::<T>::VaultNotFound.into()),
-            }
+            Vaults::<T>::get(id).ok_or(Error::<T>::VaultNotFound.into())
         }
 
         pub fn get_active_vault_by_id(
@@ -1118,21 +1126,12 @@ pub mod pallet {
             }
         }
 
-        /// Check `id` is vault or system_vault.
-        pub fn check_is_vault(id: &T::AccountId) -> bool {
-            if id == &Self::liquidator_id() {
-                true
-            } else {
-                Vaults::<T>::contains_key(id)
-            }
-        }
-
         #[inline]
         pub fn change_vault_status(vault_id: &T::AccountId, status: VaultStatus) -> DispatchResult {
             // Change vault type
             <Vaults<T>>::mutate(vault_id, |vault| match vault {
                 Some(ref mut vault) => {
-                    vault.status = VaultStatus::Liquidated;
+                    vault.status = status;
                     Ok(())
                 }
                 None => Err(Error::<T>::VaultNotFound.into()),
