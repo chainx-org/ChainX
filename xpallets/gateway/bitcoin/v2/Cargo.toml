@@ -25,6 +25,7 @@ sp-std = { version = "3.0.0", default-features = false }
 sp-version = { version = "3.0.0", default-features = false }
 frame-support = { version = "3.0.0", default-features = false }
 frame-system = { version = "3.0.0", default-features = false }
+frame-benchmarking = { version = "3.0.0", default-features = false, optional = true }
 
 # ChainX pallet
 xpallet-assets = { path = "../../../assets", default-features = false }
@@ -38,6 +39,8 @@ light-bitcoin = { git = "https://github.com/chainx-org/light-bitcoin", branch = 
 
 [dev-dependencies]
 pallet-balances = "3.0.0"
+frame-benchmarking = "3.0.0"
+pallet-timestamp = "3.0.0"
 
 [features]
 default = ["std"]
@@ -63,3 +66,5 @@ std = [
   "chainx-primitives/std",
   "xp-protocol/std",
 ]
+
+runtime-benchmarks = ["frame-benchmarking"]

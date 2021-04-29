@@ -29,6 +29,8 @@
 
 pub mod types;
 
+#[cfg(any(feature = "runtime-benchmarks", test))]
+mod benchmarking;
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
@@ -1126,7 +1128,7 @@ pub mod pallet {
         }
 
         #[inline]
-        pub fn change_vault_status(vault_id: &T::AccountId, statue: VaultStatus) -> DispatchResult {
+        pub fn change_vault_status(vault_id: &T::AccountId, status: VaultStatus) -> DispatchResult {
             // Change vault type
             <Vaults<T>>::mutate(vault_id, |vault| match vault {
                 Some(ref mut vault) => {
