@@ -5,7 +5,7 @@
 use super::*;
 use xp_logging::debug;
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     fn generic_calculate_by_proportion<S: Into<u128>>(
         total_reward: BalanceOf<T>,
         mine: S,

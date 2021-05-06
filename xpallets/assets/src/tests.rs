@@ -1,12 +1,17 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use frame_support::{assert_noop, assert_ok};
+use std::collections::BTreeMap;
+
+use frame_support::{assert_noop, assert_ok, traits::Currency, StorageDoubleMap, StorageMap};
 use frame_system::{EventRecord, Phase};
 
 use xp_protocol::X_BTC;
 
-pub use crate::mock::*;
-use crate::*;
+use crate::{
+    mock::{Balance, Event, ExtBuilder, Origin, System, Test, XAssets, XAssetsErr},
+    AssetBalance, AssetErr, AssetInfo, AssetRestrictions, AssetType, Chain, Config,
+    TotalAssetBalance,
+};
 
 #[test]
 fn test_genesis() {
@@ -413,7 +418,7 @@ fn test_account_init() {
         let _ = XAssets::issue(&X_BTC, &a, 100);
         assert!(System::events().contains(&EventRecord {
             phase: Phase::Initialization,
-            event: MetaEvent::system(frame_system::RawEvent::NewAccount(a)),
+            event: Event::frame_system(frame_system::Event::<Test>::NewAccount(a)),
             topics: vec![],
         }));
 
@@ -426,7 +431,7 @@ fn test_account_init() {
         ));
         assert!(System::events().contains(&EventRecord {
             phase: Phase::Initialization,
-            event: MetaEvent::system(frame_system::RawEvent::NewAccount(id1)),
+            event: Event::frame_system(frame_system::Event::<Test>::NewAccount(id1)),
             topics: vec![],
         }));
     })
@@ -441,7 +446,7 @@ fn test_transfer_not_init() {
                 .filter(|e| {
                     **e == EventRecord {
                         phase: Phase::Initialization,
-                        event: MetaEvent::system(frame_system::RawEvent::NewAccount(new_id)),
+                        event: Event::frame_system(frame_system::Event::<Test>::NewAccount(new_id)),
                         topics: vec![],
                     }
                 })
@@ -470,19 +475,19 @@ fn test_transfer_not_init() {
         check_only_one_new_account(new_id);
 
         {
-            let _ = <Test as Trait>::Currency::deposit_creating(&a, 1000);
-            let _ = <Test as Trait>::Currency::transfer(Origin::signed(a), new_id, 10);
+            let _ = <Test as Config>::Currency::deposit_creating(&a, 1000);
+            let _ = <Test as Config>::Currency::transfer(Origin::signed(a), new_id, 10);
         }
         check_only_one_new_account(new_id);
 
-        assert_eq!(System::refs(&new_id), 1);
+        assert_eq!(System::consumers(&new_id), 1);
         assert_ok!(XAssets::transfer(
             Origin::signed(new_id),
             a.into(),
             btc_id.into(),
             50,
         ));
-        assert_eq!(System::refs(&new_id), 0);
+        assert_eq!(System::consumers(&new_id), 0);
         assert_ok!(XAssets::transfer(
             Origin::signed(a),
             new_id.into(),

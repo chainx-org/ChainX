@@ -21,10 +21,10 @@ const ALWAYS_ALLOW: [&str; 1] = ["Sudo"];
 
 /// The module's config trait.
 ///
-/// `frame_system::Trait` should always be included in our implied traits.
-pub trait Trait: frame_system::Trait {
+/// `frame_system::Config` should always be included in our implied traits.
+pub trait Config: frame_system::Config {
     /// The overarching event type.
-    type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+    type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 
     /// The currency mechanism.
     type Currency: Currency<Self::AccountId>;
@@ -32,14 +32,14 @@ pub trait Trait: frame_system::Trait {
 
 decl_error! {
     /// Error for the XSystem Module
-    pub enum Error for Module<T: Trait> {}
+    pub enum Error for Module<T: Config> {}
 }
 
 decl_event!(
     /// Event for the XSystem Module
     pub enum Event<T>
     where
-        <T as frame_system::Trait>::AccountId,
+        <T as frame_system::Config>::AccountId,
     {
         /// An account was added to the blacklist. [who]
         Blacklisted(AccountId),
@@ -49,7 +49,7 @@ decl_event!(
 );
 
 decl_storage! {
-    trait Store for Module<T: Trait> as XSystem {
+    trait Store for Module<T: Config> as XSystem {
         /// Network property (Mainnet / Testnet).
         pub NetworkProps get(fn network_props) config(): NetworkType;
 
@@ -62,7 +62,7 @@ decl_storage! {
 }
 
 decl_module! {
-    pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+    pub struct Module<T: Config> for enum Call where origin: T::Origin {
         type Error = Error<T>;
 
         fn deposit_event() = default;
@@ -122,7 +122,7 @@ decl_module! {
     }
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     /// Returns true if the given pallet call has been paused.
     pub fn is_paused(metadata: CallMetadata) -> bool {
         if ALWAYS_ALLOW.contains(&metadata.pallet_name) {

@@ -5,7 +5,7 @@ use std::{
     collections::{BTreeMap, HashSet},
 };
 
-use frame_support::{impl_outer_origin, parameter_types, traits::Get, weights::Weight};
+use frame_support::{parameter_types, traits::Get, weights::Weight};
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
@@ -17,7 +17,7 @@ use chainx_primitives::{AssetId, BlockNumber};
 use xp_protocol::{BTC_DECIMALS, PCX, PCX_DECIMALS, X_BTC, X_DOT};
 use xpallet_assets::{AssetInfo, AssetRestrictions, Chain};
 
-use crate::*;
+use crate::{self as xpallet_dex_spot, *};
 
 /// The AccountId alias in this test module.
 pub(crate) type AccountId = u64;
@@ -26,27 +26,37 @@ pub(crate) type Balance = u128;
 pub(crate) type Amount = i128;
 pub(crate) type Price = u128;
 
-impl_outer_origin! {
-    pub enum Origin for Test {}
-}
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
+type Block = frame_system::mocking::MockBlock<Test>;
 
-// For testing the pallet, we construct most of a mock runtime. This means
-// first constructing a configuration type (`Test`) which `impl`s each of the
-// configuration traits of pallets we want to use.
-#[derive(Clone, Eq, PartialEq)]
-pub struct Test;
+frame_support::construct_runtime!(
+    pub enum Test where
+        Block = Block,
+        NodeBlock = Block,
+        UncheckedExtrinsic = UncheckedExtrinsic,
+    {
+        System: frame_system::{Module, Call, Config, Storage, Event<T>},
+        Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
+        XAssetsRegistrar: xpallet_assets_registrar::{Module, Call, Config, Storage, Event},
+        XAssets: xpallet_assets::{Module, Call, Storage, Event<T>, Config<T>},
+        XSpot: xpallet_dex_spot::{Module, Call, Storage, Event<T>, Config<T>},
+    }
+);
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
     pub const MaximumBlockWeight: Weight = 1024;
     pub const MaximumBlockLength: u32 = 2 * 1024;
     pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
+    pub const SS58Prefix: u8 = 42;
 }
 
-impl frame_system::Trait for Test {
+impl frame_system::Config for Test {
     type BaseCallFilter = ();
+    type BlockWeights = ();
+    type BlockLength = ();
     type Origin = Origin;
-    type Call = ();
+    type Call = Call;
     type Index = AccountIndex;
     type BlockNumber = u64;
     type Hash = H256;
@@ -56,19 +66,14 @@ impl frame_system::Trait for Test {
     type Header = Header;
     type Event = ();
     type BlockHashCount = BlockHashCount;
-    type MaximumBlockWeight = MaximumBlockWeight;
     type DbWeight = ();
-    type BlockExecutionWeight = ();
-    type ExtrinsicBaseWeight = ();
-    type MaximumExtrinsicWeight = MaximumBlockWeight;
-    type MaximumBlockLength = MaximumBlockLength;
-    type AvailableBlockRatio = AvailableBlockRatio;
     type Version = ();
-    type PalletInfo = ();
+    type PalletInfo = PalletInfo;
     type AccountData = pallet_balances::AccountData<Balance>;
     type OnNewAccount = ();
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
+    type SS58Prefix = SS58Prefix;
 }
 
 pub struct ExistentialDeposit;
@@ -78,7 +83,7 @@ impl Get<Balance> for ExistentialDeposit {
     }
 }
 
-impl pallet_balances::Trait for Test {
+impl pallet_balances::Config for Test {
     type MaxLocks = ();
     type Balance = Balance;
     type Event = ();
@@ -88,7 +93,7 @@ impl pallet_balances::Trait for Test {
     type WeightInfo = ();
 }
 
-impl Trait for Test {
+impl Config for Test {
     type Event = ();
     type Price = Price;
     type WeightInfo = ();
@@ -98,19 +103,19 @@ parameter_types! {
     pub const ChainXAssetId: AssetId = 0;
 }
 
-impl xpallet_assets_registrar::Trait for Test {
+impl xpallet_assets_registrar::Config for Test {
     type Event = ();
     type NativeAssetId = ChainXAssetId;
     type RegistrarHandler = XSpot;
     type WeightInfo = ();
 }
 
-impl xpallet_assets::Trait for Test {
+impl xpallet_assets::Config for Test {
     type Event = ();
     type Currency = Balances;
     type Amount = Amount;
     type TreasuryAccount = ();
-    type OnCreatedAccount = frame_system::CallOnCreatedAccount<Test>;
+    type OnCreatedAccount = frame_system::Provider<Test>;
     type OnAssetChanged = ();
     type WeightInfo = ();
 }
@@ -198,7 +203,7 @@ impl ExtBuilder {
             (X_DOT, PCX, 4, 2, 100000, true),
         ];
 
-        let _ = GenesisConfig::<Test> {
+        let _ = xpallet_dex_spot::GenesisConfig::<Test> {
             trading_pairs,
             ..Default::default()
         }
@@ -220,8 +225,3 @@ impl ExtBuilder {
         ext.execute_with(test);
     }
 }
-
-pub type System = frame_system::Module<Test>;
-pub type Balances = pallet_balances::Module<Test>;
-pub type XAssets = xpallet_assets::Module<Test>;
-pub type XSpot = Module<Test>;

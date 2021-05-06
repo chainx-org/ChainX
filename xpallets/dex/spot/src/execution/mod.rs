@@ -9,7 +9,7 @@ use xp_logging::debug;
 use super::*;
 use crate::types::*;
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     fn check_bid_price(
         quote: T::Price,
         lowest_ask: T::Price,

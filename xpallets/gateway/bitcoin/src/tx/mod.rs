@@ -25,10 +25,10 @@ pub use self::validator::validate_transaction;
 use crate::{
     native,
     types::{AccountInfo, BtcAddress, BtcDepositCache, BtcTxResult, BtcTxState},
-    BalanceOf, Error, Event, Module, PendingDeposits, Trait, WithdrawalProposal,
+    BalanceOf, Config, Error, Event, Module, PendingDeposits, WithdrawalProposal,
 };
 
-pub fn process_tx<T: Trait>(
+pub fn process_tx<T: Config>(
     tx: Transaction,
     prev_tx: Option<Transaction>,
     network: Network,
@@ -57,7 +57,7 @@ pub fn process_tx<T: Trait>(
     BtcTxState { tx_type, result }
 }
 
-fn deposit<T: Trait>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) -> BtcTxResult {
+fn deposit<T: Config>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) -> BtcTxResult {
     let account_info = match (deposit_info.op_return, deposit_info.input_addr) {
         (Some((account, referral)), Some(input_addr)) => {
             let input_addr = addr2vecu8(&input_addr);
@@ -126,7 +126,7 @@ fn deposit<T: Trait>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) -> 
     }
 }
 
-fn deposit_token<T: Trait>(txid: H256, who: &T::AccountId, balance: u64) -> DispatchResult {
+fn deposit_token<T: Config>(txid: H256, who: &T::AccountId, balance: u64) -> DispatchResult {
     let id: AssetId = <Module<T> as ChainT<_>>::ASSET_ID;
 
     let value: BalanceOf<T> = balance.saturated_into();
@@ -145,7 +145,7 @@ fn deposit_token<T: Trait>(txid: H256, who: &T::AccountId, balance: u64) -> Disp
     }
 }
 
-pub fn remove_pending_deposit<T: Trait>(input_address: &BtcAddress, who: &T::AccountId) {
+pub fn remove_pending_deposit<T: Config>(input_address: &BtcAddress, who: &T::AccountId) {
     // notice this would delete this cache
     let records = PendingDeposits::take(input_address);
     for record in records {
@@ -165,7 +165,7 @@ pub fn remove_pending_deposit<T: Trait>(input_address: &BtcAddress, who: &T::Acc
     }
 }
 
-fn insert_pending_deposit<T: Trait>(input_address: &Address, txid: H256, balance: u64) {
+fn insert_pending_deposit<T: Config>(input_address: &Address, txid: H256, balance: u64) {
     let addr_bytes = addr2vecu8(input_address);
 
     let cache = BtcDepositCache { txid, balance };
@@ -186,7 +186,7 @@ fn insert_pending_deposit<T: Trait>(input_address: &Address, txid: H256, balance
     });
 }
 
-fn withdraw<T: Trait>(tx: Transaction) -> BtcTxResult {
+fn withdraw<T: Config>(tx: Transaction) -> BtcTxResult {
     if let Some(proposal) = WithdrawalProposal::<T>::take() {
         native::debug!(
             target: xp_logging::RUNTIME_TARGET,
@@ -257,7 +257,7 @@ fn withdraw<T: Trait>(tx: Transaction) -> BtcTxResult {
 }
 
 /// Returns Ok if `tx1` and `tx2` are the same transaction.
-pub fn ensure_identical<T: Trait>(tx1: &Transaction, tx2: &Transaction) -> DispatchResult {
+pub fn ensure_identical<T: Config>(tx1: &Transaction, tx2: &Transaction) -> DispatchResult {
     if tx1.version == tx2.version
         && tx1.outputs == tx2.outputs
         && tx1.lock_time == tx2.lock_time

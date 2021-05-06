@@ -15,7 +15,7 @@ use xpallet_assets_registrar::AssetInfo;
 
 use frame_support::traits::LockIdentifier;
 
-use crate::{Error, Trait};
+use crate::{Config, Error};
 
 const ASSET_TYPES: [AssetType; 5] = [
     AssetType::Usable,
@@ -88,7 +88,7 @@ pub enum AssetErr {
     NotAllow,
 }
 
-impl<T: Trait> From<AssetErr> for Error<T> {
+impl<T: Config> From<AssetErr> for Error<T> {
     fn from(err: AssetErr) -> Self {
         match err {
             AssetErr::NotEnough => Error::<T>::InsufficientBalance,

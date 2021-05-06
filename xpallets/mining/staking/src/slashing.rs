@@ -4,7 +4,7 @@ use sp_std::ops::Mul;
 
 use super::*;
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     /// Returns the force chilled offenders if any after applying the slashings.
     ///
     /// The slashed balances will be moved to the treasury.

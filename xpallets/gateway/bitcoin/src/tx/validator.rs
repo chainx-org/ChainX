@@ -10,9 +10,9 @@ use light_bitcoin::{chain::Transaction, primitives::H256, script::Script};
 
 use xp_logging::{debug, error};
 
-use crate::{trustee::get_hot_trustee_redeem_script, types::BtcRelayedTx, Error, Trait};
+use crate::{trustee::get_hot_trustee_redeem_script, types::BtcRelayedTx, Config, Error};
 
-pub fn validate_transaction<T: Trait>(
+pub fn validate_transaction<T: Config>(
     tx: &BtcRelayedTx,
     merkle_root: H256,
     prev_tx: Option<&Transaction>,
@@ -59,14 +59,14 @@ pub fn validate_transaction<T: Trait>(
 }
 
 /// Check signed transactions
-pub fn parse_and_check_signed_tx<T: Trait>(tx: &Transaction) -> Result<u32, DispatchError> {
+pub fn parse_and_check_signed_tx<T: Config>(tx: &Transaction) -> Result<u32, DispatchError> {
     let redeem_script = get_hot_trustee_redeem_script::<T>()?;
     parse_and_check_signed_tx_impl::<T>(tx, redeem_script)
 }
 
 /// for test convenient
 #[inline]
-pub fn parse_and_check_signed_tx_impl<T: Trait>(
+pub fn parse_and_check_signed_tx_impl<T: Config>(
     tx: &Transaction,
     script: Script,
 ) -> Result<u32, DispatchError> {

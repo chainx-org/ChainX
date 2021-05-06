@@ -9,12 +9,8 @@ use super::*;
 const SEED: u32 = 0;
 
 benchmarks! {
-    _{
-        // User account seed
-        let u in 0 .. 1000 => ();
-    }
-
     claim {
+        let u in 1 .. 1000;
         xpallet_assets_registrar::Module::<T>::register(
             frame_system::RawOrigin::Root.into(),
             X_DOT,
@@ -32,21 +28,21 @@ benchmarks! {
         FixedAssetPowerOf::insert(X_DOT, 100);
 
         let miner = account("miner", u, SEED);
-        xpallet_assets::Module::<T>::issue(&X_DOT, &miner, 1000.into())?;
+        xpallet_assets::Module::<T>::issue(&X_DOT, &miner, 1000u32.into())?;
 
         let reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(&X_DOT);
-        <T as xpallet_assets::Trait>::Currency::make_free_balance_be(&reward_pot, 100.into());
-        <T as xpallet_assets::Trait>::Currency::issue(100.into());
+        <T as xpallet_assets::Config>::Currency::make_free_balance_be(&reward_pot, 100u32.into());
+        <T as xpallet_assets::Config>::Currency::issue(100u32.into());
 
         Module::<T>::set_claim_staking_requirement(RawOrigin::Root.into(), X_DOT, 0)?;
 
         let block_number: T::BlockNumber = frame_system::Module::<T>::block_number();
-        frame_system::Module::<T>::set_block_number(block_number + 100.into());
+        frame_system::Module::<T>::set_block_number(block_number + 100u32.into());
 
     }: _(RawOrigin::Signed(miner.clone()), X_DOT)
     verify {
         // 10% belongs to the referral/treasury, 90% is the miner's reward.
-        assert!(Module::<T>::free_balance(&miner) == 90.into());
+        assert!(Module::<T>::free_balance(&miner) == 90u32.into());
     }
 
     set_claim_staking_requirement {
@@ -57,7 +53,7 @@ benchmarks! {
     }
 
     set_claim_frequency_limit {
-        let c = 1000;
+        let c = 1000u32;
     }: _(RawOrigin::Root, X_BTC, c.into())
     verify {
         assert_eq!(ClaimRestrictionOf::<T>::get(X_BTC).frequency_limit, c.into());

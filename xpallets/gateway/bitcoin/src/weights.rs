@@ -45,7 +45,7 @@ pub trait WeightInfo {
 
 /// Weights for xpallet_gateway_bitcoin using the Substrate node and recommended hardware.
 pub struct SubstrateWeight<T>(PhantomData<T>);
-impl<T: frame_system::Trait> WeightInfo for SubstrateWeight<T> {
+impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
     fn push_header() -> Weight {
         (172_185_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(10 as Weight))

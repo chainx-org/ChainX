@@ -34,17 +34,17 @@ pub use self::types::{Withdrawal, WithdrawalRecord, WithdrawalRecordId, Withdraw
 pub use self::weights::WeightInfo;
 
 pub type WithdrawalRecordOf<T> = WithdrawalRecord<
-    <T as frame_system::Trait>::AccountId,
+    <T as frame_system::Config>::AccountId,
     BalanceOf<T>,
-    <T as frame_system::Trait>::BlockNumber,
+    <T as frame_system::Config>::BlockNumber,
 >;
 
 /// The module's config trait.
 ///
-/// `frame_system::Trait` should always be included in our implied traits.
-pub trait Trait: xpallet_assets::Trait {
+/// `frame_system::Config` should always be included in our implied traits.
+pub trait Config: xpallet_assets::Config {
     /// The overarching event type.
-    type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+    type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 
     /// Weight information for extrinsics in this pallet.
     type WeightInfo: WeightInfo;
@@ -52,7 +52,7 @@ pub trait Trait: xpallet_assets::Trait {
 
 decl_error! {
     /// Error for the XGatewayRecords Module
-    pub enum Error for Module<T: Trait> {
+    pub enum Error for Module<T: Config> {
         /// Id not in withdrawal records
         NotExisted,
         /// WithdrawalRecord state not `Applying`
@@ -72,7 +72,7 @@ decl_event!(
     /// Event for the XGatewayRecords Module
     pub enum Event<T>
     where
-        <T as frame_system::Trait>::AccountId,
+        <T as frame_system::Config>::AccountId,
         Balance = BalanceOf<T>,
         WithdrawalRecord = WithdrawalRecordOf<T>
     {
@@ -92,7 +92,7 @@ decl_event!(
 );
 
 decl_storage! {
-    trait Store for Module<T: Trait> as XGatewayRecords {
+    trait Store for Module<T: Config> as XGatewayRecords {
         /// Withdraw applications collection, use serial numbers to mark them.
         pub PendingWithdrawals get(fn pending_withdrawals):
             map hasher(twox_64_concat) WithdrawalRecordId => Option<WithdrawalRecordOf<T>>;
@@ -107,7 +107,7 @@ decl_storage! {
 }
 
 decl_module! {
-    pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+    pub struct Module<T: Config> for enum Call where origin: T::Origin {
         type Error = Error<T>;
 
         fn deposit_event() = default;
@@ -115,7 +115,7 @@ decl_module! {
         /// Deposit asset token.
         ///
         /// This is a root-only operation.
-        #[weight = <T as Trait>::WeightInfo::root_deposit()]
+        #[weight = <T as Config>::WeightInfo::root_deposit()]
         fn root_deposit(
             origin,
             who: <T::Lookup as StaticLookup>::Source,
@@ -130,7 +130,7 @@ decl_module! {
         /// Withdraw asset token (only lock token)
         ///
         /// This is a root-only operation.
-        #[weight = <T as Trait>::WeightInfo::root_withdraw()]
+        #[weight = <T as Config>::WeightInfo::root_withdraw()]
         fn root_withdraw(
             origin,
             who: <T::Lookup as StaticLookup>::Source,
@@ -147,7 +147,7 @@ decl_module! {
         /// Set the state of withdrawal record with given id and state.
         ///
         /// This is a root-only operation.
-        #[weight = <T as Trait>::WeightInfo::set_withdrawal_state()]
+        #[weight = <T as Config>::WeightInfo::set_withdrawal_state()]
         pub fn set_withdrawal_state(
             origin,
             #[compact] withdrawal_id: WithdrawalRecordId,
@@ -160,7 +160,7 @@ decl_module! {
         /// Set the state of withdrawal records in batches.
         ///
         /// This is a root-only operation.
-        #[weight = <T as Trait>::WeightInfo::set_withdrawal_state_list(item.len() as u32)]
+        #[weight = <T as Config>::WeightInfo::set_withdrawal_state_list(item.len() as u32)]
         pub fn set_withdrawal_state_list(
             origin,
             item: Vec<(WithdrawalRecordId, WithdrawalState)>
@@ -174,7 +174,7 @@ decl_module! {
     }
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     fn ensure_asset_belongs_to_chain(asset_id: AssetId, expected_chain: Chain) -> DispatchResult {
         let asset_chain = xpallet_assets_registrar::Module::<T>::chain_of(&asset_id)?;
         ensure!(asset_chain == expected_chain, Error::<T>::UnexpectedChain);
@@ -203,7 +203,7 @@ impl<T: Trait> Module<T> {
     }
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     /// Deposit asset.
     ///
     /// NOTE: this function has included deposit_init and deposit_finish (not wait for block confirm)
@@ -530,7 +530,7 @@ impl<T: Trait> Module<T> {
     }
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     pub fn withdrawal_list(
     ) -> BTreeMap<WithdrawalRecordId, Withdrawal<T::AccountId, BalanceOf<T>, T::BlockNumber>> {
         PendingWithdrawals::<T>::iter()

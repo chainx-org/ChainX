@@ -13,7 +13,7 @@ use light_bitcoin::{
 use xp_logging::{debug, error, info, warn};
 
 use crate::types::{BtcHeaderInfo, BtcParams};
-use crate::{Error, Module, Trait};
+use crate::{Config, Error, Module};
 
 pub struct HeaderVerifier<'a> {
     pub work: HeaderWork<'a>,
@@ -22,7 +22,7 @@ pub struct HeaderVerifier<'a> {
 }
 
 impl<'a> HeaderVerifier<'a> {
-    pub fn new<T: Trait>(header_info: &'a BtcHeaderInfo) -> Self {
+    pub fn new<T: Config>(header_info: &'a BtcHeaderInfo) -> Self {
         let now = T::UnixTime::now();
         // if convert from u64 to u32 failed (unix timestamp should not be greater than u32::MAX),
         // ignore timestamp check, timestamp check are not important
@@ -35,7 +35,7 @@ impl<'a> HeaderVerifier<'a> {
         }
     }
 
-    pub fn check<T: Trait>(&self) -> DispatchResult {
+    pub fn check<T: Config>(&self) -> DispatchResult {
         let params: BtcParams = Module::<T>::params_info();
         let network_id: Network = Module::<T>::network_id();
         if let Network::Mainnet = network_id {
@@ -65,7 +65,7 @@ impl<'a> HeaderWork<'a> {
         HeaderWork { info }
     }
 
-    fn check<T: Trait>(&self, params: &BtcParams) -> DispatchResult {
+    fn check<T: Config>(&self, params: &BtcParams) -> DispatchResult {
         let previous_header_hash = self.info.header.previous_header_hash;
         let work = work_required::<T>(previous_header_hash, self.info.height, params);
         match work {
@@ -84,7 +84,11 @@ impl<'a> HeaderWork<'a> {
     }
 }
 
-pub fn work_required<T: Trait>(parent_hash: H256, height: u32, params: &BtcParams) -> RequiredWork {
+pub fn work_required<T: Config>(
+    parent_hash: H256,
+    height: u32,
+    params: &BtcParams,
+) -> RequiredWork {
     let max_bits = params.max_bits();
     if height == 0 {
         return RequiredWork::Value(max_bits);
@@ -114,7 +118,7 @@ fn is_retarget_height(height: u32, params: &BtcParams) -> bool {
 }
 
 /// Algorithm used for retargeting work every 2 weeks
-fn work_required_retarget<T: Trait>(
+fn work_required_retarget<T: Config>(
     parent_header: BtcHeader,
     height: u32,
     params: &BtcParams,
@@ -194,7 +198,7 @@ impl<'a> HeaderProofOfWork<'a> {
         Self { header }
     }
 
-    fn check<T: Trait>(&self, params: &BtcParams) -> DispatchResult {
+    fn check<T: Config>(&self, params: &BtcParams) -> DispatchResult {
         if is_valid_proof_of_work(params.max_bits(), self.header.bits, self.header.hash()) {
             Ok(())
         } else {
@@ -227,7 +231,7 @@ impl<'a> HeaderTimestamp<'a> {
     }
 
     #[allow(unused)]
-    fn check<T: Trait>(&self, params: &BtcParams) -> DispatchResult {
+    fn check<T: Config>(&self, params: &BtcParams) -> DispatchResult {
         if let Some(current_time) = self.current_time {
             if self.header.time > current_time + params.block_max_future() {
                 error!(

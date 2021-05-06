@@ -29,32 +29,32 @@ use xpallet_gateway_common::{
 use crate::{
     tx::{addr2vecu8, ensure_identical, validator::parse_and_check_signed_tx},
     types::{BtcWithdrawalProposal, VoteResult},
-    Error, Event, Module, Trait, WithdrawalProposal,
+    Config, Error, Event, Module, WithdrawalProposal,
 };
 
-pub fn current_trustee_session<T: Trait>(
+pub fn current_trustee_session<T: Config>(
 ) -> Result<TrusteeSessionInfo<T::AccountId, BtcTrusteeAddrInfo>, DispatchError> {
     T::TrusteeSessionProvider::current_trustee_session()
 }
 
 #[inline]
-fn current_trustee_addr_pair<T: Trait>(
+fn current_trustee_addr_pair<T: Config>(
 ) -> Result<(BtcTrusteeAddrInfo, BtcTrusteeAddrInfo), DispatchError> {
     T::TrusteeSessionProvider::current_trustee_session()
         .map(|session_info| (session_info.hot_address, session_info.cold_address))
 }
 
-pub fn get_hot_trustee_address<T: Trait>() -> Result<Address, DispatchError> {
+pub fn get_hot_trustee_address<T: Config>() -> Result<Address, DispatchError> {
     current_trustee_addr_pair::<T>()
         .and_then(|(addr_info, _)| Module::<T>::verify_btc_address(&addr_info.addr))
 }
 
-pub fn get_hot_trustee_redeem_script<T: Trait>() -> Result<Script, DispatchError> {
+pub fn get_hot_trustee_redeem_script<T: Config>() -> Result<Script, DispatchError> {
     current_trustee_addr_pair::<T>().map(|(addr_info, _)| addr_info.redeem_script.into())
 }
 
 #[inline]
-pub fn get_current_trustee_address_pair<T: Trait>() -> Result<(Address, Address), DispatchError> {
+pub fn get_current_trustee_address_pair<T: Config>() -> Result<(Address, Address), DispatchError> {
     current_trustee_addr_pair::<T>().map(|(hot_info, cold_info)| {
         (
             Module::<T>::verify_btc_address(&hot_info.addr)
@@ -66,7 +66,7 @@ pub fn get_current_trustee_address_pair<T: Trait>() -> Result<(Address, Address)
 }
 
 #[inline]
-pub fn get_last_trustee_address_pair<T: Trait>() -> Result<(Address, Address), DispatchError> {
+pub fn get_last_trustee_address_pair<T: Config>() -> Result<(Address, Address), DispatchError> {
     T::TrusteeSessionProvider::last_trustee_session().map(|session_info| {
         (
             Module::<T>::verify_btc_address(&session_info.hot_address.addr)
@@ -77,7 +77,7 @@ pub fn get_last_trustee_address_pair<T: Trait>() -> Result<(Address, Address), D
     })
 }
 
-fn check_keys<T: Trait>(keys: &[Public]) -> DispatchResult {
+fn check_keys<T: Config>(keys: &[Public]) -> DispatchResult {
     let has_duplicate = (1..keys.len()).any(|i| keys[i..].contains(&keys[i - 1]));
     if has_duplicate {
         error!("[generate_new_trustees] Keys contains duplicate pubkey");
@@ -104,7 +104,7 @@ const EC_P: [u8; 32] = [
 
 const ZERO_P: [u8; 32] = [0; 32];
 
-impl<T: Trait> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo> for Module<T> {
+impl<T: Config> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo> for Module<T> {
     fn check_trustee_entity(raw_addr: &[u8]) -> Result<BtcTrusteeType, DispatchError> {
         let trustee_type = BtcTrusteeType::try_from(raw_addr.to_vec())
             .map_err(|_| Error::<T>::InvalidPublicKey)?;
@@ -220,7 +220,7 @@ impl<T: Trait> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo>
     }
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     pub fn ensure_trustee(who: &T::AccountId) -> DispatchResult {
         let trustee_session_info = current_trustee_session::<T>()?;
         if trustee_session_info.trustee_list.iter().any(|n| n == who) {
@@ -442,7 +442,7 @@ impl<T: Trait> Module<T> {
 /// sig_num: Number of signatures required
 /// trustee_num: Total number of multiple signatures
 /// NOTE: Signature ratio greater than 2/3
-pub fn get_sig_num<T: Trait>() -> (u32, u32) {
+pub fn get_sig_num<T: Config>() -> (u32, u32) {
     let trustee_list = T::TrusteeSessionProvider::current_trustee_session()
         .map(|session_info| session_info.trustee_list)
         .expect("the trustee_list must exist; qed");
@@ -450,7 +450,7 @@ pub fn get_sig_num<T: Trait>() -> (u32, u32) {
     (two_thirds_unsafe(trustee_num), trustee_num)
 }
 
-pub(crate) fn create_multi_address<T: Trait>(
+pub(crate) fn create_multi_address<T: Config>(
     pubkeys: &[Public],
     sig_num: u32,
 ) -> Option<BtcTrusteeAddrInfo> {
@@ -496,7 +496,7 @@ pub(crate) fn create_multi_address<T: Trait>(
 /// Update the signature status of trustee
 /// state: false -> Veto signature, true -> Consent signature
 /// only allow inseRelayedTx once
-fn insert_trustee_vote_state<T: Trait>(
+fn insert_trustee_vote_state<T: Config>(
     state: bool,
     who: &T::AccountId,
     trustee_list: &mut Vec<(T::AccountId, bool)>,
@@ -520,14 +520,14 @@ fn insert_trustee_vote_state<T: Trait>(
 }
 
 /// Check that the cash withdrawal transaction is correct
-fn check_withdraw_tx<T: Trait>(tx: &Transaction, withdrawal_id_list: &[u32]) -> DispatchResult {
+fn check_withdraw_tx<T: Config>(tx: &Transaction, withdrawal_id_list: &[u32]) -> DispatchResult {
     match Module::<T>::withdrawal_proposal() {
         Some(_) => Err(Error::<T>::NotFinishProposal.into()),
         None => check_withdraw_tx_impl::<T>(tx, withdrawal_id_list),
     }
 }
 
-fn check_withdraw_tx_impl<T: Trait>(
+fn check_withdraw_tx_impl<T: Config>(
     tx: &Transaction,
     withdrawal_id_list: &[u32],
 ) -> DispatchResult {

@@ -56,14 +56,14 @@ pub use self::types::*;
 pub use self::weights::WeightInfo;
 
 pub type BalanceOf<T> =
-    <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
+    <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 /// Counter for the number of eras that have passed.
 pub type EraIndex = u32;
 
-pub trait Trait: frame_system::Trait {
+pub trait Config: frame_system::Config {
     /// The overarching event type.
-    type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+    type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 
     /// The currency mechanism.
     type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
@@ -104,7 +104,7 @@ pub trait Trait: frame_system::Trait {
 }
 
 decl_storage! {
-    trait Store for Module<T: Trait> as XStaking {
+    trait Store for Module<T: Config> as XStaking {
         /// The ideal number of staking participants.
         pub ValidatorCount get(fn validator_count) config(): u32;
 
@@ -253,7 +253,7 @@ decl_event!(
     pub enum Event<T>
     where
         Balance = BalanceOf<T>,
-        <T as frame_system::Trait>::AccountId
+        <T as frame_system::Config>::AccountId
     {
         /// Issue new balance to this account. [account, reward_amount]
         Minted(AccountId, Balance),
@@ -278,7 +278,7 @@ decl_event!(
 
 decl_error! {
     /// Error for the staking module.
-    pub enum Error for Module<T: Trait> {
+    pub enum Error for Module<T: Config> {
         /// The operation of zero balance in Staking makes no sense.
         ZeroBalance,
         /// No rewards when the vote weight is zero.
@@ -322,14 +322,14 @@ decl_error! {
     }
 }
 
-impl<T: Trait> From<ZeroMiningWeightError> for Error<T> {
+impl<T: Config> From<ZeroMiningWeightError> for Error<T> {
     fn from(_: ZeroMiningWeightError) -> Self {
         Self::ZeroVoteWeight
     }
 }
 
 decl_module! {
-    pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+    pub struct Module<T: Config> for enum Call where origin: T::Origin {
         /// The minimum byte length of referral id.
         const MinimumReferralId: u32 = T::MinimumReferralId::get();
 
@@ -571,8 +571,8 @@ decl_module! {
 
 /// Means for interacting with a specialized version of the `session` trait.
 ///
-/// This is needed because `Staking` sets the `ValidatorIdOf` of the `pallet_session::Trait`
-pub trait SessionInterface<AccountId>: frame_system::Trait {
+/// This is needed because `Staking` sets the `ValidatorIdOf` of the `pallet_session::Config`
+pub trait SessionInterface<AccountId>: frame_system::Config {
     /// Disable a given validator by stash ID.
     ///
     /// Returns `true` if new era should be forced at the end of this session.
@@ -584,26 +584,26 @@ pub trait SessionInterface<AccountId>: frame_system::Trait {
     fn validators() -> Vec<AccountId>;
 }
 
-impl<T: Trait> SessionInterface<<T as frame_system::Trait>::AccountId> for T
+impl<T: Config> SessionInterface<<T as frame_system::Config>::AccountId> for T
 where
-    T: pallet_session::Trait<ValidatorId = <T as frame_system::Trait>::AccountId>,
-    T::SessionHandler: pallet_session::SessionHandler<<T as frame_system::Trait>::AccountId>,
-    T::SessionManager: pallet_session::SessionManager<<T as frame_system::Trait>::AccountId>,
+    T: pallet_session::Config<ValidatorId = <T as frame_system::Config>::AccountId>,
+    T::SessionHandler: pallet_session::SessionHandler<<T as frame_system::Config>::AccountId>,
+    T::SessionManager: pallet_session::SessionManager<<T as frame_system::Config>::AccountId>,
     T::ValidatorIdOf: Convert<
-        <T as frame_system::Trait>::AccountId,
-        Option<<T as frame_system::Trait>::AccountId>,
+        <T as frame_system::Config>::AccountId,
+        Option<<T as frame_system::Config>::AccountId>,
     >,
 {
-    fn disable_validator(validator: &<T as frame_system::Trait>::AccountId) -> Result<bool, ()> {
+    fn disable_validator(validator: &<T as frame_system::Config>::AccountId) -> Result<bool, ()> {
         <pallet_session::Module<T>>::disable(validator)
     }
 
-    fn validators() -> Vec<<T as frame_system::Trait>::AccountId> {
+    fn validators() -> Vec<<T as frame_system::Config>::AccountId> {
         <pallet_session::Module<T>>::validators()
     }
 }
 
-impl<T: Trait> xpallet_support::traits::Validator<T::AccountId> for Module<T> {
+impl<T: Config> xpallet_support::traits::Validator<T::AccountId> for Module<T> {
     fn is_validator(who: &T::AccountId) -> bool {
         Self::is_validator(who)
     }
@@ -613,7 +613,7 @@ impl<T: Trait> xpallet_support::traits::Validator<T::AccountId> for Module<T> {
     }
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     /// Initializes the validators exported from ChainX 1.0.
     #[cfg(feature = "std")]
     pub fn initialize_legacy_validators(

@@ -95,12 +95,14 @@ pub fn run() -> sc_cli::Result<()> {
             let chain_spec = &runner.config().chain_spec;
             set_default_ss58_version(chain_spec);
 
-            runner.run_node_until_exit(|config| async move {
-                match config.role {
-                    Role::Light => service::build_light(config),
-                    _ => service::build_full(config),
-                }
-            })
+            runner
+                .run_node_until_exit(|config| async move {
+                    match config.role {
+                        Role::Light => service::build_light(config),
+                        _ => service::build_full(config),
+                    }
+                })
+                .map_err(sc_cli::Error::Service)
         }
         Some(Subcommand::Benchmark(cmd)) => {
             if cfg!(feature = "runtime-benchmarks") {
@@ -120,7 +122,7 @@ pub fn run() -> sc_cli::Result<()> {
                 Ok(())
             }
         }
-        Some(Subcommand::Key(cmd)) => cmd.run(),
+        Some(Subcommand::Key(cmd)) => cmd.run(&cli),
         Some(Subcommand::Sign(cmd)) => cmd.run(),
         Some(Subcommand::Verify(cmd)) => cmd.run(),
         Some(Subcommand::Vanity(cmd)) => cmd.run(),

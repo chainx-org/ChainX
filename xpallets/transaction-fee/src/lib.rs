@@ -19,7 +19,8 @@ use frame_support::{
     decl_event, decl_module,
     traits::Get,
     weights::{
-        DispatchInfo, GetDispatchInfo, Pays, PostDispatchInfo, Weight, WeightToFeePolynomial,
+        DispatchClass, DispatchInfo, GetDispatchInfo, Pays, PostDispatchInfo, Weight,
+        WeightToFeePolynomial,
     },
 };
 use sp_runtime::{
@@ -29,12 +30,12 @@ use sp_runtime::{
 
 pub use self::types::{FeeDetails, InclusionFee};
 
-type BalanceOf<T> = <<T as pallet_transaction_payment::Trait>::OnChargeTransaction as pallet_transaction_payment::OnChargeTransaction<T>>::Balance;
+type BalanceOf<T> = <<T as pallet_transaction_payment::Config>::OnChargeTransaction as pallet_transaction_payment::OnChargeTransaction<T>>::Balance;
 
-pub trait Trait: pallet_transaction_payment::Trait {}
+pub trait Config: pallet_transaction_payment::Config {}
 
 decl_module! {
-    pub struct Module<T: Trait> for enum Call where origin: T::Origin {}
+    pub struct Module<T: Config> for enum Call where origin: T::Origin {}
 }
 
 decl_event!(
@@ -42,7 +43,7 @@ decl_event!(
     pub enum Event<T>
     where
         Balance = BalanceOf<T>,
-        <T as frame_system::Trait>::AccountId,
+        <T as frame_system::Config>::AccountId,
     {
         /// Transaction fee was paid to the block author and its reward pot in 1:9.
         /// [author, author_fee, reward_pot, reward_pot_fee]
@@ -50,7 +51,7 @@ decl_event!(
     }
 );
 
-impl<T: Trait> Module<T>
+impl<T: Config> Module<T>
 where
     BalanceOf<T>: FixedPointOperand,
 {
@@ -81,7 +82,7 @@ where
     where
         T::Call: Dispatchable<Info = DispatchInfo>,
     {
-        Self::compute_fee_raw(len, info.weight, tip, info.pays_fee)
+        Self::compute_fee_raw(len, info.weight, tip, info.pays_fee, info.class)
     }
 
     /// Returns the details of the actual post dispatch fee for a particular transaction.
@@ -102,6 +103,7 @@ where
             post_info.calc_actual_weight(info),
             tip,
             post_info.pays_fee(info),
+            info.class,
         )
     }
 
@@ -110,6 +112,7 @@ where
         weight: Weight,
         tip: BalanceOf<T>,
         pays_fee: Pays,
+        class: DispatchClass,
     ) -> FeeDetails<BalanceOf<T>> {
         if pays_fee == Pays::Yes {
             let len = <BalanceOf<T>>::from(len);
@@ -124,7 +127,7 @@ where
             // final adjusted weight fee.
             let adjusted_weight_fee = multiplier.saturating_mul_int(unadjusted_weight_fee);
 
-            let base_fee = Self::weight_to_fee(T::ExtrinsicBaseWeight::get());
+            let base_fee = Self::weight_to_fee(T::BlockWeights::get().get(class).base_extrinsic);
             let total = base_fee
                 .saturating_add(fixed_len_fee)
                 .saturating_add(adjusted_weight_fee)
@@ -153,7 +156,7 @@ where
     fn weight_to_fee(weight: Weight) -> BalanceOf<T> {
         // cap the weight to the maximum defined in runtime, otherwise it will be the
         // `Bounded` maximum of its data type, which is not desired.
-        let capped_weight = weight.min(<T as frame_system::Trait>::MaximumBlockWeight::get());
+        let capped_weight = weight.min(T::BlockWeights::get().max_block);
         T::WeightToFee::calc(&capped_weight)
     }
 }

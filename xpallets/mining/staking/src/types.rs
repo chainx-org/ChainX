@@ -16,7 +16,7 @@ use xp_logging::debug;
 use xp_mining_common::{RewardPotAccountFor, WeightType};
 use xp_mining_staking::MiningPower;
 
-use crate::{AssetMining, BalanceOf, EraIndex, Event, Module, Trait};
+use crate::{AssetMining, BalanceOf, Config, EraIndex, Event, Module};
 
 pub type VoteWeight = WeightType;
 
@@ -152,7 +152,7 @@ pub struct GlobalDistribution {
 
 impl GlobalDistribution {
     /// Calculates the rewards for treasury and mining accordingly.
-    pub fn calc_rewards<T: Trait>(&self, reward: BalanceOf<T>) -> (BalanceOf<T>, BalanceOf<T>) {
+    pub fn calc_rewards<T: Config>(&self, reward: BalanceOf<T>) -> (BalanceOf<T>, BalanceOf<T>) {
         assert!(self.treasury + self.mining > 0);
         let treasury_reward = reward * self.treasury.saturated_into()
             / (self.treasury + self.mining).saturated_into();
@@ -169,7 +169,7 @@ pub struct MiningDistribution {
 
 impl MiningDistribution {
     /// Returns the reward for Staking given the total reward according to the Staking proportion.
-    pub fn calc_staking_reward<T: Trait>(&self, reward: BalanceOf<T>) -> BalanceOf<T> {
+    pub fn calc_staking_reward<T: Config>(&self, reward: BalanceOf<T>) -> BalanceOf<T> {
         reward.saturating_mul(self.staking.saturated_into())
             / (self.asset + self.staking).saturated_into()
     }
@@ -178,7 +178,7 @@ impl MiningDistribution {
     ///
     /// If m1 >= m2, the asset mining cap has reached, all the reward calculated by the shares go to
     /// the mining assets, but its unit mining power starts to decrease compared to the inital FixedPower.
-    fn asset_mining_vs_staking<T: Trait>(&self) -> (u128, u128) {
+    fn asset_mining_vs_staking<T: Config>(&self) -> (u128, u128) {
         let total_staking_power =
             crate::Module::<T>::total_staked().saturated_into::<MiningPower>();
         let total_asset_mining_power = T::AssetMining::total_asset_mining_power();
@@ -199,7 +199,7 @@ impl MiningDistribution {
         (m1, m2)
     }
 
-    pub fn has_treasury_extra<T: Trait>(
+    pub fn has_treasury_extra<T: Config>(
         &self,
         asset_mining_reward_cap: BalanceOf<T>,
     ) -> Option<BalanceOf<T>> {
@@ -239,9 +239,9 @@ pub enum SlashOutcome<Balance> {
 /// Abstracted for caching the treasury account.
 #[derive(Copy, Clone, PartialEq, Eq, Default, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct Slasher<T: Trait>(T::AccountId);
+pub struct Slasher<T: Config>(T::AccountId);
 
-impl<T: Trait> Slasher<T> {
+impl<T: Config> Slasher<T> {
     pub fn new(treasury_account: T::AccountId) -> Self {
         Self(treasury_account)
     }

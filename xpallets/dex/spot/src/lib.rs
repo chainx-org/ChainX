@@ -58,23 +58,23 @@ const MAX_BACKLOG_ORDER: usize = 1000;
 /// more time than the Block time to finish.
 const DEFAULT_FLUCTUATION: u32 = 100;
 
-pub type BalanceOf<T> = <<T as xpallet_assets::Trait>::Currency as Currency<
-    <T as frame_system::Trait>::AccountId,
+pub type BalanceOf<T> = <<T as xpallet_assets::Config>::Currency as Currency<
+    <T as frame_system::Config>::AccountId,
 >>::Balance;
 
 pub type OrderInfo<T> = Order<
     TradingPairId,
-    <T as frame_system::Trait>::AccountId,
+    <T as frame_system::Config>::AccountId,
     BalanceOf<T>,
-    <T as Trait>::Price,
-    <T as frame_system::Trait>::BlockNumber,
+    <T as Config>::Price,
+    <T as frame_system::Config>::BlockNumber,
 >;
 
-pub type HandicapInfo<T> = Handicap<<T as Trait>::Price>;
+pub type HandicapInfo<T> = Handicap<<T as Config>::Price>;
 
-pub trait Trait: xpallet_assets::Trait {
+pub trait Config: xpallet_assets::Config {
     /// The overarching event type.
-    type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+    type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 
     /// The price of an order.
     type Price: Parameter
@@ -90,7 +90,7 @@ pub trait Trait: xpallet_assets::Trait {
 }
 
 decl_storage! {
-    trait Store for Module<T: Trait> as XSpot {
+    trait Store for Module<T: Config> as XSpot {
         /// How many trading pairs so far.
         pub TradingPairCount get(fn trading_pair_count): TradingPairId;
 
@@ -153,9 +153,9 @@ decl_event!(
     pub enum Event<T>
     where
         Balance = BalanceOf<T>,
-        <T as frame_system::Trait>::AccountId,
-        <T as frame_system::Trait>::BlockNumber,
-        <T as Trait>::Price,
+        <T as frame_system::Config>::AccountId,
+        <T as frame_system::Config>::BlockNumber,
+        <T as Config>::Price,
     {
         /// A new order was created. [order_info]
         NewOrder(Order<TradingPairId, AccountId, Balance, Price, BlockNumber>),
@@ -178,7 +178,7 @@ decl_event!(
 
 decl_error! {
     /// Error for the spot module.
-    pub enum Error for Module<T: Trait> {
+    pub enum Error for Module<T: Config> {
         /// Price can not be zero, and must be an integer multiple of the tick decimals.
         InvalidPrice,
         /// The bid price can not higher than the PriceVolatility of current lowest ask.
@@ -218,20 +218,20 @@ decl_error! {
     }
 }
 
-impl<T: Trait> From<AssetErr> for Error<T> {
+impl<T: Config> From<AssetErr> for Error<T> {
     fn from(_: AssetErr) -> Self {
         Self::AssetError
     }
 }
 
 decl_module! {
-    pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+    pub struct Module<T: Config> for enum Call where origin: T::Origin {
 
         type Error = Error<T>;
 
         fn deposit_event() = default;
 
-        #[weight = <T as Trait>::WeightInfo::put_order()]
+        #[weight = <T as Config>::WeightInfo::put_order()]
         pub fn put_order(
             origin,
             #[compact] pair_id: TradingPairId,
@@ -263,7 +263,7 @@ decl_module! {
             Self::apply_put_order(who, pair_id, order_type, side, amount, price, reserve_amount)?;
         }
 
-        #[weight = <T as Trait>::WeightInfo::cancel_order()]
+        #[weight = <T as Config>::WeightInfo::cancel_order()]
         pub fn cancel_order(
             origin,
             #[compact] pair_id: TradingPairId,
@@ -274,7 +274,7 @@ decl_module! {
         }
 
         /// Force cancel an order.
-        #[weight = <T as Trait>::WeightInfo::force_cancel_order()]
+        #[weight = <T as Config>::WeightInfo::force_cancel_order()]
         fn force_cancel_order(
             origin,
             who: <T::Lookup as StaticLookup>::Source,
@@ -286,14 +286,14 @@ decl_module! {
             Self::do_cancel_order(&who, pair_id, order_id)?;
         }
 
-        #[weight = <T as Trait>::WeightInfo::set_handicap()]
+        #[weight = <T as Config>::WeightInfo::set_handicap()]
         fn set_handicap(origin, #[compact] pair_id: TradingPairId, new: Handicap< T::Price>) {
             ensure_root(origin)?;
             info!("[set_handicap] pair_id:{:?}, new handicap:{:?}", pair_id, new);
             HandicapOf::<T>::insert(pair_id, new);
         }
 
-        #[weight = <T as Trait>::WeightInfo::set_price_fluctuation()]
+        #[weight = <T as Config>::WeightInfo::set_price_fluctuation()]
         fn set_price_fluctuation(
             origin,
             #[compact] pair_id: TradingPairId,
@@ -305,7 +305,7 @@ decl_module! {
         }
 
         /// Add a new trading pair.
-        #[weight = <T as Trait>::WeightInfo::add_trading_pair()]
+        #[weight = <T as Config>::WeightInfo::add_trading_pair()]
         pub fn add_trading_pair(
             origin,
             currency_pair: CurrencyPair,
@@ -329,7 +329,7 @@ decl_module! {
         }
 
         /// Update the trading pair profile.
-        #[weight = <T as Trait>::WeightInfo::update_trading_pair()]
+        #[weight = <T as Config>::WeightInfo::update_trading_pair()]
         pub fn update_trading_pair(
             origin,
             #[compact] pair_id: TradingPairId,
@@ -344,7 +344,7 @@ decl_module! {
     }
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     /// Public mutables
     pub fn get_trading_pair_by_currency_pair(
         currency_pair: &CurrencyPair,
@@ -495,7 +495,7 @@ impl<T: Trait> Module<T> {
     }
 }
 
-impl<T: Trait> xpallet_assets_registrar::RegistrarHandler for Module<T> {
+impl<T: Config> xpallet_assets_registrar::RegistrarHandler for Module<T> {
     fn on_deregister(token: &AssetId) -> DispatchResult {
         let pair_len = TradingPairCount::get();
         for i in 0..pair_len {

@@ -31,10 +31,10 @@ use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult},
     ensure,
-    traits::{Currency, Get, Happened, IsDeadAccount, LockableCurrency, ReservableCurrency},
+    traits::{Currency, Get, HandleLifetime, LockableCurrency, ReservableCurrency},
     Parameter, StorageDoubleMap,
 };
-use frame_system::{ensure_root, ensure_signed};
+use frame_system::{ensure_root, ensure_signed, AccountInfo};
 use orml_traits::arithmetic::{Signed, SimpleArithmetic};
 use sp_runtime::traits::{
     CheckedAdd, CheckedSub, MaybeSerializeDeserialize, Member, Saturating, StaticLookup, Zero,
@@ -53,14 +53,14 @@ pub use self::types::{
 pub use self::weights::WeightInfo;
 
 pub type BalanceOf<T> =
-    <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
+    <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 /// The module's config trait.
 ///
-/// `frame_system::Trait` should always be included in our implied traits.
-pub trait Trait: xpallet_assets_registrar::Trait {
+/// `frame_system::Config` should always be included in our implied traits.
+pub trait Config: xpallet_assets_registrar::Config {
     /// The overarching event type.
-    type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+    type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 
     type Currency: ReservableCurrency<Self::AccountId>
         + LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
@@ -78,7 +78,7 @@ pub trait Trait: xpallet_assets_registrar::Trait {
 
     type TreasuryAccount: TreasuryAccount<Self::AccountId>;
 
-    type OnCreatedAccount: Happened<Self::AccountId>;
+    type OnCreatedAccount: HandleLifetime<Self::AccountId>;
 
     type OnAssetChanged: OnAssetChanged<Self::AccountId, BalanceOf<Self>>;
 
@@ -88,7 +88,7 @@ pub trait Trait: xpallet_assets_registrar::Trait {
 
 decl_error! {
     /// Error for the Assets Module
-    pub enum Error for Module<T: Trait> {
+    pub enum Error for Module<T: Config> {
         ///
         InvalidAsset,
         /// Got an overflow after adding
@@ -107,13 +107,15 @@ decl_error! {
         DenyNativeAsset,
         /// Action is not allowed.
         ActionNotAllowed,
+        /// Account still has active reserved
+        StillHasActiveReserved
     }
 }
 
 decl_event!(
     pub enum Event<T>
     where
-        <T as frame_system::Trait>::AccountId,
+        <T as frame_system::Config>::AccountId,
         Balance = BalanceOf<T>,
     {
         /// Some balances of an asset was moved from one to another. [asset_id, from, from_type, to, to_type, amount]
@@ -128,7 +130,7 @@ decl_event!(
 );
 
 decl_storage! {
-    trait Store for Module<T: Trait> as XAssets {
+    trait Store for Module<T: Config> as XAssets {
         /// asset extend limit properties, set asset "can do", example, `CanTransfer`, `CanDestroyWithdrawal`
         /// notice if not set AssetRestriction, default is true for this limit
         /// if want let limit make sense, must set false for the limit
@@ -173,7 +175,7 @@ decl_storage! {
 }
 
 decl_module! {
-    pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+    pub struct Module<T: Config> for enum Call where origin: T::Origin {
         type Error = Error<T>;
 
         fn deposit_event() = default;
@@ -231,7 +233,7 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = <T as Trait>::WeightInfo::set_asset_limit()]
+        #[weight = <T as Config>::WeightInfo::set_asset_limit()]
         pub fn set_asset_limit(origin, #[compact] id: AssetId, restrictions: AssetRestrictions) -> DispatchResult {
             ensure_root(origin)?;
             Self::set_asset_restrictions(id, restrictions)
@@ -240,7 +242,7 @@ decl_module! {
 }
 
 // others
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     fn set_asset_restrictions(
         asset_id: AssetId,
         restrictions: AssetRestrictions,
@@ -251,7 +253,7 @@ impl<T: Trait> Module<T> {
     }
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     pub fn ensure_not_native_asset(asset_id: &AssetId) -> DispatchResult {
         ensure!(
             *asset_id != T::NativeAssetId::get(),
@@ -262,7 +264,8 @@ impl<T: Trait> Module<T> {
 }
 
 // asset related
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
+    /// Returns a map of all registered assets by far.
     pub fn total_asset_infos() -> BTreeMap<AssetId, TotalAssetInfo<BalanceOf<T>>> {
         xpallet_assets_registrar::Module::<T>::asset_infos()
             .filter_map(|(id, info)| {
@@ -285,6 +288,7 @@ impl<T: Trait> Module<T> {
             .collect()
     }
 
+    /// Retutrns the invalid asset info of `who`.
     pub fn valid_assets_of(
         who: &T::AccountId,
     ) -> BTreeMap<AssetId, BTreeMap<AssetType, BalanceOf<T>>> {
@@ -294,8 +298,9 @@ impl<T: Trait> Module<T> {
             .collect()
     }
 
-    pub fn can_do(id: &AssetId, limit: AssetRestrictions) -> bool {
-        !Self::asset_restrictions_of(id).contains(limit)
+    /// Retutrns whether `restriction` is applied for given asset `id`.
+    pub fn can_do(id: &AssetId, restriction: AssetRestrictions) -> bool {
+        !Self::asset_restrictions_of(id).contains(restriction)
     }
 
     // can do wrapper
@@ -337,7 +342,7 @@ impl<T: Trait> Module<T> {
 }
 
 // public read interface
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     pub fn total_issuance(id: &AssetId) -> BalanceOf<T> {
         let map = Self::total_asset_balance(id);
         map.values().fold(Zero::zero(), |acc, &x| acc + x)
@@ -360,16 +365,25 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn usable_balance(who: &T::AccountId, id: &AssetId) -> BalanceOf<T> {
-        Self::asset_typed_balance(&who, &id, AssetType::Usable)
+        Self::asset_typed_balance(who, id, AssetType::Usable)
     }
 
     pub fn locked_balance(who: &T::AccountId, id: &AssetId) -> BalanceOf<T> {
-        Self::asset_typed_balance(&who, &id, AssetType::Locked)
+        Self::asset_typed_balance(who, id, AssetType::Locked)
+    }
+
+    pub fn total_reserved_balance(who: &T::AccountId, id: &AssetId) -> BalanceOf<T> {
+        use AssetType::{Reserved, ReservedDexSpot, ReservedWithdrawal};
+
+        let total_balances = Self::asset_balance(who, id);
+        let balance_for = |ty: AssetType| total_balances.get(&ty).copied().unwrap_or_default();
+
+        balance_for(Reserved) + balance_for(ReservedWithdrawal) + balance_for(ReservedDexSpot)
     }
 }
 
 // public write interface
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     /// Sets the free balance of `who` without sanity checks and triggering the asset changed hook.
     #[cfg(feature = "std")]
     pub fn force_set_free_balance(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) {
@@ -489,7 +503,7 @@ impl<T: Trait> Module<T> {
 }
 
 /// token issue destroy reserve/unreserve, it's core function
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     /// Returns the balance of `who` given `asset_id` and `ty`.
     fn asset_typed_balance(who: &T::AccountId, asset_id: &AssetId, ty: AssetType) -> BalanceOf<T> {
         Self::asset_balance(who, asset_id)
@@ -500,12 +514,22 @@ impl<T: Trait> Module<T> {
 
     fn new_account(who: &T::AccountId) {
         info!("[new_account] account:{:?}", who);
-        T::OnCreatedAccount::happened(&who)
+        // FIXME: handle the result properly.
+        let _ = T::OnCreatedAccount::created(who);
+    }
+
+    fn is_dead_account(who: &T::AccountId) -> bool {
+        let AccountInfo {
+            providers,
+            consumers,
+            ..
+        } = frame_system::pallet::Account::<T>::get(who);
+        providers.is_zero() && consumers.is_zero()
     }
 
     fn try_new_account(who: &T::AccountId) {
         // lookup chainx balance
-        if frame_system::Module::<T>::is_dead_account(who) {
+        if Self::is_dead_account(who) {
             Self::new_account(who);
         }
     }
@@ -541,9 +565,10 @@ impl<T: Trait> Module<T> {
         );
         if !existed && exists {
             Self::try_new_account(who);
-            frame_system::Module::<T>::inc_ref(who);
+            // FIXME: handle the result properly
+            let _ = frame_system::Module::<T>::inc_consumers(who);
         } else if existed && !exists {
-            frame_system::Module::<T>::dec_ref(who);
+            frame_system::Module::<T>::dec_consumers(who);
             AssetBalance::<T>::remove(who, id);
         }
 

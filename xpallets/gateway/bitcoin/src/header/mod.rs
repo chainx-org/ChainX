@@ -11,7 +11,7 @@ use light_bitcoin::primitives::{hash_rev, H256};
 use xp_logging::{error, info};
 
 use crate::types::{BtcHeaderIndex, BtcHeaderInfo};
-use crate::{ConfirmedIndex, Error, MainChain, Module, Trait};
+use crate::{Config, ConfirmedIndex, Error, MainChain, Module};
 
 pub use self::header_proof::HeaderVerifier;
 
@@ -25,7 +25,7 @@ pub use self::header_proof::HeaderVerifier;
 ///           4              3     2    1       (confirmations)
 ///           97             98    99   100     (height)
 ///
-fn look_back_confirmed_header<T: Trait>(
+fn look_back_confirmed_header<T: Config>(
     header_info: &BtcHeaderInfo,
 ) -> (Option<BtcHeaderIndex>, Vec<BtcHeaderIndex>) {
     let confirmations = Module::<T>::confirmation_number();
@@ -65,7 +65,7 @@ fn look_back_confirmed_header<T: Trait>(
     }
 }
 
-pub fn update_confirmed_header<T: Trait>(header_info: &BtcHeaderInfo) -> Option<BtcHeaderIndex> {
+pub fn update_confirmed_header<T: Config>(header_info: &BtcHeaderInfo) -> Option<BtcHeaderIndex> {
     let (confirmed, chain) = look_back_confirmed_header::<T>(header_info);
     for index in chain {
         set_main_chain::<T>(index.height, index.hash);
@@ -76,7 +76,7 @@ pub fn update_confirmed_header<T: Trait>(header_info: &BtcHeaderInfo) -> Option<
     })
 }
 
-fn set_main_chain<T: Trait>(height: u32, main_hash: H256) {
+fn set_main_chain<T: Config>(height: u32, main_hash: H256) {
     let hashes = Module::<T>::block_hash_for(&height);
     if hashes.len() == 1 {
         MainChain::insert(&hashes[0], true);
@@ -91,7 +91,7 @@ fn set_main_chain<T: Trait>(height: u32, main_hash: H256) {
     }
 }
 
-pub fn check_confirmed_header<T: Trait>(header_info: &BtcHeaderInfo) -> DispatchResult {
+pub fn check_confirmed_header<T: Config>(header_info: &BtcHeaderInfo) -> DispatchResult {
     let (confirmed, _) = look_back_confirmed_header::<T>(header_info);
     if let Some(current_confirmed) = ConfirmedIndex::get() {
         if let Some(now_confirmed) = confirmed {

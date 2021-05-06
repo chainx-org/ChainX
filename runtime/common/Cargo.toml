@@ -1,6 +1,6 @@
 [package]
-name = "xpallet-transaction-fee"
-version = "2.0.9"
+name = "chainx-runtime-common"
+version = "2.0.7-1"
 authors = ["The ChainX Authors"]
 edition = "2018"
 
@@ -9,27 +9,33 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
-serde = { version = "1.0.101", optional = true }
+hex-literal = { version = "0.3.1", optional = true }
+serde = { version = "1.0.101", optional = true, features = ["derive"] }
+smallvec = "1.4.1"
+static_assertions = "1.1.0"
 
 # Substrate primitives
 sp-runtime = { version = "3.0.0", default-features = false }
-sp-std = { version = "3.0.0", default-features = false }
 
 # Substrate pallets
 frame-support = { version = "3.0.0", default-features = false }
 frame-system = { version = "3.0.0", default-features = false }
+pallet-balances = { version = "3.0.0", default-features = false }
 pallet-transaction-payment = { version = "3.0.0", default-features = false }
+
+# ChainX primitives
+chainx-primitives = { path = "../../primitives", default-features = false }
 
 [features]
 default = ["std"]
 std = [
-    "codec/std",
-    "serde",
     # Substrate primitives
     "sp-runtime/std",
-    "sp-std/std",
     # Substrate pallets
     "frame-support/std",
     "frame-system/std",
+    "pallet-balances/std",
     "pallet-transaction-payment/std",
+    # ChainX primitives
+    "chainx-primitives/std",
 ]

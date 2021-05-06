@@ -5,8 +5,8 @@ authors = ["The ChainX Authors"]
 edition = "2018"
 
 [dependencies]
-frame-benchmarking = "2.0.0"
-sc-executor = "0.8.0"
+frame-benchmarking = "3.0.0"
+sc-executor = "0.9.0"
 
 # ChainX runtime
 chainx-runtime = { path = "../runtime/chainx" }

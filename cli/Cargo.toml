@@ -12,41 +12,43 @@ log4rs = { version = "0.12", features = ["rolling_file_appender", "compound_poli
 hex = "0.4"
 hex-literal = "0.3.1"
 jsonrpc-pubsub = "15.0.0"
-parking_lot = "0.11.0"
+parking_lot = "0.11.1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 structopt = "0.3.8"
 
 # Substrate client
-sc-authority-discovery = "0.8.0"
-sc-basic-authorship = "0.8.0"
-sc-chain-spec = "2.0.0"
-sc-client-api = "2.0.0"
-sc-consensus = "0.8.0"
-sc-consensus-babe = "0.8.0"
-sc-consensus-slots = "0.8.0"
-sc-executor = "0.8.0"
-sc-finality-grandpa = "0.8.0"
-sc-network = "0.8.0"
-sc-rpc = "2.0.0"
-sc-transaction-pool = "2.0.0"
+sc-authority-discovery = "0.9.0"
+sc-basic-authorship = "0.9.0"
+sc-chain-spec = "3.0.0"
+sc-client-api = "3.0.0"
+sc-consensus = "0.9.0"
+sc-consensus-babe = "0.9.0"
+sc-consensus-slots = "0.9.0"
+sc-executor = "0.9.0"
+sc-finality-grandpa = "0.9.0"
+sc-finality-grandpa-warp-sync = { version = "0.9.0", optional = true }
+sc-network = "0.9.0"
+sc-rpc = "3.0.0"
+sc-transaction-pool = "3.0.0"
+sc-telemetry = "3.0.0"
 
-frame-benchmarking-cli = { version = "2.0.0", optional = true }
-sc-cli = { version = "0.8.0", optional = true }
-sc-service = { version = "0.8.0", optional = true }
+frame-benchmarking-cli = { version = "3.0.0", optional = true }
+sc-cli = { version = "0.9.0", optional = true }
+sc-service = { version = "0.9.0", optional = true }
 
 # Substrate primitives
-sp-authority-discovery = "2.0.0"
-sp-core = "2.0.0"
-sp-consensus = "0.8.0"
-sp-consensus-babe = "0.8.0"
-sp-finality-grandpa = "2.0.0"
-sp-inherents = "2.0.0"
-sp-runtime = "2.0.0"
-sp-transaction-pool = "2.0.0"
+sp-authority-discovery = "3.0.0"
+sp-core = "3.0.0"
+sp-consensus = "0.9.0"
+sp-consensus-babe = "0.9.0"
+sp-finality-grandpa = "3.0.0"
+sp-inherents = "3.0.0"
+sp-runtime = "3.0.0"
+sp-transaction-pool = "3.0.0"
 
 # Substrate pallets
-pallet-im-online = "2.0.0"
+pallet-im-online = "3.0.0"
 
 chainx-executor = { path = "../executor" }
 chainx-primitives = { path = "../primitives" }
@@ -64,13 +66,14 @@ xpallet-gateway-bitcoin = { path  = "../xpallets/gateway/bitcoin" }
 xpallet-gateway-common = { path  = "../xpallets/gateway/common" }
 
 [build-dependencies]
-substrate-build-script-utils = "2.0.0"
+substrate-build-script-utils = "3.0.0"
 
 [features]
 default = ["cli"]
 cli = [
     "sc-cli",
     "sc-service",
+    "sc-finality-grandpa-warp-sync",
     "frame-benchmarking-cli",
     "chainx-executor/wasmi-errno",
 ]

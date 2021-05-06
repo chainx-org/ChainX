@@ -16,17 +16,17 @@ use xpallet_assets::BalanceOf as AssetBalanceOf;
 #[cfg(feature = "std")]
 use xpallet_mining_staking::BalanceOf as StakingBalanceOf;
 
-pub trait Trait:
-    pallet_balances::Trait + xpallet_mining_asset::Trait + xpallet_mining_staking::Trait
+pub trait Config:
+    pallet_balances::Config + xpallet_mining_asset::Config + xpallet_mining_staking::Config
 {
 }
 
 decl_module! {
-    pub struct Module<T: Trait> for enum Call where origin: T::Origin {}
+    pub struct Module<T: Config> for enum Call where origin: T::Origin {}
 }
 
 decl_storage! {
-    trait Store for Module<T: Trait> as XGenesisBuilder {}
+    trait Store for Module<T: Config> as XGenesisBuilder {}
     add_extra_genesis {
         config(params): AllParams<T::AccountId, T::Balance, AssetBalanceOf<T>, StakingBalanceOf<T>>;
         config(root_endowed): T::Balance;
@@ -52,15 +52,15 @@ decl_storage! {
 #[cfg(feature = "std")]
 mod genesis {
     pub mod balances {
-        use crate::Trait;
-        use frame_support::{traits::StoredMap, StorageValue};
+        use crate::Config;
+        use frame_support::traits::StoredMap;
         use pallet_balances::AccountData;
         use xp_genesis_builder::{BalancesParams, FreeBalanceInfo, WellknownAccounts};
         use xp_protocol::X_BTC;
         use xpallet_support::traits::TreasuryAccount;
 
         /// Returns the validator account by the given reward pot account.
-        fn validator_for<'a, T: Trait, I: Iterator<Item = &'a (T::AccountId, T::AccountId)>>(
+        fn validator_for<'a, T: Config, I: Iterator<Item = &'a (T::AccountId, T::AccountId)>>(
             target_pot: &T::AccountId,
             mut pots: I,
         ) -> Option<&'a T::AccountId> {
@@ -68,7 +68,7 @@ mod genesis {
                 .map(|(_, validator)| validator)
         }
 
-        pub fn initialize<T: Trait>(
+        pub fn initialize<T: Config>(
             params: &BalancesParams<T::AccountId, T::Balance>,
             root_endowed: T::Balance,
             initial_authorities_endowed: T::Balance,
@@ -93,10 +93,11 @@ mod genesis {
                         ..Default::default()
                     },
                 )
+                .expect("Set balance can not fail; qed")
             };
 
             let treasury_account =
-                <T as xpallet_mining_staking::Trait>::TreasuryAccount::treasury_account();
+                <T as xpallet_mining_staking::Config>::TreasuryAccount::treasury_account();
 
             let vesting_account = xpallet_mining_staking::Module::<T>::vesting_account();
 
@@ -126,11 +127,11 @@ mod genesis {
     }
 
     pub mod xassets {
-        use crate::{AssetBalanceOf, Trait};
+        use crate::{AssetBalanceOf, Config};
         use xp_genesis_builder::FreeBalanceInfo;
         use xp_protocol::X_BTC;
 
-        pub fn initialize<T: Trait>(
+        pub fn initialize<T: Config>(
             xbtc_assets: &[FreeBalanceInfo<T::AccountId, AssetBalanceOf<T>>],
         ) {
             for FreeBalanceInfo { who, free } in xbtc_assets {
@@ -140,10 +141,10 @@ mod genesis {
     }
 
     pub mod xstaking {
-        use crate::{StakingBalanceOf, Trait};
+        use crate::{Config, StakingBalanceOf};
         use xp_genesis_builder::{Nomination, NominatorInfo, XStakingParams};
 
-        pub fn initialize<T: Trait>(params: &XStakingParams<T::AccountId, StakingBalanceOf<T>>) {
+        pub fn initialize<T: Config>(params: &XStakingParams<T::AccountId, StakingBalanceOf<T>>) {
             let XStakingParams {
                 validators,
                 nominators,
@@ -191,14 +192,14 @@ mod genesis {
     }
 
     pub mod xmining_asset {
-        use crate::Trait;
+        use crate::Config;
         use xp_genesis_builder::{XBtcMiner, XMiningAssetParams};
         use xp_protocol::X_BTC;
 
         /// Mining asset module initialization only involves the mining weight.
         /// - Set xbtc mining asset weight.
         /// - Set xbtc miners' weight.
-        pub fn initialize<T: Trait>(params: &XMiningAssetParams<T::AccountId>) {
+        pub fn initialize<T: Config>(params: &XMiningAssetParams<T::AccountId>) {
             let XMiningAssetParams {
                 xbtc_miners,
                 xbtc_info,

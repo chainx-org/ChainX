@@ -38,7 +38,7 @@ pub trait WeightInfo {
 
 /// Weights for xpallet_mining_asset using the Substrate node and recommended hardware.
 pub struct SubstrateWeight<T>(PhantomData<T>);
-impl<T: frame_system::Trait> WeightInfo for SubstrateWeight<T> {
+impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
     fn claim() -> Weight {
         (231_026_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(12 as Weight))

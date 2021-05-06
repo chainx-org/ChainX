@@ -5,19 +5,19 @@ authors = ["The ChainX Authors"]
 edition = "2018"
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "1.3.4", default-features = false, features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
 serde = { version = "1.0.101", optional = true }
 
 # Substrate primitives
-sp-arithmetic = { version = "2.0.0", default-features = false }
-sp-runtime = { version = "2.0.0", default-features = false }
-sp-std = { version = "2.0.0", default-features = false }
+sp-arithmetic = { version = "3.0.0", default-features = false }
+sp-runtime = { version = "3.0.0", default-features = false }
+sp-std = { version = "3.0.0", default-features = false }
 
 # Substrate pallets
-frame-benchmarking = { version = "2.0.0", default-features = false, optional = true }
-frame-support = { version = "2.0.0", default-features = false }
-frame-system = { version = "2.0.0", default-features = false }
-pallet-balances = { version = "2.0.0", default-features = false }
+frame-benchmarking = { version = "3.0.0", default-features = false, optional = true }
+frame-support = { version = "3.0.0", default-features = false }
+frame-system = { version = "3.0.0", default-features = false }
+pallet-balances = { version = "3.0.0", default-features = false }
 
 # ChainX primitives
 chainx-primitives = { path = "../../../primitives", default-features = false }
@@ -31,9 +31,9 @@ xpallet-support = { path = "../../support", default-features = false }
 
 [dev-dependencies]
 env_logger = "0.7.1"
-sp-core = "2.0.0"
-sp-io = "2.0.0"
-frame-benchmarking = "2.0.0"
+sp-core = "3.0.0"
+sp-io = "3.0.0"
+frame-benchmarking = "3.0.0"
 xp-protocol = { path = "../../../primitives/protocol" }
 
 [features]

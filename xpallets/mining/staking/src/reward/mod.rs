@@ -6,7 +6,7 @@ use xp_mining_staking::SessionIndex;
 
 mod proposal09;
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     /// Simple u32 power of 2 function - simply uses a bit shift
     #[inline]
     fn pow2(n: u32) -> BalanceOf<T> {

@@ -2,7 +2,7 @@
 
 use super::*;
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     /// Returns a new validator set for the new era.
     pub(crate) fn new_era(start_session_index: SessionIndex) -> Option<Vec<T::AccountId>> {
         // Increment or set current era.
