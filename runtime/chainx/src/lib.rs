@@ -70,7 +70,7 @@ pub use chainx_primitives::{
     AccountId, AccountIndex, AddrStr, Amount, AssetId, Balance, BlockNumber, ChainAddress, Hash,
     Index, Moment, ReferralId, Signature, Token,
 };
-pub use xp_mining_staking::SessionIndex;
+pub use sp_staking::SessionIndex;
 pub use xp_protocol::*;
 pub use xp_runtime::Memo;
 
@@ -415,12 +415,12 @@ impl frame_support::traits::ValidatorSet<AccountId> for Runtime {
     type ValidatorId = AccountId;
     type ValidatorIdOf = SimpleValidatorIdConverter;
 
-    // TODO: use sp_staking::SessionIndex?
     fn session_index() -> SessionIndex {
         Session::current_index()
     }
 
     fn validators() -> Vec<Self::ValidatorId> {
+        // TODO: return the active validator set in Staking.
         Session::validators()
     }
 }

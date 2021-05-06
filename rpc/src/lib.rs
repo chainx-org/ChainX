@@ -1,6 +1,5 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use std::fmt;
 use std::sync::Arc;
 
 use sc_client_api::AuxStore;
