@@ -2,7 +2,7 @@
 
 use sp_std::{cmp::Ordering, prelude::Vec};
 
-use xp_logging::{error, warn};
+use log::{error, warn};
 
 use light_bitcoin::{
     chain::{Transaction, TransactionOutput},

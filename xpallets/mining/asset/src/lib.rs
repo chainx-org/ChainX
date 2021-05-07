@@ -30,7 +30,7 @@ use frame_system::{ensure_root, ensure_signed};
 use sp_runtime::traits::{SaturatedConversion, Zero};
 
 use chainx_primitives::AssetId;
-use xp_logging::warn;
+use log::warn;
 use xp_mining_common::{
     Claim, ComputeMiningWeight, MiningWeight as _, RewardPotAccountFor, WeightType,
     ZeroMiningWeightError,

@@ -25,7 +25,7 @@ use sp_runtime::traits::StaticLookup;
 use orml_utilities::with_transaction_result;
 
 use chainx_primitives::{AddrStr, AssetId};
-use xp_logging::{error, info};
+use log::{error, info};
 use xp_runtime::Memo;
 use xpallet_assets::{AssetType, BalanceOf, Chain};
 use xpallet_support::try_addr;

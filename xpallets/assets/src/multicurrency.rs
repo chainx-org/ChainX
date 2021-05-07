@@ -18,7 +18,7 @@ use orml_traits::{
 };
 
 use chainx_primitives::AssetId;
-use xp_logging::error;
+use log::error;
 use xpallet_support::traits::TreasuryAccount;
 
 use crate::types::{AssetType, BalanceLock};

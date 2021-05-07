@@ -9464,6 +9464,7 @@ dependencies = [
  "frame-support",
  "hex",
  "light-bitcoin",
+ "log",
  "parity-scale-codec",
  "serde",
  "sp-core",
@@ -9508,6 +9509,9 @@ dependencies = [
 [[package]]
 name = "xp-logging"
 version = "2.0.9"
+dependencies = [
+ "log",
+]
 
 [[package]]
 name = "xp-mining-common"
@@ -9570,6 +9574,7 @@ dependencies = [
  "frame-benchmarking 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-support",
  "frame-system",
+ "log",
  "orml-traits",
  "pallet-balances",
  "parity-scale-codec",
@@ -9592,6 +9597,7 @@ dependencies = [
  "frame-benchmarking 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-support",
  "frame-system",
+ "log",
  "parity-scale-codec",
  "serde",
  "sp-core",
@@ -9640,6 +9646,7 @@ dependencies = [
  "frame-benchmarking 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-support",
  "frame-system",
+ "log",
  "pallet-balances",
  "parity-scale-codec",
  "serde",
@@ -9694,6 +9701,7 @@ dependencies = [
  "hex-literal",
  "lazy_static",
  "light-bitcoin",
+ "log",
  "orml-utilities",
  "pallet-balances",
  "pallet-multisig",
@@ -9729,6 +9737,7 @@ dependencies = [
  "hex",
  "lazy_static",
  "light-bitcoin",
+ "log",
  "pallet-balances",
  "parity-scale-codec",
  "serde",
@@ -9787,6 +9796,7 @@ dependencies = [
  "frame-benchmarking 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-support",
  "frame-system",
+ "log",
  "orml-utilities",
  "pallet-balances",
  "parity-scale-codec",
@@ -9838,6 +9848,7 @@ dependencies = [
  "chainx-primitives",
  "frame-support",
  "frame-system",
+ "log",
  "pallet-balances",
  "parity-scale-codec",
  "serde",
@@ -9861,6 +9872,7 @@ dependencies = [
  "frame-benchmarking 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-support",
  "frame-system",
+ "log",
  "pallet-balances",
  "pallet-session",
  "pallet-timestamp",
@@ -9916,6 +9928,7 @@ dependencies = [
  "frame-benchmarking 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-support",
  "frame-system",
+ "log",
  "pallet-balances",
  "pallet-session",
  "pallet-timestamp",

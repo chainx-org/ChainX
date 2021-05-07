@@ -5,7 +5,7 @@ use sp_std::prelude::Vec;
 
 use chainx_primitives::ReferralId;
 use xp_gateway_common::from_ss58_check;
-use xp_logging::{debug, error};
+use log::{debug, error};
 
 pub use xp_gateway_common::AccountExtractor;
 

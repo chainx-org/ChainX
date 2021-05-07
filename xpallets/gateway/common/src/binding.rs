@@ -4,7 +4,7 @@ use frame_support::{IterableStorageDoubleMap, StorageDoubleMap};
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
 use chainx_primitives::{AssetId, ChainAddress, ReferralId};
-use xp_logging::{debug, error, info, warn};
+use log::{debug, error, info, warn};
 use xpallet_assets::Chain;
 use xpallet_support::{traits::Validator, try_addr, try_str};
 

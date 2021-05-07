@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+log = { version = "0.4.14", default-features = true }
 serde = { version = "1.0.101", optional = true }
 
 # Substrate primitives
@@ -40,6 +41,7 @@ xp-protocol = { path = "../../../primitives/protocol" }
 default = ["std"]
 std = [
     "codec/std",
+    "log/std",
     "serde",
     # Substrate primitives
     "sp-arithmetic/std",

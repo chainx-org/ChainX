@@ -41,7 +41,7 @@ decl_storage! {
             xstaking::initialize::<T>(&config.params.xstaking);
             xmining_asset::initialize::<T>(&config.params.xmining_asset);
 
-            xp_logging::info!(
+            log::info!(
                 "Took {:?}ms to orchestrate the exported state from ChainX 1.0",
                 now.elapsed().as_millis()
             );

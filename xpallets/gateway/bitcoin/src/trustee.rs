@@ -15,8 +15,8 @@ use light_bitcoin::{
     script::{Builder, Opcode, Script},
 };
 
+use log::{debug, error, info};
 use xp_gateway_bitcoin::extract_output_addr;
-use xp_logging::{debug, error, info};
 use xpallet_assets::Chain;
 use xpallet_gateway_common::{
     traits::{TrusteeForChain, TrusteeSession},
@@ -203,7 +203,7 @@ impl<T: Config> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo
             })?;
 
         log::info!(
-            target: xp_logging::RUNTIME_TARGET,
+            target: "runtime::bitcoin",
             "[generate_trustee_session_info] hot_addr:{:?}, cold_addr:{:?}, trustee_list:{:?}",
             hot_trustee_addr_info,
             cold_trustee_addr_info,

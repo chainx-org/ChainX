@@ -7,6 +7,7 @@ edition = "2018"
 [dependencies]
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
 hex = { version = "0.4", default-features = false }
+log = { version = "0.4.14", default-features = false }
 serde = { version = "1.0", features = ["derive"], optional = true }
 
 # Substrate primitives
@@ -28,6 +29,7 @@ default = ["std"]
 std = [
     "codec/std",
     "hex/std",
+    "log/std",
     "serde",
     # Substrate primitives
     "sp-core/std",

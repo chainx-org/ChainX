@@ -4,7 +4,7 @@ mod asset;
 mod order;
 mod state;
 
-use xp_logging::debug;
+use log::debug;
 
 use super::*;
 use crate::types::*;

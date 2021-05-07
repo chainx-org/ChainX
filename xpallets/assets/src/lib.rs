@@ -41,7 +41,7 @@ use sp_runtime::traits::{
 };
 
 use chainx_primitives::AssetId;
-use xp_logging::{debug, error, info};
+use log::{debug, error, info};
 pub use xpallet_assets_registrar::{AssetInfo, Chain};
 use xpallet_support::traits::TreasuryAccount;
 

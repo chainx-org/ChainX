@@ -7,6 +7,7 @@ edition = "2018"
 [dependencies]
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
 serde = { version = "1.0", optional = true }
+log = { version = "0.4.14", default-features = false }
 
 # Substrate primitives
 sp-runtime = { version = "3.0.0", default-features = false }
@@ -36,6 +37,7 @@ frame-benchmarking = "3.0.0"
 default = ["std"]
 std = [
     "codec/std",
+    "log/std",
     "serde",
     # Substrate primitives
     "sp-runtime/std",

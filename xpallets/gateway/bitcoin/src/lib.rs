@@ -44,8 +44,8 @@ use light_bitcoin::{
 };
 
 use chainx_primitives::{AssetId, ReferralId};
+use log::{debug, error, info};
 use xp_gateway_common::AccountExtractor;
-use xp_logging::{debug, error, info};
 use xpallet_assets::{BalanceOf, Chain, ChainT, WithdrawalLimit};
 use xpallet_gateway_common::{
     traits::{AddressBinding, ReferralBinding, TrusteeSession},
@@ -69,7 +69,7 @@ use self::{
 macro_rules! log {
     ($level:tt, $patter:expr $(, $values:expr)* $(,)?) => {
         frame_support::log::$level!(
-            target: xp_logging::RUNTIME_TARGET,
+            target: "runtime::bitcoin",
             $patter $(, $values)*
         )
     };

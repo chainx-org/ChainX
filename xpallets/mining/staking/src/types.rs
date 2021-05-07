@@ -12,7 +12,7 @@ use sp_runtime::{
 };
 
 use chainx_primitives::{AssetId, ReferralId};
-use xp_logging::debug;
+use frame_support::log::debug;
 use xp_mining_common::{RewardPotAccountFor, WeightType};
 use xp_mining_staking::MiningPower;
 

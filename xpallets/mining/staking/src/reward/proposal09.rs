@@ -3,7 +3,7 @@
 //! New minted PCX distribution logic for ChainX Proposal 09.
 
 use super::*;
-use xp_logging::debug;
+use log::debug;
 
 impl<T: Config> Module<T> {
     fn generic_calculate_by_proportion<S: Into<u128>>(

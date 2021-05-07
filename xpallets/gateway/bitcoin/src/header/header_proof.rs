@@ -10,7 +10,7 @@ use light_bitcoin::{
     primitives::{hash_rev, Compact, H256, U256},
 };
 
-use xp_logging::{debug, error, info, warn};
+use log::{debug, error, info, warn};
 
 use crate::types::{BtcHeaderInfo, BtcParams};
 use crate::{Config, Error, Module};

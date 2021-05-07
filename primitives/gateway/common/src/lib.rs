@@ -7,7 +7,7 @@
 
 use sp_core::crypto::AccountId32;
 
-use xp_logging::error;
+use frame_support::log::error;
 
 /// Trait for extracting the account and possible extra data (e.g. referral) from
 /// the external world data (e.g. btc op_return).

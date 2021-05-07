@@ -14,9 +14,9 @@ use light_bitcoin::{
 };
 
 use chainx_primitives::AssetId;
+use log::{debug, error, info, warn};
 use xp_gateway_bitcoin::{BtcDepositInfo, BtcTxMetaType, BtcTxTypeDetector};
 use xp_gateway_common::AccountExtractor;
-use xp_logging::{debug, error, info, warn};
 use xpallet_assets::ChainT;
 use xpallet_gateway_common::traits::{AddressBinding, ReferralBinding};
 use xpallet_support::try_str;
@@ -172,7 +172,7 @@ fn insert_pending_deposit<T: Config>(input_address: &Address, txid: H256, balanc
     PendingDeposits::mutate(&addr_bytes, |list| {
         if !list.contains(&cache) {
             log::debug!(
-                target: xp_logging::RUNTIME_TARGET,
+                target: "runtime::bitcoin",
                 "[insert_pending_deposit] Add pending deposit, address:{:?}, txhash:{:?}, balance:{}",
                 try_str(&addr_bytes),
                 txid,
@@ -188,7 +188,7 @@ fn insert_pending_deposit<T: Config>(input_address: &Address, txid: H256, balanc
 fn withdraw<T: Config>(tx: Transaction) -> BtcTxResult {
     if let Some(proposal) = WithdrawalProposal::<T>::take() {
         log::debug!(
-            target: xp_logging::RUNTIME_TARGET,
+            target: "runtime::bitcoin",
             "[withdraw] Withdraw tx {:?}, proposal:{:?}",
             proposal,
             tx
@@ -267,7 +267,7 @@ pub fn ensure_identical<T: Config>(tx1: &Transaction, tx2: &Transaction) -> Disp
                 || tx1.inputs[i].sequence != tx2.inputs[i].sequence
             {
                 log::error!(
-                    target: xp_logging::RUNTIME_TARGET,
+                    target: "runtime::bitcoin",
                     "[ensure_identical] Tx1 is different to Tx2, tx1:{:?}, tx2:{:?}",
                     tx1,
                     tx2
