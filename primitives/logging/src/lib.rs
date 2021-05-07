@@ -9,64 +9,64 @@ pub const RUNTIME_TARGET: &str = "runtime";
 #[macro_export]
 macro_rules! error {
     (target: $target:expr, $($arg:tt)+) => (
-        frame_support::debug::error!(target: $target, $($arg)+);
+        frame_support::log::error!(target: $target, $($arg)+);
     );
     ($($arg:tt)+) => (
         #[cfg(feature = "std")]
-        frame_support::debug::error!(target: &format!("runtime::{}", module_path!()), $($arg)+);
+        frame_support::log::error!(target: &format!("runtime::{}", module_path!()), $($arg)+);
         #[cfg(not(feature = "std"))]
-        frame_support::debug::error!(target: "runtime", $($arg)+);
+        frame_support::log::error!(target: "runtime", $($arg)+);
     )
 }
 
 #[macro_export]
 macro_rules! warn {
      (target: $target:expr, $($arg:tt)+) => (
-         frame_support::debug::warn!(target: $target, $($arg)+);
+         frame_support::log::warn!(target: $target, $($arg)+);
      );
      ($($arg:tt)+) => (
         #[cfg(feature = "std")]
-        frame_support::debug::warn!(target: &format!("runtime::{}", module_path!()), $($arg)+);
+        frame_support::log::warn!(target: &format!("runtime::{}", module_path!()), $($arg)+);
         #[cfg(not(feature = "std"))]
-        frame_support::debug::warn!(target: "runtime", $($arg)+);
+        frame_support::log::warn!(target: "runtime", $($arg)+);
      )
  }
 
 #[macro_export]
 macro_rules! info {
     (target: $target:expr, $($arg:tt)+) => (
-        frame_support::debug::info!(target: $target, $($arg)+);
+        frame_support::log::info!(target: $target, $($arg)+);
     );
     ($($arg:tt)+) => (
         #[cfg(feature = "std")]
-        frame_support::debug::info!(target: &format!("runtime::{}", module_path!()), $($arg)+);
+        frame_support::log::info!(target: &format!("runtime::{}", module_path!()), $($arg)+);
         #[cfg(not(feature = "std"))]
-        frame_support::debug::info!(target: "runtime", $($arg)+);
+        frame_support::log::info!(target: "runtime", $($arg)+);
     )
 }
 
 #[macro_export]
 macro_rules! debug {
     (target: $target:expr, $($arg:tt)+) => (
-        frame_support::debug::debug!(target: $target, $($arg)+);
+        frame_support::log::debug!(target: $target, $($arg)+);
     );
     ($($arg:tt)+) => (
         #[cfg(feature = "std")]
-        frame_support::debug::debug!(target: &format!("runtime::{}", module_path!()), $($arg)+);
+        frame_support::log::debug!(target: &format!("runtime::{}", module_path!()), $($arg)+);
         #[cfg(not(feature = "std"))]
-        frame_support::debug::debug!(target: "runtime", $($arg)+);
+        frame_support::log::debug!(target: "runtime", $($arg)+);
     )
 }
 
 #[macro_export]
 macro_rules! trace {
     (target: $target:expr, $($arg:tt)+) => (
-        frame_support::debug::trace!(target: $target, $($arg)+);
+        frame_support::log::trace!(target: $target, $($arg)+);
     );
     ($($arg:tt)+) => (
         #[cfg(feature = "std")]
-        frame_support::debug::trace!(target: &format!("runtime::{}", module_path!()), $($arg)+);
+        frame_support::log::trace!(target: &format!("runtime::{}", module_path!()), $($arg)+);
         #[cfg(not(feature = "std"))]
-        frame_support::debug::trace!(target: "runtime", $($arg)+);
+        frame_support::log::trace!(target: "runtime", $($arg)+);
     )
 }

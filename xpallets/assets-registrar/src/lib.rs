@@ -308,7 +308,7 @@ impl<T: Config> Module<T> {
         AssetInfoOf::insert(&id, asset);
         AssetOnline::insert(&id, true);
 
-        RegisteredAt::<T>::insert(&id, frame_system::Module::<T>::block_number());
+        RegisteredAt::<T>::insert(&id, frame_system::Pallet::<T>::block_number());
 
         Ok(())
     }

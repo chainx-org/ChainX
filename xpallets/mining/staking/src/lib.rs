@@ -375,7 +375,7 @@ decl_module! {
                 Self::check_validator_acceptable_votes_limit(&to, value)?;
             }
 
-            let current_block = <frame_system::Module<T>>::block_number();
+            let current_block = <frame_system::Pallet<T>>::block_number();
             if let Some(last_rebond) = Self::last_rebond_of(&sender) {
                 ensure!(
                     current_block > last_rebond + Self::bonding_duration(),
@@ -412,7 +412,7 @@ decl_module! {
             ensure!(unbonded_index < unbonded_chunks.len() as u32, Error::<T>::InvalidUnbondedIndex);
 
             let Unbonded { value, locked_until } = unbonded_chunks[unbonded_index as usize];
-            let current_block = <frame_system::Module<T>>::block_number();
+            let current_block = <frame_system::Pallet<T>>::block_number();
             ensure!(current_block > locked_until, Error::<T>::UnbondedWithdrawalNotYetDue);
 
             Self::apply_unlock_unbonded_withdrawal(&sender, value);
@@ -457,7 +457,7 @@ decl_module! {
             }
             Validators::<T>::mutate(sender, |validator| {
                     validator.is_chilled = true;
-                    validator.last_chilled = Some(<frame_system::Module<T>>::block_number());
+                    validator.last_chilled = Some(<frame_system::Pallet<T>>::block_number());
                 }
             );
         }
@@ -908,7 +908,7 @@ impl<T: Config> Module<T> {
     fn apply_force_chilled(who: &T::AccountId) {
         Validators::<T>::mutate(who, |validator| {
             validator.is_chilled = true;
-            validator.last_chilled = Some(<frame_system::Module<T>>::block_number());
+            validator.last_chilled = Some(<frame_system::Pallet<T>>::block_number());
         });
     }
 
@@ -966,7 +966,7 @@ impl<T: Config> Module<T> {
         target: &T::AccountId,
         delta: Delta<BalanceOf<T>>,
     ) {
-        let current_block = <frame_system::Module<T>>::block_number();
+        let current_block = <frame_system::Pallet<T>>::block_number();
 
         let source_weight =
             <Self as ComputeMiningWeight<T::AccountId, T::BlockNumber>>::settle_claimer_weight(
@@ -986,7 +986,7 @@ impl<T: Config> Module<T> {
     }
 
     fn apply_register(who: &T::AccountId, referral_id: ReferralId) {
-        let current_block = <frame_system::Module<T>>::block_number();
+        let current_block = <frame_system::Pallet<T>>::block_number();
         ValidatorFor::<T>::insert(&referral_id, who.clone());
         Validators::<T>::insert(
             who,
@@ -1075,7 +1075,7 @@ impl<T: Config> Module<T> {
         Self::unbond_reserve(who, value)?;
 
         let locked_until =
-            <frame_system::Module<T>>::block_number() + Self::bonding_duration_for(who, target);
+            <frame_system::Pallet<T>>::block_number() + Self::bonding_duration_for(who, target);
         Self::mutate_unbonded_chunks(who, target, value, locked_until);
 
         Self::update_vote_weight(who, target, Delta::Sub(value));

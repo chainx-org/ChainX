@@ -198,7 +198,7 @@ impl<T: Config> Claim<T::AccountId> for Module<T> {
     type Error = Error<T>;
 
     fn claim(claimer: &T::AccountId, claimee: &Self::Claimee) -> Result<(), Self::Error> {
-        let current_block = <frame_system::Module<T>>::block_number();
+        let current_block = <frame_system::Pallet<T>>::block_number();
 
         let (dividend, source_weight, target_weight, claimee_pot) =
             Self::calculate_dividend_on_claim(claimer, claimee, current_block)?;

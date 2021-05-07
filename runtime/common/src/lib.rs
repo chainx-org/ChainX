@@ -21,7 +21,7 @@ pub use frame_support::weights::constants::{
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 
-pub type NegativeImbalance<T> = <pallet_balances::Module<T> as Currency<
+pub type NegativeImbalance<T> = <pallet_balances::Pallet<T> as Currency<
     <T as frame_system::Config>::AccountId,
 >>::NegativeImbalance;
 

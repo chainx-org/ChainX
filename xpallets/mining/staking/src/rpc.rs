@@ -74,7 +74,7 @@ impl<T: Config> Module<T> {
     }
 
     pub fn staking_dividend_of(who: T::AccountId) -> BTreeMap<T::AccountId, BalanceOf<T>> {
-        let current_block = <frame_system::Module<T>>::block_number();
+        let current_block = <frame_system::Pallet<T>>::block_number();
         Nominations::<T>::iter_prefix(&who)
             .filter_map(|(validator, _)| {
                 match Self::compute_dividend_at(&who, &validator, current_block) {

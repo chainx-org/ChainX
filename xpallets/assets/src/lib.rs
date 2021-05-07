@@ -566,9 +566,9 @@ impl<T: Config> Module<T> {
         if !existed && exists {
             Self::try_new_account(who);
             // FIXME: handle the result properly
-            let _ = frame_system::Module::<T>::inc_consumers(who);
+            let _ = frame_system::Pallet::<T>::inc_consumers(who);
         } else if existed && !exists {
-            frame_system::Module::<T>::dec_consumers(who);
+            frame_system::Pallet::<T>::dec_consumers(who);
             AssetBalance::<T>::remove(who, id);
         }
 

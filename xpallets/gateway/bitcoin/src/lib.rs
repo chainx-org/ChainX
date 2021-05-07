@@ -64,11 +64,11 @@ use self::{
     },
 };
 
-// syntactic sugar for native log.
+// syntactic sugar for log.
 #[macro_export]
-macro_rules! native {
+macro_rules! log {
     ($level:tt, $patter:expr $(, $values:expr)* $(,)?) => {
-        frame_support::debug::native::$level!(
+        frame_support::log::$level!(
             target: xp_logging::RUNTIME_TARGET,
             $patter $(, $values)*
         )
@@ -297,7 +297,7 @@ decl_module! {
                 None
             };
             let relay_tx = relayed_info.into_relayed_tx(raw_tx);
-            native!(debug, "[push_transaction] from:{:?}, relay_tx:{:?}, prev_tx:{:?}", _from, relay_tx, prev_tx);
+            log!(debug, "[push_transaction] from:{:?}, relay_tx:{:?}, prev_tx:{:?}", _from, relay_tx, prev_tx);
 
             Self::apply_push_transaction(relay_tx, prev_tx)?;
 
@@ -314,7 +314,7 @@ decl_module! {
             Self::ensure_trustee(&from)?;
 
             let tx = Self::deserialize_tx(tx.as_slice())?;
-            native!(debug, "[create_withdraw_tx] from:{:?}, withdrawal list:{:?}, tx:{:?}", from, withdrawal_id_list, tx);
+            log!(debug, "[create_withdraw_tx] from:{:?}, withdrawal list:{:?}, tx:{:?}", from, withdrawal_id_list, tx);
 
             Self::apply_create_withdraw(from, tx, withdrawal_id_list)?;
             Ok(())
@@ -333,7 +333,7 @@ decl_module! {
             } else {
                 None
             };
-            native!(debug, "[sign_withdraw_tx] from:{:?}, vote_tx:{:?}", from, tx);
+            log!(debug, "[sign_withdraw_tx] from:{:?}, vote_tx:{:?}", from, tx);
 
             Self::apply_sig_withdraw(from, tx)?;
             Ok(())
@@ -390,7 +390,7 @@ decl_module! {
         pub fn force_replace_proposal_tx(origin, tx: Vec<u8>) -> DispatchResult {
             T::TrusteeOrigin::try_origin(origin).map(|_| ()).or_else(ensure_root)?;
             let tx = Self::deserialize_tx(tx.as_slice())?;
-            native!(debug, "[force_replace_proposal_tx] new_tx:{:?}", tx);
+            log!(debug, "[force_replace_proposal_tx] new_tx:{:?}", tx);
             Self::force_replace_withdraw_tx(tx)
         }
 
@@ -486,7 +486,7 @@ impl<T: Config> Module<T> {
         }
         // prev header should exist, thus we reject orphan block
         let prev_info = Self::headers(header.previous_header_hash).ok_or_else(|| {
-            native!(
+            log!(
                 error,
                 "[check_prev_and_convert] Can not find prev header, current header:{:?}",
                 header

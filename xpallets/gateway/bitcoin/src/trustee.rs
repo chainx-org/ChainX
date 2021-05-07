@@ -1,9 +1,8 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 use frame_support::{
-    debug::native,
     dispatch::{DispatchError, DispatchResult},
-    ensure, StorageValue,
+    ensure, log, StorageValue,
 };
 use sp_runtime::SaturatedConversion;
 use sp_std::{convert::TryFrom, prelude::*};
@@ -203,7 +202,7 @@ impl<T: Config> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo
                 Error::<T>::GenerateMultisigFailed
             })?;
 
-        native::info!(
+        log::info!(
             target: xp_logging::RUNTIME_TARGET,
             "[generate_trustee_session_info] hot_addr:{:?}, cold_addr:{:?}, trustee_list:{:?}",
             hot_trustee_addr_info,

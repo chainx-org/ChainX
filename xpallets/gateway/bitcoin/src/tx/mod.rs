@@ -3,7 +3,7 @@
 mod secp256k1_verifier;
 pub mod validator;
 
-use frame_support::{debug::native, dispatch::DispatchResult, StorageMap, StorageValue};
+use frame_support::{dispatch::DispatchResult, log, StorageMap, StorageValue};
 use sp_runtime::{traits::Zero, SaturatedConversion};
 use sp_std::prelude::*;
 
@@ -23,7 +23,6 @@ use xpallet_support::try_str;
 
 pub use self::validator::validate_transaction;
 use crate::{
-    native,
     types::{AccountInfo, BtcAddress, BtcDepositCache, BtcTxResult, BtcTxState},
     BalanceOf, Config, Error, Event, Module, PendingDeposits, WithdrawalProposal,
 };
@@ -172,7 +171,7 @@ fn insert_pending_deposit<T: Config>(input_address: &Address, txid: H256, balanc
 
     PendingDeposits::mutate(&addr_bytes, |list| {
         if !list.contains(&cache) {
-            native::debug!(
+            log::debug!(
                 target: xp_logging::RUNTIME_TARGET,
                 "[insert_pending_deposit] Add pending deposit, address:{:?}, txhash:{:?}, balance:{}",
                 try_str(&addr_bytes),
@@ -188,7 +187,7 @@ fn insert_pending_deposit<T: Config>(input_address: &Address, txid: H256, balanc
 
 fn withdraw<T: Config>(tx: Transaction) -> BtcTxResult {
     if let Some(proposal) = WithdrawalProposal::<T>::take() {
-        native::debug!(
+        log::debug!(
             target: xp_logging::RUNTIME_TARGET,
             "[withdraw] Withdraw tx {:?}, proposal:{:?}",
             proposal,
@@ -267,8 +266,8 @@ pub fn ensure_identical<T: Config>(tx1: &Transaction, tx2: &Transaction) -> Disp
             if tx1.inputs[i].previous_output != tx2.inputs[i].previous_output
                 || tx1.inputs[i].sequence != tx2.inputs[i].sequence
             {
-                native!(
-                    error,
+                log::error!(
+                    target: xp_logging::RUNTIME_TARGET,
                     "[ensure_identical] Tx1 is different to Tx2, tx1:{:?}, tx2:{:?}",
                     tx1,
                     tx2
@@ -278,8 +277,8 @@ pub fn ensure_identical<T: Config>(tx1: &Transaction, tx2: &Transaction) -> Disp
         }
         return Ok(());
     }
-    native!(
-        error,
+    log::error!(
+        target: xp_logging::RUNTIME_TARGET,
         "The transaction text does not match the original text to be signed",
     );
     Err(Error::<T>::MismatchedTx.into())

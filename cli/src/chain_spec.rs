@@ -350,28 +350,28 @@ fn build_genesis(
         .expect("bitcoin trustees generation can not fail; qed");
 
     dev::GenesisConfig {
-        frame_system: Some(dev::SystemConfig {
+        frame_system: dev::SystemConfig {
             code: wasm_binary.to_vec(),
             changes_trie_config: Default::default(),
-        }),
-        pallet_babe: Some(Default::default()),
-        pallet_grandpa: Some(dev::GrandpaConfig {
+        },
+        pallet_babe: Default::default(),
+        pallet_grandpa: dev::GrandpaConfig {
             authorities: vec![],
-        }),
-        pallet_collective_Instance1: Some(dev::CouncilConfig::default()),
-        pallet_collective_Instance2: Some(dev::TechnicalCommitteeConfig {
+        },
+        pallet_collective_Instance1: dev::CouncilConfig::default(),
+        pallet_collective_Instance2: dev::TechnicalCommitteeConfig {
             members: tech_comm_members,
             phantom: Default::default(),
-        }),
-        pallet_membership_Instance1: Some(Default::default()),
-        pallet_democracy: Some(dev::DemocracyConfig::default()),
-        pallet_treasury: Some(Default::default()),
-        pallet_elections_phragmen: Some(dev::ElectionsConfig {
+        },
+        pallet_membership_Instance1: Default::default(),
+        pallet_democracy: dev::DemocracyConfig::default(),
+        pallet_treasury: Default::default(),
+        pallet_elections_phragmen: dev::ElectionsConfig {
             members: phragmen_members,
-        }),
-        pallet_im_online: Some(dev::ImOnlineConfig { keys: vec![] }),
-        pallet_authority_discovery: Some(dev::AuthorityDiscoveryConfig { keys: vec![] }),
-        pallet_session: Some(dev::SessionConfig {
+        },
+        pallet_im_online: dev::ImOnlineConfig { keys: vec![] },
+        pallet_authority_discovery: dev::AuthorityDiscoveryConfig { keys: vec![] },
+        pallet_session: dev::SessionConfig {
             keys: initial_authorities
                 .iter()
                 .map(|x| {
@@ -382,20 +382,20 @@ fn build_genesis(
                     )
                 })
                 .collect::<Vec<_>>(),
-        }),
-        pallet_balances: Some(dev::BalancesConfig { balances }),
-        pallet_indices: Some(dev::IndicesConfig { indices: vec![] }),
-        pallet_sudo: Some(dev::SudoConfig { key: root_key }),
-        xpallet_system: Some(dev::XSystemConfig {
+        },
+        pallet_balances: dev::BalancesConfig { balances },
+        pallet_indices: dev::IndicesConfig { indices: vec![] },
+        pallet_sudo: dev::SudoConfig { key: root_key },
+        xpallet_system: dev::XSystemConfig {
             network_props: NetworkType::Testnet,
-        }),
-        xpallet_assets_registrar: Some(dev::XAssetsRegistrarConfig { assets }),
-        xpallet_assets: Some(dev::XAssetsConfig {
+        },
+        xpallet_assets_registrar: dev::XAssetsRegistrarConfig { assets },
+        xpallet_assets: dev::XAssetsConfig {
             assets_restrictions,
             endowed: assets_endowed,
-        }),
-        xpallet_gateway_common: Some(dev::XGatewayCommonConfig { trustees }),
-        xpallet_gateway_bitcoin: Some(dev::XGatewayBitcoinConfig {
+        },
+        xpallet_gateway_common: dev::XGatewayCommonConfig { trustees },
+        xpallet_gateway_bitcoin: dev::XGatewayBitcoinConfig {
             genesis_trustees: btc_genesis_trustees,
             network_id: bitcoin.network,
             confirmation_number: bitcoin.confirmation_number,
@@ -411,8 +411,8 @@ fn build_genesis(
             btc_withdrawal_fee: 500000,
             max_withdrawal_count: 100,
             verifier: BtcTxVerifier::Recover,
-        }),
-        xpallet_mining_staking: Some(dev::XStakingConfig {
+        },
+        xpallet_mining_staking: dev::XStakingConfig {
             validators,
             validator_count: 50,
             sessions_per_era: 12,
@@ -421,18 +421,18 @@ fn build_genesis(
             mining_ratio: (10, 90),    // (Asset Mining, Staking) = (10, 90)
             minimum_penalty: 2 * DOLLARS,
             ..Default::default()
-        }),
-        xpallet_mining_asset: Some(dev::XMiningAssetConfig {
+        },
+        xpallet_mining_asset: dev::XMiningAssetConfig {
             claim_restrictions: vec![(X_BTC, (10, DEV_DAYS * 7))],
             mining_power_map: vec![(X_BTC, 400)],
-        }),
-        xpallet_dex_spot: Some(dev::XSpotConfig {
+        },
+        xpallet_dex_spot: dev::XSpotConfig {
             trading_pairs: vec![(PCX, X_BTC, 9, 2, 100000, true)],
-        }),
-        xpallet_genesis_builder: Some(dev::XGenesisBuilderConfig {
+        },
+        xpallet_genesis_builder: dev::XGenesisBuilderConfig {
             params: crate::genesis::genesis_builder_params(),
             initial_authorities_endowed,
             root_endowed: 0,
-        }),
+        },
     }
 }
