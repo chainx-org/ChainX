@@ -2,7 +2,7 @@
 
 pub mod bitcoin;
 
-use frame_support::{dispatch::DispatchError, traits::Contains};
+use frame_support::{dispatch::DispatchError, traits::SortedMembers};
 use sp_std::{convert::TryFrom, marker::PhantomData, prelude::*};
 
 use log::{error, warn};
@@ -84,7 +84,7 @@ impl<T: Config, C: ChainProvider> MultiSig<T::AccountId> for TrusteeMultisigProv
     }
 }
 
-impl<T: Config, C: ChainProvider> Contains<T::AccountId> for TrusteeMultisigProvider<T, C> {
+impl<T: Config, C: ChainProvider> SortedMembers<T::AccountId> for TrusteeMultisigProvider<T, C> {
     fn sorted_members() -> Vec<T::AccountId> {
         vec![Self::multisig()]
     }

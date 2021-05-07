@@ -31,13 +31,14 @@ use sp_runtime::{
         InvalidTransaction, TransactionPriority, TransactionSource, TransactionValidity,
         TransactionValidityError, ValidTransaction,
     },
-    ApplyExtrinsicResult, DispatchError, ModuleId, Perbill, Percent, Permill, RuntimeDebug,
+    ApplyExtrinsicResult, DispatchError, Perbill, Percent, Permill, RuntimeDebug,
 };
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
+use frame_support::PalletId;
 use frame_system::{EnsureOneOf, EnsureRoot, EnsureSignedBy};
 use pallet_grandpa::fg_primitives;
 use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
@@ -136,7 +137,7 @@ impl Filter<Call> for BaseFilter {
     }
 }
 pub struct IsCallable;
-frame_support::impl_filter_stack!(IsCallable, BaseFilter, Call, is_callable);
+// frame_support::impl_filter_stack!(IsCallable, BaseFilter, Call, is_callable);
 
 pub const FORBIDDEN_CALL: u8 = 255;
 pub const FORBIDDEN_ACCOUNT: u8 = 254;
@@ -629,7 +630,7 @@ parameter_types! {
     pub const TermDuration: BlockNumber = 1 * DAYS;
     pub const DesiredMembers: u32 = 11;
     pub const DesiredRunnersUp: u32 = 7;
-    pub const ElectionsPhragmenModuleId: LockIdentifier = *b"pcx/phre";
+    pub const ElectionsPhragmenPalletId: LockIdentifier = *b"pcx/phre";
 }
 
 // Make sure that there are no more than `MaxMembers` members elected via elections-phragmen.
@@ -637,7 +638,7 @@ const_assert!(DesiredMembers::get() <= CouncilMaxMembers::get());
 
 impl pallet_elections_phragmen::Config for Runtime {
     type Event = Event;
-    type ModuleId = ElectionsPhragmenModuleId;
+    type PalletId = ElectionsPhragmenPalletId;
     type Currency = Balances;
     type ChangeMembers = Council;
     // NOTE: this implies that council's genesis members cannot be set directly and must come from
@@ -687,6 +688,8 @@ impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
     type PrimeOrigin = EnsureRootOrHalfCouncil;
     type MembershipInitialized = TechnicalCommittee;
     type MembershipChanged = TechnicalCommittee;
+    type MaxMembers = TechnicalMaxMembers;
+    type WeightInfo = pallet_membership::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -701,7 +704,7 @@ parameter_types! {
     pub const DataDepositPerByte: Balance = 1 * CENTS;
     pub const BountyDepositBase: Balance = 1 * DOLLARS;
     pub const BountyDepositPayoutDelay: BlockNumber = 4 * DAYS;
-    pub const TreasuryModuleId: ModuleId = ModuleId(*b"pcx/trsy");
+    pub const TreasuryPalletId: PalletId = PalletId(*b"pcx/trsy");
     pub const BountyUpdatePeriod: BlockNumber = 90 * DAYS;
     pub const MaximumReasonLength: u32 = 16384;
     pub const BountyCuratorDeposit: Permill = Permill::from_percent(50);
@@ -709,7 +712,7 @@ parameter_types! {
 }
 
 impl pallet_treasury::Config for Runtime {
-    type ModuleId = TreasuryModuleId;
+    type PalletId = TreasuryPalletId;
     type Currency = Balances;
     type ApproveOrigin = EnsureOneOf<
         AccountId,
@@ -992,7 +995,7 @@ impl xpallet_dex_spot::Config for Runtime {
 pub struct SimpleTreasuryAccount;
 impl xpallet_support::traits::TreasuryAccount<AccountId> for SimpleTreasuryAccount {
     fn treasury_account() -> AccountId {
-        TreasuryModuleId::get().into_account()
+        TreasuryPalletId::get().into_account()
     }
 }
 

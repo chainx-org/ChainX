@@ -42,7 +42,7 @@ pallet-balances = { version = "3.0.0", default-features = false }
 pallet-bounties = { version = "3.0.0", default-features = false }
 pallet-collective = { version = "3.0.0", default-features = false }
 pallet-democracy = { version = "3.0.0", default-features = false }
-pallet-elections-phragmen = { version = "3.0.0", default-features = false }
+pallet-elections-phragmen = { version = "4.0.0", default-features = false }
 pallet-grandpa = { version = "3.0.0", default-features = false }
 pallet-identity = { version = "3.0.0", default-features = false }
 pallet-im-online = { version = "3.0.0", default-features = false }
