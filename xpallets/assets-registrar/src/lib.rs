@@ -21,7 +21,7 @@ use sp_std::prelude::*;
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult},
-    ensure,
+    ensure, log,
     traits::Get,
     IterableStorageMap,
 };
@@ -139,7 +139,7 @@ decl_module! {
             asset.is_valid::<T>()?;
             ensure!(!Self::exists(&asset_id), Error::<T>::AssetAlreadyExists);
 
-            frame_support::log::info!(
+            log::info!(
                 "[register_asset] id:{}, info:{:?}, is_online:{}, has_mining_rights:{}",
                 asset_id, asset, is_online, has_mining_rights
             );
