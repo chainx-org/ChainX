@@ -1151,7 +1151,7 @@ pub type Executive = frame_executive::Executive<
     Block,
     frame_system::ChainContext<Runtime>,
     Runtime,
-    AllModules,
+    AllPallets,
 >;
 
 impl_runtime_apis! {

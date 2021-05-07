@@ -245,7 +245,7 @@ impl<T: Config> Module<T> {
             try_addr(&addr),
             ext
         );
-        let height = frame_system::Module::<T>::block_number();
+        let height = frame_system::Pallet::<T>::block_number();
         let record =
             WithdrawalRecordOf::<T>::new(who.clone(), asset_id, balance, addr, ext, height);
 

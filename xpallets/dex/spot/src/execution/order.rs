@@ -89,7 +89,7 @@ impl<T: Config> Module<T> {
         amount: BalanceOf<T>,
         remaining: BalanceOf<T>,
     ) -> Order<TradingPairId, T::AccountId, BalanceOf<T>, T::Price, T::BlockNumber> {
-        let current_block = <frame_system::Module<T>>::block_number();
+        let current_block = <frame_system::Pallet<T>>::block_number();
         let props = OrderProperty {
             pair_id,
             side,
@@ -312,7 +312,7 @@ impl<T: Config> Module<T> {
             Ordering::Less => OrderStatus::PartialFill,
             Ordering::Equal => OrderStatus::Filled,
         };
-        order.last_update_at = <frame_system::Module<T>>::block_number();
+        order.last_update_at = <frame_system::Pallet<T>>::block_number();
     }
 
     /// Writes the `order` to the storage.
@@ -391,7 +391,7 @@ impl<T: Config> Module<T> {
             turnover,
             maker_order,
             taker_order,
-            <frame_system::Module<T>>::block_number(),
+            <frame_system::Pallet<T>>::block_number(),
         )));
 
         Ok(())
@@ -412,7 +412,7 @@ impl<T: Config> Module<T> {
 
         order.update_status_on_cancel();
         order.decrease_remaining_on_cancel(refund_amount);
-        order.last_update_at = <frame_system::Module<T>>::block_number();
+        order.last_update_at = <frame_system::Pallet<T>>::block_number();
 
         OrderInfoOf::<T>::insert(order.submitter(), order.id(), order.clone());
 

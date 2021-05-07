@@ -394,7 +394,7 @@ impl<T: Config> Module<T> {
             pair_id,
             TradingPairInfo {
                 latest_price,
-                last_updated: <frame_system::Module<T>>::block_number(),
+                last_updated: <frame_system::Pallet<T>>::block_number(),
             },
         );
 
