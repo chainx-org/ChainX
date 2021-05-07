@@ -24,8 +24,8 @@ frame_support::construct_runtime!(
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
-        System: frame_system::{Module, Call, Config, Storage, Event<T>},
-        XAssetsRegistrar: xpallet_assets_registrar::{Module, Call, Config, Storage, Event},
+        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        XAssetsRegistrar: xpallet_assets_registrar::{Pallet, Call, Config, Storage, Event},
     }
 );
 
