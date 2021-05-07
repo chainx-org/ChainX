@@ -4,8 +4,8 @@ use sp_core::crypto::AccountId32;
 use sp_std::prelude::Vec;
 
 use chainx_primitives::ReferralId;
-use xp_gateway_common::from_ss58_check;
 use log::{debug, error};
+use xp_gateway_common::from_ss58_check;
 
 pub use xp_gateway_common::AccountExtractor;
 
