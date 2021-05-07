@@ -354,7 +354,10 @@ fn build_genesis(
             code: wasm_binary.to_vec(),
             changes_trie_config: Default::default(),
         },
-        pallet_babe: Default::default(),
+        pallet_babe: dev::BabeConfig {
+            authorities: vec![],
+            epoch_config: Some(dev::BABE_GENESIS_EPOCH_CONFIG),
+        },
         pallet_grandpa: dev::GrandpaConfig {
             authorities: vec![],
         },
