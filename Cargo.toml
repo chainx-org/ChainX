@@ -103,7 +103,6 @@ pallet-treasury = { git = "https://github.com/paritytech/substrate", rev = "0c26
 pallet-utility = { git = "https://github.com/paritytech/substrate", rev = "0c26d7baebfca3cf6cafeca54f2fec7b8acc5955" }
 
 [workspace]
-resolver = "2"
 members = [
     "cli",
     "executor",
@@ -153,6 +152,11 @@ members = [
     "xpallets/transaction-fee/rpc",
     "xpallets/transaction-fee/rpc/runtime-api",
 ]
+
+# make sure dev builds with backtrace do
+# not slow us down
+[profile.dev.package.backtrace]
+opt-level = 3
 
 [profile.release]
 panic = "unwind"
