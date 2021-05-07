@@ -14,7 +14,7 @@ use light_bitcoin::{
 
 use crate::types::RequestMetaType;
 use crate::{
-    types::{BtcDepositInfo, BtcTxMetaType, RequestInfo, RequestType},
+    types::{BtcDepositInfo, BtcTxMetaType, RequestInfo, RequestType, TrusteePair},
     utils::{
         extract_addr_from_transaction, extract_opreturn_data, extract_output_addr, is_trustee_addr,
     },
@@ -27,25 +27,14 @@ pub struct BtcTxTypeDetector {
     network: Network,
     // The minimum deposit value of the `Deposit` transaction.
     min_deposit: u64,
-    // (current hot trustee address, current cold trustee address)
-    current_trustee_pair: (Address, Address),
-    // (last hot trustee address, last cold trustee address)
-    last_trustee_pair: Option<(Address, Address)>,
 }
 
 impl BtcTxTypeDetector {
     /// Create a new bitcoin tx type detector.
-    pub fn new(
-        network: Network,
-        min_deposit: u64,
-        current_trustee_pair: (Address, Address),
-        last_trustee_pair: Option<(Address, Address)>,
-    ) -> Self {
+    pub fn new(network: Network, min_deposit: u64) -> Self {
         Self {
             network,
             min_deposit,
-            current_trustee_pair,
-            last_trustee_pair,
         }
     }
 
@@ -77,12 +66,21 @@ impl BtcTxTypeDetector {
             .expect("Btc Transaction must have at least one output");
 
         let output = extract_output_addr(output_info, self.network);
-        let amount = output_info.value;
 
-        let (op_return, _amount) = self.parse_deposit_transaction_outputs(tx, extract_account);
+        if let Some(output) = output {
+            //TODO(wangyafei): change `parse_deposit_transaction_outputs` signature from address
+            //pair to single address.
+            let (op_return, amount) = self.parse_deposit_transaction_outputs(
+                tx,
+                extract_account,
+                (output.clone(), output.clone()),
+            );
 
-        let op_return: Option<AccountId> = op_return.and_then(|tuple| Some(tuple.0));
-        (input_addr, output, op_return, amount)
+            let op_return: Option<AccountId> = op_return.and_then(|tuple| Some(tuple.0));
+            (input_addr, Some(output), op_return, amount)
+        } else {
+            (input_addr, None, None, 0u64)
+        }
     }
 
     /// Detect transaction in Btc if an Issue/Redeem transaction for xbtc
@@ -140,6 +138,8 @@ impl BtcTxTypeDetector {
         tx: &Transaction,
         prev_tx: Option<&Transaction>,
         extract_account: Extractor,
+        current_trustee_pair: TrusteePair,
+        last_trustee_pair: Option<TrusteePair>,
     ) -> BtcTxMetaType<AccountId>
     where
         AccountId: Debug,
@@ -157,9 +157,9 @@ impl BtcTxTypeDetector {
                 .outputs
                 .iter()
                 .map(|output| extract_output_addr(output, self.network).unwrap_or_default())
-                .all(|addr| is_trustee_addr(addr, self.current_trustee_pair));
+                .all(|addr| is_trustee_addr(addr, current_trustee_pair));
 
-            if is_trustee_addr(input_addr, self.current_trustee_pair) {
+            if is_trustee_addr(input_addr, current_trustee_pair) {
                 return if all_outputs_is_trustee {
                     BtcTxMetaType::HotAndCold
                 } else {
@@ -167,7 +167,7 @@ impl BtcTxTypeDetector {
                     BtcTxMetaType::Withdrawal
                 };
             }
-            if let Some(last_trustee_pair) = self.last_trustee_pair {
+            if let Some(last_trustee_pair) = last_trustee_pair {
                 if is_trustee_addr(input_addr, last_trustee_pair) && all_outputs_is_trustee {
                     // inputs should from last trustee address, outputs should all be current trustee addresses
                     return BtcTxMetaType::TrusteeTransition;
@@ -176,7 +176,7 @@ impl BtcTxTypeDetector {
         }
 
         // detect X-BTC `Deposit` transaction
-        self.detect_deposit_transaction_type(tx, input_addr, extract_account)
+        self.detect_deposit_transaction_type(tx, input_addr, extract_account, current_trustee_pair)
     }
 
     /// Detect X-BTC `Deposit` transaction
@@ -226,13 +226,14 @@ impl BtcTxTypeDetector {
         tx: &Transaction,
         input_addr: Option<Address>,
         extract_account: Extractor,
+        current_trustee_pair: TrusteePair,
     ) -> BtcTxMetaType<AccountId>
     where
         AccountId: Debug,
         Extractor: Fn(&[u8]) -> Option<(AccountId, Option<ReferralId>)>,
     {
         let (op_return, deposit_value) =
-            self.parse_deposit_transaction_outputs(tx, extract_account);
+            self.parse_deposit_transaction_outputs(tx, extract_account, current_trustee_pair);
         // check if deposit value is greater than minimum deposit value.
         if deposit_value >= self.min_deposit {
             // if opreturn.is_none() && input_addr.is_none()
@@ -257,6 +258,7 @@ impl BtcTxTypeDetector {
         &self,
         tx: &Transaction,
         extract_account: Extractor,
+        current_trustee_pair: TrusteePair,
     ) -> (Option<(AccountId, Option<ReferralId>)>, u64)
     where
         AccountId: Debug,
@@ -283,7 +285,7 @@ impl BtcTxTypeDetector {
         }
 
         let mut deposit_value = 0;
-        let (hot_addr, _) = self.current_trustee_pair;
+        let (hot_addr, _) = current_trustee_pair;
         for output in &tx.outputs {
             // extract destination address from the script of output.
             if let Some(dest_addr) = extract_output_addr(output, self.network) {
@@ -449,19 +451,18 @@ mod tests {
 
         const DEPOSIT_HOT_ADDR: &str = "3LFSUKkP26hun42J1Dy6RATsbgmBJb27NF";
         const DEPOSIT_COLD_ADDR: &str = "3FLBhPfEqmw4Wn5EQMeUzPLrQtJMprgwnw";
-        let btc_tx_detector = BtcTxTypeDetector::new(
-            Network::Mainnet,
-            0,
-            (
-                DEPOSIT_HOT_ADDR.parse::<Address>().unwrap(),
-                DEPOSIT_COLD_ADDR.parse::<Address>().unwrap(),
-            ),
-            None,
-        );
+        let btc_tx_detector = BtcTxTypeDetector::new(Network::Mainnet, 0);
 
+        let current_trustee_pair = (
+            DEPOSIT_HOT_ADDR.parse::<Address>().unwrap(),
+            DEPOSIT_COLD_ADDR.parse::<Address>().unwrap(),
+        );
         for (tx, expect) in cases {
-            let got = btc_tx_detector
-                .parse_deposit_transaction_outputs(&tx, OpReturnExtractor::extract_account);
+            let got = btc_tx_detector.parse_deposit_transaction_outputs(
+                &tx,
+                OpReturnExtractor::extract_account,
+                current_trustee_pair,
+            );
             assert_eq!(got, expect);
         }
     }
