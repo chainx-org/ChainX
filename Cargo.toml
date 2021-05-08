@@ -68,6 +68,7 @@ sp-transaction-pool = { git = "https://github.com/paritytech/substrate", rev = "
 sp-trie = { git = "https://github.com/paritytech/substrate", rev = "2be8fcc4236d32786c62f6f27a98e7fe7e550807" }
 sp-version = { git = "https://github.com/paritytech/substrate", rev = "2be8fcc4236d32786c62f6f27a98e7fe7e550807" }
 
+frame-benchmarking = { git = "https://github.com/paritytech/substrate", rev = "2be8fcc4236d32786c62f6f27a98e7fe7e550807" }
 frame-benchmarking-cli = { git = "https://github.com/paritytech/substrate", rev = "2be8fcc4236d32786c62f6f27a98e7fe7e550807" }
 frame-executive = { git = "https://github.com/paritytech/substrate", rev = "2be8fcc4236d32786c62f6f27a98e7fe7e550807" }
 frame-support = { git = "https://github.com/paritytech/substrate", rev = "2be8fcc4236d32786c62f6f27a98e7fe7e550807" }

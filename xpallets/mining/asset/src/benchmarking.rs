@@ -11,7 +11,7 @@ const SEED: u32 = 0;
 benchmarks! {
     claim {
         let u in 1 .. 1000;
-        xpallet_assets_registrar::Module::<T>::register(
+        xpallet_assets_registrar::Pallet::<T>::register(
             frame_system::RawOrigin::Root.into(),
             X_DOT,
             xpallet_assets_registrar::AssetInfo::new::<T>(
@@ -28,21 +28,21 @@ benchmarks! {
         FixedAssetPowerOf::insert(X_DOT, 100);
 
         let miner = account("miner", u, SEED);
-        xpallet_assets::Module::<T>::issue(&X_DOT, &miner, 1000u32.into())?;
+        xpallet_assets::Pallet::<T>::issue(&X_DOT, &miner, 1000u32.into())?;
 
         let reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(&X_DOT);
         <T as xpallet_assets::Config>::Currency::make_free_balance_be(&reward_pot, 100u32.into());
         <T as xpallet_assets::Config>::Currency::issue(100u32.into());
 
-        Module::<T>::set_claim_staking_requirement(RawOrigin::Root.into(), X_DOT, 0)?;
+        Pallet::<T>::set_claim_staking_requirement(RawOrigin::Root.into(), X_DOT, 0)?;
 
-        let block_number: T::BlockNumber = frame_system::Module::<T>::block_number();
-        frame_system::Module::<T>::set_block_number(block_number + 100u32.into());
+        let block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
+        frame_system::Pallet::<T>::set_block_number(block_number + 100u32.into());
 
     }: _(RawOrigin::Signed(miner.clone()), X_DOT)
     verify {
         // 10% belongs to the referral/treasury, 90% is the miner's reward.
-        assert!(Module::<T>::free_balance(&miner) == 90u32.into());
+        assert!(Pallet::<T>::free_balance(&miner) == 90u32.into());
     }
 
     set_claim_staking_requirement {

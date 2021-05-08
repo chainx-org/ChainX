@@ -828,7 +828,7 @@ version = "2.0.9"
 dependencies = [
  "chainx-runtime",
  "dev-runtime",
- "frame-benchmarking 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "malan-runtime",
  "sc-executor",
  "xp-io",
@@ -902,7 +902,7 @@ version = "2.0.9"
 dependencies = [
  "chainx-primitives",
  "chainx-runtime-common",
- "frame-benchmarking 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "frame-executive",
  "frame-support",
  "frame-system",
@@ -1505,7 +1505,7 @@ version = "2.0.9"
 dependencies = [
  "chainx-primitives",
  "chainx-runtime-common",
- "frame-benchmarking 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "frame-executive",
  "frame-support",
  "frame-system",
@@ -1947,25 +1947,6 @@ dependencies = [
 [[package]]
 name = "frame-benchmarking"
 version = "3.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70fe99487f84579a3f2c4ba52650fec875492eea41be0e4eea8019187f105052"
-dependencies = [
- "frame-support",
- "frame-system",
- "linregress",
- "parity-scale-codec",
- "paste",
- "sp-api",
- "sp-io",
- "sp-runtime",
- "sp-runtime-interface",
- "sp-std",
- "sp-storage",
-]
-
-[[package]]
-name = "frame-benchmarking"
-version = "3.1.0"
 source = "git+https://github.com/paritytech/substrate?rev=2be8fcc4236d32786c62f6f27a98e7fe7e550807#2be8fcc4236d32786c62f6f27a98e7fe7e550807"
 dependencies = [
  "frame-support",
@@ -1989,7 +1970,7 @@ source = "git+https://github.com/paritytech/substrate?rev=2be8fcc4236d32786c62f6
 dependencies = [
  "Inflector",
  "chrono",
- "frame-benchmarking 3.1.0 (git+https://github.com/paritytech/substrate?rev=2be8fcc4236d32786c62f6f27a98e7fe7e550807)",
+ "frame-benchmarking",
  "handlebars",
  "parity-scale-codec",
  "sc-cli",
@@ -2114,7 +2095,7 @@ version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e93602f58cdab9820b6d607b7b50834d9b878efa33405a65c89ebfb5a596b584"
 dependencies = [
- "frame-benchmarking 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -3898,7 +3879,7 @@ version = "2.0.9"
 dependencies = [
  "chainx-primitives",
  "chainx-runtime-common",
- "frame-benchmarking 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "frame-executive",
  "frame-support",
  "frame-system",
@@ -4567,7 +4548,7 @@ name = "pallet-babe"
 version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate?rev=2be8fcc4236d32786c62f6f27a98e7fe7e550807#2be8fcc4236d32786c62f6f27a98e7fe7e550807"
 dependencies = [
- "frame-benchmarking 3.1.0 (git+https://github.com/paritytech/substrate?rev=2be8fcc4236d32786c62f6f27a98e7fe7e550807)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -4590,7 +4571,7 @@ name = "pallet-balances"
 version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate?rev=2be8fcc4236d32786c62f6f27a98e7fe7e550807#2be8fcc4236d32786c62f6f27a98e7fe7e550807"
 dependencies = [
- "frame-benchmarking 3.1.0 (git+https://github.com/paritytech/substrate?rev=2be8fcc4236d32786c62f6f27a98e7fe7e550807)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -4617,7 +4598,7 @@ name = "pallet-collective"
 version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate?rev=2be8fcc4236d32786c62f6f27a98e7fe7e550807#2be8fcc4236d32786c62f6f27a98e7fe7e550807"
 dependencies = [
- "frame-benchmarking 3.1.0 (git+https://github.com/paritytech/substrate?rev=2be8fcc4236d32786c62f6f27a98e7fe7e550807)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -4633,7 +4614,7 @@ name = "pallet-democracy"
 version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate?rev=2be8fcc4236d32786c62f6f27a98e7fe7e550807#2be8fcc4236d32786c62f6f27a98e7fe7e550807"
 dependencies = [
- "frame-benchmarking 3.1.0 (git+https://github.com/paritytech/substrate?rev=2be8fcc4236d32786c62f6f27a98e7fe7e550807)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -4664,7 +4645,7 @@ name = "pallet-grandpa"
 version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate?rev=2be8fcc4236d32786c62f6f27a98e7fe7e550807#2be8fcc4236d32786c62f6f27a98e7fe7e550807"
 dependencies = [
- "frame-benchmarking 3.1.0 (git+https://github.com/paritytech/substrate?rev=2be8fcc4236d32786c62f6f27a98e7fe7e550807)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -4686,7 +4667,7 @@ version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate?rev=2be8fcc4236d32786c62f6f27a98e7fe7e550807#2be8fcc4236d32786c62f6f27a98e7fe7e550807"
 dependencies = [
  "enumflags2",
- "frame-benchmarking 3.1.0 (git+https://github.com/paritytech/substrate?rev=2be8fcc4236d32786c62f6f27a98e7fe7e550807)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -4733,7 +4714,7 @@ name = "pallet-membership"
 version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate?rev=2be8fcc4236d32786c62f6f27a98e7fe7e550807#2be8fcc4236d32786c62f6f27a98e7fe7e550807"
 dependencies = [
- "frame-benchmarking 3.1.0 (git+https://github.com/paritytech/substrate?rev=2be8fcc4236d32786c62f6f27a98e7fe7e550807)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -4805,7 +4786,7 @@ name = "pallet-scheduler"
 version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate?rev=2be8fcc4236d32786c62f6f27a98e7fe7e550807#2be8fcc4236d32786c62f6f27a98e7fe7e550807"
 dependencies = [
- "frame-benchmarking 3.1.0 (git+https://github.com/paritytech/substrate?rev=2be8fcc4236d32786c62f6f27a98e7fe7e550807)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -4852,7 +4833,7 @@ name = "pallet-timestamp"
 version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate?rev=2be8fcc4236d32786c62f6f27a98e7fe7e550807#2be8fcc4236d32786c62f6f27a98e7fe7e550807"
 dependencies = [
- "frame-benchmarking 3.1.0 (git+https://github.com/paritytech/substrate?rev=2be8fcc4236d32786c62f6f27a98e7fe7e550807)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "impl-trait-for-tuples 0.2.1",
@@ -9740,7 +9721,7 @@ dependencies = [
  "bitflags",
  "chainx-primitives",
  "env_logger",
- "frame-benchmarking 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -9763,7 +9744,7 @@ name = "xpallet-assets-registrar"
 version = "2.0.9"
 dependencies = [
  "chainx-primitives",
- "frame-benchmarking 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -9812,7 +9793,7 @@ version = "2.0.9"
 dependencies = [
  "chainx-primitives",
  "env_logger",
- "frame-benchmarking 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -9863,7 +9844,7 @@ version = "2.0.9"
 dependencies = [
  "bs58 0.3.1",
  "chainx-primitives",
- "frame-benchmarking 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "hex",
@@ -9900,7 +9881,7 @@ name = "xpallet-gateway-common"
 version = "2.0.9"
 dependencies = [
  "chainx-primitives",
- "frame-benchmarking 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "hex",
@@ -9962,7 +9943,7 @@ name = "xpallet-gateway-records"
 version = "2.0.9"
 dependencies = [
  "chainx-primitives",
- "frame-benchmarking 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -10038,7 +10019,7 @@ version = "2.0.9"
 dependencies = [
  "chainx-primitives",
  "env_logger",
- "frame-benchmarking 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -10094,7 +10075,7 @@ version = "2.0.9"
 dependencies = [
  "chainx-primitives",
  "env_logger",
- "frame-benchmarking 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
