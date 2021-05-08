@@ -9703,7 +9703,7 @@ dependencies = [
 
 [[package]]
 name = "xp-protocol"
-version = "2.0.9"
+version = "2.0.8-1"
 dependencies = [
  "chainx-primitives",
  "parity-scale-codec",
@@ -9893,6 +9893,33 @@ dependencies = [
  "xpallet-gateway-common",
  "xpallet-gateway-records",
  "xpallet-support",
+]
+
+[[package]]
+name = "xpallet-gateway-bitcoin-v2"
+version = "2.0.1"
+dependencies = [
+ "bitflags",
+ "bs58 0.3.1",
+ "chainx-primitives",
+ "frame-support",
+ "frame-system",
+ "impl-trait-for-tuples 0.2.1",
+ "light-bitcoin",
+ "pallet-balances",
+ "parity-scale-codec",
+ "serde",
+ "sha2 0.8.2",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-inherents",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "sp-version",
+ "xp-protocol",
+ "xpallet-assets",
+ "xpallet-assets-registrar",
 ]
 
 [[package]]

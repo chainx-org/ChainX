@@ -1,0 +1,65 @@
+[package]
+name = "xpallet-gateway-bitcoin-v2"
+version = "2.0.1"
+authors = ["The ChainX Authors"]
+edition = "2018"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+bs58 = { version = "0.3", default-features = false, features = ["alloc"] }
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+impl-trait-for-tuples = "0.2.0"
+serde = { version = "1.0.101", optional = true, features = ["derive"] }
+sha2 = { version = "0.8.0", default-features = false }
+bitflags = { version = "1.2.1", default-features = false }
+
+# Substrate
+sp-arithmetic = { version = "3.0.0", default-features = false }
+sp-core = { version = "3.0.0", default-features = false }
+sp-io = { version = "3.0.0", default-features = false }
+sp-inherents = { version = "3.0.0", default-features = false }
+sp-runtime = { version = "3.0.0", default-features = false }
+sp-std = { version = "3.0.0", default-features = false }
+sp-version = { version = "3.0.0", default-features = false }
+frame-support = { version = "3.0.0", default-features = false }
+frame-system = { version = "3.0.0", default-features = false }
+
+# ChainX pallet
+xpallet-assets = { path = "../../../assets", default-features = false }
+xpallet-assets-registrar = { path = "../../../assets-registrar", default-features = false }
+chainx-primitives = { path = "../../../../primitives", default-features = false }
+xp-protocol = { path = "../../../../primitives/protocol", default-features = false }
+
+
+# light-bitcoin
+light-bitcoin = { git = "https://github.com/chainx-org/light-bitcoin", branch = "master", default-features = false }
+
+[dev-dependencies]
+pallet-balances = "3.0.0"
+
+[features]
+default = ["std"]
+std = [
+  "codec/std",
+  "bs58/std",
+  "serde",
+  "sha2/std",
+  "sp-arithmetic/std",
+  "sp-core/std",
+  "sp-io/std",
+  "sp-inherents/std",
+  "sp-runtime/std",
+  "sp-std/std",
+  "sp-version/std",
+  "frame-support/std",
+  "frame-system/std",
+  "xpallet-assets/std",
+  "xpallet-assets-registrar/std",
+  # light-bitcoin
+  "light-bitcoin/std",
+  # Chainx primitives
+  "chainx-primitives/std",
+  "xp-protocol/std",
+]
