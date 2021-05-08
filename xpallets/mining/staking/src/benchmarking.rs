@@ -19,7 +19,7 @@ pub fn create_funded_user<T: Config>(string: &'static str, n: u32, value: u32) -
 
 fn b_bond<T: Config>(nominator: T::AccountId, validator: T::AccountId, value: u32) {
     let validator_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(validator);
-    assert!(crate::Module::<T>::bond(
+    assert!(crate::Pallet::<T>::bond(
         RawOrigin::Signed(nominator).into(),
         validator_lookup,
         value.into(),
@@ -29,7 +29,7 @@ fn b_bond<T: Config>(nominator: T::AccountId, validator: T::AccountId, value: u3
 
 pub fn create_validator<T: Config>(string: &'static str, n: u32, value: u32) -> T::AccountId {
     let validator = create_funded_user::<T>(string, n, value);
-    assert!(crate::Module::<T>::register(
+    assert!(crate::Pallet::<T>::register(
         RawOrigin::Signed(validator.clone()).into(),
         n.to_be_bytes().to_vec(),
         value.into()
@@ -63,28 +63,28 @@ benchmarks! {
         let validator_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(validator.clone());
     }: _(RawOrigin::Signed(validator.clone()), validator_lookup, 10u32.into())
     verify {
-        assert!(Module::<T>::bonded_to(&validator, &validator) == 90u32.into());
+        assert!(Pallet::<T>::bonded_to(&validator, &validator) == 90u32.into());
     }
 
     unlock_unbonded_withdrawal {
         let validator: T::AccountId = create_validator::<T>("validator", 2, 100);
         let validator_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(validator.clone());
 
-        Module::<T>::set_validator_bonding_duration(RawOrigin::Root.into(), 0u32.into())?;
+        Pallet::<T>::set_validator_bonding_duration(RawOrigin::Root.into(), 0u32.into())?;
 
-        Module::<T>::unbond(
+        Pallet::<T>::unbond(
             RawOrigin::Signed(validator.clone()).into(),
             validator_lookup.clone(),
             20u32.into(),
         )?;
 
-        let block_number: T::BlockNumber = frame_system::Module::<T>::block_number();
-        frame_system::Module::<T>::set_block_number(block_number + 1u32.into());
+        let block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
+        frame_system::Pallet::<T>::set_block_number(block_number + 1u32.into());
 
     }: _(RawOrigin::Signed(validator.clone()), validator_lookup, 0)
     verify {
-        assert!(Module::<T>::bonded_to(&validator, &validator) == 80u32.into());
-        assert!(Module::<T>::staked_of(&validator)  == 80u32.into());
+        assert!(Pallet::<T>::bonded_to(&validator, &validator) == 80u32.into());
+        assert!(Pallet::<T>::staked_of(&validator)  == 80u32.into());
     }
 
     rebond {
@@ -97,8 +97,8 @@ benchmarks! {
         let validator2_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(validator2.clone());
     }: _(RawOrigin::Signed(nominator.clone()), validator1_lookup, validator2_lookup, 10u32.into())
     verify {
-        assert!(Module::<T>::bonded_to(&nominator, &validator1) == 20u32.into());
-        assert!(Module::<T>::bonded_to(&nominator, &validator2) == 10u32.into());
+        assert!(Pallet::<T>::bonded_to(&nominator, &validator1) == 20u32.into());
+        assert!(Pallet::<T>::bonded_to(&nominator, &validator2) == 10u32.into());
     }
 
     claim {
@@ -113,8 +113,8 @@ benchmarks! {
 
         let balance_before = T::Currency::free_balance(&validator);
 
-        let block_number: T::BlockNumber = frame_system::Module::<T>::block_number();
-        frame_system::Module::<T>::set_block_number(block_number + 1u32.into());
+        let block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
+        frame_system::Pallet::<T>::set_block_number(block_number + 1u32.into());
     }: _(RawOrigin::Signed(validator.clone()), validator_lookup)
     verify {
         assert!(T::Currency::total_balance(&validator) == balance_before + pot_balance.into());
@@ -123,24 +123,24 @@ benchmarks! {
     chill {
         let u in 1 .. 1000;
         let validator: T::AccountId = create_validator::<T>("validator", 2, 1000);
-        if !Module::<T>::is_validator(&validator) {
-            Module::<T>::register(RawOrigin::Signed(validator.clone()).into(), (u as u32).to_be_bytes().to_vec(), 100u32.into())?;
+        if !Pallet::<T>::is_validator(&validator) {
+            Pallet::<T>::register(RawOrigin::Signed(validator.clone()).into(), (u as u32).to_be_bytes().to_vec(), 100u32.into())?;
         }
     }: _(RawOrigin::Signed(validator.clone()))
     verify {
-        assert!(Module::<T>::is_chilled(&validator));
+        assert!(Pallet::<T>::is_chilled(&validator));
     }
 
     validate {
         let u in 1 .. 1000;
         let validator: T::AccountId = create_validator::<T>("validator", 2, 1000);
-        if !Module::<T>::is_validator(&validator) {
-            Module::<T>::register(RawOrigin::Signed(validator.clone()).into(), (u as u32).to_be_bytes().to_vec(), 100u32.into())?;
+        if !Pallet::<T>::is_validator(&validator) {
+            Pallet::<T>::register(RawOrigin::Signed(validator.clone()).into(), (u as u32).to_be_bytes().to_vec(), 100u32.into())?;
         }
-        Module::<T>::chill(RawOrigin::Signed(validator.clone()).into())?;
+        Pallet::<T>::chill(RawOrigin::Signed(validator.clone()).into())?;
     }: _(RawOrigin::Signed(validator.clone()))
     verify {
-        assert!(Module::<T>::is_active(&validator));
+        assert!(Pallet::<T>::is_active(&validator));
     }
 
     set_validator_count {

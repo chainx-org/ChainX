@@ -106,6 +106,12 @@ impl ExtBuilder {
         ext
     }
 
+    pub fn build_with(self) -> sp_io::TestExternalities {
+        let btc_assets = btc();
+        let assets = vec![(btc_assets.0, btc_assets.1, true, true)];
+        self.build(assets)
+    }
+
     pub fn build_and_execute(self, test: impl FnOnce() -> ()) {
         let btc_assets = btc();
         let assets = vec![(btc_assets.0, btc_assets.1, true, true)];

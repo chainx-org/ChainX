@@ -5,7 +5,7 @@ use super::*;
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_system::RawOrigin;
 
-use crate::Module as XAssets;
+use crate::Pallet as XAssets;
 
 const ASSET_ID: AssetId = xp_protocol::X_BTC;
 const SEED: u32 = 0;
