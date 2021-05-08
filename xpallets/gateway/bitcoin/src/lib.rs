@@ -7,7 +7,7 @@
 mod header;
 pub mod trustee;
 mod tx;
-mod types;
+pub mod types;
 pub mod weights;
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
@@ -475,7 +475,7 @@ impl<T: Trait> Module<T> {
         deserialize(Reader::new(input)).map_err(|_| Error::<T>::DeserializeErr)
     }
 
-    fn apply_push_header(header: BtcHeader) -> DispatchResult {
+    pub fn apply_push_header(header: BtcHeader) -> DispatchResult {
         // current should not exist
         if Self::headers(&header.hash()).is_some() {
             error!(
@@ -551,7 +551,10 @@ impl<T: Trait> Module<T> {
         })
     }
 
-    fn apply_push_transaction(tx: BtcRelayedTx, prev_tx: Option<Transaction>) -> DispatchResult {
+    pub fn apply_push_transaction(
+        tx: BtcRelayedTx,
+        prev_tx: Option<Transaction>,
+    ) -> DispatchResult {
         let tx_hash = tx.raw.hash();
         let block_hash = tx.block_hash;
         let header_info = Module::<T>::headers(&tx.block_hash).ok_or_else(|| {

@@ -22,6 +22,7 @@ use dev_runtime::constants::{currency::DOLLARS as DEV_DOLLARS, time::DAYS as DEV
 use xp_assets_registrar::Chain;
 use xp_protocol::{NetworkType, PCX, PCX_DECIMALS, X_BTC};
 use xpallet_gateway_bitcoin::{BtcParams, BtcTxVerifier};
+use xpallet_gateway_bitcoin_offchain::AuthorityId as GatewayBitcoinRelayId;
 use xpallet_gateway_common::types::TrusteeInfoConfig;
 
 use crate::genesis::assets::{genesis_assets, init_assets, pcx, AssetParams};
@@ -82,8 +83,17 @@ type AuthorityKeysTuple = (
     AuthorityDiscoveryId,
 );
 
+type DevAuthorityKeysTuple = (
+    (AccountId, ReferralId), // (Staking ValidatorId, ReferralId)
+    BabeId,
+    GrandpaId,
+    ImOnlineId,
+    AuthorityDiscoveryId,
+    GatewayBitcoinRelayId,
+);
+
 /// Helper function to generate an authority key for babe
-pub fn authority_keys_from_seed(seed: &str) -> AuthorityKeysTuple {
+pub fn dev_authority_keys_from_seed(seed: &str) -> DevAuthorityKeysTuple {
     (
         (
             get_account_id_from_seed::<sr25519::Public>(seed),
@@ -93,6 +103,7 @@ pub fn authority_keys_from_seed(seed: &str) -> AuthorityKeysTuple {
         get_from_seed::<GrandpaId>(seed),
         get_from_seed::<ImOnlineId>(seed),
         get_from_seed::<AuthorityDiscoveryId>(seed),
+        get_from_seed::<GatewayBitcoinRelayId>(seed),
     )
 }
 
@@ -137,7 +148,7 @@ pub fn development_config() -> Result<DevChainSpec, String> {
     let constructor = move || {
         build_genesis(
             wasm_binary,
-            vec![authority_keys_from_seed("Alice")],
+            vec![dev_authority_keys_from_seed("Alice")],
             get_account_id_from_seed::<sr25519::Public>("Alice"),
             get_account_id_from_seed::<sr25519::Public>("vesting"),
             genesis_assets(),
@@ -173,7 +184,7 @@ pub fn benchmarks_config() -> Result<DevChainSpec, String> {
     let constructor = move || {
         build_genesis(
             wasm_binary,
-            vec![authority_keys_from_seed("Alice")],
+            vec![dev_authority_keys_from_seed("Alice")],
             get_account_id_from_seed::<sr25519::Public>("Alice"),
             get_account_id_from_seed::<sr25519::Public>("vesting"),
             genesis_assets(),
@@ -209,8 +220,8 @@ pub fn local_testnet_config() -> Result<DevChainSpec, String> {
         build_genesis(
             wasm_binary,
             vec![
-                authority_keys_from_seed("Alice"),
-                authority_keys_from_seed("Bob"),
+                dev_authority_keys_from_seed("Alice"),
+                dev_authority_keys_from_seed("Bob"),
             ],
             get_account_id_from_seed::<sr25519::Public>("Alice"),
             get_account_id_from_seed::<sr25519::Public>("vesting"),
@@ -259,18 +270,20 @@ fn dev_session_keys(
     grandpa: GrandpaId,
     im_online: ImOnlineId,
     authority_discovery: AuthorityDiscoveryId,
+    gateway_bitcoin_relay: GatewayBitcoinRelayId,
 ) -> dev::SessionKeys {
     dev::SessionKeys {
         grandpa,
         babe,
         im_online,
         authority_discovery,
+        gateway_bitcoin_relay,
     }
 }
 
 fn build_genesis(
     wasm_binary: &[u8],
-    initial_authorities: Vec<AuthorityKeysTuple>,
+    initial_authorities: Vec<DevAuthorityKeysTuple>,
     root_key: AccountId,
     vesting_account: AccountId,
     assets: Vec<AssetParams>,
@@ -328,7 +341,7 @@ fn build_genesis(
     let validators = initial_authorities
         .clone()
         .into_iter()
-        .map(|((validator, referral), _, _, _, _)| {
+        .map(|((validator, referral), _, _, _, _, _)| {
             initial_authorities_endowed += STAKING_LOCKED;
             (validator, referral, STAKING_LOCKED)
         })
@@ -378,7 +391,13 @@ fn build_genesis(
                     (
                         (x.0).0.clone(),
                         (x.0).0.clone(),
-                        dev_session_keys(x.1.clone(), x.2.clone(), x.3.clone(), x.4.clone()),
+                        dev_session_keys(
+                            x.1.clone(),
+                            x.2.clone(),
+                            x.3.clone(),
+                            x.4.clone(),
+                            x.5.clone(),
+                        ),
                     )
                 })
                 .collect::<Vec<_>>(),
@@ -412,6 +431,7 @@ fn build_genesis(
             max_withdrawal_count: 100,
             verifier: BtcTxVerifier::Recover,
         }),
+        xpallet_gateway_bitcoin_offchain: Some(dev::XGatewayBitcoinOffchainConfig { keys: vec![] }),
         xpallet_mining_staking: Some(dev::XStakingConfig {
             validators,
             validator_count: 50,

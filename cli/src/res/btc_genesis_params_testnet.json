@@ -1,12 +1,12 @@
 {
     "network": "Testnet",
-    "confirmation_number": 4,
-    "height": 1906709,
-    "hash": "00000000000000089a64809fc63d63efd57b2b208b452474571bac5db052a720",
+    "confirmation_number": 6,
+    "height": 1893217,
+    "hash": "000000000000005876ab6c0fae002ef9f7bc5a2a96909b0e38c8997351c92529",
     "version": 536928256,
-    "previous_header_hash": "0000000008d2e5d70a9dc24f0085952c940e5b63c808debc5067a5fdc9171119",
-    "merkle_root_hash": "7bf96b2185758157094f03f5bba28ac9c2e9acefce1729d26b914e2c2d11ac6c",
-    "time": 1611971971,
-    "bits": 420676857,
-    "nonce": 1684667187
+    "previous_header_hash": "00000000000000280986025caa89c9531ae89ff41b6ff38fe1b58b9f1321447f",
+    "merkle_root_hash": "27b273721e248e74c8649d080fefb68140121be9c5dd5acd4b4cfcc4a4005886",
+    "time": 1605852787,
+    "bits": 436242667,
+    "nonce": 1959020028
 }

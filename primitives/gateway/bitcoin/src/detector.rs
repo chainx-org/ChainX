@@ -3,7 +3,7 @@
 use sp_std::fmt::Debug;
 
 use chainx_primitives::ReferralId;
-use xp_logging::{debug, warn};
+use xp_logging::debug;
 
 use light_bitcoin::{
     chain::Transaction,
@@ -163,7 +163,7 @@ impl BtcTxTypeDetector {
                 input_addr,
             })
         } else {
-            warn!(
+            debug!(
                 "[detect_deposit_transaction_type] Receive a deposit tx ({:?}), but deposit value ({:}) is too low, drop it",
                 hash_rev(tx.hash()), deposit_value,
             );
