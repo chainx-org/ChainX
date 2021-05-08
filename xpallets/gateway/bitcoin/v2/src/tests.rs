@@ -4,6 +4,7 @@ use frame_support::traits::Hooks;
 use frame_support::{
     assert_err, assert_ok,
     dispatch::{DispatchResult, DispatchResultWithPostInfo},
+    instances::Instance1,
 };
 use frame_system::RawOrigin;
 
@@ -84,11 +85,11 @@ fn test_register_vault() {
         const Bob: AccountId = 2;
         assert_err!(
             t_register_vault(Alice, 20000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna"),
-            pallet::Error::<Test>::InsufficientFunds
+            pallet::Error::<Test, Instance1>::InsufficientFunds
         );
         assert_err!(
             t_register_vault(Alice, 10, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna"),
-            pallet::Error::<Test>::CollateralAmountTooSmall
+            pallet::Error::<Test, Instance1>::CollateralAmountTooSmall
         );
         assert_ok!(t_register_vault(
             Alice,
@@ -97,11 +98,11 @@ fn test_register_vault() {
         ));
         assert_err!(
             t_register_vault(Alice, 2000, "3LrrqZ2LtZxAcroVaYKgM6yDeRszV2sY1r"),
-            pallet::Error::<Test>::VaultAlreadyRegistered
+            pallet::Error::<Test, Instance1>::VaultAlreadyRegistered
         );
         assert_err!(
             t_register_vault(Bob, 2000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna"),
-            pallet::Error::<Test>::BtcAddressOccupied
+            pallet::Error::<Test, Instance1>::BtcAddressOccupied
         );
     })
 }
@@ -113,7 +114,7 @@ fn test_add_extra_collateral() {
         const Alice: AccountId = 1;
         assert_err!(
             XGatewayBitcoin::add_extra_collateral(Origin::signed(Alice), 100),
-            pallet::Error::<Test>::VaultNotFound
+            pallet::Error::<Test, Instance1>::VaultNotFound
         );
         assert_ok!(t_register_vault(
             Alice,
@@ -122,7 +123,7 @@ fn test_add_extra_collateral() {
         ));
         assert_err!(
             XGatewayBitcoin::add_extra_collateral(Origin::signed(Alice), 10000),
-            pallet::Error::<Test>::InsufficientFunds
+            pallet::Error::<Test, Instance1>::InsufficientFunds
         );
         assert_ok!(XGatewayBitcoin::add_extra_collateral(
             Origin::signed(Alice),
@@ -148,7 +149,7 @@ fn test_update_exchange_rate() {
 
         assert_err!(
             XGatewayBitcoin::update_exchange_rate(Origin::signed(2), new_exchange_rate.clone()),
-            pallet::Error::<Test>::NotOracle
+            pallet::Error::<Test, Instance1>::NotOracle
         );
         assert_ok!(XGatewayBitcoin::force_update_oracles(
             Origin::root(),
@@ -272,7 +273,7 @@ fn test_issue_request() {
 
         assert_err!(
             XGatewayBitcoin::execute_issue(Origin::signed(1), 1, vec![], vec![], vec![],),
-            pallet::Error::<Test>::IssueRequestNotFound
+            pallet::Error::<Test, Instance1>::IssueRequestNotFound
         );
     })
 }
@@ -288,7 +289,7 @@ fn test_cancel_issue_request() {
         System::set_block_number(5000);
         assert_err!(
             XGatewayBitcoin::cancel_issue(Origin::signed(1), 1),
-            pallet::Error::<Test>::IssueRequestNotExpired
+            pallet::Error::<Test, Instance1>::IssueRequestNotExpired
         );
 
         System::set_block_number(10020);
@@ -308,7 +309,7 @@ fn test_lock_collateral() {
         assert_eq!(<pallet::CurrencyOf<Test>>::reserved_balance(1), 200);
         assert_err!(
             XGatewayBitcoin::lock_collateral(&1, 100_000),
-            pallet::Error::<Test>::InsufficientFunds
+            pallet::Error::<Test, Instance1>::InsufficientFunds
         );
     });
 }
@@ -319,7 +320,7 @@ fn test_slash_collateral() {
         XGatewayBitcoin::lock_collateral(&1, 200).unwrap();
         assert_err!(
             XGatewayBitcoin::slash_collateral(&1, &2, 300),
-            pallet::Error::<Test>::InsufficientCollateral
+            pallet::Error::<Test, Instance1>::InsufficientCollateral
         );
         assert_ok!(XGatewayBitcoin::slash_collateral(&1, &2, 200));
         assert_eq!(<pallet::CurrencyOf<Test>>::reserved_balance(1), 0);
@@ -335,8 +336,8 @@ fn test_release_collateral() {
         assert_ok!(XGatewayBitcoin::unlock_collateral(&1, 200));
         assert_eq!(<pallet::CurrencyOf<Test>>::reserved_balance(1), 0);
         assert_err!(
-            pallet::Pallet::<Test>::unlock_collateral(&1, 200),
-            pallet::Error::<Test>::InsufficientCollateral
+            pallet::Pallet::<Test, Instance1>::unlock_collateral(&1, 200),
+            pallet::Error::<Test, Instance1>::InsufficientCollateral
         );
     })
 }
@@ -357,7 +358,7 @@ fn test_redeem_request_err_with_insufficiant_assets_funds() {
                 1000,
                 "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".as_bytes().to_vec()
             ),
-            pallet::Error::<Test>::InsufficiantAssetsFunds
+            pallet::Error::<Test, Instance1>::InsufficiantAssetsFunds
         );
     })
 }
@@ -381,7 +382,7 @@ fn test_redeem_request_ok() {
         let vault = XGatewayBitcoin::get_vault_by_id(&3).unwrap();
         assert_eq!(vault.to_be_redeemed_tokens, 1);
 
-        let redeem_request = pallet::RedeemRequests::<Test>::get(&1).unwrap();
+        let redeem_request = pallet::RedeemRequests::<Test, Instance1>::get(&1).unwrap();
         assert_eq!(redeem_request.btc_amount, 1);
 
         let requester_locked_xbtc = xpallet_assets::Module::<Test>::asset_balance_of(
@@ -419,7 +420,7 @@ fn test_redeem_execute() {
         ));
 
         // Request is removed.
-        assert_eq!(pallet::RedeemRequests::<Test>::get(&1), None);
+        assert_eq!(pallet::RedeemRequests::<Test, Instance1>::get(&1), None);
 
         // Check requester assets after executing.
         let requester_locked_xbtc = xpallet_assets::Module::<Test>::asset_balance_of(

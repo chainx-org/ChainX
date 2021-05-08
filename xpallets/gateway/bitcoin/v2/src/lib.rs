@@ -47,7 +47,7 @@ pub mod pallet {
         dispatch::{DispatchError, DispatchResult, DispatchResultWithPostInfo},
         ensure,
         storage::types::{StorageMap, StorageValue, ValueQuery},
-        traits::{Currency, Get, Hooks, IsType, ReservableCurrency},
+        traits::{Currency, Get, Hooks, Instance, IsType, ReservableCurrency},
         Blake2_128Concat, Twox64Concat,
     };
     use frame_system::{
@@ -88,11 +88,11 @@ pub mod pallet {
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(crate) trait Store)]
-    pub struct Pallet<T>(PhantomData<T>);
+    pub struct Pallet<T, I = ()>(PhantomData<(T, I)>);
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + xpallet_assets::Config {
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+    pub trait Config<I: 'static = ()>: frame_system::Config + xpallet_assets::Config {
+        type Event: From<Event<Self, I>> + IsType<<Self as frame_system::Config>::Event>;
 
         /// Bitcoin asset id in `xpallet_assets` module.
         #[pallet::constant]
@@ -131,12 +131,12 @@ pub mod pallet {
     }
 
     #[pallet::hooks]
-    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+    impl<T: Config<I>, I: 'static> Hooks<BlockNumberFor<T>> for Pallet<T, I> {
         fn on_initialize(n: BlockNumberFor<T>) -> frame_support::weights::Weight {
             let height = Self::exchange_rate_update_time();
             let period = T::ExchangeRateExpiredPeriod::get();
             if n - height > period {
-                BridgeStatus::<T>::put(Status::Error(ErrorCode::EXCHANGE_RATE_EXPIRED));
+                BridgeStatus::<T, I>::put(Status::Error(ErrorCode::EXCHANGE_RATE_EXPIRED));
             };
 
             0u64.into()
@@ -145,13 +145,13 @@ pub mod pallet {
         fn on_finalize(_: BlockNumberFor<T>) {
             // recover from error if all errors were solved.
             if let Status::Error(ErrorCode::NONE) = Self::bridge_status() {
-                BridgeStatus::<T>::put(Status::Running);
+                BridgeStatus::<T, I>::put(Status::Running);
             }
         }
     }
 
     #[pallet::call]
-    impl<T: Config> Pallet<T> {
+    impl<T: Config<I>, I: 'static> Pallet<T, I> {
         /// Update exchange rate by oracle.
         ///
         /// The extrinsic only allows oracle accounts.
@@ -166,10 +166,10 @@ pub mod pallet {
             let sender = ensure_signed(origin)?;
             ensure!(
                 Self::oracle_accounts().contains(&sender),
-                Error::<T>::NotOracle
+                Error::<T, I>::NotOracle
             );
             Self::_update_exchange_rate(exchange_rate.clone())?;
-            Self::deposit_event(Event::<T>::ExchangeRateUpdated(sender, exchange_rate));
+            Self::deposit_event(Event::<T, I>::ExchangeRateUpdated(sender, exchange_rate));
             Ok(().into())
         }
 
@@ -187,21 +187,21 @@ pub mod pallet {
             let sender = ensure_signed(origin)?;
             ensure!(
                 collateral >= T::DustCollateral::get(),
-                Error::<T>::CollateralAmountTooSmall
+                Error::<T, I>::CollateralAmountTooSmall
             );
             ensure!(
-                !<Vaults<T>>::contains_key(&sender),
-                Error::<T>::VaultAlreadyRegistered
+                !Vaults::<T, I>::contains_key(&sender),
+                Error::<T, I>::VaultAlreadyRegistered
             );
             Self::verify_btc_address(&btc_address)?;
 
             ensure!(
-                !<BtcAddresses<T>>::contains_key(&btc_address),
-                Error::<T>::BtcAddressOccupied
+                !BtcAddresses::<T, I>::contains_key(&btc_address),
+                Error::<T, I>::BtcAddressOccupied
             );
             Self::lock_collateral(&sender, collateral)?;
-            <BtcAddresses<T>>::insert(&btc_address, sender.clone());
-            <Vaults<T>>::insert(&sender, Vault::new(btc_address));
+            BtcAddresses::<T, I>::insert(&btc_address, sender.clone());
+            Vaults::<T, I>::insert(&sender, Vault::new(btc_address));
             Self::deposit_event(Event::VaultRegistered(sender, collateral));
             Ok(().into())
         }
@@ -214,8 +214,8 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             ensure!(
-                <Vaults<T>>::contains_key(&sender),
-                Error::<T>::VaultNotFound
+                Vaults::<T, I>::contains_key(&sender),
+                Error::<T, I>::VaultNotFound
             );
             Self::lock_collateral(&sender, collateral)?;
             Self::deposit_event(Event::ExtraCollateralAdded(sender, collateral));
@@ -238,7 +238,7 @@ pub mod pallet {
                 Self::collateral_ratio_with_inc_amount(&vault_id, btc_amount)?;
             ensure!(
                 collateral_ratio_later >= T::SecureThreshold::get(),
-                Error::<T>::InsecureVault
+                Error::<T, I>::InsecureVault
             );
 
             let griefing_collateral = Self::calculate_required_collateral(btc_amount)?;
@@ -246,7 +246,7 @@ pub mod pallet {
 
             let request_id = Self::get_next_issue_id();
             let vault = Self::get_active_vault_by_id(&vault_id)?;
-            IssueRequests::<T>::insert(
+            IssueRequests::<T, I>::insert(
                 request_id,
                 IssueRequest::<T> {
                     vault: vault_id.clone(),
@@ -258,12 +258,12 @@ pub mod pallet {
                     ..Default::default()
                 },
             );
-            Vaults::<T>::mutate(&vault_id, |vault| {
+            Vaults::<T, I>::mutate(&vault_id, |vault| {
                 if let Some(vault) = vault {
                     vault.to_be_issued_tokens += btc_amount;
                 }
             });
-            Self::deposit_event(Event::<T>::NewIssueRequest(request_id));
+            Self::deposit_event(Event::<T, I>::NewIssueRequest(request_id));
             Ok(().into())
         }
 
@@ -287,7 +287,7 @@ pub mod pallet {
             let request = Self::get_issue_request_by_id(request_id)?;
             ensure!(
                 Self::get_issue_request_duration(&request) < T::IssueRequestExpiredTime::get(),
-                Error::<T>::IssueRequestExpired
+                Error::<T, I>::IssueRequestExpired
             );
 
             <xpallet_assets::Module<T>>::issue(
@@ -296,7 +296,7 @@ pub mod pallet {
                 request.btc_amount,
             )?;
             Self::unlock_collateral(&request.requester, request.griefing_collateral)?;
-            Vaults::<T>::mutate(&request.vault, |vault| {
+            Vaults::<T, I>::mutate(&request.vault, |vault| {
                 if let Some(vault) = vault {
                     vault.to_be_issued_tokens -= request.btc_amount;
                 }
@@ -306,9 +306,9 @@ pub mod pallet {
                 &request.vault,
                 request.btc_amount,
             )?;
-            IssueRequests::<T>::remove(&request_id);
+            IssueRequests::<T, I>::remove(&request_id);
 
-            Self::deposit_event(Event::<T>::IssueRequestExecuted(request_id));
+            Self::deposit_event(Event::<T, I>::IssueRequestExecuted(request_id));
             Ok(().into())
         }
 
@@ -323,7 +323,7 @@ pub mod pallet {
 
             ensure!(
                 Self::get_issue_request_duration(&request) >= T::IssueRequestExpiredTime::get(),
-                Error::<T>::IssueRequestNotExpired
+                Error::<T, I>::IssueRequestNotExpired
             );
 
             let slashed_collateral = Self::calculate_slashed_collateral(request.btc_amount)?;
@@ -331,14 +331,14 @@ pub mod pallet {
 
             Self::unlock_collateral(&request.requester, request.griefing_collateral)?;
 
-            Vaults::<T>::mutate(&request.vault, |vault| {
+            Vaults::<T, I>::mutate(&request.vault, |vault| {
                 if let Some(vault) = vault {
                     vault.to_be_issued_tokens -= request.btc_amount;
                 }
             });
-            IssueRequests::<T>::remove(&request_id);
+            IssueRequests::<T, I>::remove(&request_id);
 
-            Self::deposit_event(Event::<T>::IssueRequestCancelled(request_id));
+            Self::deposit_event(Event::<T, I>::IssueRequestCancelled(request_id));
             Ok(().into())
         }
 
@@ -356,24 +356,24 @@ pub mod pallet {
             ensure!(
                 // this is the amount the vault will send (minus fee)
                 redeem_amount >= T::RedeemBtcDustValue::get(),
-                Error::<T>::AmountBelowDustAmount
+                Error::<T, I>::AmountBelowDustAmount
             );
             ensure!(
                 redeem_amount <= Self::usable_xbtc_of(&sender),
-                Error::<T>::InsufficiantAssetsFunds
+                Error::<T, I>::InsufficiantAssetsFunds
             );
 
             // Ensure this vault can work.
             Self::get_active_vault_by_id(&vault_id)?;
             ensure!(
                 redeem_amount <= Self::issued_tokens_of(&vault_id),
-                Error::<T>::RedeemAmountTooLarge
+                Error::<T, I>::RedeemAmountTooLarge
             );
 
             Self::verify_btc_address(&btc_address)?;
 
             // Increase vault's to_be_redeemed_tokens
-            Vaults::<T>::mutate(&vault_id, |vault| {
+            Vaults::<T, I>::mutate(&vault_id, |vault| {
                 //vault exists; qed.
                 if let Some(vault) = vault {
                     vault.to_be_redeemed_tokens += redeem_amount
@@ -385,7 +385,7 @@ pub mod pallet {
 
             // Generate redeem request identify and insert it to record
             let request_id = Self::get_next_redeem_id();
-            <RedeemRequests<T>>::insert(
+            RedeemRequests::<T, I>::insert(
                 request_id,
                 RedeemRequest::<T> {
                     vault: vault_id,
@@ -393,12 +393,12 @@ pub mod pallet {
                     requester: sender,
                     btc_address,
                     btc_amount: redeem_amount,
-                    redeem_fee: RedeemFee::<T>::get(),
+                    redeem_fee: RedeemFee::<T, I>::get(),
                     reimburse: false,
                 },
             );
 
-            Self::deposit_event(Event::<T>::NewRedeemRequest(request_id));
+            Self::deposit_event(Event::<T, I>::NewRedeemRequest(request_id));
             Ok(().into())
         }
 
@@ -414,12 +414,12 @@ pub mod pallet {
 
             Self::ensure_bridge_running()?;
 
-            let request =
-                <RedeemRequests<T>>::get(request_id).ok_or(Error::<T>::RedeemRequestNotFound)?;
+            let request = <RedeemRequests<T, I>>::get(request_id)
+                .ok_or(Error::<T, I>::RedeemRequestNotFound)?;
 
             ensure!(
                 Self::get_redeem_request_duration(&request) < T::RedeemRequestExpiredTime::get(),
-                Error::<T>::RedeemRequestExpired
+                Error::<T, I>::RedeemRequestExpired
             );
             Self::get_active_vault_by_id(&request.vault)?;
 
@@ -435,7 +435,7 @@ pub mod pallet {
                 Self::slash_collateral(&request.vault, &request.requester, premium_fee)?;
             }
 
-            Vaults::<T>::mutate(&request.vault, |vault| {
+            Vaults::<T, I>::mutate(&request.vault, |vault| {
                 if let Some(vault) = vault {
                     vault.to_be_redeemed_tokens -= request.btc_amount;
                 }
@@ -445,9 +445,9 @@ pub mod pallet {
             Self::burn_token(&request.vault, request.btc_amount)?;
             Self::burn_xbtc(&request.requester, request.btc_amount)?;
 
-            RedeemRequests::<T>::remove(&request_id);
+            RedeemRequests::<T, I>::remove(&request_id);
 
-            Self::deposit_event(Event::<T>::RedeemExecuted(request_id));
+            Self::deposit_event(Event::<T, I>::RedeemExecuted(request_id));
             Ok(().into())
         }
 
@@ -463,13 +463,13 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
 
-            let request =
-                <RedeemRequests<T>>::get(request_id).ok_or(Error::<T>::RedeemRequestNotFound)?;
+            let request = <RedeemRequests<T, I>>::get(request_id)
+                .ok_or(Error::<T, I>::RedeemRequestNotFound)?;
 
-            ensure!(request.requester == sender, Error::<T>::InvalidRequester);
+            ensure!(request.requester == sender, Error::<T, I>::InvalidRequester);
             ensure!(
                 Self::get_redeem_request_duration(&request) >= T::RedeemRequestExpiredTime::get(),
-                Error::<T>::RedeemRequestNotExpired
+                Error::<T, I>::RedeemRequestNotExpired
             );
 
             Self::get_active_vault_by_id(&request.vault)?;
@@ -477,7 +477,7 @@ pub mod pallet {
 
             if reimburse {
                 // Decrease vault tokens
-                Vaults::<T>::mutate(&request.vault, |vault| {
+                Vaults::<T, I>::mutate(&request.vault, |vault| {
                     if let Some(vault) = vault {
                         vault.to_be_redeemed_tokens -= request.btc_amount;
                     }
@@ -499,9 +499,9 @@ pub mod pallet {
                 )?;
             }
 
-            RedeemRequests::<T>::remove(&request_id);
+            RedeemRequests::<T, I>::remove(&request_id);
 
-            Self::deposit_event(Event::<T>::RedeemCancelled(request_id));
+            Self::deposit_event(Event::<T, I>::RedeemCancelled(request_id));
             Ok(().into())
         }
 
@@ -514,7 +514,7 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
             Self::_update_exchange_rate(exchange_rate.clone())?;
-            Self::deposit_event(Event::<T>::ExchangeRateForceUpdated(exchange_rate));
+            Self::deposit_event(Event::<T, I>::ExchangeRateForceUpdated(exchange_rate));
             Ok(().into())
         }
 
@@ -527,8 +527,8 @@ pub mod pallet {
             oracles: Vec<T::AccountId>,
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
-            OracleAccounts::<T>::put(oracles.clone());
-            Self::deposit_event(Event::<T>::OracleForceUpdated(oracles));
+            OracleAccounts::<T, I>::put(oracles.clone());
+            Self::deposit_event(Event::<T, I>::OracleForceUpdated(oracles));
             Ok(().into())
         }
 
@@ -539,8 +539,8 @@ pub mod pallet {
             griefing_fee: Percent,
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
-            <IssueGriefingFee<T>>::put(griefing_fee);
-            Self::deposit_event(Event::<T>::GriefingFeeUpdated(griefing_fee));
+            <IssueGriefingFee<T, I>>::put(griefing_fee);
+            Self::deposit_event(Event::<T, I>::GriefingFeeUpdated(griefing_fee));
             Ok(().into())
         }
     }
@@ -552,7 +552,7 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     #[pallet::metadata(T::AccountId = "AccountId", BalanceOf<T> = "Balance", BlockNumberFor<T> = "BlockNumber", Vec<T::AccountId>="Vec<AccountId>")]
-    pub enum Event<T: Config> {
+    pub enum Event<T: Config<I>, I: 'static = ()> {
         /// Update exchange rate by oracle
         ExchangeRateUpdated(T::AccountId, TradingPrice),
         /// Update exchange rate by root
@@ -589,7 +589,7 @@ pub mod pallet {
 
     /// Errors for assets module
     #[pallet::error]
-    pub enum Error<T> {
+    pub enum Error<T, I = ()> {
         /// Permission denied.
         NotOracle,
         /// Requester doesn't have enough pcx for collateral.
@@ -663,83 +663,94 @@ pub mod pallet {
     /// Total collateral locked by xbridge.
     #[pallet::storage]
     #[pallet::getter(fn total_collateral)]
-    pub(crate) type TotalCollateral<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
+    pub(crate) type TotalCollateral<T: Config<I>, I: 'static = ()> =
+        StorageValue<_, BalanceOf<T>, ValueQuery>;
 
     /// Exchange rate from pcx to btc.
     #[pallet::storage]
     #[pallet::getter(fn exchange_rate)]
-    pub(crate) type ExchangeRate<T: Config> = StorageValue<_, TradingPrice, ValueQuery>;
+    pub(crate) type ExchangeRate<T: Config<I>, I: 'static = ()> =
+        StorageValue<_, TradingPrice, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn oracle_accounts)]
-    pub(crate) type OracleAccounts<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
+    pub(crate) type OracleAccounts<T: Config<I>, I: 'static = ()> =
+        StorageValue<_, Vec<T::AccountId>, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn bridge_status)]
-    pub(crate) type BridgeStatus<T: Config> = StorageValue<_, Status, ValueQuery>;
+    pub(crate) type BridgeStatus<T: Config<I>, I: 'static = ()> =
+        StorageValue<_, Status, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn exchange_rate_update_time)]
-    pub(crate) type ExchangeRateUpdateTime<T: Config> =
+    pub(crate) type ExchangeRateUpdateTime<T: Config<I>, I: 'static = ()> =
         StorageValue<_, BlockNumberFor<T>, ValueQuery>;
 
     /// Mapping account to vault struct.
     #[pallet::storage]
-    pub(crate) type Vaults<T: Config> =
+    pub(crate) type Vaults<T: Config<I>, I: 'static = ()> =
         StorageMap<_, Blake2_128Concat, T::AccountId, Vault<T::BlockNumber, BalanceOf<T>>>;
 
     /// Mapping btc address to vault id.
     #[pallet::storage]
-    pub(crate) type BtcAddresses<T: Config> = StorageMap<_, Twox64Concat, BtcAddress, T::AccountId>;
+    pub(crate) type BtcAddresses<T: Config<I>, I: 'static = ()> =
+        StorageMap<_, Twox64Concat, BtcAddress, T::AccountId>;
 
     /// Specicial `SystemVault`
     #[pallet::storage]
     #[pallet::getter(fn liquidator)]
-    pub(crate) type Liquidator<T: Config> =
+    pub(crate) type Liquidator<T: Config<I>, I: 'static = ()> =
         StorageValue<_, SystemVault<T::AccountId, BalanceOf<T>>, ValueQuery>;
 
     /// Liquidator account id
     #[pallet::storage]
     #[pallet::getter(fn liquidator_id)]
-    pub(crate) type LiquidatorId<T: Config> = StorageValue<_, T::AccountId, ValueQuery>;
+    pub(crate) type LiquidatorId<T: Config<I>, I: 'static = ()> =
+        StorageValue<_, T::AccountId, ValueQuery>;
 
     /// Percentage to lock, when user requests issue
     #[pallet::storage]
     #[pallet::getter(fn issue_griefing_fee)]
-    pub(crate) type IssueGriefingFee<T: Config> = StorageValue<_, Percent, ValueQuery>;
+    pub(crate) type IssueGriefingFee<T: Config<I>, I: 'static = ()> =
+        StorageValue<_, Percent, ValueQuery>;
 
     /// Auto-increament id to identify each issue request.
     /// Also presents total amount of created requests.
     #[pallet::storage]
-    pub(crate) type IssueRequestCount<T: Config> = StorageValue<_, RequestId, ValueQuery>;
+    pub(crate) type IssueRequestCount<T: Config<I>, I: 'static = ()> =
+        StorageValue<_, RequestId, ValueQuery>;
 
     /// Mapping from issue id to `IssueRequest`
     #[pallet::storage]
-    pub(crate) type IssueRequests<T: Config> =
+    pub(crate) type IssueRequests<T: Config<I>, I: 'static = ()> =
         StorageMap<_, Twox64Concat, RequestId, IssueRequest<T>>;
 
     /// Redeem fee when use request redeem
     #[pallet::storage]
     #[pallet::getter(fn redeem_fee)]
-    pub(crate) type RedeemFee<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
+    pub(crate) type RedeemFee<T: Config<I>, I: 'static = ()> =
+        StorageValue<_, BalanceOf<T>, ValueQuery>;
 
     /// Slashed when excuting redeem if vault's collateral is below than `PremiumThreshold`
     #[pallet::storage]
     #[pallet::getter(fn premium_fee)]
-    pub(crate) type PremiumFee<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>; /*TODO(wangyafei): use fixed currently*/
+    pub(crate) type PremiumFee<T: Config<I>, I: 'static = ()> =
+        StorageValue<_, BalanceOf<T>, ValueQuery>; /*TODO(wangyafei): use fixed currently*/
 
     /// Auto-increament id to identify each redeem request.
     /// Also presents total amount of created requests.
     #[pallet::storage]
-    pub(crate) type RedeemRequestCount<T: Config> = StorageValue<_, RequestId, ValueQuery>;
+    pub(crate) type RedeemRequestCount<T: Config<I>, I: 'static = ()> =
+        StorageValue<_, RequestId, ValueQuery>;
 
     /// Mapping from redeem id to `RedeemRequest`
     #[pallet::storage]
-    pub(crate) type RedeemRequests<T: Config> =
+    pub(crate) type RedeemRequests<T: Config<I>, I: 'static = ()> =
         StorageMap<_, Twox64Concat, RequestId, RedeemRequest<T>>;
 
     #[pallet::genesis_config]
-    pub struct GenesisConfig<T: Config> {
+    pub struct GenesisConfig<T: Config<I>, I: 'static = ()> {
         /// Trading pair of pcx/btc.
         pub exchange_rate: TradingPrice,
         /// Accounts that allow to update exchange rate.
@@ -751,10 +762,11 @@ pub mod pallet {
         pub issue_griefing_fee: u8,
         /// Fixed fee that user shall lock when requesting redeem.
         pub redeem_fee: BalanceOf<T>,
+        pub marker: PhantomData<I>,
     }
 
     #[cfg(feature = "std")]
-    impl<T: Config> Default for GenesisConfig<T> {
+    impl<T: Config<I>, I: 'static> Default for GenesisConfig<T, I> {
         fn default() -> Self {
             Self {
                 exchange_rate: Default::default(),
@@ -762,26 +774,27 @@ pub mod pallet {
                 liquidator_id: Default::default(),
                 issue_griefing_fee: Default::default(),
                 redeem_fee: Default::default(),
+                marker: PhantomData::<I>,
             }
         }
     }
 
     #[pallet::genesis_build]
-    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+    impl<T: Config<I>, I: 'static> GenesisBuild<T, I> for GenesisConfig<T, I> {
         fn build(&self) {
-            <ExchangeRate<T>>::put(self.exchange_rate.clone());
-            <OracleAccounts<T>>::put(self.oracle_accounts.clone());
-            <Liquidator<T>>::put(SystemVault {
+            <ExchangeRate<T, I>>::put(self.exchange_rate.clone());
+            <OracleAccounts<T, I>>::put(self.oracle_accounts.clone());
+            <Liquidator<T, I>>::put(SystemVault {
                 id: self.liquidator_id.clone(),
                 ..Default::default()
             });
-            <LiquidatorId<T>>::put(self.liquidator_id.clone());
-            <IssueGriefingFee<T>>::put(Percent::from_parts(self.issue_griefing_fee));
-            <RedeemFee<T>>::put(self.redeem_fee);
+            <LiquidatorId<T, I>>::put(self.liquidator_id.clone());
+            <IssueGriefingFee<T, I>>::put(Percent::from_parts(self.issue_griefing_fee));
+            <RedeemFee<T, I>>::put(self.redeem_fee);
         }
     }
 
-    impl<T: Config> Pallet<T> {
+    impl<T: Config<I>, I: 'static> Pallet<T, I> {
         /// Getter for vault's collateral.
         ///
         /// Ensure `id` is vault  is caller's responsibility.
@@ -832,13 +845,13 @@ pub mod pallet {
         }
     }
 
-    impl<T: Config> Pallet<T> {
+    impl<T: Config<I>, I: 'static> Pallet<T, I> {
         pub fn convert_to_pcx(btc_amount: BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError> {
             //TODO(wangyafei): add lower bound?
             let exchange_rate = Self::exchange_rate();
             let result = exchange_rate
                 .convert_to_pcx(btc_amount.saturated_into())
-                .ok_or(Error::<T>::ArithmeticError)?;
+                .ok_or(Error::<T, I>::ArithmeticError)?;
             Ok(result.saturated_into())
         }
 
@@ -847,19 +860,19 @@ pub mod pallet {
             let exchange_rate = Self::exchange_rate();
             let result = exchange_rate
                 .convert_to_btc(pcx_amount.saturated_into())
-                .ok_or(Error::<T>::ArithmeticError)?;
+                .ok_or(Error::<T, I>::ArithmeticError)?;
             Ok(result.saturated_into())
         }
 
-        fn verify_btc_address(address: &[u8]) -> Result<Address, Error<T>> {
+        fn verify_btc_address(address: &[u8]) -> Result<Address, Error<T, I>> {
             from_utf8(address)
-                .map_err(|_| Error::<T>::InvalidAddress)?
+                .map_err(|_| Error::<T, I>::InvalidAddress)?
                 .parse()
-                .map_err(|_| Error::<T>::InvalidAddress)
+                .map_err(|_| Error::<T, I>::InvalidAddress)
         }
     }
 
-    impl<T: Config> Pallet<T> {
+    impl<T: Config<I>, I: 'static> Pallet<T, I> {
         pub(crate) fn lock_collateral(
             sender: &T::AccountId,
             amount: BalanceOf<T>,
@@ -867,8 +880,8 @@ pub mod pallet {
             <<T as xpallet_assets::Config>::Currency as ReservableCurrency<
                 <T as frame_system::Config>::AccountId,
             >>::reserve(sender, amount)
-            .map_err(|_| Error::<T>::InsufficientFunds)?;
-            <TotalCollateral<T>>::mutate(|total| *total += amount);
+            .map_err(|_| Error::<T, I>::InsufficientFunds)?;
+            <TotalCollateral<T, I>>::mutate(|total| *total += amount);
             Ok(())
         }
 
@@ -879,10 +892,10 @@ pub mod pallet {
             let reserved_collateral = <CurrencyOf<T>>::reserved_balance(account);
             ensure!(
                 reserved_collateral >= amount,
-                Error::<T>::InsufficientCollateral
+                Error::<T, I>::InsufficientCollateral
             );
             <CurrencyOf<T>>::unreserve(account, amount);
-            <TotalCollateral<T>>::mutate(|total| *total -= amount);
+            <TotalCollateral<T, I>>::mutate(|total| *total -= amount);
             Ok(())
         }
 
@@ -895,15 +908,15 @@ pub mod pallet {
             let reserved_collateral = <CurrencyOf<T>>::reserved_balance(sender);
             ensure!(
                 reserved_collateral >= amount,
-                Error::<T>::InsufficientCollateral
+                Error::<T, I>::InsufficientCollateral
             );
             let (slashed, _) = <CurrencyOf<T>>::slash_reserved(sender, amount);
 
             <CurrencyOf<T>>::resolve_creating(receiver, slashed);
             //FIXME(wangyafei): why need this
             <CurrencyOf<T>>::reserve(receiver, amount)
-                .map_err(|_| Error::<T>::InsufficientFunds)?;
-            Self::deposit_event(Event::<T>::CollateralSlashed(
+                .map_err(|_| Error::<T, I>::InsufficientFunds)?;
+            Self::deposit_event(Event::<T, I>::CollateralSlashed(
                 sender.clone(),
                 receiver.clone(),
                 amount,
@@ -918,18 +931,18 @@ pub mod pallet {
         ) -> Result<u16, DispatchError> {
             let issued_tokens = issued_tokens.saturated_into::<u128>();
             let collateral = collateral.saturated_into::<u128>();
-            ensure!(issued_tokens != 0, Error::<T>::NoIssuedTokens);
+            ensure!(issued_tokens != 0, Error::<T, I>::NoIssuedTokens);
 
             let exchange_rate: TradingPrice = Self::exchange_rate();
             let equivalence_collateral = exchange_rate
                 .convert_to_pcx(issued_tokens)
-                .ok_or(Error::<T>::ArithmeticError)?;
+                .ok_or(Error::<T, I>::ArithmeticError)?;
             let raw_collateral: u128 = collateral.saturated_into();
             let collateral_ratio = raw_collateral
                 .checked_mul(100)
-                .ok_or(Error::<T>::ArithmeticError)?
+                .ok_or(Error::<T, I>::ArithmeticError)?
                 .checked_div(equivalence_collateral)
-                .ok_or(Error::<T>::ArithmeticError)?;
+                .ok_or(Error::<T, I>::ArithmeticError)?;
             //FIXME(wangyafei): should use try_into?
             Ok(collateral_ratio as u16)
         }
@@ -938,7 +951,7 @@ pub mod pallet {
         pub(crate) fn get_issue_request_by_id(
             request_id: RequestId,
         ) -> Result<IssueRequest<T>, DispatchError> {
-            <IssueRequests<T>>::get(request_id).ok_or(Error::<T>::IssueRequestNotFound.into())
+            <IssueRequests<T, I>>::get(request_id).ok_or(Error::<T, I>::IssueRequestNotFound.into())
         }
 
         /// Calculate minimium required collateral for a `IssueRequest`
@@ -966,7 +979,7 @@ pub mod pallet {
 
         /// generate secure key from account id
         pub(crate) fn get_next_issue_id() -> RequestId {
-            <IssueRequestCount<T>>::mutate(|n| {
+            <IssueRequestCount<T, I>>::mutate(|n| {
                 *n += 1;
                 *n
             })
@@ -974,7 +987,7 @@ pub mod pallet {
 
         /// Generate secure key from account id
         pub(crate) fn get_next_redeem_id() -> RequestId {
-            <RedeemRequestCount<T>>::mutate(|n| {
+            <RedeemRequestCount<T, I>>::mutate(|n| {
                 *n += 1;
                 *n
             })
@@ -986,7 +999,7 @@ pub mod pallet {
             to: &T::AccountId,
             to_ty: AssetType,
             amount: BalanceOf<T>,
-        ) -> Result<(), Error<T>> {
+        ) -> Result<(), Error<T, I>> {
             xpallet_assets::Module::<T>::move_balance(
                 &T::TargetAssetId::get(),
                 from,
@@ -995,13 +1008,13 @@ pub mod pallet {
                 to_ty,
                 amount,
             )
-            .map_err(|_| Error::<T>::AssetError)
+            .map_err(|_| Error::<T, I>::AssetError)
         }
 
         fn reserve_xbtc_to_withdrawal(
             user: &T::AccountId,
             amount: BalanceOf<T>,
-        ) -> Result<(), Error<T>> {
+        ) -> Result<(), Error<T, I>> {
             use AssetType::{ReservedWithdrawal, Usable};
             Self::move_xbtc(user, Usable, user, ReservedWithdrawal, amount)
         }
@@ -1009,7 +1022,7 @@ pub mod pallet {
         fn release_xbtc_from_reserved_withdrawal(
             user: &T::AccountId,
             amount: BalanceOf<T>,
-        ) -> Result<(), Error<T>> {
+        ) -> Result<(), Error<T, I>> {
             use AssetType::{ReservedWithdrawal, Usable};
             Self::move_xbtc(user, ReservedWithdrawal, user, Usable, amount)
         }
@@ -1033,9 +1046,9 @@ pub mod pallet {
 
         fn _update_exchange_rate(exchange_rate: TradingPrice) -> DispatchResult {
             // TODO: sanity check?
-            <ExchangeRate<T>>::put(exchange_rate);
+            <ExchangeRate<T, I>>::put(exchange_rate);
             let height = <frame_system::Pallet<T>>::block_number();
-            <ExchangeRateUpdateTime<T>>::put(height);
+            <ExchangeRateUpdateTime<T, I>>::put(height);
             Self::recover_from_exchange_rate_expired();
             Ok(())
         }
@@ -1047,7 +1060,7 @@ pub mod pallet {
             let secure_collateral = 100u128
                 .checked_mul(vault_collateral.saturated_into())
                 .and_then(|c| c.checked_div(u128::from(T::SecureThreshold::get())))
-                .ok_or(Error::<T>::ArithmeticError)?;
+                .ok_or(Error::<T, I>::ArithmeticError)?;
             Self::convert_to_btc(secure_collateral.saturated_into())
         }
 
@@ -1055,7 +1068,7 @@ pub mod pallet {
         pub fn get_first_matched_vault(
             xbtc_amount: BalanceOf<T>,
         ) -> Option<(T::AccountId, Vec<u8>)> {
-            Vaults::<T>::iter()
+            Vaults::<T, I>::iter()
                 .filter(|(vault_id, vault)| {
                     if let Ok(token_upper_bound) =
                         Self::_calculate_vault_token_upper_bound(vault_id)
@@ -1074,14 +1087,14 @@ pub mod pallet {
                 .next()
         }
     }
-    impl<T: Config> Pallet<T> {
+    impl<T: Config<I>, I: 'static> Pallet<T, I> {
         fn burn_token(vault_id: &T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
             xpallet_assets::Module::<T>::destroy_usable(&T::TokenAssetId::get(), vault_id, amount)
         }
     }
 
     // Getter and Checker
-    impl<T: Config> Pallet<T> {
+    impl<T: Config<I>, I: 'static> Pallet<T, I> {
         /// Get if the bridge running
         pub fn is_bridge_running() -> bool {
             Self::bridge_status() == Status::Running
@@ -1091,7 +1104,7 @@ pub mod pallet {
         pub(crate) fn ensure_bridge_running() -> DispatchResult {
             ensure!(
                 Self::bridge_status() == Status::Running,
-                Error::<T>::BridgeNotRunning
+                Error::<T, I>::BridgeNotRunning
             );
             Ok(())
         }
@@ -1099,9 +1112,9 @@ pub mod pallet {
         pub fn get_vault_by_id(
             id: &T::AccountId,
         ) -> Result<Vault<T::BlockNumber, BalanceOf<T>>, DispatchError> {
-            match <Vaults<T>>::get(id) {
+            match <Vaults<T, I>>::get(id) {
                 Some(vault) => Ok(vault),
-                None => Err(Error::<T>::VaultNotFound.into()),
+                None => Err(Error::<T, I>::VaultNotFound.into()),
             }
         }
 
@@ -1112,7 +1125,7 @@ pub mod pallet {
             if vault.status == VaultStatus::Active {
                 Ok(vault)
             } else {
-                Err(Error::<T>::VaultInactive.into())
+                Err(Error::<T, I>::VaultInactive.into())
             }
         }
 
@@ -1121,24 +1134,24 @@ pub mod pallet {
             if id == &Self::liquidator_id() {
                 true
             } else {
-                Vaults::<T>::contains_key(id)
+                Vaults::<T, I>::contains_key(id)
             }
         }
 
         #[inline]
         pub fn change_vault_status(vault_id: &T::AccountId, statue: VaultStatus) -> DispatchResult {
             // Change vault type
-            <Vaults<T>>::mutate(vault_id, |vault| match vault {
+            <Vaults<T, I>>::mutate(vault_id, |vault| match vault {
                 Some(ref mut vault) => {
                     vault.status = VaultStatus::Liquidated;
                     Ok(())
                 }
-                None => Err(Error::<T>::VaultNotFound.into()),
+                None => Err(Error::<T, I>::VaultNotFound.into()),
             })
         }
     }
 
-    impl<T: Config> Pallet<T> {
+    impl<T: Config<I>, I: 'static> Pallet<T, I> {
         /// Clarify `ExchangeRateExpired` is solved and recover from this error.
         ///
         /// Dangerous! Ensure this error truly solved is caller's responsibility.
@@ -1146,7 +1159,7 @@ pub mod pallet {
             if let Status::Error(mut error_codes) = Self::bridge_status() {
                 if error_codes.contains(ErrorCode::EXCHANGE_RATE_EXPIRED) {
                     error_codes.remove(ErrorCode::EXCHANGE_RATE_EXPIRED);
-                    <BridgeStatus<T>>::put(Status::Error(error_codes))
+                    <BridgeStatus<T, I>>::put(Status::Error(error_codes))
                 }
             }
         }
@@ -1158,7 +1171,7 @@ pub mod pallet {
             if let Status::Error(mut error_codes) = Self::bridge_status() {
                 if error_codes.contains(ErrorCode::LIQUIDATING) {
                     error_codes.remove(ErrorCode::LIQUIDATING);
-                    <BridgeStatus<T>>::put(Status::Error(error_codes))
+                    <BridgeStatus<T, I>>::put(Status::Error(error_codes))
                 }
             }
         }

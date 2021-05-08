@@ -1,3 +1,4 @@
+use frame_support::instances::Instance1;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
@@ -88,7 +89,7 @@ parameter_types! {
     pub const RedeemBtcDustValue: Balance = 1;
 }
 
-impl pallet::Config for Test {
+impl pallet::Config<Instance1> for Test {
     type Event = ();
     type TargetAssetId = BridgeTargetAssetId;
     type TokenAssetId = BridgeTokenAssetId;
@@ -114,7 +115,7 @@ construct_runtime! {
             System: frame_system::{Pallet, Call, Event<T>},
             Balances: pallet_balances::{Pallet, Call, Event<T>},
             XAssets: xpallet_assets::{Pallet,Call, Event<T>, Config<T>},
-            XGatewayBitcoin: pallet::{Pallet, Call, Event<T>, Config<T>},
+            XGatewayBitcoin: pallet::<Instance1>::{Pallet, Call, Event<T>, Config<T>},
         }
 }
 
@@ -146,7 +147,7 @@ impl ExtBuilder {
             .build_storage::<Test>()
             .unwrap();
 
-        let _ = GenesisBuild::<Test>::assimilate_storage(
+        let _ = GenesisBuild::<Test, Instance1>::assimilate_storage(
             &pallet::GenesisConfig {
                 exchange_rate: TradingPrice {
                     price: exchange_price,
@@ -156,6 +157,7 @@ impl ExtBuilder {
                 liquidator_id: 100,
                 issue_griefing_fee: 10,
                 redeem_fee: 0u32.into(),
+                marker: sp_std::marker::PhantomData::<_>,
             },
             &mut storage,
         );
