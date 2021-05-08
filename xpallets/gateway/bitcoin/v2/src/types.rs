@@ -1,7 +1,7 @@
 use sp_std::vec::Vec;
 
 use codec::{Decode, Encode};
-use sp_runtime::{traits::AtLeast32BitUnsigned, RuntimeDebug};
+use sp_runtime::RuntimeDebug;
 
 use bitflags::bitflags;
 #[cfg(feature = "std")]

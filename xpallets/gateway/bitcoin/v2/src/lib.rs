@@ -47,7 +47,7 @@ pub mod pallet {
         dispatch::{DispatchError, DispatchResult, DispatchResultWithPostInfo},
         ensure,
         storage::types::{StorageMap, StorageValue, ValueQuery},
-        traits::{Currency, Get, Hooks, Instance, IsType, ReservableCurrency},
+        traits::{Currency, Get, Hooks, IsType, ReservableCurrency},
         Blake2_128Concat, Twox64Concat,
     };
     use frame_system::{
@@ -139,7 +139,7 @@ pub mod pallet {
                 BridgeStatus::<T, I>::put(Status::Error(ErrorCode::EXCHANGE_RATE_EXPIRED));
             };
 
-            0u64.into()
+            0u64
         }
 
         fn on_finalize(_: BlockNumberFor<T>) {
@@ -255,7 +255,6 @@ pub mod pallet {
                     btc_address: vault.wallet,
                     btc_amount,
                     griefing_collateral,
-                    ..Default::default()
                 },
             );
             Vaults::<T, I>::mutate(&vault_id, |vault| {
@@ -921,7 +920,7 @@ pub mod pallet {
                 receiver.clone(),
                 amount,
             ));
-            Ok(().into())
+            Ok(())
         }
 
         //FIXME(wangyafei): Update logic
@@ -951,7 +950,8 @@ pub mod pallet {
         pub(crate) fn get_issue_request_by_id(
             request_id: RequestId,
         ) -> Result<IssueRequest<T>, DispatchError> {
-            <IssueRequests<T, I>>::get(request_id).ok_or(Error::<T, I>::IssueRequestNotFound.into())
+            <IssueRequests<T, I>>::get(request_id)
+                .ok_or_else(|| Error::<T, I>::IssueRequestNotFound.into())
         }
 
         /// Calculate minimium required collateral for a `IssueRequest`
@@ -1139,11 +1139,11 @@ pub mod pallet {
         }
 
         #[inline]
-        pub fn change_vault_status(vault_id: &T::AccountId, statue: VaultStatus) -> DispatchResult {
+        pub fn change_vault_status(vault_id: &T::AccountId, status: VaultStatus) -> DispatchResult {
             // Change vault type
             <Vaults<T, I>>::mutate(vault_id, |vault| match vault {
                 Some(ref mut vault) => {
-                    vault.status = VaultStatus::Liquidated;
+                    vault.status = status;
                     Ok(())
                 }
                 None => Err(Error::<T, I>::VaultNotFound.into()),
