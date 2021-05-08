@@ -38,7 +38,9 @@ jobs:
 
     # WASM build requires nightly.
     - if: matrix.toolchain == 'stable'
-      run: rustup toolchain install nightly
+      run: |
+        rustup toolchain install nightly
+        rustup target add wasm32-unknown-unknown --toolchain nightly
 
     - uses: actions/cache@v2
       with:
