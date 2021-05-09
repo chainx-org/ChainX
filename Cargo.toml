@@ -73,6 +73,7 @@ frame-benchmarking-cli = { git = "https://github.com/paritytech/substrate", rev 
 frame-executive = { git = "https://github.com/paritytech/substrate", rev = "2be8fcc4236d32786c62f6f27a98e7fe7e550807" }
 frame-support = { git = "https://github.com/paritytech/substrate", rev = "2be8fcc4236d32786c62f6f27a98e7fe7e550807" }
 frame-system = { git = "https://github.com/paritytech/substrate", rev = "2be8fcc4236d32786c62f6f27a98e7fe7e550807" }
+frame-system-benchmarking = { git = "https://github.com/paritytech/substrate", rev = "2be8fcc4236d32786c62f6f27a98e7fe7e550807" }
 frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", rev = "2be8fcc4236d32786c62f6f27a98e7fe7e550807" }
 
 substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate", rev = "2be8fcc4236d32786c62f6f27a98e7fe7e550807" }
