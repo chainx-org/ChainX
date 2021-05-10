@@ -37,7 +37,11 @@ mod tests;
 #[frame_support::pallet]
 #[allow(dead_code)]
 pub mod pallet {
-    use sp_arithmetic::{traits::SaturatedConversion, Percent};
+
+    use sp_arithmetic::{
+        traits::{SaturatedConversion, Saturating},
+        Percent,
+    };
     use sp_std::{marker::PhantomData, str::from_utf8, vec::Vec};
 
     #[cfg(feature = "std")]
@@ -54,7 +58,7 @@ pub mod pallet {
         ensure_root, ensure_signed,
         pallet_prelude::{BlockNumberFor, OriginFor},
     };
-    use light_bitcoin::keys::Address;
+    use light_bitcoin::keys::MultiAddress;
 
     use chainx_primitives::AssetId;
     use xpallet_assets::AssetType;
@@ -245,7 +249,7 @@ pub mod pallet {
             Self::lock_collateral(&sender, griefing_collateral)?;
 
             let request_id = Self::get_next_issue_id();
-            let vault = Self::get_active_vault_by_id(&vault_id)?;
+            let vault = Self::try_get_active_vault(&vault_id)?;
             IssueRequests::<T, I>::insert(
                 request_id,
                 IssueRequest::<T> {
@@ -363,7 +367,7 @@ pub mod pallet {
             );
 
             // Ensure this vault can work.
-            Self::get_active_vault_by_id(&vault_id)?;
+            Self::try_get_active_vault(&vault_id)?;
             ensure!(
                 redeem_amount <= Self::issued_tokens_of(&vault_id),
                 Error::<T, I>::RedeemAmountTooLarge
@@ -420,7 +424,7 @@ pub mod pallet {
                 Self::get_redeem_request_duration(&request) < T::RedeemRequestExpiredTime::get(),
                 Error::<T, I>::RedeemRequestExpired
             );
-            Self::get_active_vault_by_id(&request.vault)?;
+            Self::try_get_active_vault(&request.vault)?;
 
             // TODO verify tx
             let collateral = CurrencyOf::<T>::reserved_balance(&request.vault);
@@ -471,7 +475,7 @@ pub mod pallet {
                 Error::<T, I>::RedeemRequestNotExpired
             );
 
-            Self::get_active_vault_by_id(&request.vault)?;
+            Self::try_get_active_vault(&request.vault)?;
             let worth_pcx = Self::convert_to_pcx(request.btc_amount)?;
 
             if reimburse {
@@ -821,7 +825,7 @@ pub mod pallet {
             vault_id: &T::AccountId,
             btc_amount: BalanceOf<T>,
         ) -> Result<u16, DispatchError> {
-            let vault = Self::get_active_vault_by_id(vault_id)?;
+            let vault = Self::try_get_active_vault(vault_id)?;
             // check if vault is rich enough
             let collateral_ratio_after_requesting = Self::calculate_collateral_ratio(
                 Self::issued_tokens_of(vault_id) + vault.to_be_issued_tokens + btc_amount,
@@ -846,7 +850,6 @@ pub mod pallet {
 
     impl<T: Config<I>, I: 'static> Pallet<T, I> {
         pub fn convert_to_pcx(btc_amount: BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError> {
-            //TODO(wangyafei): add lower bound?
             let exchange_rate = Self::exchange_rate();
             let result = exchange_rate
                 .convert_to_pcx(btc_amount.saturated_into())
@@ -855,7 +858,6 @@ pub mod pallet {
         }
 
         pub fn convert_to_btc(pcx_amount: BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError> {
-            //TODO(wangyafei): add lower bound?
             let exchange_rate = Self::exchange_rate();
             let result = exchange_rate
                 .convert_to_btc(pcx_amount.saturated_into())
@@ -863,7 +865,7 @@ pub mod pallet {
             Ok(result.saturated_into())
         }
 
-        fn verify_address(address: &[u8]) -> Result<Address, Error<T, I>> {
+        fn verify_address(address: &[u8]) -> Result<MultiAddress, Error<T, I>> {
             from_utf8(address)
                 .map_err(|_| Error::<T, I>::InvalidAddress)?
                 .parse()
@@ -912,9 +914,6 @@ pub mod pallet {
             let (slashed, _) = <CurrencyOf<T>>::slash_reserved(sender, amount);
 
             <CurrencyOf<T>>::resolve_creating(receiver, slashed);
-            //FIXME(wangyafei): why need this
-            <CurrencyOf<T>>::reserve(receiver, amount)
-                .map_err(|_| Error::<T, I>::InsufficientFunds)?;
             Self::deposit_event(Event::<T, I>::CollateralSlashed(
                 sender.clone(),
                 receiver.clone(),
@@ -923,26 +922,24 @@ pub mod pallet {
             Ok(())
         }
 
-        //FIXME(wangyafei): Update logic
         pub fn calculate_collateral_ratio(
             issued_tokens: BalanceOf<T>,
             collateral: BalanceOf<T>,
         ) -> Result<u16, DispatchError> {
-            let issued_tokens = issued_tokens.saturated_into::<u128>();
-            let collateral = collateral.saturated_into::<u128>();
-            ensure!(issued_tokens != 0, Error::<T, I>::NoIssuedTokens);
+            ensure!(
+                issued_tokens != 0u32.saturated_into(),
+                Error::<T, I>::NoIssuedTokens
+            );
 
             let exchange_rate: TradingPrice = Self::exchange_rate();
             let equivalence_collateral = exchange_rate
-                .convert_to_pcx(issued_tokens)
+                .convert_to_pcx(issued_tokens.saturated_into())
                 .ok_or(Error::<T, I>::ArithmeticError)?;
             let raw_collateral: u128 = collateral.saturated_into();
             let collateral_ratio = raw_collateral
-                .checked_mul(100)
-                .ok_or(Error::<T, I>::ArithmeticError)?
+                .saturating_mul(100)
                 .checked_div(equivalence_collateral)
                 .ok_or(Error::<T, I>::ArithmeticError)?;
-            //FIXME(wangyafei): should use try_into?
             Ok(collateral_ratio as u16)
         }
 
@@ -1109,7 +1106,7 @@ pub mod pallet {
             Ok(())
         }
 
-        pub fn get_vault_by_id(
+        pub fn try_get_vault(
             id: &T::AccountId,
         ) -> Result<Vault<T::BlockNumber, BalanceOf<T>>, DispatchError> {
             match <Vaults<T, I>>::get(id) {
@@ -1118,10 +1115,10 @@ pub mod pallet {
             }
         }
 
-        pub fn get_active_vault_by_id(
+        pub fn try_get_active_vault(
             id: &T::AccountId,
         ) -> Result<Vault<T::BlockNumber, BalanceOf<T>>, DispatchError> {
-            let vault = Self::get_vault_by_id(id)?;
+            let vault = Self::try_get_vault(id)?;
             if vault.status == VaultStatus::Active {
                 Ok(vault)
             } else {

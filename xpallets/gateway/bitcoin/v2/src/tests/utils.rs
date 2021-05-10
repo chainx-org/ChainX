@@ -1,3 +1,9 @@
+use frame_support::{
+    dispatch::{DispatchResult, DispatchResultWithPostInfo},
+    traits::Hooks,
+};
+use frame_system::RawOrigin;
+
 use crate::mock::*;
 
 pub(super) fn t_register_vault(

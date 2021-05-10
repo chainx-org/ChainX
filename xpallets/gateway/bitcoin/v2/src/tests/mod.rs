@@ -14,12 +14,14 @@ use super::mock::*;
 use crate::pallet;
 use utils::*;
 
+#[allow(non_upper_case_globals)]
 const Alice: AccountId = 1;
+#[allow(non_upper_case_globals)]
 const Bob: AccountId = 2;
+#[allow(non_upper_case_globals)]
 const Solid: AccountId = 3;
 
 #[test]
-#[allow(non_upper_case_globals)]
 fn test_register_vault() {
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
         assert_err!(
@@ -186,7 +188,7 @@ fn test_issue_request() {
         assert_eq!(issue_request.open_time, 0);
 
         // check vault's token status
-        let vault = XGatewayBitcoin::get_vault_by_id(&issue_request.vault).unwrap();
+        let vault = XGatewayBitcoin::try_get_vault(&issue_request.vault).unwrap();
         assert_eq!(vault.to_be_issued_tokens, issue_request.btc_amount);
 
         t_register_btc().unwrap();
@@ -207,7 +209,7 @@ fn test_issue_request() {
         );
         assert_eq!(user_xbtc, 1);
 
-        let vault = XGatewayBitcoin::get_vault_by_id(&issue_request.vault).unwrap();
+        let vault = XGatewayBitcoin::try_get_vault(&issue_request.vault).unwrap();
         assert_eq!(
             XGatewayBitcoin::issued_tokens_of(&issue_request.vault),
             issue_request.btc_amount
@@ -239,8 +241,7 @@ fn test_cancel_issue_request() {
         assert_ok!(XGatewayBitcoin::cancel_issue(Origin::signed(Alice), 1));
 
         assert_eq!(<pallet::CurrencyOf<Test>>::reserved_balance(Solid), 17000);
-        assert_eq!(<pallet::CurrencyOf<Test>>::reserved_balance(Alice), 3000);
-        assert_eq!(Balances::free_balance(Alice), 10000);
+        assert_eq!(<pallet::CurrencyOf<Test>>::free_balance(Alice), 13000);
     })
 }
 
@@ -266,8 +267,8 @@ fn test_slash_collateral() {
             pallet::Error::<Test, Instance1>::InsufficientCollateral
         );
         assert_ok!(XGatewayBitcoin::slash_collateral(&Alice, &Bob, 200));
-        assert_eq!(<pallet::CurrencyOf<Test>>::reserved_balance(Alice), 0);
-        assert_eq!(<pallet::CurrencyOf<Test>>::reserved_balance(Bob), 200);
+        assert_eq!(<pallet::CurrencyOf<Test>>::free_balance(Alice), 9800);
+        assert_eq!(<pallet::CurrencyOf<Test>>::free_balance(Bob), 20200);
     });
 }
 
@@ -322,7 +323,7 @@ fn test_redeem_request_ok() {
             "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".as_bytes().to_vec()
         ));
 
-        let vault = XGatewayBitcoin::get_vault_by_id(&Solid).unwrap();
+        let vault = XGatewayBitcoin::try_get_vault(&Solid).unwrap();
         assert_eq!(vault.to_be_redeemed_tokens, 1);
 
         let redeem_request = pallet::RedeemRequests::<Test, Instance1>::get(&1).unwrap();
@@ -374,7 +375,7 @@ fn test_redeem_execute() {
         assert_eq!(requester_locked_xbtc, 0);
 
         // Vault's to-be-redeem-tokens decreased.
-        let vault = XGatewayBitcoin::get_vault_by_id(&Solid).unwrap();
+        let vault = XGatewayBitcoin::try_get_vault(&Solid).unwrap();
         assert_eq!(vault.to_be_redeemed_tokens, 0);
 
         // Vault's issued_tokens decreased.
