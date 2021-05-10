@@ -34,7 +34,7 @@ xp-protocol = { path = "../../../../primitives/protocol", default-features = fal
 
 
 # light-bitcoin
-light-bitcoin = { git = "https://github.com/chainx-org/light-bitcoin", branch = "master", default-features = false }
+light-bitcoin = { git = "https://github.com/chainx-org/light-bitcoin", branch = "btc-like", default-features = false }
 
 [dev-dependencies]
 pallet-balances = "3.0.0"

@@ -8,7 +8,12 @@ edition = "2018"
 [dependencies]
 futures = "0.3.4"
 log = "0.4.8"
-log4rs = { version = "0.12", features = ["rolling_file_appender", "compound_policy", "size_trigger", "fixed_window_roller"] }
+log4rs = { version = "0.12", features = [
+  "rolling_file_appender",
+  "compound_policy",
+  "size_trigger",
+  "fixed_window_roller",
+] }
 hex = "0.4"
 hex-literal = "0.3.1"
 jsonrpc-pubsub = "15.0.0"
@@ -58,12 +63,13 @@ chainx-runtime = { path = "../runtime/chainx" }
 dev-runtime = { path = "../runtime/dev" }
 malan-runtime = { path = "../runtime/malan" }
 
-xp-assets-registrar = { path  = "../primitives/assets-registrar" }
-xp-genesis-builder = { path  = "../primitives/genesis-builder" }
+xp-assets-registrar = { path = "../primitives/assets-registrar" }
+xp-genesis-builder = { path = "../primitives/genesis-builder" }
 xp-protocol = { path = "../primitives/protocol" }
 
-xpallet-gateway-bitcoin = { path  = "../xpallets/gateway/bitcoin" }
-xpallet-gateway-common = { path  = "../xpallets/gateway/common" }
+xpallet-gateway-bitcoin = { path = "../xpallets/gateway/bitcoin" }
+xpallet-gateway-bitcoin-v2 = { path = "../xpallets/gateway/bitcoin/v2" }
+xpallet-gateway-common = { path = "../xpallets/gateway/common" }
 
 [build-dependencies]
 substrate-build-script-utils = "3.0.0"
@@ -71,19 +77,19 @@ substrate-build-script-utils = "3.0.0"
 [features]
 default = ["cli"]
 cli = [
-    "sc-cli",
-    "sc-service",
-    "sc-finality-grandpa-warp-sync",
-    "frame-benchmarking-cli",
-    "chainx-executor/wasmi-errno",
+  "sc-cli",
+  "sc-service",
+  "sc-finality-grandpa-warp-sync",
+  "frame-benchmarking-cli",
+  "chainx-executor/wasmi-errno",
 ]
 wasmtime = [
-    "sc-cli/wasmtime",
-    "sc-service/wasmtime",
-    "chainx-executor/wasmtime",
+  "sc-cli/wasmtime",
+  "sc-service/wasmtime",
+  "chainx-executor/wasmtime",
 ]
 runtime-benchmarks = [
-    "chainx-runtime/runtime-benchmarks",
-    "dev-runtime/runtime-benchmarks",
-    "malan-runtime/runtime-benchmarks",
+  "chainx-runtime/runtime-benchmarks",
+  "dev-runtime/runtime-benchmarks",
+  "malan-runtime/runtime-benchmarks",
 ]
