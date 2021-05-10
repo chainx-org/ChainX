@@ -193,7 +193,7 @@ pub mod pallet {
                 !Vaults::<T, I>::contains_key(&sender),
                 Error::<T, I>::VaultAlreadyRegistered
             );
-            Self::verify_btc_address(&btc_address)?;
+            Self::verify_address(&btc_address)?;
 
             ensure!(
                 !BtcAddresses::<T, I>::contains_key(&btc_address),
@@ -369,7 +369,7 @@ pub mod pallet {
                 Error::<T, I>::RedeemAmountTooLarge
             );
 
-            Self::verify_btc_address(&btc_address)?;
+            Self::verify_address(&btc_address)?;
 
             // Increase vault's to_be_redeemed_tokens
             Vaults::<T, I>::mutate(&vault_id, |vault| {
@@ -863,7 +863,7 @@ pub mod pallet {
             Ok(result.saturated_into())
         }
 
-        fn verify_btc_address(address: &[u8]) -> Result<Address, Error<T, I>> {
+        fn verify_address(address: &[u8]) -> Result<Address, Error<T, I>> {
             from_utf8(address)
                 .map_err(|_| Error::<T, I>::InvalidAddress)?
                 .parse()
