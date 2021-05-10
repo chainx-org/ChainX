@@ -2101,7 +2101,7 @@ dependencies = [
 [[package]]
 name = "frame-system-benchmarking"
 version = "3.0.0"
-source = "git+https://github.com/paritytech/substrate?rev=2be8fcc4236d32786c62f6f27a98e7fe7e550807#2be8fcc4236d32786c62f6f27a98e7fe7e550807"
+source = "git+https://github.com/paritytech/substrate?branch=rococo-v1#2be8fcc4236d32786c62f6f27a98e7fe7e550807"
 dependencies = [
  "frame-benchmarking",
  "frame-support",

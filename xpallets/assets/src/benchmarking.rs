@@ -2,7 +2,7 @@
 
 use super::*;
 
-use frame_benchmarking::{account, benchmarks, whitelisted_caller};
+use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_system::RawOrigin;
 
 use crate::Pallet as XAssets;
@@ -62,19 +62,8 @@ benchmarks! {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::tests::{ExtBuilder, Test};
-    use frame_support::assert_ok;
-
-    #[test]
-    fn test_benchmarks() {
-        ExtBuilder::default().build_default().execute_with(|| {
-            assert_ok!(test_benchmark_transfer::<Test>());
-            assert_ok!(test_benchmark_force_transfer::<Test>());
-            assert_ok!(test_benchmark_set_balance::<Test>());
-            assert_ok!(test_benchmark_set_asset_limit::<Test>());
-        });
-    }
-}
+impl_benchmark_test_suite!(
+    Pallet,
+    crate::mock::ExtBuilder::default().build_default(),
+    crate::mock::Test,
+);
