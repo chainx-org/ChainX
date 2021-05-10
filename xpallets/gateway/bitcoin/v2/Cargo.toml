@@ -1,6 +1,6 @@
 [package]
 name = "xpallet-gateway-bitcoin-v2"
-version = "2.0.1"
+version = "2.0.9"
 authors = ["The ChainX Authors"]
 edition = "2018"
 
