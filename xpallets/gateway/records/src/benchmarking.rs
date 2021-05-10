@@ -4,7 +4,7 @@ use frame_benchmarking::{benchmarks, whitelisted_caller};
 use frame_system::RawOrigin;
 
 use super::*;
-use crate::Module as XGatewayRecords;
+use crate::Pallet as XGatewayRecords;
 
 const ASSET_ID: AssetId = xp_protocol::X_BTC;
 
@@ -21,7 +21,7 @@ fn deposit<T: Config>(who: T::AccountId, amount: BalanceOf<T>) {
 
 fn deposit_and_withdraw<T: Config>(who: T::AccountId, amount: BalanceOf<T>) {
     deposit::<T>(who.clone(), amount);
-    let withdrawal = amount - 500.into();
+    let withdrawal = amount - 500_u32.into();
     let addr = b"3LFSUKkP26hun42J1Dy6RATsbgmBJb27NF".to_vec();
     let memo = b"memo".to_vec().into();
     let receiver_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(who);
@@ -47,15 +47,15 @@ benchmarks! {
         let amount: BalanceOf<T> = 1000u32.into();
     }: _(RawOrigin::Root, receiver_lookup, ASSET_ID, amount)
     verify {
-        assert_eq!(xpallet_assets::Module::<T>::usable_balance(&receiver, &ASSET_ID), amount);
+        assert_eq!(xpallet_assets::Pallet::<T>::usable_balance(&receiver, &ASSET_ID), amount);
     }
 
     root_withdraw {
         let receiver: T::AccountId = whitelisted_caller();
         let receiver_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(receiver.clone());
-        let amount: BalanceOf<T> = 1000.into();
+        let amount: BalanceOf<T> = 1000_u32.into();
         deposit::<T>(receiver, amount);
-        let withdrawal = amount - 500.into();
+        let withdrawal = amount - 500_u32.into();
         let addr = b"3LFSUKkP26hun42J1Dy6RATsbgmBJb27NF".to_vec();
         let memo = b"memo".to_vec().into();
     }: _(RawOrigin::Root, receiver_lookup, ASSET_ID, withdrawal, addr, memo)

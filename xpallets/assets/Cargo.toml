@@ -36,6 +36,7 @@ env_logger = "0.7.1"
 sp-io = "3.0.0"
 sp-core = "3.0.0"
 pallet-balances = "3.0.0"
+frame-benchmarking = "3.0.0"
 
 [features]
 default = ["std"]

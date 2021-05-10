@@ -20,7 +20,7 @@ fn b_prepare_put_order<T: Config>(
     <T as xpallet_assets::Config>::Currency::make_free_balance_be(user, pcx_value.into());
     <T as xpallet_assets::Config>::Currency::issue(pcx_value.into());
 
-    <xpallet_assets::Module<T>>::issue(&X_BTC, user, btc_value.into())?;
+    <xpallet_assets::Pallet<T>>::issue(&X_BTC, user, btc_value.into())?;
     Ok(())
 }
 
@@ -31,7 +31,7 @@ fn b_put_order<T: Config>(
     price: u32,
 ) -> DispatchResult {
     b_prepare_put_order::<T>(&user, pcx_value, btc_value)?;
-    Module::<T>::put_order(
+    Pallet::<T>::put_order(
         RawOrigin::Signed(user.clone()).into(),
         PAIR_ID,
         OrderType::Limit,
@@ -96,11 +96,11 @@ benchmarks! {
     }: _(RawOrigin::Root, pair.clone(), 2, 1, 100u32.into(), true)
     verify {
         #[cfg(test)]
-        assert_eq!(Module::<T>::trading_pair_count(), 3);
+        assert_eq!(Pallet::<T>::trading_pair_count(), 3);
         #[cfg(feature = "runtime-benchmarks")]
-        assert_eq!(Module::<T>::trading_pair_count(), 2);
+        assert_eq!(Pallet::<T>::trading_pair_count(), 2);
         assert_eq!(
-            Module::<T>::get_trading_pair_by_currency_pair(&pair)
+            Pallet::<T>::get_trading_pair_by_currency_pair(&pair)
                 .unwrap()
                 .base(),
             pair.base
@@ -109,11 +109,11 @@ benchmarks! {
 
     update_trading_pair {
         let pair = CurrencyPair::new(EOS, ETH);
-        Module::<T>::add_trading_pair(RawOrigin::Root.into(), pair.clone(), 2, 1, 100u32.into(), true)?;
+        Pallet::<T>::add_trading_pair(RawOrigin::Root.into(), pair.clone(), 2, 1, 100u32.into(), true)?;
     }: _(RawOrigin::Root, PAIR_ID, 888, false)
     verify {
-        assert_eq!(Module::<T>::trading_pair_of(PAIR_ID).unwrap().tick_decimals, 888);
-        assert_eq!(Module::<T>::trading_pair_of(PAIR_ID).unwrap().tradable, false);
+        assert_eq!(Pallet::<T>::trading_pair_of(PAIR_ID).unwrap().tick_decimals, 888);
+        assert_eq!(Pallet::<T>::trading_pair_of(PAIR_ID).unwrap().tradable, false);
     }
 }
 

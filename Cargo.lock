@@ -16,7 +16,16 @@ version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a55f82cfe485775d02112886f4169bde0c5894d75e79ead7eafe7e40a25e45f7"
 dependencies = [
- "gimli",
+ "gimli 0.23.0",
+]
+
+[[package]]
+name = "addr2line"
+version = "0.15.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "03345e98af8f3d786b6d9f656ccfa6ac316d954e92bc4841f0bba20789d5fb5a"
+dependencies = [
+ "gimli 0.24.0",
 ]
 
 [[package]]
@@ -401,16 +410,16 @@ checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
 
 [[package]]
 name = "backtrace"
-version = "0.3.58"
+version = "0.3.59"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "88fb5a785d6b44fd9d6700935608639af1b8356de1e55d5f7c2740f4faa15d82"
+checksum = "4717cfcbfaa661a0fd48f8453951837ae7e8f81e481fbb136e3202d72805a744"
 dependencies = [
- "addr2line",
+ "addr2line 0.15.1",
  "cc",
  "cfg-if 1.0.0",
  "libc",
  "miniz_oxide",
- "object",
+ "object 0.24.0",
  "rustc-demangle",
 ]
 
@@ -828,7 +837,7 @@ version = "2.0.9"
 dependencies = [
  "chainx-runtime",
  "dev-runtime",
- "frame-benchmarking 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "malan-runtime",
  "sc-executor",
  "xp-io",
@@ -902,7 +911,7 @@ version = "2.0.9"
 dependencies = [
  "chainx-primitives",
  "chainx-runtime-common",
- "frame-benchmarking 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "frame-executive",
  "frame-support",
  "frame-system",
@@ -1201,7 +1210,7 @@ dependencies = [
  "cranelift-codegen-meta",
  "cranelift-codegen-shared",
  "cranelift-entity",
- "gimli",
+ "gimli 0.23.0",
  "log",
  "regalloc",
  "serde",
@@ -1505,7 +1514,7 @@ version = "2.0.9"
 dependencies = [
  "chainx-primitives",
  "chainx-runtime-common",
- "frame-benchmarking 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "frame-executive",
  "frame-support",
  "frame-system",
@@ -1947,25 +1956,6 @@ dependencies = [
 [[package]]
 name = "frame-benchmarking"
 version = "3.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70fe99487f84579a3f2c4ba52650fec875492eea41be0e4eea8019187f105052"
-dependencies = [
- "frame-support",
- "frame-system",
- "linregress",
- "parity-scale-codec",
- "paste",
- "sp-api",
- "sp-io",
- "sp-runtime",
- "sp-runtime-interface",
- "sp-std",
- "sp-storage",
-]
-
-[[package]]
-name = "frame-benchmarking"
-version = "3.1.0"
 source = "git+https://github.com/paritytech/substrate?branch=rococo-v1#2be8fcc4236d32786c62f6f27a98e7fe7e550807"
 dependencies = [
  "frame-support",
@@ -1989,7 +1979,7 @@ source = "git+https://github.com/paritytech/substrate?branch=rococo-v1#2be8fcc42
 dependencies = [
  "Inflector",
  "chrono",
- "frame-benchmarking 3.1.0 (git+https://github.com/paritytech/substrate?branch=rococo-v1)",
+ "frame-benchmarking",
  "handlebars",
  "parity-scale-codec",
  "sc-cli",
@@ -2111,10 +2101,9 @@ dependencies = [
 [[package]]
 name = "frame-system-benchmarking"
 version = "3.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e93602f58cdab9820b6d607b7b50834d9b878efa33405a65c89ebfb5a596b584"
+source = "git+https://github.com/paritytech/substrate?branch=rococo-v1#2be8fcc4236d32786c62f6f27a98e7fe7e550807"
 dependencies = [
- "frame-benchmarking 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -2424,6 +2413,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "gimli"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0e4075386626662786ddb0ec9081e7c7eeb1ba31951f447ca780ef9f5d568189"
+
+[[package]]
 name = "glob"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2502,7 +2497,7 @@ dependencies = [
  "log",
  "pest",
  "pest_derive",
- "quick-error 2.0.0",
+ "quick-error 2.0.1",
  "serde",
  "serde_json",
 ]
@@ -3612,7 +3607,7 @@ dependencies = [
  "quicksink",
  "rw-stream-sink",
  "soketto",
- "url 2.2.1",
+ "url 2.2.2",
  "webpki-roots",
 ]
 
@@ -3671,7 +3666,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#1e12efba33d9805d612b878cbb9a2d3a8a2bf8e2"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#c0db1bc73bda1b5fddd5fcb5814dc2caf1409700"
 dependencies = [
  "light-bitcoin-chain",
  "light-bitcoin-crypto",
@@ -3685,7 +3680,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-chain"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#1e12efba33d9805d612b878cbb9a2d3a8a2bf8e2"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#c0db1bc73bda1b5fddd5fcb5814dc2caf1409700"
 dependencies = [
  "hex",
  "light-bitcoin-crypto",
@@ -3698,7 +3693,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-crypto"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#1e12efba33d9805d612b878cbb9a2d3a8a2bf8e2"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#c0db1bc73bda1b5fddd5fcb5814dc2caf1409700"
 dependencies = [
  "digest 0.9.0",
  "light-bitcoin-primitives",
@@ -3711,7 +3706,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-keys"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#1e12efba33d9805d612b878cbb9a2d3a8a2bf8e2"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#c0db1bc73bda1b5fddd5fcb5814dc2caf1409700"
 dependencies = [
  "bs58 0.4.0",
  "hex",
@@ -3726,7 +3721,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-merkle"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#1e12efba33d9805d612b878cbb9a2d3a8a2bf8e2"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#c0db1bc73bda1b5fddd5fcb5814dc2caf1409700"
 dependencies = [
  "light-bitcoin-chain",
  "light-bitcoin-primitives",
@@ -3737,7 +3732,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-primitives"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#1e12efba33d9805d612b878cbb9a2d3a8a2bf8e2"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#c0db1bc73bda1b5fddd5fcb5814dc2caf1409700"
 dependencies = [
  "byteorder",
  "fixed-hash",
@@ -3751,7 +3746,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-script"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#1e12efba33d9805d612b878cbb9a2d3a8a2bf8e2"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#c0db1bc73bda1b5fddd5fcb5814dc2caf1409700"
 dependencies = [
  "hex",
  "light-bitcoin-chain",
@@ -3764,7 +3759,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-serialization"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#1e12efba33d9805d612b878cbb9a2d3a8a2bf8e2"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#c0db1bc73bda1b5fddd5fcb5814dc2caf1409700"
 dependencies = [
  "light-bitcoin-primitives",
  "light-bitcoin-serialization-derive",
@@ -3773,7 +3768,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-serialization-derive"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#1e12efba33d9805d612b878cbb9a2d3a8a2bf8e2"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#c0db1bc73bda1b5fddd5fcb5814dc2caf1409700"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3898,7 +3893,7 @@ version = "2.0.9"
 dependencies = [
  "chainx-primitives",
  "chainx-runtime-common",
- "frame-benchmarking 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "frame-executive",
  "frame-support",
  "frame-system",
@@ -4435,6 +4430,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "object"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1a5b3dd1c072ee7963717671d1ca129f1048fda25edea6b752bfc71ac8854170"
+
+[[package]]
 name = "once_cell"
 version = "1.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4567,7 +4568,7 @@ name = "pallet-babe"
 version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate?branch=rococo-v1#2be8fcc4236d32786c62f6f27a98e7fe7e550807"
 dependencies = [
- "frame-benchmarking 3.1.0 (git+https://github.com/paritytech/substrate?branch=rococo-v1)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -4590,7 +4591,7 @@ name = "pallet-balances"
 version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate?branch=rococo-v1#2be8fcc4236d32786c62f6f27a98e7fe7e550807"
 dependencies = [
- "frame-benchmarking 3.1.0 (git+https://github.com/paritytech/substrate?branch=rococo-v1)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -4617,7 +4618,7 @@ name = "pallet-collective"
 version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate?branch=rococo-v1#2be8fcc4236d32786c62f6f27a98e7fe7e550807"
 dependencies = [
- "frame-benchmarking 3.1.0 (git+https://github.com/paritytech/substrate?branch=rococo-v1)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -4633,7 +4634,7 @@ name = "pallet-democracy"
 version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate?branch=rococo-v1#2be8fcc4236d32786c62f6f27a98e7fe7e550807"
 dependencies = [
- "frame-benchmarking 3.1.0 (git+https://github.com/paritytech/substrate?branch=rococo-v1)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -4664,7 +4665,7 @@ name = "pallet-grandpa"
 version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate?branch=rococo-v1#2be8fcc4236d32786c62f6f27a98e7fe7e550807"
 dependencies = [
- "frame-benchmarking 3.1.0 (git+https://github.com/paritytech/substrate?branch=rococo-v1)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -4686,7 +4687,7 @@ version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate?branch=rococo-v1#2be8fcc4236d32786c62f6f27a98e7fe7e550807"
 dependencies = [
  "enumflags2",
- "frame-benchmarking 3.1.0 (git+https://github.com/paritytech/substrate?branch=rococo-v1)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -4733,7 +4734,7 @@ name = "pallet-membership"
 version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate?branch=rococo-v1#2be8fcc4236d32786c62f6f27a98e7fe7e550807"
 dependencies = [
- "frame-benchmarking 3.1.0 (git+https://github.com/paritytech/substrate?branch=rococo-v1)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -4805,7 +4806,7 @@ name = "pallet-scheduler"
 version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate?branch=rococo-v1#2be8fcc4236d32786c62f6f27a98e7fe7e550807"
 dependencies = [
- "frame-benchmarking 3.1.0 (git+https://github.com/paritytech/substrate?branch=rococo-v1)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -4852,7 +4853,7 @@ name = "pallet-timestamp"
 version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate?branch=rococo-v1#2be8fcc4236d32786c62f6f27a98e7fe7e550807"
 dependencies = [
- "frame-benchmarking 3.1.0 (git+https://github.com/paritytech/substrate?branch=rococo-v1)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "impl-trait-for-tuples 0.2.1",
@@ -4983,7 +4984,7 @@ dependencies = [
  "serde",
  "static_assertions",
  "unsigned-varint 0.7.0",
- "url 2.2.1",
+ "url 2.2.2",
 ]
 
 [[package]]
@@ -5093,7 +5094,7 @@ dependencies = [
  "rand 0.7.3",
  "sha-1 0.8.2",
  "slab",
- "url 2.2.1",
+ "url 2.2.2",
 ]
 
 [[package]]
@@ -5558,9 +5559,9 @@ checksum = "a1d01941d82fa2ab50be1e79e6714289dd7cde78eba4c074bc5a4374f650dfe0"
 
 [[package]]
 name = "quick-error"
-version = "2.0.0"
+version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ac73b1112776fc109b2e61909bc46c7e1bf0d7f690ffb1676553acce16d5cda"
+checksum = "a993555f31e5a609f617c12db6250dedcac1b0a85076912c436e6fc9b2c8e6a3"
 
 [[package]]
 name = "quicksink"
@@ -8861,7 +8862,7 @@ dependencies = [
  "smallvec 1.6.1",
  "thiserror",
  "tinyvec",
- "url 2.2.1",
+ "url 2.2.2",
 ]
 
 [[package]]
@@ -9046,9 +9047,9 @@ dependencies = [
 
 [[package]]
 name = "url"
-version = "2.2.1"
+version = "2.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ccd964113622c8e9322cfac19eb1004a07e636c545f325da085d5cdde6f1f8b"
+checksum = "a507c383b2d33b5fc35d1861e77e6b383d158b2da5e14fe51b83dfedf6fd578c"
 dependencies = [
  "form_urlencoded",
  "idna 0.2.3",
@@ -9334,9 +9335,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "382eecd6281c6c1d1f3c904c3c143e671fc1a9573820cbfa777fba45ce2eda9c"
 dependencies = [
  "anyhow",
- "gimli",
+ "gimli 0.23.0",
  "more-asserts",
- "object",
+ "object 0.23.0",
  "target-lexicon",
  "thiserror",
  "wasmparser",
@@ -9354,7 +9355,7 @@ dependencies = [
  "cranelift-codegen",
  "cranelift-entity",
  "cranelift-wasm",
- "gimli",
+ "gimli 0.23.0",
  "indexmap",
  "log",
  "more-asserts",
@@ -9380,7 +9381,7 @@ version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b5f649623859a12d361fe4cc4793de44f7c3ff34c322c5714289787e89650bb"
 dependencies = [
- "addr2line",
+ "addr2line 0.14.1",
  "anyhow",
  "cfg-if 1.0.0",
  "cranelift-codegen",
@@ -9388,10 +9389,10 @@ dependencies = [
  "cranelift-frontend",
  "cranelift-native",
  "cranelift-wasm",
- "gimli",
+ "gimli 0.23.0",
  "log",
  "more-asserts",
- "object",
+ "object 0.23.0",
  "rayon",
  "region",
  "serde",
@@ -9415,7 +9416,7 @@ checksum = "ef2e99cd9858f57fd062e9351e07881cedfc8597928385e02a48d9333b9e15a1"
 dependencies = [
  "anyhow",
  "more-asserts",
- "object",
+ "object 0.23.0",
  "target-lexicon",
  "wasmtime-debug",
  "wasmtime-environ",
@@ -9429,10 +9430,10 @@ checksum = "e46c0a590e49278ba7f79ef217af9db4ecc671b50042c185093e22d73524abb2"
 dependencies = [
  "anyhow",
  "cfg-if 1.0.0",
- "gimli",
+ "gimli 0.23.0",
  "lazy_static",
  "libc",
- "object",
+ "object 0.23.0",
  "scroll",
  "serde",
  "target-lexicon",
@@ -9740,7 +9741,7 @@ dependencies = [
  "bitflags",
  "chainx-primitives",
  "env_logger",
- "frame-benchmarking 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -9763,7 +9764,7 @@ name = "xpallet-assets-registrar"
 version = "2.0.9"
 dependencies = [
  "chainx-primitives",
- "frame-benchmarking 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -9812,7 +9813,7 @@ version = "2.0.9"
 dependencies = [
  "chainx-primitives",
  "env_logger",
- "frame-benchmarking 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -9863,7 +9864,7 @@ version = "2.0.9"
 dependencies = [
  "bs58 0.3.1",
  "chainx-primitives",
- "frame-benchmarking 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "hex",
@@ -9927,7 +9928,7 @@ name = "xpallet-gateway-common"
 version = "2.0.9"
 dependencies = [
  "chainx-primitives",
- "frame-benchmarking 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "hex",
@@ -9989,7 +9990,7 @@ name = "xpallet-gateway-records"
 version = "2.0.9"
 dependencies = [
  "chainx-primitives",
- "frame-benchmarking 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -10065,7 +10066,7 @@ version = "2.0.9"
 dependencies = [
  "chainx-primitives",
  "env_logger",
- "frame-benchmarking 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -10121,7 +10122,7 @@ version = "2.0.9"
 dependencies = [
  "chainx-primitives",
  "env_logger",
- "frame-benchmarking 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",

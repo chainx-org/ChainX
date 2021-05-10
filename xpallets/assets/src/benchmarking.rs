@@ -2,10 +2,10 @@
 
 use super::*;
 
-use frame_benchmarking::{account, benchmarks, whitelisted_caller};
+use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_system::RawOrigin;
 
-use crate::Module as XAssets;
+use crate::Pallet as XAssets;
 
 const ASSET_ID: AssetId = xp_protocol::X_BTC;
 const SEED: u32 = 0;
@@ -44,11 +44,11 @@ benchmarks! {
         let user: T::AccountId = account("user", 0, SEED);
         let user_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(user.clone());
         let mut balances = BTreeMap::new();
-        balances.insert(AssetType::Locked, 1000.into());
-        balances.insert(AssetType::Locked, 1000.into());
-        balances.insert(AssetType::Reserved, 1000.into());
-        balances.insert(AssetType::ReservedWithdrawal, 1000.into());
-        balances.insert(AssetType::ReservedDexSpot, 1000.into());
+        balances.insert(AssetType::Locked, 1000_u32.into());
+        balances.insert(AssetType::Locked, 1000_u32.into());
+        balances.insert(AssetType::Reserved, 1000_u32.into());
+        balances.insert(AssetType::ReservedWithdrawal, 1000_u32.into());
+        balances.insert(AssetType::ReservedDexSpot, 1000_u32.into());
     }: set_balance(RawOrigin::Root, user_lookup, ASSET_ID, balances.clone())
     verify {
         assert_eq!(XAssets::<T>::asset_balance(&user, &ASSET_ID), balances);
@@ -62,19 +62,8 @@ benchmarks! {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::tests::{ExtBuilder, Test};
-    use frame_support::assert_ok;
-
-    #[test]
-    fn test_benchmarks() {
-        ExtBuilder::default().build_default().execute_with(|| {
-            assert_ok!(test_benchmark_transfer::<Test>());
-            assert_ok!(test_benchmark_force_transfer::<Test>());
-            assert_ok!(test_benchmark_set_balance::<Test>());
-            assert_ok!(test_benchmark_set_asset_limit::<Test>());
-        });
-    }
-}
+impl_benchmark_test_suite!(
+    Pallet,
+    crate::mock::ExtBuilder::default().build_default(),
+    crate::mock::Test,
+);

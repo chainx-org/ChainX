@@ -6,7 +6,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::type_complexity, clippy::transmute_ptr_to_ptr)]
 
-#[cfg(feature = "runtime-benchmarks")]
+#[cfg(any(feature = "runtime-benchmarks", test))]
 mod benchmarking;
 #[cfg(test)]
 mod mock;
