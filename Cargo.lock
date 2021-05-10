@@ -9704,7 +9704,7 @@ dependencies = [
 
 [[package]]
 name = "xp-protocol"
-version = "2.0.8-1"
+version = "2.0.9"
 dependencies = [
  "chainx-primitives",
  "parity-scale-codec",
@@ -9898,7 +9898,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-gateway-bitcoin-v2"
-version = "2.0.1"
+version = "2.0.9"
 dependencies = [
  "bitflags",
  "bs58 0.3.1",
