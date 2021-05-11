@@ -46,7 +46,8 @@ jobs:
     - name: Format
       run: cargo fmt -- --check
 
-    - if: matrix.os == 'ubuntu-latest'
+    - name: Clippy
+      if: matrix.os == 'ubuntu-latest'
       run: cargo clippy
 
     - name: Test
@@ -56,4 +57,4 @@ jobs:
       run: cargo test --no-run
 
     - name: Runtime benchmarks
-      run: cargo build --features runtime-benchmarks
+      run: cargo test --no-run --features runtime-benchmarks
