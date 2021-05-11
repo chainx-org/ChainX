@@ -136,8 +136,6 @@ impl Filter<Call> for BaseFilter {
         !XSystem::is_paused(metadata)
     }
 }
-pub struct IsCallable;
-// frame_support::impl_filter_stack!(IsCallable, BaseFilter, Call, is_callable);
 
 pub const FORBIDDEN_CALL: u8 = 255;
 pub const FORBIDDEN_ACCOUNT: u8 = 254;

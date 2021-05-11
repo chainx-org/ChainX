@@ -335,11 +335,10 @@ where
 
                     let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
 
-                    let slot =
-						sp_consensus_babe::inherents::InherentDataProvider::from_timestamp_and_duration(
-							*timestamp,
-							slot_duration,
-						);
+                    let slot = sp_consensus_babe::inherents::InherentDataProvider::from_timestamp_and_duration(
+                        *timestamp,
+                        slot_duration,
+                    );
 
                     Ok((timestamp, slot, uncles))
                 }
