@@ -241,6 +241,7 @@ decl_module! {
             };
 
             info!(
+                target: "runtime::gateway::common",
                 "[transition_trustee_session] Try to transition trustees, chain:{:?}, new_trustees:{:?}",
                 chain,
                 new_trustees
@@ -383,6 +384,7 @@ impl<T: Config> Module<T> {
             (1..new_trustees.len()).any(|i| new_trustees[i..].contains(&new_trustees[i - 1]));
         if has_duplicate {
             error!(
+                target: "runtime::gateway::common",
                 "[try_generate_session_info] Duplicate account, candidates:{:?}",
                 new_trustees
             );
@@ -392,6 +394,7 @@ impl<T: Config> Module<T> {
         for accountid in new_trustees.into_iter() {
             let p = Self::trustee_intention_props_of(&accountid, chain).ok_or_else(|| {
                 error!(
+                    target: "runtime::gateway::common",
                     "[transition_trustee_session] Candidate {:?} has not registered as a trustee",
                     accountid
                 );

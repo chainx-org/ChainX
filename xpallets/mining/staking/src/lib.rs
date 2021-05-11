@@ -1069,6 +1069,7 @@ impl<T: Config> Module<T> {
         value: BalanceOf<T>,
     ) -> Result<(), Error<T>> {
         debug!(
+            target: "runtime::mining::staking",
             "[apply_unbond] who:{:?}, target:{:?}, value:{:?}",
             who, target, value
         );

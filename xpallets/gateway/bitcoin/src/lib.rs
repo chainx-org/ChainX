@@ -44,7 +44,6 @@ use light_bitcoin::{
 };
 
 use chainx_primitives::{AssetId, ReferralId};
-use log::{debug, error, info};
 use xp_gateway_common::AccountExtractor;
 use xpallet_assets::{BalanceOf, Chain, ChainT, WithdrawalLimit};
 use xpallet_gateway_common::{
@@ -68,7 +67,7 @@ use self::{
 #[macro_export]
 macro_rules! log {
     ($level:tt, $patter:expr $(, $values:expr)* $(,)?) => {
-        frame_support::log::$level!(
+        log::$level!(
             target: "runtime::bitcoin",
             $patter $(, $values)*
         )
@@ -273,7 +272,7 @@ decl_module! {
         pub fn push_header(origin, header: Vec<u8>) -> DispatchResultWithPostInfo {
             let from = ensure_signed(origin)?;
             let header: BtcHeader = deserialize(header.as_slice()).map_err(|_| Error::<T>::DeserializeErr)?;
-            debug!("[push_header] from:{:?}, header:{:?}", from, header);
+            log!(debug, "[push_header] from:{:?}, header:{:?}", from, header);
 
             Self::apply_push_header(header)?;
 
@@ -365,7 +364,7 @@ decl_module! {
             if let Some(w) = who {
                 remove_pending_deposit::<T>(&addr, &w);
             } else {
-                info!("[remove_pending] Release pending deposit directly, not deposit to someone, addr:{:?}", try_addr(&addr));
+                log!(info, "[remove_pending] Release pending deposit directly, not deposit to someone, addr:{:?}", try_addr(&addr));
                 PendingDeposits::remove(&addr);
             }
             Ok(())
@@ -422,7 +421,8 @@ impl<T: Config> ChainT<BalanceOf<T>> for Module<T> {
     fn check_addr(addr: &[u8], _: &[u8]) -> DispatchResult {
         // this addr is base58 addr
         let address = Self::verify_btc_address(addr).map_err(|err| {
-            error!(
+            log!(
+                error,
                 "[verify_btc_address] Verify failed, error:{:?}, source addr:{:?}",
                 err,
                 try_addr(addr)
@@ -438,7 +438,7 @@ impl<T: Config> ChainT<BalanceOf<T>> for Module<T> {
                 }
             }
             Err(err) => {
-                error!("[check_addr] Can not get trustee addr:{:?}", err);
+                log!(error, "[check_addr] Can not get trustee addr:{:?}", err);
             }
         }
 
@@ -478,7 +478,8 @@ impl<T: Config> Module<T> {
     fn apply_push_header(header: BtcHeader) -> DispatchResult {
         // current should not exist
         if Self::headers(&header.hash()).is_some() {
-            error!(
+            log!(
+                error,
                 "[apply_push_header] The BTC header already exists, hash:{:?}",
                 header.hash()
             );
@@ -515,7 +516,8 @@ impl<T: Config> Module<T> {
                 }
             });
 
-            debug!(
+            log!(
+                debug,
                 "[apply_push_header] Verify successfully, insert header to storage [height:{}, hash:{:?}, all hashes of the height:{:?}]",
                 header_info.height,
                 hash,
@@ -527,9 +529,12 @@ impl<T: Config> Module<T> {
             if header_info.height > best_index.height {
                 // note update_confirmed_header would mutate other storage depend on BlockHashFor
                 let confirmed_index = header::update_confirmed_header::<T>(&header_info);
-                info!(
+                log!(
+                    info,
                     "[apply_push_header] Update new height:{}, hash:{:?}, confirm:{:?}",
-                    header_info.height, hash, confirmed_index
+                    header_info.height,
+                    hash,
+                    confirmed_index
                 );
 
                 // new best index
@@ -540,9 +545,11 @@ impl<T: Config> Module<T> {
                 BestIndex::put(new_best_index);
             } else {
                 // forked chain
-                info!(
+                log!(
+                    info,
                     "[apply_push_header] Best index {} larger than this height {}",
-                    best_index.height, header_info.height
+                    best_index.height,
+                    header_info.height
                 );
                 header::check_confirmed_header::<T>(&header_info)?;
             };
@@ -555,7 +562,8 @@ impl<T: Config> Module<T> {
         let tx_hash = tx.raw.hash();
         let block_hash = tx.block_hash;
         let header_info = Module::<T>::headers(&tx.block_hash).ok_or_else(|| {
-            error!(
+            log!(
+                error,
                 "[apply_push_transaction] Tx's block header ({:?}) must exist before",
                 block_hash
             );
@@ -573,8 +581,9 @@ impl<T: Config> Module<T> {
         let confirmed = Self::confirmed_index().ok_or(Error::<T>::UnconfirmedTx)?;
         let height = header_info.height;
         if height > confirmed.height {
-            error!(
-                "[apply_push_transaction] Receive an unconfirmed tx (height:{}, hash:{:?}), confirmed index (height:{}, hash:{:?})", 
+            log!(
+                error,
+                "[apply_push_transaction] Receive an unconfirmed tx (height:{}, hash:{:?}), confirmed index (height:{}, hash:{:?})",
                 height, tx_hash, confirmed.height, confirmed.hash
             );
             return Err(Error::<T>::UnconfirmedTx.into());
@@ -584,8 +593,9 @@ impl<T: Config> Module<T> {
             None => { /* do nothing */ }
             Some(state) => {
                 if state.result == BtcTxResult::Success {
-                    error!(
-                        "[apply_push_transaction] Reject processed tx (hash:{:?}, type:{:?}, result:{:?})", 
+                    log!(
+                        error,
+                        "[apply_push_transaction] Reject processed tx (hash:{:?}, type:{:?}, result:{:?})",
                         tx_hash, state.tx_type, state.result
                     );
                     return Err(Error::<T>::ReplayedTx.into());

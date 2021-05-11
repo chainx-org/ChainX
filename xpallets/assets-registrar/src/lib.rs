@@ -140,6 +140,7 @@ decl_module! {
             ensure!(!Self::exists(&asset_id), Error::<T>::AssetAlreadyExists);
 
             log::info!(
+                target: "runtime::assets-registrar",
                 "[register_asset] id:{}, info:{:?}, is_online:{}, has_mining_rights:{}",
                 asset_id, asset, is_online, has_mining_rights
             );

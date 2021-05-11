@@ -16,6 +16,7 @@ impl<T: Config> Module<T> {
         fluctuation: T::Price,
     ) -> Result<(), Error<T>> {
         debug!(
+            target: "runtime::dex::spot",
             "[check_bid_price] quote: {:?}, lowest_ask: {:?}, fluctuation: {:?}",
             quote, lowest_ask, fluctuation
         );
@@ -38,6 +39,7 @@ impl<T: Config> Module<T> {
         fluctuation: T::Price,
     ) -> Result<(), Error<T>> {
         debug!(
+            target: "runtime::dex::spot",
             "[check_ask_price] Sell: quote: {:?}, highest_bid: {:?}, fluctuation: {:?}",
             quote, highest_bid, fluctuation
         );

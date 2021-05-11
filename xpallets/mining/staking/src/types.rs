@@ -206,6 +206,7 @@ impl MiningDistribution {
         let (m1, m2) = self.asset_mining_vs_staking::<T>();
         if m1 >= m2 {
             debug!(
+                target: "runtime::mining::staking",
                 "[has_treasury_extra] m1({}) >= m2({}), no extra treasury split.",
                 m1, m2
             );
@@ -259,6 +260,7 @@ impl<T: Config> Slasher<T> {
         let reward_pot_balance = Module::<T>::free_balance(&reward_pot);
 
         debug!(
+            target: "runtime::mining::staking",
             "[try_slash] reward_pot_balance:{:?}, expected_slash:{:?}",
             reward_pot_balance, expected_slash
         );

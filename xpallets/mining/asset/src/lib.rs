@@ -257,6 +257,7 @@ impl<T: Config> Module<T> {
             if let Some(last_claim) = Self::last_claim(who, asset_id) {
                 if current_block <= last_claim + frequency_limit {
                     warn!(
+                        target: "runtime::mining::asset",
                         "{:?} can not claim until block {:?}",
                         who,
                         last_claim + frequency_limit
@@ -280,6 +281,7 @@ impl<T: Config> Module<T> {
                 staking_requirement.saturated_into::<BalanceOf<T>>() * total_dividend;
             if staking_locked < required_stake {
                 warn!(
+                    target: "runtime::mining::asset",
                     "{:?}'s staked balance is not insufficient, total dividend: {:?}, staked: {:?}, required: {:?}",
                     who,
                     total_dividend,
@@ -407,6 +409,7 @@ impl<T: Config> Module<T> {
             Self::transfer(&reward_pot, depositor, deposit_reward)?;
         } else {
             warn!(
+                target: "runtime::mining::asset",
                 "asset {}'s reward pot has only {:?}, skipped issuing deposit reward for depositor {:?}",
                 target,
                 reward_pot_balance,

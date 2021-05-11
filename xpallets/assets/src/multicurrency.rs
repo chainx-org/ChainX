@@ -229,6 +229,7 @@ impl<T: Config> MultiReservableCurrency<T::AccountId> for Module<T> {
             actual,
         ) {
             error!(
+                target: "runtime::assets",
                 "[slash_reserved] Should not be failed when move asset (reserved => usable), \
                 who:{:?}, id:{}, err:{:?}",
                 who, currency_id, err
@@ -279,6 +280,7 @@ impl<T: Config> MultiReservableCurrency<T::AccountId> for Module<T> {
             actual,
         ) {
             error!(
+                target: "runtime::assets",
                 "[unreserve] Should not be failed when move asset (reserved => usable), \
                 who:{:?}, id:{}, err:{:?}",
                 who, currency_id, err

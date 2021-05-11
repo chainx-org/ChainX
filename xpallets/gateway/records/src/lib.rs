@@ -211,6 +211,7 @@ impl<T: Config> Module<T> {
         xpallet_assets::Module::<T>::ensure_not_native_asset(&asset_id)?;
 
         info!(
+            target: "runtime::gateway::records",
             "[deposit] who:{:?}, id:{}, balance:{:?}",
             who, asset_id, balance
         );
@@ -237,6 +238,7 @@ impl<T: Config> Module<T> {
 
         let id = Self::id();
         info!(
+            target: "runtime::gateway::records",
             "[apply_withdrawal] id:{}, who:{:?}, asset id:{}, balance:{:?}, addr:{:?}, memo:{}",
             id,
             who,
@@ -277,6 +279,7 @@ impl<T: Config> Module<T> {
     ) -> DispatchResult {
         if curr_state != WithdrawalState::Applying {
             error!(
+                target: "runtime::gateway::records",
                 "[process_withdrawal] id:{}, current withdrawal state ({:?}) must be `Applying`",
                 id, curr_state
             );
@@ -312,6 +315,7 @@ impl<T: Config> Module<T> {
     ) -> DispatchResult {
         if curr_state != WithdrawalState::Processing {
             error!(
+                target: "runtime::gateway::records",
                 "[recover_withdrawal] id:{}, current withdrawal state ({:?}) must be `Processing`",
                 id, curr_state
             );
@@ -329,6 +333,7 @@ impl<T: Config> Module<T> {
         let (record, curr_state) = Self::ensure_withdrawal_records_exists(id)?;
         if record.applicant() != who {
             error!(
+                target: "runtime::gateway::records",
                 "[cancel_withdrawal] id:{}, account {:?} is not the applicant {:?}",
                 id,
                 who,
@@ -348,6 +353,7 @@ impl<T: Config> Module<T> {
     ) -> DispatchResult {
         if curr_state != WithdrawalState::Applying {
             error!(
+                target: "runtime::gateway::records",
                 "[cancel_withdrawal] id:{}, current withdrawal state ({:?}) must be `Applying`",
                 id, curr_state
             );
@@ -397,6 +403,7 @@ impl<T: Config> Module<T> {
     ) -> DispatchResult {
         if curr_state != WithdrawalState::Processing {
             error!(
+                target: "runtime::gateway::records",
                 "[finish_withdrawal] id:{}, current withdrawal state ({:?}) must be `Processing`",
                 id, curr_state
             );
@@ -461,6 +468,7 @@ impl<T: Config> Module<T> {
             }
             _ => {
                 error!(
+                    target: "runtime::gateway::records",
                     "[set_withdrawal_state_by_root] Shouldn't happen normally, unless called by root, \
                     current state:{:?}, new state:{:?}",
                     curr_state, new_state
@@ -479,6 +487,7 @@ impl<T: Config> Module<T> {
         Self::ensure_asset_belongs_to_chain(record.asset_id(), chain)?;
         if state != WithdrawalState::Processing {
             error!(
+                target: "runtime::gateway::records",
                 "[set_withdrawal_state_by_trustees] id:{}, current withdrawal state ({:?}) must be `Processing`",
                 id, state
             );
@@ -489,6 +498,7 @@ impl<T: Config> Module<T> {
             WithdrawalState::RootFinish | WithdrawalState::RootCancel => { /*do nothing*/ }
             _ => {
                 error!(
+                    target: "runtime::gateway::records",
                     "[set_withdrawal_state_by_trustees] id:{}, new withdrawal state ({:?}) must be `RootFinish` or `RootCancel`",
                     id, new_state
                 );

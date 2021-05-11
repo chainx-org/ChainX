@@ -289,7 +289,7 @@ decl_module! {
         #[weight = <T as Config>::WeightInfo::set_handicap()]
         fn set_handicap(origin, #[compact] pair_id: TradingPairId, new: Handicap< T::Price>) {
             ensure_root(origin)?;
-            info!("[set_handicap] pair_id:{:?}, new handicap:{:?}", pair_id, new);
+            info!(target: "runtime::dex::spot", "[set_handicap] pair_id:{:?}, new handicap:{:?}", pair_id, new);
             HandicapOf::<T>::insert(pair_id, new);
         }
 
@@ -387,7 +387,7 @@ impl<T: Config> Module<T> {
             tradable,
         };
 
-        info!("New trading pair: {:?}", pair);
+        info!(target: "runtime::dex::spot", "New trading pair: {:?}", pair);
 
         TradingPairOf::insert(pair_id, &pair);
         TradingPairInfoOf::<T>::insert(
@@ -405,6 +405,7 @@ impl<T: Config> Module<T> {
 
     fn apply_update_trading_pair(pair_id: TradingPairId, tick_decimals: u32, tradable: bool) {
         info!(
+            target: "runtime::dex::spot",
             "[update_trading_pair] pair_id: {:}, tick_decimals: {:}, tradable:{:}",
             pair_id, tick_decimals, tradable
         );
@@ -427,6 +428,7 @@ impl<T: Config> Module<T> {
         reserve_amount: BalanceOf<T>,
     ) -> Result<(), Error<T>> {
         info!(
+            target: "runtime::dex::spot",
             "transactor:{:?}, pair_id:{:}, type:{:?}, side:{:?}, amount:{:?}, price:{:?}",
             who, pair_id, order_type, side, amount, price
         );
@@ -473,6 +475,7 @@ impl<T: Config> Module<T> {
         order_id: OrderId,
     ) -> DispatchResult {
         info!(
+            target: "runtime::dex::spot",
             "[apply_cancel_order] who:{:?}, pair_id:{}, order_id:{}",
             who, pair_id, order_id
         );

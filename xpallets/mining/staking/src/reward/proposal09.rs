@@ -124,6 +124,7 @@ impl<T: Config> Module<T> {
             Self::distribute_to_mining_assets(real_asset_mining_reward);
         if !unpaid_asset_mining_reward.is_zero() {
             debug!(
+                target: "runtime::mining::staking",
                 "[distribute_mining_rewards] unpaid_asset_mining_reward:{:?}",
                 unpaid_asset_mining_reward
             );

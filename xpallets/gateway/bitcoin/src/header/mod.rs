@@ -50,6 +50,7 @@ fn look_back_confirmed_header<T: Config>(
             // e.g. want to get the previous header of #98, but genesis height is 98,
             // obviously, we cannot find the header of #97.
             info!(
+                target: "runtime::bitcoin",
                 "[update_confirmed_header] Can not find header ({:?}), current reverse count:{}",
                 hash_rev(prev_hash),
                 cnt

@@ -25,17 +25,24 @@ const ASSET_TYPES: [AssetType; 5] = [
     AssetType::ReservedDexSpot,
 ];
 
+/// Concrete type of asset balance.
 #[derive(PartialEq, PartialOrd, Ord, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum AssetType {
+    /// Free balance.
     Usable,
+    /// For the
     Locked,
+    /// Unused for now.
     Reserved,
+    /// Reserved balance in gateway::records.
     ReservedWithdrawal,
+    /// Reserved balance for creating order in DEX.
     ReservedDexSpot,
 }
 
 impl AssetType {
+    /// Returns an iterator of all asset types.
     pub fn iter() -> Iter<'static, AssetType> {
         ASSET_TYPES.iter()
     }
@@ -43,7 +50,7 @@ impl AssetType {
 
 impl Default for AssetType {
     fn default() -> Self {
-        AssetType::Usable
+        Self::Usable
     }
 }
 
@@ -63,7 +70,7 @@ bitflags! {
 
 impl Default for AssetRestrictions {
     fn default() -> Self {
-        AssetRestrictions::empty()
+        Self::empty()
     }
 }
 

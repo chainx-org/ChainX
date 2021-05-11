@@ -19,6 +19,7 @@ pub fn validate_transaction<T: Config>(
 ) -> DispatchResult {
     let tx_hash = tx.raw.hash();
     debug!(
+        target: "runtime::bitcoin",
         "[validate_transaction] tx_hash:{:?}, relay tx:{:?}",
         tx_hash, tx
     );
@@ -32,13 +33,17 @@ pub fn validate_transaction<T: Config>(
         .map_err(|_| Error::<T>::BadMerkleProof)?;
     if merkle_root != hash {
         error!(
+            target: "runtime::bitcoin",
             "[validate_transaction] Check merkle tree proof error, merkle_root:{:?}, hash:{:?}",
             merkle_root, hash
         );
         return Err(Error::<T>::BadMerkleProof.into());
     }
     if !matches.iter().any(|h| *h == tx_hash) {
-        error!("[validate_transaction] Tx hash should in matches of partial merkle tree");
+        error!(
+            target: "runtime::bitcoin",
+            "[validate_transaction] Tx hash should in matches of partial merkle tree"
+        );
         return Err(Error::<T>::BadMerkleProof.into());
     }
 
@@ -49,6 +54,7 @@ pub fn validate_transaction<T: Config>(
         let expected_id = tx.raw.inputs[0].previous_output.txid;
         if previous_txid != expected_id {
             error!(
+                target: "runtime::bitcoin",
                 "[validate_transaction] Relay previous tx's hash not equal to relay tx first input, expected_id:{:?}, prev:{:?}",
                 expected_id, previous_txid
             );
@@ -96,6 +102,7 @@ pub fn parse_and_check_signed_tx_impl<T: Config>(
             });
             if !verify {
                 error!(
+                    target: "runtime::bitcoin",
                     "[parse_and_check_signed_tx] Verify sig failed, tx:{:?}, input:{:?}, bytes_redeem_script:{:?}",
                     tx, i, bytes_redeem_script
                 );

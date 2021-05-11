@@ -42,6 +42,7 @@ decl_storage! {
             xmining_asset::initialize::<T>(&config.params.xmining_asset);
 
             log::info!(
+                target: "runtime::genesis-builder",
                 "Took {:?}ms to orchestrate the exported state from ChainX 1.0",
                 now.elapsed().as_millis()
             );
