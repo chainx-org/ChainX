@@ -1029,6 +1029,8 @@ impl xpallet_gateway_bitcoin_v2::pallet::Config<Instance1> for Runtime {
     type IssueRequestExpiredTime = IssueRequestExpiredTime;
     type RedeemRequestExpiredTime = RedeemRequestExpiredTime;
     type ExchangeRateExpiredPeriod = ExchangeRateExpiredPeriod;
+    type CollateralManager = XGatewayBridgeBtc;
+    type AssetManager = XGatewayBridgeBtc;
 }
 
 impl xpallet_gateway_bitcoin_v2::pallet::Config<Instance2> for Runtime {
@@ -1043,6 +1045,8 @@ impl xpallet_gateway_bitcoin_v2::pallet::Config<Instance2> for Runtime {
     type IssueRequestExpiredTime = IssueRequestExpiredTime;
     type RedeemRequestExpiredTime = RedeemRequestExpiredTime;
     type ExchangeRateExpiredPeriod = ExchangeRateExpiredPeriod;
+    type CollateralManager = XGatewayBridgeDoge;
+    type AssetManager = XGatewayBridgeDoge;
 }
 
 impl xpallet_dex_spot::Config for Runtime {
