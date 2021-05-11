@@ -621,7 +621,8 @@ fn check_withdraw_tx_impl<T: Config>(
                     error,
                     "Withdrawal tx's output not match to withdrawal application. \
                     withdrawal application:{:?}, tx withdrawal output:{:?}",
-                    a, b
+                    a,
+                    b
                 );
                 false
             }
