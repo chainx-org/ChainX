@@ -398,7 +398,7 @@ where
         offenders: &[OffenceDetails<Reporter<T>, Offender<T>>],
         slash_fraction: &[Perbill],
         slash_session: SessionIndex,
-    ) -> Result<Weight, ()> {
+    ) -> Weight {
         let offenders_tuple = offenders
             .iter()
             .zip(slash_fraction)
@@ -418,11 +418,7 @@ where
         // together later and then perform the slashing operation only once.
         <SessionOffenders<T>>::put(offenders_tuple);
 
-        Ok(1)
-    }
-
-    fn can_report() -> bool {
-        true
+        1
     }
 }
 

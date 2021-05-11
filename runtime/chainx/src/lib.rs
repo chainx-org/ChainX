@@ -501,15 +501,10 @@ where
     type OverarchingCall = Call;
 }
 
-parameter_types! {
-    pub OffencesWeightSoftLimit: Weight = Perbill::from_percent(60) * MaximumBlockWeight::get();
-}
-
 impl pallet_offences::Config for Runtime {
     type Event = Event;
     type IdentificationTuple = xpallet_mining_staking::IdentificationTuple<Runtime>;
     type OnOffenceHandler = XStaking;
-    type WeightSoftLimit = OffencesWeightSoftLimit;
 }
 
 impl pallet_utility::Config for Runtime {
@@ -710,6 +705,7 @@ parameter_types! {
     pub const MaximumReasonLength: u32 = 16384;
     pub const BountyCuratorDeposit: Permill = Permill::from_percent(50);
     pub const BountyValueMinimum: Balance = 10 * DOLLARS;
+    pub const MaxApprovals: u32 = 100;
 }
 
 impl pallet_treasury::Config for Runtime {
@@ -734,6 +730,7 @@ impl pallet_treasury::Config for Runtime {
     type BurnDestination = ();
     type SpendFunds = Bounties;
     type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
+    type MaxApprovals = MaxApprovals;
 }
 
 impl pallet_bounties::Config for Runtime {
@@ -1193,10 +1190,6 @@ impl_runtime_apis! {
             data: sp_inherents::InherentData,
         ) -> sp_inherents::CheckInherentsResult {
             data.check_extrinsics(&block)
-        }
-
-        fn random_seed() -> <Block as BlockT>::Hash {
-            RandomnessCollectiveFlip::random_seed().0
         }
     }
 
