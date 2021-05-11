@@ -2,16 +2,11 @@ mod utils;
 
 use sp_arithmetic::Percent;
 
-use frame_support::traits::Hooks;
-use frame_support::{
-    assert_err, assert_ok,
-    dispatch::{DispatchResult, DispatchResultWithPostInfo},
-    instances::Instance1,
-};
+use frame_support::{assert_err, assert_ok, instances::Instance1};
 use frame_system::RawOrigin;
 
 use super::mock::*;
-use crate::pallet;
+use crate::{pallet, traits::MultiCollateral};
 use utils::*;
 
 #[allow(non_upper_case_globals)]
@@ -26,7 +21,7 @@ fn test_register_vault() {
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
         assert_err!(
             t_register_vault(Alice, 20000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna"),
-            pallet::Error::<Test, Instance1>::InsufficientFunds
+            pallet_balances::Error::<Test>::InsufficientBalance
         );
         assert_err!(
             t_register_vault(Alice, 10, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna"),
@@ -70,7 +65,7 @@ fn test_add_extra_collateral() {
         ));
         assert_err!(
             XGatewayBitcoin::add_extra_collateral(Origin::signed(Alice), 10000),
-            pallet::Error::<Test, Instance1>::InsufficientFunds
+            pallet_balances::Error::<Test>::InsufficientBalance
         );
         assert_ok!(XGatewayBitcoin::add_extra_collateral(
             Origin::signed(Alice),
@@ -249,11 +244,11 @@ fn test_cancel_issue_request() {
 #[test]
 fn test_lock_collateral() {
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
-        assert_ok!(XGatewayBitcoin::lock_collateral(&Alice, 200));
+        assert_ok!(XGatewayBitcoin::lock(&Alice, 200));
         assert_eq!(<pallet::CurrencyOf<Test>>::reserved_balance(Alice), 200);
         assert_err!(
-            XGatewayBitcoin::lock_collateral(&Alice, 100_000),
-            pallet::Error::<Test, Instance1>::InsufficientFunds
+            XGatewayBitcoin::lock(&Alice, 100_000),
+            pallet_balances::Error::<Test>::InsufficientBalance,
         );
     });
 }
@@ -261,29 +256,16 @@ fn test_lock_collateral() {
 #[test]
 fn test_slash_collateral() {
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
-        XGatewayBitcoin::lock_collateral(&Alice, 200).unwrap();
+        XGatewayBitcoin::lock(&Alice, 200).unwrap();
         assert_err!(
-            XGatewayBitcoin::slash_collateral(&Alice, &Bob, 300),
+            XGatewayBitcoin::slash(&Alice, &Bob, 300),
             pallet::Error::<Test, Instance1>::InsufficientCollateral
         );
-        assert_ok!(XGatewayBitcoin::slash_collateral(&Alice, &Bob, 200));
+        assert_ok!(XGatewayBitcoin::slash(&Alice, &Bob, 200));
         assert_eq!(<pallet::CurrencyOf<Test>>::free_balance(Alice), 9800);
         assert_eq!(<pallet::CurrencyOf<Test>>::free_balance(Bob), 20200);
+        assert_eq!(XGatewayBitcoin::total_collateral(), 0);
     });
-}
-
-#[test]
-fn test_release_collateral() {
-    ExtBuilder::build(BuildConfig::default()).execute_with(|| {
-        XGatewayBitcoin::lock_collateral(&Alice, 200).unwrap();
-        assert_eq!(<pallet::CurrencyOf<Test>>::reserved_balance(Alice), 200);
-        assert_ok!(XGatewayBitcoin::unlock_collateral(&Alice, 200));
-        assert_eq!(<pallet::CurrencyOf<Test>>::reserved_balance(Alice), 0);
-        assert_err!(
-            pallet::Pallet::<Test, Instance1>::unlock_collateral(&Alice, 200),
-            pallet::Error::<Test, Instance1>::InsufficientCollateral
-        );
-    })
 }
 
 #[test]

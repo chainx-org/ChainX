@@ -101,6 +101,8 @@ impl pallet::Config<Instance1> for Test {
     type RedeemRequestExpiredTime = RedeemRequestExpiredTime;
     type RedeemBtcDustValue = RedeemBtcDustValue;
     type ExchangeRateExpiredPeriod = ExchangeRateExpiredPeriod;
+    type CollateralManager = XGatewayBitcoin;
+    type AssetManager = XGatewayBitcoin;
 }
 
 type Block = frame_system::mocking::MockBlock<Test>;
