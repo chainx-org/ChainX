@@ -437,5 +437,28 @@ fn build_genesis(
             initial_authorities_endowed,
             root_endowed: 0,
         },
+        xpallet_gateway_bitcoin_v2_pallet_Instance1: dev::XGatewayBridgeBtcConfig {
+            exchange_rate: xpallet_gateway_bitcoin_v2::types::TradingPrice {
+                price: 1,
+                decimal: 3,
+            },
+            oracle_accounts: Default::default(),
+            liquidator_id: Default::default(),
+            issue_griefing_fee: 10,
+            redeem_fee: 0u32.into(),
+            marker: std::marker::PhantomData::<_>,
+        },
+
+        xpallet_gateway_bitcoin_v2_pallet_Instance2: dev::XGatewayBridgeDogeConfig {
+            exchange_rate: xpallet_gateway_bitcoin_v2::types::TradingPrice {
+                price: 1,
+                decimal: 3,
+            },
+            oracle_accounts: Default::default(),
+            liquidator_id: Default::default(),
+            issue_griefing_fee: 10,
+            redeem_fee: 0u32.into(),
+            marker: std::marker::PhantomData::<_>,
+        },
     }
 }

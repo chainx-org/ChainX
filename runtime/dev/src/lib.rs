@@ -38,7 +38,10 @@ use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
-use frame_support::PalletId;
+use frame_support::{
+    instances::{Instance1, Instance2},
+    PalletId,
+};
 use frame_system::{EnsureOneOf, EnsureRoot, EnsureSignedBy};
 use pallet_grandpa::fg_primitives;
 use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
@@ -48,6 +51,7 @@ use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 
 use chainx_runtime_common::{BlockLength, BlockWeights};
 use xpallet_dex_spot::{Depth, FullPairInfo, RpcOrder, TradingPairId};
+use xpallet_gateway_bitcoin_v2::pallet as xpallet_gateway_bitcoin_v2_pallet;
 use xpallet_mining_asset::{MinerLedger, MiningAssetInfo, MiningDividendInfo};
 use xpallet_mining_staking::{NominatorInfo, NominatorLedger, ValidatorInfo};
 use xpallet_support::traits::MultisigAddressFor;
@@ -991,6 +995,56 @@ impl xpallet_gateway_bitcoin::Config for Runtime {
     type WeightInfo = xpallet_gateway_bitcoin::weights::SubstrateWeight<Runtime>;
 }
 
+parameter_types! {
+    pub const DustCollateral: Balance = 1000;
+    pub const SecureThreshold: u16 = 300;
+    pub const PremiumThreshold: u16 = 250;
+    pub const LiquidationThreshold: u16 = 180;
+    pub const IssueRequestExpiredTime: BlockNumber = 48 * 600;
+    pub const RedeemRequestExpiredTime: BlockNumber = 48 * 600;
+    pub const ExchangeRateExpiredPeriod: BlockNumber = 48 * 600;
+}
+
+parameter_types! {
+    //bitcoin
+    pub const BridgeBtcAssetId: u32 = xp_protocol::C_BTC;
+    pub const BridgeTokenBtcAssetId: u32 = xp_protocol::S_BTC;
+    pub const RedeemBtcDustValue: Balance = 10000;
+
+    // dogecoin
+    pub const BridgeDogeAssetId: u32 = xp_protocol::C_DOGE;
+    pub const BridgeTokenDogeAssetId: u32 = xp_protocol::S_DOGE;
+    pub const RedeemDogeDustValue: Balance = 100000000;
+}
+
+impl xpallet_gateway_bitcoin_v2::pallet::Config<Instance1> for Runtime {
+    type Event = Event;
+    type TargetAssetId = BridgeBtcAssetId;
+    type TokenAssetId = BridgeTokenBtcAssetId;
+    type RedeemBtcDustValue = RedeemBtcDustValue;
+    type DustCollateral = DustCollateral;
+    type SecureThreshold = SecureThreshold;
+    type PremiumThreshold = PremiumThreshold;
+    type LiquidationThreshold = LiquidationThreshold;
+    type IssueRequestExpiredTime = IssueRequestExpiredTime;
+    type RedeemRequestExpiredTime = RedeemRequestExpiredTime;
+    type ExchangeRateExpiredPeriod = ExchangeRateExpiredPeriod;
+}
+
+impl xpallet_gateway_bitcoin_v2::pallet::Config<Instance2> for Runtime {
+    type Event = Event;
+    type TargetAssetId = BridgeDogeAssetId;
+    type TokenAssetId = BridgeTokenDogeAssetId;
+    type RedeemBtcDustValue = RedeemDogeDustValue;
+    type DustCollateral = DustCollateral;
+    type SecureThreshold = SecureThreshold;
+    type PremiumThreshold = PremiumThreshold;
+    type LiquidationThreshold = LiquidationThreshold;
+    type IssueRequestExpiredTime = IssueRequestExpiredTime;
+    type RedeemRequestExpiredTime = RedeemRequestExpiredTime;
+    type ExchangeRateExpiredPeriod = ExchangeRateExpiredPeriod;
+}
+
 impl xpallet_dex_spot::Config for Runtime {
     type Event = Event;
     type Price = Balance;
@@ -1102,6 +1156,8 @@ construct_runtime!(
         XGatewayRecords: xpallet_gateway_records::{Pallet, Call, Storage, Event<T>},
         XGatewayCommon: xpallet_gateway_common::{Pallet, Call, Storage, Event<T>, Config<T>},
         XGatewayBitcoin: xpallet_gateway_bitcoin::{Pallet, Call, Storage, Event<T>, Config<T>},
+        XGatewayBridgeBtc: xpallet_gateway_bitcoin_v2_pallet::<Instance1>::{Pallet, Call, Event<T>, Config<T>},
+        XGatewayBridgeDoge: xpallet_gateway_bitcoin_v2_pallet::<Instance2>::{Pallet, Call, Event<T>, Config<T>},
 
         // DEX
         XSpot: xpallet_dex_spot::{Pallet, Call, Storage, Event<T>, Config<T>},

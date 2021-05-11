@@ -828,6 +828,7 @@ dependencies = [
  "xp-genesis-builder",
  "xp-protocol",
  "xpallet-gateway-bitcoin",
+ "xpallet-gateway-bitcoin-v2",
  "xpallet-gateway-common",
 ]
 
@@ -1579,6 +1580,7 @@ dependencies = [
  "xpallet-dex-spot",
  "xpallet-dex-spot-rpc-runtime-api",
  "xpallet-gateway-bitcoin",
+ "xpallet-gateway-bitcoin-v2",
  "xpallet-gateway-common",
  "xpallet-gateway-common-rpc-runtime-api",
  "xpallet-gateway-records",
@@ -3666,15 +3668,42 @@ dependencies = [
 [[package]]
 name = "light-bitcoin"
 version = "0.2.0"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=btc-like#5ec9b441cd3bdd08256577386e4231118fe24b99"
+dependencies = [
+ "light-bitcoin-chain 0.2.0 (git+https://github.com/chainx-org/light-bitcoin?branch=btc-like)",
+ "light-bitcoin-crypto 0.2.0 (git+https://github.com/chainx-org/light-bitcoin?branch=btc-like)",
+ "light-bitcoin-keys 0.2.0 (git+https://github.com/chainx-org/light-bitcoin?branch=btc-like)",
+ "light-bitcoin-merkle 0.2.0 (git+https://github.com/chainx-org/light-bitcoin?branch=btc-like)",
+ "light-bitcoin-primitives 0.2.0 (git+https://github.com/chainx-org/light-bitcoin?branch=btc-like)",
+ "light-bitcoin-script 0.2.0 (git+https://github.com/chainx-org/light-bitcoin?branch=btc-like)",
+ "light-bitcoin-serialization 0.2.0 (git+https://github.com/chainx-org/light-bitcoin?branch=btc-like)",
+]
+
+[[package]]
+name = "light-bitcoin"
+version = "0.2.0"
 source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#c0db1bc73bda1b5fddd5fcb5814dc2caf1409700"
 dependencies = [
- "light-bitcoin-chain",
- "light-bitcoin-crypto",
- "light-bitcoin-keys",
- "light-bitcoin-merkle",
- "light-bitcoin-primitives",
- "light-bitcoin-script",
- "light-bitcoin-serialization",
+ "light-bitcoin-chain 0.2.0 (git+https://github.com/chainx-org/light-bitcoin)",
+ "light-bitcoin-crypto 0.2.0 (git+https://github.com/chainx-org/light-bitcoin)",
+ "light-bitcoin-keys 0.2.0 (git+https://github.com/chainx-org/light-bitcoin)",
+ "light-bitcoin-merkle 0.2.0 (git+https://github.com/chainx-org/light-bitcoin)",
+ "light-bitcoin-primitives 0.2.0 (git+https://github.com/chainx-org/light-bitcoin)",
+ "light-bitcoin-script 0.2.0 (git+https://github.com/chainx-org/light-bitcoin)",
+ "light-bitcoin-serialization 0.2.0 (git+https://github.com/chainx-org/light-bitcoin)",
+]
+
+[[package]]
+name = "light-bitcoin-chain"
+version = "0.2.0"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=btc-like#5ec9b441cd3bdd08256577386e4231118fe24b99"
+dependencies = [
+ "hex",
+ "light-bitcoin-crypto 0.2.0 (git+https://github.com/chainx-org/light-bitcoin?branch=btc-like)",
+ "light-bitcoin-primitives 0.2.0 (git+https://github.com/chainx-org/light-bitcoin?branch=btc-like)",
+ "light-bitcoin-serialization 0.2.0 (git+https://github.com/chainx-org/light-bitcoin?branch=btc-like)",
+ "parity-scale-codec",
+ "serde",
 ]
 
 [[package]]
@@ -3683,11 +3712,24 @@ version = "0.2.0"
 source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#c0db1bc73bda1b5fddd5fcb5814dc2caf1409700"
 dependencies = [
  "hex",
- "light-bitcoin-crypto",
- "light-bitcoin-primitives",
- "light-bitcoin-serialization",
+ "light-bitcoin-crypto 0.2.0 (git+https://github.com/chainx-org/light-bitcoin)",
+ "light-bitcoin-primitives 0.2.0 (git+https://github.com/chainx-org/light-bitcoin)",
+ "light-bitcoin-serialization 0.2.0 (git+https://github.com/chainx-org/light-bitcoin)",
  "parity-scale-codec",
  "serde",
+]
+
+[[package]]
+name = "light-bitcoin-crypto"
+version = "0.2.0"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=btc-like#5ec9b441cd3bdd08256577386e4231118fe24b99"
+dependencies = [
+ "digest 0.9.0",
+ "light-bitcoin-primitives 0.2.0 (git+https://github.com/chainx-org/light-bitcoin?branch=btc-like)",
+ "ripemd160",
+ "sha-1 0.9.5",
+ "sha2 0.9.4",
+ "siphasher",
 ]
 
 [[package]]
@@ -3696,11 +3738,26 @@ version = "0.2.0"
 source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#c0db1bc73bda1b5fddd5fcb5814dc2caf1409700"
 dependencies = [
  "digest 0.9.0",
- "light-bitcoin-primitives",
+ "light-bitcoin-primitives 0.2.0 (git+https://github.com/chainx-org/light-bitcoin)",
  "ripemd160",
  "sha-1 0.9.5",
  "sha2 0.9.4",
  "siphasher",
+]
+
+[[package]]
+name = "light-bitcoin-keys"
+version = "0.2.0"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=btc-like#5ec9b441cd3bdd08256577386e4231118fe24b99"
+dependencies = [
+ "bs58 0.4.0",
+ "hex",
+ "libsecp256k1",
+ "light-bitcoin-crypto 0.2.0 (git+https://github.com/chainx-org/light-bitcoin?branch=btc-like)",
+ "light-bitcoin-primitives 0.2.0 (git+https://github.com/chainx-org/light-bitcoin?branch=btc-like)",
+ "light-bitcoin-serialization 0.2.0 (git+https://github.com/chainx-org/light-bitcoin?branch=btc-like)",
+ "parity-scale-codec",
+ "serde",
 ]
 
 [[package]]
@@ -3711,9 +3768,9 @@ dependencies = [
  "bs58 0.4.0",
  "hex",
  "libsecp256k1",
- "light-bitcoin-crypto",
- "light-bitcoin-primitives",
- "light-bitcoin-serialization",
+ "light-bitcoin-crypto 0.2.0 (git+https://github.com/chainx-org/light-bitcoin)",
+ "light-bitcoin-primitives 0.2.0 (git+https://github.com/chainx-org/light-bitcoin)",
+ "light-bitcoin-serialization 0.2.0 (git+https://github.com/chainx-org/light-bitcoin)",
  "parity-scale-codec",
  "serde",
 ]
@@ -3721,12 +3778,37 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-merkle"
 version = "0.2.0"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=btc-like#5ec9b441cd3bdd08256577386e4231118fe24b99"
+dependencies = [
+ "light-bitcoin-chain 0.2.0 (git+https://github.com/chainx-org/light-bitcoin?branch=btc-like)",
+ "light-bitcoin-primitives 0.2.0 (git+https://github.com/chainx-org/light-bitcoin?branch=btc-like)",
+ "light-bitcoin-serialization 0.2.0 (git+https://github.com/chainx-org/light-bitcoin?branch=btc-like)",
+ "parity-scale-codec",
+]
+
+[[package]]
+name = "light-bitcoin-merkle"
+version = "0.2.0"
 source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#c0db1bc73bda1b5fddd5fcb5814dc2caf1409700"
 dependencies = [
- "light-bitcoin-chain",
- "light-bitcoin-primitives",
- "light-bitcoin-serialization",
+ "light-bitcoin-chain 0.2.0 (git+https://github.com/chainx-org/light-bitcoin)",
+ "light-bitcoin-primitives 0.2.0 (git+https://github.com/chainx-org/light-bitcoin)",
+ "light-bitcoin-serialization 0.2.0 (git+https://github.com/chainx-org/light-bitcoin)",
  "parity-scale-codec",
+]
+
+[[package]]
+name = "light-bitcoin-primitives"
+version = "0.2.0"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=btc-like#5ec9b441cd3bdd08256577386e4231118fe24b99"
+dependencies = [
+ "byteorder",
+ "fixed-hash",
+ "hex",
+ "impl-codec",
+ "impl-serde",
+ "primitive-types",
+ "serde",
 ]
 
 [[package]]
@@ -3746,14 +3828,36 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-script"
 version = "0.2.0"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=btc-like#5ec9b441cd3bdd08256577386e4231118fe24b99"
+dependencies = [
+ "hex",
+ "light-bitcoin-chain 0.2.0 (git+https://github.com/chainx-org/light-bitcoin?branch=btc-like)",
+ "light-bitcoin-crypto 0.2.0 (git+https://github.com/chainx-org/light-bitcoin?branch=btc-like)",
+ "light-bitcoin-keys 0.2.0 (git+https://github.com/chainx-org/light-bitcoin?branch=btc-like)",
+ "light-bitcoin-primitives 0.2.0 (git+https://github.com/chainx-org/light-bitcoin?branch=btc-like)",
+ "light-bitcoin-serialization 0.2.0 (git+https://github.com/chainx-org/light-bitcoin?branch=btc-like)",
+]
+
+[[package]]
+name = "light-bitcoin-script"
+version = "0.2.0"
 source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#c0db1bc73bda1b5fddd5fcb5814dc2caf1409700"
 dependencies = [
  "hex",
- "light-bitcoin-chain",
- "light-bitcoin-crypto",
- "light-bitcoin-keys",
- "light-bitcoin-primitives",
- "light-bitcoin-serialization",
+ "light-bitcoin-chain 0.2.0 (git+https://github.com/chainx-org/light-bitcoin)",
+ "light-bitcoin-crypto 0.2.0 (git+https://github.com/chainx-org/light-bitcoin)",
+ "light-bitcoin-keys 0.2.0 (git+https://github.com/chainx-org/light-bitcoin)",
+ "light-bitcoin-primitives 0.2.0 (git+https://github.com/chainx-org/light-bitcoin)",
+ "light-bitcoin-serialization 0.2.0 (git+https://github.com/chainx-org/light-bitcoin)",
+]
+
+[[package]]
+name = "light-bitcoin-serialization"
+version = "0.2.0"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=btc-like#5ec9b441cd3bdd08256577386e4231118fe24b99"
+dependencies = [
+ "light-bitcoin-primitives 0.2.0 (git+https://github.com/chainx-org/light-bitcoin?branch=btc-like)",
+ "light-bitcoin-serialization-derive 0.2.0 (git+https://github.com/chainx-org/light-bitcoin?branch=btc-like)",
 ]
 
 [[package]]
@@ -3761,8 +3865,18 @@ name = "light-bitcoin-serialization"
 version = "0.2.0"
 source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#c0db1bc73bda1b5fddd5fcb5814dc2caf1409700"
 dependencies = [
- "light-bitcoin-primitives",
- "light-bitcoin-serialization-derive",
+ "light-bitcoin-primitives 0.2.0 (git+https://github.com/chainx-org/light-bitcoin)",
+ "light-bitcoin-serialization-derive 0.2.0 (git+https://github.com/chainx-org/light-bitcoin)",
+]
+
+[[package]]
+name = "light-bitcoin-serialization-derive"
+version = "0.2.0"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=btc-like#5ec9b441cd3bdd08256577386e4231118fe24b99"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -9633,7 +9747,7 @@ dependencies = [
  "chainx-primitives",
  "frame-support",
  "hex",
- "light-bitcoin",
+ "light-bitcoin 0.2.0 (git+https://github.com/chainx-org/light-bitcoin)",
  "log",
  "parity-scale-codec",
  "serde",
@@ -9870,7 +9984,7 @@ dependencies = [
  "hex",
  "hex-literal",
  "lazy_static",
- "light-bitcoin",
+ "light-bitcoin 0.2.0 (git+https://github.com/chainx-org/light-bitcoin)",
  "log",
  "orml-utilities",
  "pallet-balances",
@@ -9897,6 +10011,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "xpallet-gateway-bitcoin-v2"
+version = "2.0.9"
+dependencies = [
+ "bitflags",
+ "bs58 0.3.1",
+ "chainx-primitives",
+ "frame-support",
+ "frame-system",
+ "impl-trait-for-tuples 0.2.1",
+ "light-bitcoin 0.2.0 (git+https://github.com/chainx-org/light-bitcoin?branch=btc-like)",
+ "pallet-balances",
+ "parity-scale-codec",
+ "serde",
+ "sha2 0.8.2",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-inherents",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "sp-version",
+ "xp-protocol",
+ "xpallet-assets",
+ "xpallet-assets-registrar",
+]
+
+[[package]]
 name = "xpallet-gateway-common"
 version = "2.0.9"
 dependencies = [
@@ -9906,7 +10047,7 @@ dependencies = [
  "frame-system",
  "hex",
  "lazy_static",
- "light-bitcoin",
+ "light-bitcoin 0.2.0 (git+https://github.com/chainx-org/light-bitcoin)",
  "log",
  "pallet-balances",
  "parity-scale-codec",
