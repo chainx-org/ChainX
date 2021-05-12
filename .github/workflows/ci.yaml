@@ -3,7 +3,7 @@ name: ci
 on: [push, pull_request]
 
 env:
-  CARGO_INCREMENTAL: 1
+  CARGO_INCREMENTAL: 0
   CARGO_NET_RETRY: 10
   CI: 1
   RUST_BACKTRACE: short
@@ -56,6 +56,29 @@ jobs:
 
     - name: Compile
       run: cargo test --no-run
+
+  runtime_benchmarks:
+    name: Runtime benchmarks
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        toolchain: [nightly]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: ${{ matrix.toolchain }}
+        target: wasm32-unknown-unknown
+        profile: minimal
+        override: true
+        components: rustfmt, rust-src, clippy
 
     - name: Runtime benchmarks
       run: cargo test --no-run --features runtime-benchmarks
