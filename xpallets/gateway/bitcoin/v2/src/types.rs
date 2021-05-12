@@ -1,5 +1,3 @@
-use sp_std::vec::Vec;
-
 use codec::{Decode, Encode};
 use sp_runtime::RuntimeDebug;
 
@@ -7,7 +5,7 @@ use bitflags::bitflags;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
-pub type BtcAddress = Vec<u8>;
+pub use chainx_primitives::AddrStr;
 
 /// Bridge status
 #[derive(Encode, Decode, RuntimeDebug, Clone, Eq, PartialEq)]
@@ -79,32 +77,6 @@ impl TradingPrice {
     }
 }
 
-#[derive(Encode, Decode, Clone, PartialEq)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "std", derive(Debug))]
-pub enum VaultStatus {
-    /// Vault is ready to serve issue and redeem request, unless it was banned.
-    Active,
-    /// Vault is under Liquidation
-    Liquidated,
-    /// Vault was committed has illegal behavior.
-    CommittedTheft,
-}
-
-impl Default for VaultStatus {
-    fn default() -> Self {
-        Self::Active
-    }
-}
-
-#[derive(Encode, Decode, Default, Clone, PartialEq)]
-#[cfg_attr(feature = "std", derive(Debug))]
-pub struct SystemVault<AccountId, Balance> {
-    pub(crate) id: AccountId,
-    pub(crate) to_be_issued_tokens: Balance,
-    pub(crate) to_be_redeemed_tokens: Balance,
-}
-
 #[derive(Encode, Decode, Default, Clone, PartialEq)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
@@ -115,16 +87,14 @@ pub struct Vault<BlockNumber, Balance> {
     /// Number of tokens pending redeem
     pub to_be_redeemed_tokens: Balance,
     /// Bitcoin address of this Vault (P2PKH, P2SH, P2PKH, P2WSH)
-    pub wallet: BtcAddress,
+    pub wallet: AddrStr,
     /// Block height until which this Vault is banned from being
     /// used for Issue, Redeem (except during automatic liquidation) and Replace .
     pub banned_until: Option<BlockNumber>,
-    /// Current status of the vault
-    pub status: VaultStatus,
 }
 
 impl<BlockNumber: Default, Balance: Default> Vault<BlockNumber, Balance> {
-    pub(crate) fn new(address: BtcAddress) -> Self {
+    pub(crate) fn new(address: AddrStr) -> Self {
         Self {
             wallet: address,
             ..Default::default()
@@ -134,19 +104,19 @@ impl<BlockNumber: Default, Balance: Default> Vault<BlockNumber, Balance> {
 
 #[derive(Encode, Decode, RuntimeDebug, Default, Clone, PartialEq)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct RedeemRequest<AccountId, BlockNumber, XBTC, PCX> {
+pub struct RedeemRequest<AccountId, BlockNumber, Balance> {
     /// Vault id
     pub vault: AccountId,
     /// Block height when the redeem requested
     pub open_time: BlockNumber,
     /// Who requests redeem
     pub requester: AccountId,
-    /// Requester's btc address
-    pub btc_address: BtcAddress,
+    /// Requester's outer chain address
+    pub outer_address: AddrStr,
     /// Amount that user wants to redeem
-    pub btc_amount: XBTC,
+    pub amount: Balance,
     /// Redeem fee amount
-    pub redeem_fee: PCX,
+    pub redeem_fee: Balance,
     /// If redeem is reimbursed by redeemer
     pub reimburse: bool,
 }
@@ -154,19 +124,19 @@ pub struct RedeemRequest<AccountId, BlockNumber, XBTC, PCX> {
 /// Contains all informations while executing a issue request needed.
 #[derive(Encode, Decode, RuntimeDebug, Default, Clone, PartialEq)]
 #[cfg_attr(feature = "std", derive(Deserialize, Serialize))]
-pub struct IssueRequest<AccountId, BlockNumber, XBTC, PCX> {
+pub struct IssueRequest<AccountId, BlockNumber, Balance> {
     /// Vault id
     pub vault: AccountId,
     /// Block height when the issue requested
     pub open_time: BlockNumber,
     /// Who requests issue
     pub requester: AccountId,
-    /// Vault's btc address
-    pub btc_address: BtcAddress,
+    /// Vault's outer chain address
+    pub outer_address: AddrStr,
     /// Amount that user wants to issue
-    pub btc_amount: XBTC,
+    pub amount: Balance,
     /// Collateral locked to avoid user griefing
-    pub griefing_collateral: PCX,
+    pub griefing_collateral: Balance,
 }
 
 #[cfg(test)]

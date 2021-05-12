@@ -7,7 +7,9 @@ use frame_support::{
     traits::{Currency, Get, ReservableCurrency},
 };
 
-use crate::pallet::{BalanceOf, Collaterals, Config, CurrencyOf, Error, Pallet};
+use crate::pallet::{
+    BalanceOf, Collaterals, Config, CurrencyOf, Error, IssueRequest, Pallet, Vaults,
+};
 
 impl<T: Config<I>, I: 'static> Pallet<T, I> {
     /// Collateral of `vault`
@@ -85,6 +87,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         amount: BalanceOf<T>,
     ) -> DispatchResult {
         xpallet_assets::Pallet::<T>::issue(&T::TargetAssetId::get(), who, amount)?;
+        Self::decrease_vault_to_be_issued_token(by, amount);
         xpallet_assets::Pallet::<T>::issue(&T::TokenAssetId::get(), by, amount)?;
         Ok(())
     }

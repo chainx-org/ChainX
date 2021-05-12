@@ -144,19 +144,6 @@ fn test_bridge_needs_to_update_exchange_rate() {
 }
 
 #[test]
-fn test_match_vault() {
-    ExtBuilder::build(BuildConfig::default()).execute_with(|| {
-        t_register_vault(Alice, 10000, "3LrrqZ2LtZxAcroVaYKgM6yDeRszV2sY1r").unwrap();
-        t_register_vault(Bob, 20000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
-        let vault = XGatewayBitcoin::get_first_matched_vault(2);
-        assert_eq!(vault.unwrap().0, Alice);
-        XGatewayBitcoin::request_issue(Origin::signed(Solid), Alice, 3).unwrap();
-        let vault = XGatewayBitcoin::get_first_matched_vault(3);
-        assert_eq!(vault.unwrap().0, Bob);
-    })
-}
-
-#[test]
 fn test_issue_request() {
     use super::types::TradingPrice;
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
@@ -188,7 +175,7 @@ fn test_issue_request() {
 
         // check vault's token status
         let vault = XGatewayBitcoin::try_get_vault(&issue_request.vault).unwrap();
-        assert_eq!(vault.to_be_issued_tokens, issue_request.btc_amount);
+        assert_eq!(vault.to_be_issued_tokens, issue_request.amount);
 
         t_register_btc().unwrap();
 
@@ -211,7 +198,7 @@ fn test_issue_request() {
         let vault = XGatewayBitcoin::try_get_vault(&issue_request.vault).unwrap();
         assert_eq!(
             XGatewayBitcoin::token_asset_of(&issue_request.vault),
-            issue_request.btc_amount
+            issue_request.amount
         );
         assert_eq!(vault.to_be_issued_tokens, 0);
 
@@ -239,8 +226,9 @@ fn test_cancel_issue_request() {
         System::set_block_number(10020);
         assert_ok!(XGatewayBitcoin::cancel_issue(Origin::signed(Alice), 1));
 
-        assert_eq!(<pallet::CurrencyOf<Test>>::reserved_balance(Solid), 17000);
-        assert_eq!(<pallet::CurrencyOf<Test>>::free_balance(Alice), 13000);
+        assert_eq!(<pallet::CurrencyOf<Test>>::reserved_balance(Solid), 20000);
+        assert_eq!(<pallet::CurrencyOf<Test>>::free_balance(Solid), 10100);
+        assert_eq!(<pallet::CurrencyOf<Test>>::free_balance(Alice), 9900);
     })
 }
 
@@ -268,7 +256,6 @@ fn test_slash_collateral() {
         assert_ok!(XGatewayBitcoin::slash_vault(&Alice, &Bob, 200));
         assert_eq!(<pallet::CurrencyOf<Test>>::free_balance(Alice), 9800);
         assert_eq!(<pallet::CurrencyOf<Test>>::free_balance(Bob), 20200);
-        assert_eq!(XGatewayBitcoin::total_collateral(), 0);
     });
 }
 
@@ -313,7 +300,7 @@ fn test_redeem_request_ok() {
         assert_eq!(vault.to_be_redeemed_tokens, 1);
 
         let redeem_request = pallet::RedeemRequests::<Test, Instance1>::get(&1).unwrap();
-        assert_eq!(redeem_request.btc_amount, 1);
+        assert_eq!(redeem_request.amount, 1);
 
         let requester_locked_xbtc = xpallet_assets::Module::<Test>::asset_balance_of(
             &2,

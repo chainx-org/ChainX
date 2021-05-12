@@ -83,8 +83,8 @@ parameter_types! {
     pub const SecureThreshold: u16 = 300;
     pub const PremiumThreshold: u16 = 250;
     pub const LiquidationThreshold: u16 = 180;
-    pub const IssueRequestExpiredTime: BlockNumber = 10000;
-    pub const RedeemRequestExpiredTime: BlockNumber = 10000;
+    pub const IssueRequestExpiredPeriod: BlockNumber = 10000;
+    pub const RedeemRequestExpiredPeriod: BlockNumber = 10000;
     pub const ExchangeRateExpiredPeriod: BlockNumber = 10;
     pub const MinimumRedeemValue: Balance = 1;
 }
@@ -97,8 +97,8 @@ impl pallet::Config<Instance1> for Test {
     type SecureThreshold = SecureThreshold;
     type PremiumThreshold = PremiumThreshold;
     type LiquidationThreshold = LiquidationThreshold;
-    type IssueRequestExpiredTime = IssueRequestExpiredTime;
-    type RedeemRequestExpiredTime = RedeemRequestExpiredTime;
+    type IssueRequestExpiredPeriod = IssueRequestExpiredPeriod;
+    type RedeemRequestExpiredPeriod = RedeemRequestExpiredPeriod;
     type MinimumRedeemValue = MinimumRedeemValue;
     type ExchangeRateExpiredPeriod = ExchangeRateExpiredPeriod;
 }
