@@ -3,7 +3,7 @@ name: ci
 on: [push, pull_request]
 
 env:
-  CARGO_INCREMENTAL: 0
+  CARGO_INCREMENTAL: 1
   CARGO_NET_RETRY: 10
   CI: 1
   RUST_BACKTRACE: short
