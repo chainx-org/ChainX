@@ -286,11 +286,11 @@ fn test_redeem_request_ok() {
         t_register_vault(Solid, 30000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
         t_register_btc().unwrap();
 
-        XAssets::issue(&BridgeTokenAssetId::get(), &Solid, 1).unwrap();
-        XAssets::issue(&BridgeTargetAssetId::get(), &Bob, 1).unwrap();
+        xpallet_assets::Pallet::<Test>::issue(&BridgeTargetAssetId::get(), &Alice, 1);
+        xpallet_assets::Pallet::<Test>::issue(&BridgeTokenAssetId::get(), &Solid, 1);
 
         assert_ok!(XGatewayBitcoin::request_redeem(
-            Origin::signed(Bob),
+            Origin::signed(Alice),
             Solid,
             1,
             "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".as_bytes().to_vec()
@@ -303,7 +303,7 @@ fn test_redeem_request_ok() {
         assert_eq!(redeem_request.amount, 1);
 
         let requester_locked_xbtc = xpallet_assets::Module::<Test>::asset_balance_of(
-            &2,
+            &Alice,
             &BridgeTargetAssetId::get(),
             xpallet_assets::AssetType::ReservedWithdrawal,
         );
@@ -316,12 +316,11 @@ fn test_redeem_execute() {
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
         t_register_vault(Solid, 30000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
         t_register_btc().unwrap();
-
-        XAssets::issue(&BridgeTokenAssetId::get(), &Solid, 1).unwrap();
-        XAssets::issue(&BridgeTargetAssetId::get(), &Bob, 1).unwrap();
+        xpallet_assets::Pallet::<Test>::issue(&BridgeTargetAssetId::get(), &Alice, 1).unwrap();
+        xpallet_assets::Pallet::<Test>::issue(&BridgeTokenAssetId::get(), &Solid, 1).unwrap();
 
         XGatewayBitcoin::request_redeem(
-            Origin::signed(Bob),
+            Origin::signed(Alice),
             Solid,
             1,
             "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".as_bytes().to_vec(),
@@ -353,6 +352,87 @@ fn test_redeem_execute() {
 
         // Vault's issued_tokens decreased.
         assert_eq!(XGatewayBitcoin::token_asset_of(&Solid), 0);
+    })
+}
+
+#[test]
+fn test_cannot_cancel_redeem_valid() {
+    ExtBuilder::build(BuildConfig::default()).execute_with(|| {
+        t_register_vault(Solid, 30000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
+        t_register_btc().unwrap();
+        xpallet_assets::Pallet::<Test>::issue(&BridgeTargetAssetId::get(), &Alice, 1).unwrap();
+        xpallet_assets::Pallet::<Test>::issue(&BridgeTokenAssetId::get(), &Solid, 1).unwrap();
+
+        XGatewayBitcoin::request_redeem(
+            Origin::signed(Alice),
+            Solid,
+            1,
+            "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".as_bytes().to_vec(),
+        )
+        .unwrap();
+        assert_err!(
+            XGatewayBitcoin::cancel_redeem(Origin::signed(Alice), 1, false),
+            pallet::Error::<Test, Instance1>::RedeemRequestNotExpired
+        );
+        assert!(pallet::RedeemRequests::<Test, Instance1>::contains_key(&1));
+    })
+}
+
+#[test]
+fn test_cancel_redeem_no_reimburse() {
+    ExtBuilder::build(BuildConfig::default()).execute_with(|| {
+        t_register_vault(Solid, 30000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
+        t_register_btc().unwrap();
+        xpallet_assets::Pallet::<Test>::issue(&BridgeTargetAssetId::get(), &Alice, 1).unwrap();
+        xpallet_assets::Pallet::<Test>::issue(&BridgeTokenAssetId::get(), &Solid, 1).unwrap();
+
+        XGatewayBitcoin::request_redeem(
+            Origin::signed(Alice),
+            Solid,
+            1,
+            "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".as_bytes().to_vec(),
+        )
+        .unwrap();
+        run_to_block(30000);
+        assert_ok!(XGatewayBitcoin::cancel_redeem(
+            Origin::signed(Alice),
+            1,
+            false
+        ));
+
+        let vault_collateral = XGatewayBitcoin::collateral_of(&Solid);
+        assert_eq!(vault_collateral, 30000);
+
+        let vault = XGatewayBitcoin::try_get_vault(&Solid).unwrap();
+        assert_eq!(vault.to_be_redeemed_tokens, 0);
+    })
+}
+
+#[test]
+fn test_cancel_redeem_reimburse() {
+    ExtBuilder::build(BuildConfig::default()).execute_with(|| {
+        t_register_vault(Solid, 30000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
+        t_register_btc().unwrap();
+        xpallet_assets::Pallet::<Test>::issue(&BridgeTargetAssetId::get(), &Alice, 1).unwrap();
+        xpallet_assets::Pallet::<Test>::issue(&BridgeTokenAssetId::get(), &Solid, 1).unwrap();
+        XGatewayBitcoin::request_redeem(
+            Origin::signed(Alice),
+            Solid,
+            1,
+            "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".as_bytes().to_vec(),
+        )
+        .unwrap();
+        run_to_block(30000);
+        assert_ok!(XGatewayBitcoin::cancel_redeem(
+            Origin::signed(Alice),
+            1,
+            true
+        ));
+        let vault_collateral = XGatewayBitcoin::collateral_of(&Solid);
+        assert_eq!(vault_collateral, 29000);
+
+        let vault = XGatewayBitcoin::try_get_vault(&Solid).unwrap();
+        assert_eq!(vault.to_be_redeemed_tokens, 0);
     })
 }
 

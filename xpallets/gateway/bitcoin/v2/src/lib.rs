@@ -557,8 +557,8 @@ pub mod pallet {
         RedeemRequestProcessing,
         /// Redeem is completed
         RedeemRequestAlreadyCompleted,
-        /// Redeem is cancled
-        RedeemRequestAlreadyCancled,
+        /// Redeem is cancelled
+        RedeemRequestAlreadyCancelled,
         /// Bridge status is not correct
         BridgeStatusError,
         /// Invalid btc address

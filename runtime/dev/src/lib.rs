@@ -1000,8 +1000,8 @@ parameter_types! {
     pub const SecureThreshold: u16 = 300;
     pub const PremiumThreshold: u16 = 250;
     pub const LiquidationThreshold: u16 = 180;
-    pub const IssueRequestExpiredTime: BlockNumber = 48 * 600;
-    pub const RedeemRequestExpiredTime: BlockNumber = 48 * 600;
+    pub const IssueRequestExpiredPeriod: BlockNumber = 48 * 600;
+    pub const RedeemRequestExpiredPeriod: BlockNumber = 48 * 600;
     pub const ExchangeRateExpiredPeriod: BlockNumber = 48 * 600;
 }
 
@@ -1026,8 +1026,8 @@ impl xpallet_gateway_bitcoin_v2::pallet::Config<Instance1> for Runtime {
     type SecureThreshold = SecureThreshold;
     type PremiumThreshold = PremiumThreshold;
     type LiquidationThreshold = LiquidationThreshold;
-    type IssueRequestExpiredTime = IssueRequestExpiredTime;
-    type RedeemRequestExpiredTime = RedeemRequestExpiredTime;
+    type IssueRequestExpiredPeriod = IssueRequestExpiredPeriod;
+    type RedeemRequestExpiredPeriod = RedeemRequestExpiredPeriod;
     type ExchangeRateExpiredPeriod = ExchangeRateExpiredPeriod;
 }
 
@@ -1040,8 +1040,8 @@ impl xpallet_gateway_bitcoin_v2::pallet::Config<Instance2> for Runtime {
     type SecureThreshold = SecureThreshold;
     type PremiumThreshold = PremiumThreshold;
     type LiquidationThreshold = LiquidationThreshold;
-    type IssueRequestExpiredTime = IssueRequestExpiredTime;
-    type RedeemRequestExpiredTime = RedeemRequestExpiredTime;
+    type IssueRequestExpiredPeriod = IssueRequestExpiredPeriod;
+    type RedeemRequestExpiredPeriod = RedeemRequestExpiredPeriod;
     type ExchangeRateExpiredPeriod = ExchangeRateExpiredPeriod;
 }
 
