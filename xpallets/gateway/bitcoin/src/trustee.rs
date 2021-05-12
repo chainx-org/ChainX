@@ -29,7 +29,7 @@ use xpallet_gateway_common::{
 use crate::{
     tx::{addr2vecu8, ensure_identical, validator::parse_and_check_signed_tx},
     types::{BtcWithdrawalProposal, VoteResult},
-    Config, Error, Event, Module, WithdrawalProposal,
+    Config, Error, Event, Pallet, WithdrawalProposal,
 };
 
 pub fn current_trustee_session<T: Config>(
@@ -46,7 +46,7 @@ fn current_trustee_addr_pair<T: Config>(
 
 pub fn get_hot_trustee_address<T: Config>() -> Result<Address, DispatchError> {
     current_trustee_addr_pair::<T>()
-        .and_then(|(addr_info, _)| Module::<T>::verify_btc_address(&addr_info.addr))
+        .and_then(|(addr_info, _)| Pallet::<T>::verify_btc_address(&addr_info.addr))
 }
 
 pub fn get_hot_trustee_redeem_script<T: Config>() -> Result<Script, DispatchError> {
@@ -57,9 +57,9 @@ pub fn get_hot_trustee_redeem_script<T: Config>() -> Result<Script, DispatchErro
 pub fn get_current_trustee_address_pair<T: Config>() -> Result<(Address, Address), DispatchError> {
     current_trustee_addr_pair::<T>().map(|(hot_info, cold_info)| {
         (
-            Module::<T>::verify_btc_address(&hot_info.addr)
+            Pallet::<T>::verify_btc_address(&hot_info.addr)
                 .expect("should not parse error from storage data; qed"),
-            Module::<T>::verify_btc_address(&cold_info.addr)
+            Pallet::<T>::verify_btc_address(&cold_info.addr)
                 .expect("should not parse error from storage data; qed"),
         )
     })
@@ -69,9 +69,9 @@ pub fn get_current_trustee_address_pair<T: Config>() -> Result<(Address, Address
 pub fn get_last_trustee_address_pair<T: Config>() -> Result<(Address, Address), DispatchError> {
     T::TrusteeSessionProvider::last_trustee_session().map(|session_info| {
         (
-            Module::<T>::verify_btc_address(&session_info.hot_address.addr)
+            Pallet::<T>::verify_btc_address(&session_info.hot_address.addr)
                 .expect("should not parse error from storage data; qed"),
-            Module::<T>::verify_btc_address(&session_info.cold_address.addr)
+            Pallet::<T>::verify_btc_address(&session_info.cold_address.addr)
                 .expect("should not parse error from storage data; qed"),
         )
     })
@@ -104,7 +104,7 @@ const EC_P: [u8; 32] = [
 
 const ZERO_P: [u8; 32] = [0; 32];
 
-impl<T: Config> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo> for Module<T> {
+impl<T: Config> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo> for Pallet<T> {
     fn check_trustee_entity(raw_addr: &[u8]) -> Result<BtcTrusteeType, DispatchError> {
         let trustee_type = BtcTrusteeType::try_from(raw_addr.to_vec())
             .map_err(|_| Error::<T>::InvalidPublicKey)?;
@@ -220,7 +220,7 @@ impl<T: Config> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo
     }
 }
 
-impl<T: Config> Module<T> {
+impl<T: Config> Pallet<T> {
     pub fn ensure_trustee(who: &T::AccountId) -> DispatchResult {
         let trustee_session_info = current_trustee_session::<T>()?;
         if trustee_session_info.trustee_list.iter().any(|n| n == who) {
@@ -483,7 +483,7 @@ pub(crate) fn create_multi_address<T: Config>(
 
     let addr = Address {
         kind: Type::P2SH,
-        network: Module::<T>::network_id(),
+        network: Pallet::<T>::network_id(),
         hash: dhash160(&redeem_script),
     };
     let script_bytes: Bytes = redeem_script.into();
@@ -515,13 +515,13 @@ fn insert_trustee_vote_state<T: Config>(
             );
         }
     }
-    Module::<T>::deposit_event(Event::<T>::WithdrawalProposalVoted(who.clone(), state));
+    Pallet::<T>::deposit_event(Event::<T>::WithdrawalProposalVoted(who.clone(), state));
     Ok(())
 }
 
 /// Check that the cash withdrawal transaction is correct
 fn check_withdraw_tx<T: Config>(tx: &Transaction, withdrawal_id_list: &[u32]) -> DispatchResult {
-    match Module::<T>::withdrawal_proposal() {
+    match Pallet::<T>::withdrawal_proposal() {
         Some(_) => Err(Error::<T>::NotFinishProposal.into()),
         None => check_withdraw_tx_impl::<T>(tx, withdrawal_id_list),
     }
@@ -538,15 +538,15 @@ fn check_withdraw_tx_impl<T: Config>(
             .ok_or(Error::<T>::NoWithdrawalRecord)?;
         // record.addr() is base58
         // verify btc address would conveRelayedTx a base58 addr to Address
-        let addr: Address = Module::<T>::verify_btc_address(&record.addr())?;
+        let addr: Address = Pallet::<T>::verify_btc_address(&record.addr())?;
 
         appl_withdrawal_list.push((addr, record.balance().saturated_into::<u64>()));
     }
     // not allow deposit directly to cold address, only hot address allow
     let hot_trustee_address: Address = get_hot_trustee_address::<T>()?;
     // withdrawal addr list for tx outputs
-    let btc_withdrawal_fee = Module::<T>::btc_withdrawal_fee();
-    let btc_network = Module::<T>::network_id();
+    let btc_withdrawal_fee = Pallet::<T>::btc_withdrawal_fee();
+    let btc_network = Pallet::<T>::network_id();
     let mut tx_withdraw_list = Vec::new();
     for output in &tx.outputs {
         let addr = extract_output_addr(&output, btc_network).ok_or("not found addr in this out")?;

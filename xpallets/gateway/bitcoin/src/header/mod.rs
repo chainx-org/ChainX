@@ -11,7 +11,7 @@ use light_bitcoin::primitives::{hash_rev, H256};
 use xp_logging::{error, info};
 
 use crate::types::{BtcHeaderIndex, BtcHeaderInfo};
-use crate::{Config, ConfirmedIndex, Error, MainChain, Module};
+use crate::{Config, ConfirmedIndex, Error, MainChain, Pallet};
 
 pub use self::header_proof::HeaderVerifier;
 
@@ -28,7 +28,7 @@ pub use self::header_proof::HeaderVerifier;
 fn look_back_confirmed_header<T: Config>(
     header_info: &BtcHeaderInfo,
 ) -> (Option<BtcHeaderIndex>, Vec<BtcHeaderIndex>) {
-    let confirmations = Module::<T>::confirmation_number();
+    let confirmations = Pallet::<T>::confirmation_number();
     let mut chain = Vec::with_capacity(confirmations as usize);
     let mut prev_hash = header_info.header.previous_header_hash;
 
@@ -39,7 +39,7 @@ fn look_back_confirmed_header<T: Config>(
     });
     // e.g. when confirmations is 4, loop 3 times max
     for cnt in 1..confirmations {
-        if let Some(current_info) = Module::<T>::headers(&prev_hash) {
+        if let Some(current_info) = Pallet::<T>::headers(&prev_hash) {
             chain.push(BtcHeaderIndex {
                 hash: prev_hash,
                 height: current_info.height,
@@ -71,29 +71,29 @@ pub fn update_confirmed_header<T: Config>(header_info: &BtcHeaderInfo) -> Option
         set_main_chain::<T>(index.height, index.hash);
     }
     confirmed.map(|index| {
-        ConfirmedIndex::put(index);
+        ConfirmedIndex::<T>::put(index);
         index
     })
 }
 
 fn set_main_chain<T: Config>(height: u32, main_hash: H256) {
-    let hashes = Module::<T>::block_hash_for(&height);
+    let hashes = Pallet::<T>::block_hash_for(&height);
     if hashes.len() == 1 {
-        MainChain::insert(&hashes[0], true);
+        MainChain::<T>::insert(&hashes[0], true);
         return;
     }
     for hash in hashes {
         if hash == main_hash {
-            MainChain::insert(&hash, true);
+            MainChain::<T>::insert(&hash, true);
         } else {
-            MainChain::remove(&hash);
+            MainChain::<T>::remove(&hash);
         }
     }
 }
 
 pub fn check_confirmed_header<T: Config>(header_info: &BtcHeaderInfo) -> DispatchResult {
     let (confirmed, _) = look_back_confirmed_header::<T>(header_info);
-    if let Some(current_confirmed) = ConfirmedIndex::get() {
+    if let Some(current_confirmed) = ConfirmedIndex::<T>::get() {
         if let Some(now_confirmed) = confirmed {
             return match current_confirmed.height.cmp(&now_confirmed.height) {
                 Ordering::Greater => {
