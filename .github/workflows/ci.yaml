@@ -13,7 +13,6 @@ jobs:
   rust:
     name: Rust
     runs-on: ${{ matrix.os }}
-
     strategy:
       fail-fast: false
       matrix:
@@ -48,7 +47,6 @@ jobs:
       run: cargo fmt -- --check
 
     - name: Clippy
-      if: matrix.os == 'ubuntu-latest'
       run: cargo clippy
 
     - name: Test
@@ -58,9 +56,8 @@ jobs:
       run: cargo test --no-run
 
   runtime_benchmarks:
-    name: Runtime benchmarks
+    name: Runtime Benchmarks
     runs-on: ${{ matrix.os }}
-
     strategy:
       fail-fast: false
       matrix:
@@ -78,7 +75,6 @@ jobs:
         target: wasm32-unknown-unknown
         profile: minimal
         override: true
-        components: rustfmt, rust-src, clippy
 
     - name: Runtime benchmarks
       run: cargo test --no-run --features runtime-benchmarks
