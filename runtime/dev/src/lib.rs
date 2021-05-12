@@ -1009,19 +1009,19 @@ parameter_types! {
     //bitcoin
     pub const BridgeBtcAssetId: u32 = xp_protocol::C_BTC;
     pub const BridgeTokenBtcAssetId: u32 = xp_protocol::S_BTC;
-    pub const RedeemBtcDustValue: Balance = 10000;
+    pub const BtcMinimumRedeemValue: Balance = 10000;
 
     // dogecoin
     pub const BridgeDogeAssetId: u32 = xp_protocol::C_DOGE;
     pub const BridgeTokenDogeAssetId: u32 = xp_protocol::S_DOGE;
-    pub const RedeemDogeDustValue: Balance = 100000000;
+    pub const DogeMinimumRedeemValue: Balance = 100000000;
 }
 
 impl xpallet_gateway_bitcoin_v2::pallet::Config<Instance1> for Runtime {
     type Event = Event;
     type TargetAssetId = BridgeBtcAssetId;
     type TokenAssetId = BridgeTokenBtcAssetId;
-    type RedeemBtcDustValue = RedeemBtcDustValue;
+    type MinimumRedeemValue = BtcMinimumRedeemValue;
     type DustCollateral = DustCollateral;
     type SecureThreshold = SecureThreshold;
     type PremiumThreshold = PremiumThreshold;
@@ -1029,15 +1029,13 @@ impl xpallet_gateway_bitcoin_v2::pallet::Config<Instance1> for Runtime {
     type IssueRequestExpiredTime = IssueRequestExpiredTime;
     type RedeemRequestExpiredTime = RedeemRequestExpiredTime;
     type ExchangeRateExpiredPeriod = ExchangeRateExpiredPeriod;
-    type CollateralManager = XGatewayBridgeBtc;
-    type AssetManager = XGatewayBridgeBtc;
 }
 
 impl xpallet_gateway_bitcoin_v2::pallet::Config<Instance2> for Runtime {
     type Event = Event;
     type TargetAssetId = BridgeDogeAssetId;
     type TokenAssetId = BridgeTokenDogeAssetId;
-    type RedeemBtcDustValue = RedeemDogeDustValue;
+    type MinimumRedeemValue = DogeMinimumRedeemValue;
     type DustCollateral = DustCollateral;
     type SecureThreshold = SecureThreshold;
     type PremiumThreshold = PremiumThreshold;
@@ -1045,8 +1043,6 @@ impl xpallet_gateway_bitcoin_v2::pallet::Config<Instance2> for Runtime {
     type IssueRequestExpiredTime = IssueRequestExpiredTime;
     type RedeemRequestExpiredTime = RedeemRequestExpiredTime;
     type ExchangeRateExpiredPeriod = ExchangeRateExpiredPeriod;
-    type CollateralManager = XGatewayBridgeDoge;
-    type AssetManager = XGatewayBridgeDoge;
 }
 
 impl xpallet_dex_spot::Config for Runtime {

@@ -86,7 +86,7 @@ parameter_types! {
     pub const IssueRequestExpiredTime: BlockNumber = 10000;
     pub const RedeemRequestExpiredTime: BlockNumber = 10000;
     pub const ExchangeRateExpiredPeriod: BlockNumber = 10;
-    pub const RedeemBtcDustValue: Balance = 1;
+    pub const MinimumRedeemValue: Balance = 1;
 }
 
 impl pallet::Config<Instance1> for Test {
@@ -99,10 +99,8 @@ impl pallet::Config<Instance1> for Test {
     type LiquidationThreshold = LiquidationThreshold;
     type IssueRequestExpiredTime = IssueRequestExpiredTime;
     type RedeemRequestExpiredTime = RedeemRequestExpiredTime;
-    type RedeemBtcDustValue = RedeemBtcDustValue;
+    type MinimumRedeemValue = MinimumRedeemValue;
     type ExchangeRateExpiredPeriod = ExchangeRateExpiredPeriod;
-    type CollateralManager = XGatewayBitcoin;
-    type AssetManager = XGatewayBitcoin;
 }
 
 type Block = frame_system::mocking::MockBlock<Test>;

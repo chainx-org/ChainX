@@ -6,7 +6,7 @@ use frame_support::{assert_err, assert_ok, instances::Instance1};
 use frame_system::RawOrigin;
 
 use super::mock::*;
-use crate::{pallet, traits::MultiCollateral};
+use crate::pallet;
 use utils::*;
 
 #[allow(non_upper_case_globals)]
@@ -172,11 +172,15 @@ fn test_issue_request() {
         )
         .unwrap();
 
-        assert_ok!(XGatewayBitcoin::request_issue(Origin::signed(2), 3, 1));
+        assert_ok!(XGatewayBitcoin::request_issue(
+            Origin::signed(Bob),
+            Solid,
+            1
+        ));
 
         let reserved_balance = <<Test as xpallet_assets::Config>::Currency>::reserved_balance(2);
         assert_eq!(reserved_balance, 10);
-        let issue_request = XGatewayBitcoin::get_issue_request_by_id(1).unwrap();
+        let issue_request = XGatewayBitcoin::try_get_issue_request(1).unwrap();
         assert_eq!(issue_request.griefing_collateral, 10);
         assert_eq!(issue_request.requester, 2);
         assert_eq!(issue_request.vault, 3);
@@ -206,7 +210,7 @@ fn test_issue_request() {
 
         let vault = XGatewayBitcoin::try_get_vault(&issue_request.vault).unwrap();
         assert_eq!(
-            XGatewayBitcoin::issued_tokens_of(&issue_request.vault),
+            XGatewayBitcoin::token_asset_of(&issue_request.vault),
             issue_request.btc_amount
         );
         assert_eq!(vault.to_be_issued_tokens, 0);
@@ -244,10 +248,10 @@ fn test_cancel_issue_request() {
 #[test]
 fn test_lock_collateral() {
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
-        assert_ok!(XGatewayBitcoin::lock(&Alice, 200));
+        assert_ok!(XGatewayBitcoin::lock_collateral(&Alice, 200));
         assert_eq!(<pallet::CurrencyOf<Test>>::reserved_balance(Alice), 200);
         assert_err!(
-            XGatewayBitcoin::lock(&Alice, 100_000),
+            XGatewayBitcoin::lock_collateral(&Alice, 100_000),
             pallet_balances::Error::<Test>::InsufficientBalance,
         );
     });
@@ -256,12 +260,12 @@ fn test_lock_collateral() {
 #[test]
 fn test_slash_collateral() {
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
-        XGatewayBitcoin::lock(&Alice, 200).unwrap();
+        XGatewayBitcoin::lock_collateral(&Alice, 200).unwrap();
         assert_err!(
-            XGatewayBitcoin::slash(&Alice, &Bob, 300),
+            XGatewayBitcoin::slash_vault(&Alice, &Bob, 300),
             pallet::Error::<Test, Instance1>::InsufficientCollateral
         );
-        assert_ok!(XGatewayBitcoin::slash(&Alice, &Bob, 200));
+        assert_ok!(XGatewayBitcoin::slash_vault(&Alice, &Bob, 200));
         assert_eq!(<pallet::CurrencyOf<Test>>::free_balance(Alice), 9800);
         assert_eq!(<pallet::CurrencyOf<Test>>::free_balance(Bob), 20200);
         assert_eq!(XGatewayBitcoin::total_collateral(), 0);
@@ -361,7 +365,7 @@ fn test_redeem_execute() {
         assert_eq!(vault.to_be_redeemed_tokens, 0);
 
         // Vault's issued_tokens decreased.
-        assert_eq!(XGatewayBitcoin::issued_tokens_of(&Solid), 0);
+        assert_eq!(XGatewayBitcoin::token_asset_of(&Solid), 0);
     })
 }
 
