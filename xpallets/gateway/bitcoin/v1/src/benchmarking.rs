@@ -19,9 +19,7 @@ use light_bitcoin::{
     serialization::{self, Reader},
 };
 
-use crate::{
-    types::*, Call, Config, Module, PendingDeposits, TxState, Verifier, WithdrawalProposal,
-};
+use crate::{types::*, *};
 
 const ASSET_ID: AssetId = xp_protocol::X_BTC;
 
@@ -184,7 +182,7 @@ benchmarks! {
     verify {
         assert!(WithdrawalProposal::<T>::get().is_none());
         assert_eq!(
-            TxState::get(tx_hash),
+            TxState::<T>::get(tx_hash),
             Some(BtcTxState {
                 tx_type: BtcTxType::Withdrawal,
                 result: BtcTxResult::Success,
@@ -275,7 +273,7 @@ benchmarks! {
                 balance: 300000000,
             },
         ];
-        PendingDeposits::insert(&addr, v);
+        PendingDeposits::<T>::insert(&addr, v);
         let receiver: T::AccountId = whitelisted_caller();
     }: _(RawOrigin::Root, addr.clone(), Some(receiver.clone()))
     verify {
@@ -300,7 +298,7 @@ benchmarks! {
     force_replace_proposal_tx {
         let l = 1024 * 1024 * 500; // 500KB length
 
-        Verifier::put(BtcTxVerifier::Test);
+        Verifier::<T>::put(BtcTxVerifier::Test);
         let tx = prepare_withdrawal::<T>();
         let raw = serialization::serialize(&tx);
     }: _(RawOrigin::Root, raw.into())

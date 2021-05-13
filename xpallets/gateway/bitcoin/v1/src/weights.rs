@@ -16,7 +16,7 @@
 // --execution=wasm
 // --wasm-execution=compiled
 // --heap-pages=4096
-// --output=./xpallets/gateway/bitcoin/src/weights.rs
+// --output=./xpallets/gateway/bitcoin/v1/src/weights.rs
 // --template=./scripts/xpallet-weight-template.hbs
 
 #![allow(unused_parens)]

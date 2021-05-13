@@ -14,10 +14,8 @@ use light_bitcoin::{
 
 use xp_gateway_bitcoin::{AccountExtractor, BtcTxMetaType, BtcTxTypeDetector};
 
-use crate::mock::{
-    generate_blocks_576576_578692, AccountId, ExtBuilder, Test, XAssets, XGatewayBitcoin,
-    XGatewayBitcoinErr, XGatewayCommon, X_BTC,
-};
+use crate::mock::*;
+
 use crate::{
     tx::process_tx,
     types::{
