@@ -44,11 +44,11 @@ benchmarks! {
         let user: T::AccountId = account("user", 0, SEED);
         let user_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(user.clone());
         let mut balances = BTreeMap::new();
-        balances.insert(AssetType::Locked, 1000_u32.into());
-        balances.insert(AssetType::Locked, 1000_u32.into());
-        balances.insert(AssetType::Reserved, 1000_u32.into());
-        balances.insert(AssetType::ReservedWithdrawal, 1000_u32.into());
-        balances.insert(AssetType::ReservedDexSpot, 1000_u32.into());
+        balances.insert(AssetType::Locked, 1000u32.into());
+        balances.insert(AssetType::Locked, 1000u32.into());
+        balances.insert(AssetType::Reserved, 1000u32.into());
+        balances.insert(AssetType::ReservedWithdrawal, 1000u32.into());
+        balances.insert(AssetType::ReservedDexSpot, 1000u32.into());
     }: set_balance(RawOrigin::Root, user_lookup, ASSET_ID, balances.clone())
     verify {
         assert_eq!(XAssets::<T>::asset_balance(&user, &ASSET_ID), balances);

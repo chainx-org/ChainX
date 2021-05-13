@@ -5,7 +5,7 @@ use frame_support::dispatch::DispatchResult;
 use light_bitcoin::{chain::Transaction, primitives::Bytes};
 
 use crate::types::BtcTxVerifier;
-use crate::{Config, Error, Module};
+use crate::{Config, Error, Pallet};
 
 mod recover_verifier;
 mod runtime_interface {
@@ -28,7 +28,7 @@ pub fn verify_sig<T: Config>(
     script_pubkey: &Bytes,
     index: usize,
 ) -> DispatchResult {
-    match Module::<T>::verifier() {
+    match Pallet::<T>::verifier() {
         BtcTxVerifier::Recover => {
             recover_verifier::verify_sig_impl::<T>(sig, pubkey, tx, script_pubkey, index)
         }

@@ -4,6 +4,8 @@ use std::{cell::RefCell, collections::BTreeMap, time::Duration};
 
 use hex_literal::hex;
 
+#[cfg(feature = "std")]
+use frame_support::traits::GenesisBuild;
 use frame_support::{parameter_types, sp_io, traits::UnixTime, weights::Weight};
 use frame_system::EnsureSignedBy;
 use sp_core::H256;

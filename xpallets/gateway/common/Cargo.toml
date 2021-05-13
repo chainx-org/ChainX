@@ -22,7 +22,7 @@ frame-system = { version = "3.0.0", default-features = false }
 
 # ChainX primitives
 chainx-primitives = { path = "../../../primitives", default-features = false }
-xp-logging =  { path = "../../../primitives/logging", default-features = false }
+xp-logging = { path = "../../../primitives/logging", default-features = false }
 xp-protocol = { path = "../../../primitives/protocol", default-features = false }
 xp-rpc = { path = "../../../primitives/rpc", optional = true }
 xp-runtime = { path = "../../../primitives/runtime", default-features = false }
@@ -42,39 +42,34 @@ serde_json = "1.0"
 sp-io = "3.0.0"
 frame-benchmarking = "3.0.0"
 pallet-balances = "3.0.0"
-xp-gateway-bitcoin =  { path = "../../../primitives/gateway/bitcoin" }
-xpallet-gateway-bitcoin = { path = "../bitcoin" }
+xp-gateway-bitcoin = { path = "../../../primitives/gateway/bitcoin" }
+xpallet-gateway-bitcoin = { path = "../bitcoin/v1" }
 
 [features]
 default = ["std"]
 std = [
-    "codec/std",
-    "hex/std",
-    "log/std",
-    "serde",
-    # Substrate primitives
-    "sp-core/std",
-    "sp-runtime/std",
-    "sp-std/std",
-    # Substrate pallets
-    "frame-support/std",
-    "frame-system/std",
-    # ChainX primitives
-    "chainx-primitives/std",
-    "xp-logging/std",
-    "xp-protocol/std",
-    "xp-rpc",
-    "xp-runtime/std",
-    # ChainX pallets
-    "xpallet-assets/std",
-    "xpallet-assets-registrar/std",
-    "xpallet-gateway-records/std",
-    "xpallet-support/std",
-    # light-bitcoin
-    "light-bitcoin/std",
+  "codec/std",
+  "hex/std",
+  "serde",
+  # Substrate primitives
+  "sp-core/std",
+  "sp-runtime/std",
+  "sp-std/std",
+  # Substrate pallets
+  "frame-support/std",
+  "frame-system/std",
+  # ChainX primitives
+  "chainx-primitives/std",
+  "xp-logging/std",
+  "xp-protocol/std",
+  "xp-rpc",
+  "xp-runtime/std",
+  # ChainX pallets
+  "xpallet-assets/std",
+  "xpallet-assets-registrar/std",
+  "xpallet-gateway-records/std",
+  "xpallet-support/std",
+  # light-bitcoin
+  "light-bitcoin/std",
 ]
-runtime-benchmarks = [
-    "hex",
-    "sp-core",
-    "frame-benchmarking",
-]
+runtime-benchmarks = ["hex", "sp-core", "frame-benchmarking"]
