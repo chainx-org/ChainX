@@ -31,56 +31,58 @@ use crate::{
     Config, Error, Event, Pallet, WithdrawalProposal,
 };
 
-pub fn current_trustee_session<T: Config>(
+pub fn current_trustee_session<T: Config<I>, I: 'static>(
 ) -> Result<TrusteeSessionInfo<T::AccountId, BtcTrusteeAddrInfo>, DispatchError> {
     T::TrusteeSessionProvider::current_trustee_session()
 }
 
 #[inline]
-fn current_trustee_addr_pair<T: Config>(
+fn current_trustee_addr_pair<T: Config<I>, I: 'static>(
 ) -> Result<(BtcTrusteeAddrInfo, BtcTrusteeAddrInfo), DispatchError> {
     T::TrusteeSessionProvider::current_trustee_session()
         .map(|session_info| (session_info.hot_address, session_info.cold_address))
 }
 
-pub fn get_hot_trustee_address<T: Config>() -> Result<Address, DispatchError> {
-    current_trustee_addr_pair::<T>()
-        .and_then(|(addr_info, _)| Pallet::<T>::verify_btc_address(&addr_info.addr))
+pub fn get_hot_trustee_address<T: Config<I>, I: 'static>() -> Result<Address, DispatchError> {
+    current_trustee_addr_pair::<T, I>()
+        .and_then(|(addr_info, _)| Pallet::<T, I>::verify_btc_address(&addr_info.addr))
 }
 
-pub fn get_hot_trustee_redeem_script<T: Config>() -> Result<Script, DispatchError> {
-    current_trustee_addr_pair::<T>().map(|(addr_info, _)| addr_info.redeem_script.into())
+pub fn get_hot_trustee_redeem_script<T: Config<I>, I: 'static>() -> Result<Script, DispatchError> {
+    current_trustee_addr_pair::<T, I>().map(|(addr_info, _)| addr_info.redeem_script.into())
 }
 
 #[inline]
-pub fn get_current_trustee_address_pair<T: Config>() -> Result<(Address, Address), DispatchError> {
-    current_trustee_addr_pair::<T>().map(|(hot_info, cold_info)| {
+pub fn get_current_trustee_address_pair<T: Config<I>, I: 'static>(
+) -> Result<(Address, Address), DispatchError> {
+    current_trustee_addr_pair::<T, I>().map(|(hot_info, cold_info)| {
         (
-            Pallet::<T>::verify_btc_address(&hot_info.addr)
+            Pallet::<T, I>::verify_btc_address(&hot_info.addr)
                 .expect("should not parse error from storage data; qed"),
-            Pallet::<T>::verify_btc_address(&cold_info.addr)
+            Pallet::<T, I>::verify_btc_address(&cold_info.addr)
                 .expect("should not parse error from storage data; qed"),
         )
     })
 }
 
 #[inline]
-pub fn get_last_trustee_address_pair<T: Config>() -> Result<(Address, Address), DispatchError> {
+pub fn get_last_trustee_address_pair<T: Config<I>, I: 'static>(
+) -> Result<(Address, Address), DispatchError> {
     T::TrusteeSessionProvider::last_trustee_session().map(|session_info| {
         (
-            Pallet::<T>::verify_btc_address(&session_info.hot_address.addr)
+            Pallet::<T, I>::verify_btc_address(&session_info.hot_address.addr)
                 .expect("should not parse error from storage data; qed"),
-            Pallet::<T>::verify_btc_address(&session_info.cold_address.addr)
+            Pallet::<T, I>::verify_btc_address(&session_info.cold_address.addr)
                 .expect("should not parse error from storage data; qed"),
         )
     })
 }
 
-fn check_keys<T: Config>(keys: &[Public]) -> DispatchResult {
+fn check_keys<T: Config<I>, I: 'static>(keys: &[Public]) -> DispatchResult {
     let has_duplicate = (1..keys.len()).any(|i| keys[i..].contains(&keys[i - 1]));
     if has_duplicate {
         error!("[generate_new_trustees] Keys contains duplicate pubkey");
-        return Err(Error::<T>::DuplicatedKeys.into());
+        return Err(Error::<T, I>::DuplicatedKeys.into());
     }
     let has_normal_pubkey = keys.iter().any(|public: &Public| {
         if let Public::Normal(_) = public {
@@ -103,29 +105,31 @@ const EC_P: [u8; 32] = [
 
 const ZERO_P: [u8; 32] = [0; 32];
 
-impl<T: Config> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo> for Pallet<T> {
+impl<T: Config<I>, I: 'static> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo>
+    for Pallet<T, I>
+{
     fn check_trustee_entity(raw_addr: &[u8]) -> Result<BtcTrusteeType, DispatchError> {
         let trustee_type = BtcTrusteeType::try_from(raw_addr.to_vec())
-            .map_err(|_| Error::<T>::InvalidPublicKey)?;
+            .map_err(|_| Error::<T, I>::InvalidPublicKey)?;
         let public = trustee_type.0;
         if let Public::Normal(_) = public {
             error!("Disallow Normal Public for bitcoin now");
-            return Err(Error::<T>::InvalidPublicKey.into());
+            return Err(Error::<T, I>::InvalidPublicKey.into());
         }
 
         if 2 != raw_addr[0] && 3 != raw_addr[0] {
             error!("Not Compressed Public(prefix not 2|3)");
-            return Err(Error::<T>::InvalidPublicKey.into());
+            return Err(Error::<T, I>::InvalidPublicKey.into());
         }
 
         if ZERO_P == raw_addr[1..33] {
             error!("Not Compressed Public(Zero32)");
-            return Err(Error::<T>::InvalidPublicKey.into());
+            return Err(Error::<T, I>::InvalidPublicKey.into());
         }
 
         if &raw_addr[1..33] >= &EC_P {
             error!("Not Compressed Public(EC_P)");
-            return Err(Error::<T>::InvalidPublicKey.into());
+            return Err(Error::<T, I>::InvalidPublicKey.into());
         }
 
         Ok(BtcTrusteeType(public))
@@ -147,8 +151,8 @@ impl<T: Config> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo
             .map(|props| (props.hot_entity.0, props.cold_entity.0))
             .unzip();
 
-        check_keys::<T>(&hot_keys)?;
-        check_keys::<T>(&cold_keys)?;
+        check_keys::<T, I>(&hot_keys)?;
+        check_keys::<T, I>(&cold_keys)?;
 
         // [min, max] e.g. bitcoin min is 4, max is 15
         if (trustees.len() as u32) < config.min_trustee_count
@@ -159,7 +163,7 @@ impl<T: Config> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo
                 can't generate trustee addr",
                 trustees, config.min_trustee_count, config.max_trustee_count
             );
-            return Err(Error::<T>::InvalidTrusteeCount.into());
+            return Err(Error::<T, I>::InvalidTrusteeCount.into());
         }
 
         #[cfg(feature = "std")]
@@ -185,21 +189,21 @@ impl<T: Config> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo
         let sig_num = two_thirds_unsafe(trustees.len() as u32);
 
         let hot_trustee_addr_info: BtcTrusteeAddrInfo =
-            create_multi_address::<T>(&hot_keys, sig_num).ok_or_else(|| {
+            create_multi_address::<T, I>(&hot_keys, sig_num).ok_or_else(|| {
                 error!(
                     "[generate_trustee_session_info] Create hot_addr error, hot_keys:{:?}",
                     hot_keys
                 );
-                Error::<T>::GenerateMultisigFailed
+                Error::<T, I>::GenerateMultisigFailed
             })?;
 
         let cold_trustee_addr_info: BtcTrusteeAddrInfo =
-            create_multi_address::<T>(&cold_keys, sig_num).ok_or_else(|| {
+            create_multi_address::<T, I>(&cold_keys, sig_num).ok_or_else(|| {
                 error!(
                     "[generate_trustee_session_info] Create cold_addr error, cold_keys:{:?}",
                     cold_keys
                 );
-                Error::<T>::GenerateMultisigFailed
+                Error::<T, I>::GenerateMultisigFailed
             })?;
 
         log::info!(
@@ -219,9 +223,9 @@ impl<T: Config> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo
     }
 }
 
-impl<T: Config> Pallet<T> {
+impl<T: Config<I>, I: 'static> Pallet<T, I> {
     pub fn ensure_trustee(who: &T::AccountId) -> DispatchResult {
-        let trustee_session_info = current_trustee_session::<T>()?;
+        let trustee_session_info = current_trustee_session::<T, I>()?;
         if trustee_session_info.trustee_list.iter().any(|n| n == who) {
             Ok(())
         } else {
@@ -229,7 +233,7 @@ impl<T: Config> Pallet<T> {
                 "[ensure_trustee] Committer {:?} not in the trustee list:{:?}",
                 who, trustee_session_info.trustee_list
             );
-            Err(Error::<T>::NotTrustee.into())
+            Err(Error::<T, I>::NotTrustee.into())
         }
     }
 
@@ -244,21 +248,21 @@ impl<T: Config> Pallet<T> {
                 "[apply_create_withdraw] Current list (len:{}) exceeding the max withdrawal amount {}",
                 withdrawal_id_list.len(), withdraw_amount
             );
-            return Err(Error::<T>::WroungWithdrawalCount.into());
+            return Err(Error::<T, I>::WroungWithdrawalCount.into());
         }
         // remove duplicate
         let mut withdrawal_id_list = withdrawal_id_list;
         withdrawal_id_list.sort();
         withdrawal_id_list.dedup();
 
-        check_withdraw_tx::<T>(&tx, &withdrawal_id_list)?;
+        check_withdraw_tx::<T, I>(&tx, &withdrawal_id_list)?;
         info!(
             "[apply_create_withdraw] Create new withdraw, id_list:{:?}",
             withdrawal_id_list
         );
 
         // check sig
-        let sigs_count = parse_and_check_signed_tx::<T>(&tx)?;
+        let sigs_count = parse_and_check_signed_tx::<T, I>(&tx)?;
         let apply_sig = if sigs_count == 0 {
             false
         } else if sigs_count == 1 {
@@ -268,7 +272,7 @@ impl<T: Config> Pallet<T> {
                 "[apply_create_withdraw] The sigs for tx could not more than 1, current sigs:{}",
                 sigs_count
             );
-            return Err(Error::<T>::InvalidSignCount.into());
+            return Err(Error::<T, I>::InvalidSignCount.into());
         };
 
         xpallet_gateway_records::Module::<T>::process_withdrawals(
@@ -285,7 +289,7 @@ impl<T: Config> Pallet<T> {
 
         info!("[apply_create_withdraw] Pass the legality check of withdrawal");
 
-        Self::deposit_event(Event::<T>::WithdrawalProposalCreated(
+        Self::deposit_event(Event::<T, I>::WithdrawalProposalCreated(
             who.clone(),
             withdrawal_id_list,
         ));
@@ -294,39 +298,39 @@ impl<T: Config> Pallet<T> {
             info!("[apply_create_withdraw] Apply sign after creating proposal");
             // due to `SignWithdrawalProposal` event should after `WithdrawalProposalCreated`, thus this function should after proposal
             // but this function would have an error return, this error return should not meet.
-            if insert_trustee_vote_state::<T>(true, &who, &mut proposal.trustee_list).is_err() {
+            if insert_trustee_vote_state::<T, I>(true, &who, &mut proposal.trustee_list).is_err() {
                 // should not be error in this function, if hit this branch, panic to clear all modification
                 // TODO change to revoke in future
                 panic!("insert_trustee_vote_state should not be error")
             }
         }
 
-        WithdrawalProposal::<T>::put(proposal);
+        WithdrawalProposal::<T, I>::put(proposal);
 
         Ok(())
     }
 
     pub fn apply_sig_withdraw(who: T::AccountId, tx: Option<Transaction>) -> DispatchResult {
         let mut proposal: BtcWithdrawalProposal<T::AccountId> =
-            Self::withdrawal_proposal().ok_or(Error::<T>::NoProposal)?;
+            Self::withdrawal_proposal().ok_or(Error::<T, I>::NoProposal)?;
 
         if proposal.sig_state == VoteResult::Finish {
             error!("[apply_sig_withdraw] Proposal is on FINISH state, can't sign for this proposal:{:?}", proposal);
-            return Err(Error::<T>::RejectSig.into());
+            return Err(Error::<T, I>::RejectSig.into());
         }
 
-        let (sig_num, total) = get_sig_num::<T>();
+        let (sig_num, total) = get_sig_num::<T, I>();
         match tx {
             Some(tx) => {
                 // check this tx is same to proposal, just check input and output, not include sigs
-                ensure_identical::<T>(&tx, &proposal.tx)?;
+                ensure_identical::<T, I>(&tx, &proposal.tx)?;
 
                 // sign
                 // check first and get signatures from commit transaction
-                let sigs_count = parse_and_check_signed_tx::<T>(&tx)?;
+                let sigs_count = parse_and_check_signed_tx::<T, I>(&tx)?;
                 if sigs_count == 0 {
                     error!("[apply_sig_withdraw] Tx sig should not be zero, zero is the source tx without any sig, tx{:?}", tx);
-                    return Err(Error::<T>::InvalidSignCount.into());
+                    return Err(Error::<T, I>::InvalidSignCount.into());
                 }
 
                 let confirmed_count = proposal
@@ -340,10 +344,10 @@ impl<T: Config> Pallet<T> {
                         "[apply_sig_withdraw] Need to sign on the latest signature results, sigs count:{}, confirmed count:{}",
                         sigs_count, confirmed_count
                     );
-                    return Err(Error::<T>::InvalidSignCount.into());
+                    return Err(Error::<T, I>::InvalidSignCount.into());
                 }
 
-                insert_trustee_vote_state::<T>(true, &who, &mut proposal.trustee_list)?;
+                insert_trustee_vote_state::<T, I>(true, &who, &mut proposal.trustee_list)?;
                 // check required count
                 // required count should be equal or more than (2/3)*total
                 // e.g. total=6 => required=2*6/3=4, thus equal to 4 should mark as finish
@@ -352,7 +356,7 @@ impl<T: Config> Pallet<T> {
                     info!("[apply_sig_withdraw] Signature completed:{}", sigs_count);
                     proposal.sig_state = VoteResult::Finish;
 
-                    Self::deposit_event(Event::<T>::WithdrawalProposalCompleted(tx.hash()))
+                    Self::deposit_event(Event::<T, I>::WithdrawalProposalCompleted(tx.hash()))
                 } else {
                     proposal.sig_state = VoteResult::Unfinish;
                 }
@@ -361,7 +365,7 @@ impl<T: Config> Pallet<T> {
             }
             None => {
                 // reject
-                insert_trustee_vote_state::<T>(false, &who, &mut proposal.trustee_list)?;
+                insert_trustee_vote_state::<T, I>(false, &who, &mut proposal.trustee_list)?;
 
                 let reject_count = proposal
                     .trustee_list
@@ -387,9 +391,9 @@ impl<T: Config> Pallet<T> {
                         );
                     }
 
-                    WithdrawalProposal::<T>::kill();
+                    WithdrawalProposal::<T, I>::kill();
 
-                    Self::deposit_event(Event::<T>::WithdrawalProposalDropped(
+                    Self::deposit_event(Event::<T, I>::WithdrawalProposalDropped(
                         reject_count as u32,
                         sig_num as u32,
                         proposal.withdrawal_id_list,
@@ -404,13 +408,13 @@ impl<T: Config> Pallet<T> {
             proposal.sig_state, proposal.trustee_list
         );
 
-        WithdrawalProposal::<T>::put(proposal);
+        WithdrawalProposal::<T, I>::put(proposal);
         Ok(())
     }
 
     pub fn force_replace_withdraw_tx(tx: Transaction) -> DispatchResult {
         let mut proposal: BtcWithdrawalProposal<T::AccountId> =
-            Self::withdrawal_proposal().ok_or(Error::<T>::NoProposal)?;
+            Self::withdrawal_proposal().ok_or(Error::<T, I>::NoProposal)?;
 
         ensure!(
             proposal.sig_state == VoteResult::Finish,
@@ -419,20 +423,20 @@ impl<T: Config> Pallet<T> {
 
         // make sure withdrawal list is same as current proposal
         let current_withdrawal_list = &proposal.withdrawal_id_list;
-        check_withdraw_tx_impl::<T>(&tx, current_withdrawal_list)?;
+        check_withdraw_tx_impl::<T, I>(&tx, current_withdrawal_list)?;
 
         // sign
         // check first and get signatures from commit transaction
-        let sigs_count = parse_and_check_signed_tx::<T>(&tx)?;
+        let sigs_count = parse_and_check_signed_tx::<T, I>(&tx)?;
         ensure!(
             proposal.trustee_list.len() as u32 == sigs_count,
-            Error::<T>::InvalidSignCount
+            Error::<T, I>::InvalidSignCount
         );
 
         // replace old transaction
         proposal.tx = tx;
 
-        WithdrawalProposal::<T>::put(proposal);
+        WithdrawalProposal::<T, I>::put(proposal);
         Ok(())
     }
 }
@@ -441,7 +445,7 @@ impl<T: Config> Pallet<T> {
 /// sig_num: Number of signatures required
 /// trustee_num: Total number of multiple signatures
 /// NOTE: Signature ratio greater than 2/3
-pub fn get_sig_num<T: Config>() -> (u32, u32) {
+pub fn get_sig_num<T: Config<I>, I: 'static>() -> (u32, u32) {
     let trustee_list = T::TrusteeSessionProvider::current_trustee_session()
         .map(|session_info| session_info.trustee_list)
         .expect("the trustee_list must exist; qed");
@@ -449,7 +453,7 @@ pub fn get_sig_num<T: Config>() -> (u32, u32) {
     (two_thirds_unsafe(trustee_num), trustee_num)
 }
 
-pub(crate) fn create_multi_address<T: Config>(
+pub(crate) fn create_multi_address<T: Config<I>, I: 'static>(
     pubkeys: &[Public],
     sig_num: u32,
 ) -> Option<BtcTrusteeAddrInfo> {
@@ -482,7 +486,7 @@ pub(crate) fn create_multi_address<T: Config>(
 
     let addr = Address {
         kind: Type::P2SH,
-        network: Pallet::<T>::network_id(),
+        network: Pallet::<T, I>::network_id(),
         hash: dhash160(&redeem_script),
     };
     let script_bytes: Bytes = redeem_script.into();
@@ -495,7 +499,7 @@ pub(crate) fn create_multi_address<T: Config>(
 /// Update the signature status of trustee
 /// state: false -> Veto signature, true -> Consent signature
 /// only allow inseRelayedTx once
-fn insert_trustee_vote_state<T: Config>(
+fn insert_trustee_vote_state<T: Config<I>, I: 'static>(
     state: bool,
     who: &T::AccountId,
     trustee_list: &mut Vec<(T::AccountId, bool)>,
@@ -504,7 +508,7 @@ fn insert_trustee_vote_state<T: Config>(
         Some(_) => {
             // if account is exist, override state
             error!("[insert_trustee_vote_state] {:?} has already vote for this withdrawal proposal, old vote:{}", who, state);
-            return Err(Error::<T>::DuplicateVote.into());
+            return Err(Error::<T, I>::DuplicateVote.into());
         }
         None => {
             trustee_list.push((who.clone(), state));
@@ -514,19 +518,22 @@ fn insert_trustee_vote_state<T: Config>(
             );
         }
     }
-    Pallet::<T>::deposit_event(Event::<T>::WithdrawalProposalVoted(who.clone(), state));
+    Pallet::<T, I>::deposit_event(Event::<T, I>::WithdrawalProposalVoted(who.clone(), state));
     Ok(())
 }
 
 /// Check that the cash withdrawal transaction is correct
-fn check_withdraw_tx<T: Config>(tx: &Transaction, withdrawal_id_list: &[u32]) -> DispatchResult {
-    match Pallet::<T>::withdrawal_proposal() {
-        Some(_) => Err(Error::<T>::NotFinishProposal.into()),
-        None => check_withdraw_tx_impl::<T>(tx, withdrawal_id_list),
+fn check_withdraw_tx<T: Config<I>, I: 'static>(
+    tx: &Transaction,
+    withdrawal_id_list: &[u32],
+) -> DispatchResult {
+    match Pallet::<T, I>::withdrawal_proposal() {
+        Some(_) => Err(Error::<T, I>::NotFinishProposal.into()),
+        None => check_withdraw_tx_impl::<T, I>(tx, withdrawal_id_list),
     }
 }
 
-fn check_withdraw_tx_impl<T: Config>(
+fn check_withdraw_tx_impl<T: Config<I>, I: 'static>(
     tx: &Transaction,
     withdrawal_id_list: &[u32],
 ) -> DispatchResult {
@@ -534,18 +541,18 @@ fn check_withdraw_tx_impl<T: Config>(
     let mut appl_withdrawal_list: Vec<(Address, u64)> = Vec::new();
     for withdraw_index in withdrawal_id_list.iter() {
         let record = xpallet_gateway_records::Module::<T>::pending_withdrawals(withdraw_index)
-            .ok_or(Error::<T>::NoWithdrawalRecord)?;
+            .ok_or(Error::<T, I>::NoWithdrawalRecord)?;
         // record.addr() is base58
         // verify btc address would conveRelayedTx a base58 addr to Address
-        let addr: Address = Pallet::<T>::verify_btc_address(&record.addr())?;
+        let addr: Address = Pallet::<T, I>::verify_btc_address(&record.addr())?;
 
         appl_withdrawal_list.push((addr, record.balance().saturated_into::<u64>()));
     }
     // not allow deposit directly to cold address, only hot address allow
-    let hot_trustee_address: Address = get_hot_trustee_address::<T>()?;
+    let hot_trustee_address: Address = get_hot_trustee_address::<T, I>()?;
     // withdrawal addr list for tx outputs
-    let btc_withdrawal_fee = Pallet::<T>::btc_withdrawal_fee();
-    let btc_network = Pallet::<T>::network_id();
+    let btc_withdrawal_fee = Pallet::<T, I>::btc_withdrawal_fee();
+    let btc_network = Pallet::<T, I>::network_id();
     let mut tx_withdraw_list = Vec::new();
     for output in &tx.outputs {
         let addr = extract_output_addr(&output, btc_network).ok_or("not found addr in this out")?;
@@ -571,7 +578,7 @@ fn check_withdraw_tx_impl<T: Config>(
                 .zip(appl_withdrawal_list)
                 .collect::<Vec<_>>()
         );
-        return Err(Error::<T>::InvalidProposal.into());
+        return Err(Error::<T, I>::InvalidProposal.into());
     }
 
     let count = appl_withdrawal_list
@@ -592,7 +599,7 @@ fn check_withdraw_tx_impl<T: Config>(
         .count();
 
     if count != appl_withdrawal_list.len() {
-        return Err(Error::<T>::InvalidProposal.into());
+        return Err(Error::<T, I>::InvalidProposal.into());
     }
 
     Ok(())

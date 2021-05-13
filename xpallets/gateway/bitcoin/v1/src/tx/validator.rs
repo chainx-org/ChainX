@@ -12,7 +12,7 @@ use log::{debug, error};
 
 use crate::{trustee::get_hot_trustee_redeem_script, types::BtcRelayedTx, Config, Error};
 
-pub fn validate_transaction<T: Config>(
+pub fn validate_transaction<T: Config<I>, I: 'static>(
     tx: &BtcRelayedTx,
     merkle_root: H256,
     prev_tx: Option<&Transaction>,
@@ -29,17 +29,17 @@ pub fn validate_transaction<T: Config>(
     let hash = tx
         .merkle_proof
         .extract_matches(&mut matches, &mut _indexes)
-        .map_err(|_| Error::<T>::BadMerkleProof)?;
+        .map_err(|_| Error::<T, I>::BadMerkleProof)?;
     if merkle_root != hash {
         error!(
             "[validate_transaction] Check merkle tree proof error, merkle_root:{:?}, hash:{:?}",
             merkle_root, hash
         );
-        return Err(Error::<T>::BadMerkleProof.into());
+        return Err(Error::<T, I>::BadMerkleProof.into());
     }
     if !matches.iter().any(|h| *h == tx_hash) {
         error!("[validate_transaction] Tx hash should in matches of partial merkle tree");
-        return Err(Error::<T>::BadMerkleProof.into());
+        return Err(Error::<T, I>::BadMerkleProof.into());
     }
 
     if let Some(prev) = prev_tx {
@@ -52,27 +52,29 @@ pub fn validate_transaction<T: Config>(
                 "[validate_transaction] Relay previous tx's hash not equal to relay tx first input, expected_id:{:?}, prev:{:?}",
                 expected_id, previous_txid
             );
-            return Err(Error::<T>::InvalidPrevTx.into());
+            return Err(Error::<T, I>::InvalidPrevTx.into());
         }
     }
     Ok(())
 }
 
 /// Check signed transactions
-pub fn parse_and_check_signed_tx<T: Config>(tx: &Transaction) -> Result<u32, DispatchError> {
-    let redeem_script = get_hot_trustee_redeem_script::<T>()?;
-    parse_and_check_signed_tx_impl::<T>(tx, redeem_script)
+pub fn parse_and_check_signed_tx<T: Config<I>, I: 'static>(
+    tx: &Transaction,
+) -> Result<u32, DispatchError> {
+    let redeem_script = get_hot_trustee_redeem_script::<T, I>()?;
+    parse_and_check_signed_tx_impl::<T, I>(tx, redeem_script)
 }
 
 /// for test convenient
 #[inline]
-pub fn parse_and_check_signed_tx_impl<T: Config>(
+pub fn parse_and_check_signed_tx_impl<T: Config<I>, I: 'static>(
     tx: &Transaction,
     script: Script,
 ) -> Result<u32, DispatchError> {
     let (pubkeys, _, _) = script
         .parse_redeem_script()
-        .ok_or(Error::<T>::BadRedeemScript)?;
+        .ok_or(Error::<T, I>::BadRedeemScript)?;
     let bytes_redeem_script = script.to_bytes();
 
     let mut input_signs = Vec::new();
@@ -87,25 +89,31 @@ pub fn parse_and_check_signed_tx_impl<T: Config>(
         }
         let (sigs, _) = script
             .extract_multi_scriptsig()
-            .map_err(|_| Error::<T>::BadSignature)?;
+            .map_err(|_| Error::<T, I>::BadSignature)?;
 
         for sig in sigs.iter() {
             let verify = pubkeys.iter().any(|pubkey| {
-                super::secp256k1_verifier::verify_sig::<T>(sig, pubkey, tx, &bytes_redeem_script, i)
-                    .is_ok()
+                super::secp256k1_verifier::verify_sig::<T, I>(
+                    sig,
+                    pubkey,
+                    tx,
+                    &bytes_redeem_script,
+                    i,
+                )
+                .is_ok()
             });
             if !verify {
                 error!(
                     "[parse_and_check_signed_tx] Verify sig failed, tx:{:?}, input:{:?}, bytes_redeem_script:{:?}",
                     tx, i, bytes_redeem_script
                 );
-                return Err(Error::<T>::VerifySignFailed.into());
+                return Err(Error::<T, I>::VerifySignFailed.into());
             }
         }
         input_signs.push(sigs.len());
     }
     // the list length must more than one, due to must have inputs; qed
-    ensure!(!input_signs.is_empty(), Error::<T>::InvalidSignCount);
+    ensure!(!input_signs.is_empty(), Error::<T, I>::InvalidSignCount);
 
     let first = &input_signs[0];
     // if just one element, `iter().all()` would return true
@@ -113,6 +121,6 @@ pub fn parse_and_check_signed_tx_impl<T: Config>(
         Ok(*first as u32)
     } else {
         // all inputs sigs count should be same, otherwise it's an invalid tx
-        Err(Error::<T>::InvalidSignCount.into())
+        Err(Error::<T, I>::InvalidSignCount.into())
     }
 }

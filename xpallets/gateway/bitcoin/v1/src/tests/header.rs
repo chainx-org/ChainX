@@ -4,10 +4,7 @@ use frame_support::{assert_noop, assert_ok};
 
 use light_bitcoin::{chain::BlockHeader, keys::Network, primitives::h256_rev, serialization};
 
-use crate::mock::{
-    generate_blocks_478557_478563, generate_blocks_576576_578692, ExtBuilder, XGatewayBitcoin,
-    XGatewayBitcoinErr,
-};
+use crate::mock::*;
 use crate::types::BtcHeaderIndex;
 
 #[test]

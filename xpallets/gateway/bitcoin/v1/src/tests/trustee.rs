@@ -1,6 +1,6 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use frame_support::{assert_noop, assert_ok, storage::StorageValue};
+use frame_support::{assert_noop, assert_ok, instances::Instance1};
 use frame_system::RawOrigin;
 use hex_literal::hex;
 
@@ -14,10 +14,7 @@ use light_bitcoin::{
 
 use xpallet_gateway_common::traits::TrusteeForChain;
 
-use crate::mock::{
-    alice, bob, AccountId, ExtBuilder, Test, XGatewayBitcoin, XGatewayBitcoinErr, XGatewayCommon,
-    XGatewayRecords, X_BTC,
-};
+use crate::mock::*;
 use crate::{
     trustee::create_multi_address,
     tx::validator::parse_and_check_signed_tx_impl,
@@ -98,8 +95,8 @@ fn test_create_multi_address() {
     cold_keys.push(Public::from_slice(&pubkey8_bytes).unwrap());
 
     ExtBuilder::default().build_and_execute(|| {
-        let hot_info = create_multi_address::<Test>(&hot_keys, 3).unwrap();
-        let cold_info = create_multi_address::<Test>(&cold_keys, 3).unwrap();
+        let hot_info = create_multi_address::<Test, Instance1>(&hot_keys, 3).unwrap();
+        let cold_info = create_multi_address::<Test, Instance1>(&cold_keys, 3).unwrap();
         let real_hot_addr = b"39eBWF3miGWb4CPiHw4MfsSwHcjtGq2pYL".to_vec();
         let real_cold_addr = b"3AWmpzJ1kSF1cktFTDEb3qmLcdN8YydxA7".to_vec();
         assert_eq!(hot_info.addr, real_hot_addr);
@@ -125,7 +122,7 @@ fn test_verify_signed() {
     let full_sig_tx = "010000000317840b38d466580696e9cb065c7a7aa55cb58cd5eb2526a10c3a30cc06d4b50a05000000fdfd0000483045022100dabbf878df8cacb23c08a8b5414cd64392a3f84777db4c01d8eec1e06d2e03fb0220502bd6e3960b68452699a40debfd92ac02e45d1526a2b570f5b28abdb496706401473044022047c58c3ad586d93f4b4caf65230a21e0ff70475b66affb8d4f92e916e6f6f664022029231b30472a949648dd99585ccbb169ccc2c007ad5387f580d41affdc8b37b6014c69522102df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6210244d81efeb4171b1a8a433b87dd202117f94e44c909c49e42e77b69b5a6ce7d0d2103a36339f413da869df12b1ab0def91749413a0dee87f0bfa85ba7196e6cdad10253aeffffffff853c87b1ecb4e881f323fec5314cb8623ca15de1341694e8352f99c434e7046a02000000fdfe0000483045022100b1b2233f70434f4079c1a8be1be5843b4dfe1edea30a3533aa94781af9984b2e02201ef78527ced51c7b122568666b9499d9cd2d4c3e704f5a54ebe433489c91b20101483045022100bde660b2f6f3c6fa512794377564289cbfcbeab6ecba1fe3b0b1531ebaa7d00a02207ea5435312280e0b502de715a6cbff7de866ba508a5fe8a644b88540ed471aee014c69522102df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6210244d81efeb4171b1a8a433b87dd202117f94e44c909c49e42e77b69b5a6ce7d0d2103a36339f413da869df12b1ab0def91749413a0dee87f0bfa85ba7196e6cdad10253aeffffffff442214a2d5a31195d6849005699892f60d48d89bca15bdb4ad6349c083e9936202000000fdfd000047304402205960c277575a7d2bb719211fe9cee0dd398c5a64d3a258fb0f877ae176dd11af02206cc0be53b1d5ea59477f9d2103ce06b61608561ac466c72235e86b26fe45734d01483045022100dcbd79d6f2d9504e2ea1578b7fdc9f98dadc018708acb4b87bd8b154312edfaa022043197a5b72219dc9603a81146a65c724a09022229ada2e3101a002dbd834b591014c69522102df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6210244d81efeb4171b1a8a433b87dd202117f94e44c909c49e42e77b69b5a6ce7d0d2103a36339f413da869df12b1ab0def91749413a0dee87f0bfa85ba7196e6cdad10253aeffffffff0340ebd201000000001976a9148e2fbed4fc7481a9a51f2bfe204301a122473f2f88ac406fdf25000000001976a914ede61104eddc07594f0c0cf43fecb9675353d16288ac91a3f6070000000017a914cb94110435d0635223eebe25ed2aaabc03781c458700000000".parse().unwrap();
     let script = "522102df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6210244d81efeb4171b1a8a433b87dd202117f94e44c909c49e42e77b69b5a6ce7d0d2103a36339f413da869df12b1ab0def91749413a0dee87f0bfa85ba7196e6cdad10253ae".parse().unwrap();
     ExtBuilder::default().build_and_execute(|| {
-        let result = parse_and_check_signed_tx_impl::<Test>(&full_sig_tx, script);
+        let result = parse_and_check_signed_tx_impl::<Test, Instance1>(&full_sig_tx, script);
         assert_eq!(result, Ok(2))
     });
 }
@@ -157,7 +154,7 @@ fn test_verify_tx_sign() {
             let bytes = hex::decode(tx_hex).unwrap();
             let tx: Transaction = serialization::deserialize(Reader::new(&bytes)).unwrap();
             let script = script_hex.parse().unwrap();
-            let got = parse_and_check_signed_tx_impl::<Test>(&tx, script);
+            let got = parse_and_check_signed_tx_impl::<Test, Instance1>(&tx, script);
             assert_eq!(got, Ok(expect));
         }
     });
@@ -167,7 +164,7 @@ fn test_verify_tx_sign() {
 fn force_replace_withdraw() {
     ExtBuilder::default().build_and_execute(|| {
         // test would ignore sign check and always return true
-        Verifier::<Test>::put(BtcTxVerifier::Test);
+        Verifier::<Test, Instance1>::put(BtcTxVerifier::Test);
 
         // https://btc.com/62c389f1974b8a44737d76f92da0f5cd7f6f48d065e7af6ba368298361141270.rawhex
         const RAW_TX: &str = "0100000001052ceda6cf9c93012a994f4ffa2a29c9e31ecf96f472b175eb8e602bfa2b2c5100000000fdfd000047304402200e4d732c456f4722d376252be16554edb27fc93c55db97859e16682bc62b014502202b9c4b01ad55daa1f76e6a564b7762cd0a81240c947806ab3f3b056f2e77c1da01483045022100c7cd680992de60da8c33fc3ef7f5ead85b204660822d9fbda2d85f9fadba732a022021fdc49b20a6007ea971a385732a4065d1d7c792ac9dc391034fb78aa9f5034b014c69522102df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6210244d81efeb4171b1a8a433b87dd202117f94e44c909c49e42e77b69b5a6ce7d0d2103a36339f413da869df12b1ab0def91749413a0dee87f0bfa85ba7196e6cdad10253aeffffffff03e0349500000000001976a91413256ff2dee6e80c275ddb877abc1ffe453a731488ace00f9700000000001976a914ea6e8dd56703ace584eb9dff0224629f8486672988acc88a02000000000017a914cb94110435d0635223eebe25ed2aaabc03781c458700000000";
@@ -206,7 +203,7 @@ fn force_replace_withdraw() {
             tx: old_withdraw.clone(),
             trustee_list: vec![(alice, true), (bob, true)],
         };
-        WithdrawalProposal::<Test>::put(proposal);
+        WithdrawalProposal::<Test, Instance1>::put(proposal);
 
         // replace tx
         let mut new_withdraw = old_withdraw;

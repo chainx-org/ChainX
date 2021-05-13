@@ -24,10 +24,10 @@ pub use self::header_proof::HeaderVerifier;
 ///           4              3     2    1       (confirmations)
 ///           97             98    99   100     (height)
 ///
-fn look_back_confirmed_header<T: Config>(
+fn look_back_confirmed_header<T: Config<I>, I: 'static>(
     header_info: &BtcHeaderInfo,
 ) -> (Option<BtcHeaderIndex>, Vec<BtcHeaderIndex>) {
-    let confirmations = Pallet::<T>::confirmation_number();
+    let confirmations = Pallet::<T, I>::confirmation_number();
     let mut chain = Vec::with_capacity(confirmations as usize);
     let mut prev_hash = header_info.header.previous_header_hash;
 
@@ -38,7 +38,7 @@ fn look_back_confirmed_header<T: Config>(
     });
     // e.g. when confirmations is 4, loop 3 times max
     for cnt in 1..confirmations {
-        if let Some(current_info) = Pallet::<T>::headers(&prev_hash) {
+        if let Some(current_info) = Pallet::<T, I>::headers(&prev_hash) {
             chain.push(BtcHeaderIndex {
                 hash: prev_hash,
                 height: current_info.height,
@@ -64,35 +64,39 @@ fn look_back_confirmed_header<T: Config>(
     }
 }
 
-pub fn update_confirmed_header<T: Config>(header_info: &BtcHeaderInfo) -> Option<BtcHeaderIndex> {
-    let (confirmed, chain) = look_back_confirmed_header::<T>(header_info);
+pub fn update_confirmed_header<T: Config<I>, I: 'static>(
+    header_info: &BtcHeaderInfo,
+) -> Option<BtcHeaderIndex> {
+    let (confirmed, chain) = look_back_confirmed_header::<T, I>(header_info);
     for index in chain {
-        set_main_chain::<T>(index.height, index.hash);
+        set_main_chain::<T, I>(index.height, index.hash);
     }
     confirmed.map(|index| {
-        ConfirmedIndex::<T>::put(index);
+        ConfirmedIndex::<T, I>::put(index);
         index
     })
 }
 
-fn set_main_chain<T: Config>(height: u32, main_hash: H256) {
-    let hashes = Pallet::<T>::block_hash_for(&height);
+fn set_main_chain<T: Config<I>, I: 'static>(height: u32, main_hash: H256) {
+    let hashes = Pallet::<T, I>::block_hash_for(&height);
     if hashes.len() == 1 {
-        MainChain::<T>::insert(&hashes[0], true);
+        MainChain::<T, I>::insert(&hashes[0], true);
         return;
     }
     for hash in hashes {
         if hash == main_hash {
-            MainChain::<T>::insert(&hash, true);
+            MainChain::<T, I>::insert(&hash, true);
         } else {
-            MainChain::<T>::remove(&hash);
+            MainChain::<T, I>::remove(&hash);
         }
     }
 }
 
-pub fn check_confirmed_header<T: Config>(header_info: &BtcHeaderInfo) -> DispatchResult {
-    let (confirmed, _) = look_back_confirmed_header::<T>(header_info);
-    if let Some(current_confirmed) = ConfirmedIndex::<T>::get() {
+pub fn check_confirmed_header<T: Config<I>, I: 'static>(
+    header_info: &BtcHeaderInfo,
+) -> DispatchResult {
+    let (confirmed, _) = look_back_confirmed_header::<T, I>(header_info);
+    if let Some(current_confirmed) = ConfirmedIndex::<T, I>::get() {
         if let Some(now_confirmed) = confirmed {
             return match current_confirmed.height.cmp(&now_confirmed.height) {
                 Ordering::Greater => {
@@ -120,7 +124,7 @@ pub fn check_confirmed_header<T: Config>(header_info: &BtcHeaderInfo) -> Dispatc
                         //  | --------- b(now_confirmed) --- b  ------ b --- b(now)
                         // 99              100       101  102    103
                         // current_confirmed = now_confirmed
-                        Err(Error::<T>::AncientFork.into())
+                        Err(Error::<T, I>::AncientFork.into())
                     }
                 }
                 Ordering::Less => {
@@ -130,7 +134,7 @@ pub fn check_confirmed_header<T: Config>(header_info: &BtcHeaderInfo) -> Dispatc
                         "[check_confirmed_header] Should not happen, current confirmed is less than confirmed for this header, \
                         current:{:?}, now:{:?}", current_confirmed, now_confirmed
                     );
-                    Err(Error::<T>::AncientFork.into())
+                    Err(Error::<T, I>::AncientFork.into())
                 }
             };
         }
