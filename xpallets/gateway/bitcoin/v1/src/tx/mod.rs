@@ -3,7 +3,7 @@
 mod secp256k1_verifier;
 pub mod validator;
 
-use frame_support::{dispatch::DispatchResult, log, StorageMap, StorageValue};
+use frame_support::{dispatch::DispatchResult, log};
 use sp_runtime::{traits::Zero, SaturatedConversion};
 use sp_std::prelude::*;
 

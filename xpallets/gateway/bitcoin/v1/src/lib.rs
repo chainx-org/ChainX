@@ -62,7 +62,7 @@ pub use pallet::*;
 #[macro_export]
 macro_rules! native {
     ($level:tt, $patter:expr $(, $values:expr)* $(,)?) => {
-        frame_support::debug::native::$level!(
+        frame_support::log::$level!(
             target: xp_logging::RUNTIME_TARGET,
             $patter $(, $values)*
         )
