@@ -13,7 +13,6 @@ jobs:
   rust:
     name: Rust
     runs-on: ${{ matrix.os }}
-
     strategy:
       fail-fast: false
       matrix:
@@ -47,20 +46,40 @@ jobs:
     - name: Format
       run: cargo fmt -- --check
 
-    - name: Clippy
-      if: matrix.os == 'ubuntu-latest'
-      run: cargo clippy
-
     - name: Test
       run: cargo test --workspace -- --test-threads 1
 
     - name: Compile
       run: cargo test --no-run
 
+  clippy:
+    name: Clippy
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        toolchain: [nightly]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: ${{ matrix.toolchain }}
+        target: wasm32-unknown-unknown
+        profile: minimal
+        override: true
+        components: rust-src, clippy
+
+    - name: Clippy
+      run: cargo clippy
+
   runtime_benchmarks:
     name: Runtime benchmarks
     runs-on: ${{ matrix.os }}
-
     strategy:
       fail-fast: false
       matrix:
