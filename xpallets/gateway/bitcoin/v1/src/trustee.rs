@@ -2,11 +2,7 @@
 
 use frame_support::{
     dispatch::{DispatchError, DispatchResult},
-<<<<<<< HEAD:xpallets/gateway/bitcoin/src/trustee.rs
-    ensure, log, StorageValue,
-=======
     ensure,
->>>>>>> develop:xpallets/gateway/bitcoin/v1/src/trustee.rs
 };
 use sp_runtime::SaturatedConversion;
 use sp_std::{convert::TryFrom, prelude::*};

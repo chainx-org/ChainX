@@ -3,11 +3,7 @@
 mod secp256k1_verifier;
 pub mod validator;
 
-<<<<<<< HEAD:xpallets/gateway/bitcoin/src/tx/mod.rs
 use frame_support::{dispatch::DispatchResult, log, StorageMap, StorageValue};
-=======
-use frame_support::{debug::native, dispatch::DispatchResult};
->>>>>>> develop:xpallets/gateway/bitcoin/v1/src/tx/mod.rs
 use sp_runtime::{traits::Zero, SaturatedConversion};
 use sp_std::prelude::*;
 

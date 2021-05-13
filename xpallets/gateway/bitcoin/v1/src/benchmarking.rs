@@ -19,13 +19,7 @@ use light_bitcoin::{
     serialization::{self, Reader},
 };
 
-<<<<<<< HEAD:xpallets/gateway/bitcoin/src/benchmarking.rs
-use crate::{
-    types::*, Call, Config, Pallet, PendingDeposits, TxState, Verifier, WithdrawalProposal,
-};
-=======
 use crate::{types::*, *};
->>>>>>> develop:xpallets/gateway/bitcoin/v1/src/benchmarking.rs
 
 const ASSET_ID: AssetId = xp_protocol::X_BTC;
 
