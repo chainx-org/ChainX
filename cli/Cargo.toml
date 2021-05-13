@@ -8,12 +8,7 @@ edition = "2018"
 [dependencies]
 futures = "0.3.4"
 log = "0.4.8"
-log4rs = { version = "0.12", features = [
-  "rolling_file_appender",
-  "compound_policy",
-  "size_trigger",
-  "fixed_window_roller",
-] }
+log4rs = { version = "0.12", features = [ "rolling_file_appender", "compound_policy", "size_trigger", "fixed_window_roller" ] }
 hex = "0.4"
 hex-literal = "0.3.1"
 jsonrpc-pubsub = "15.0.0"
