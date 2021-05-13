@@ -24,14 +24,15 @@ pub mod weights;
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult},
-    ensure, IterableStorageMap,
+    ensure,
+    log::{error, info},
+    IterableStorageMap,
 };
 use frame_system::{ensure_root, ensure_signed};
 use sp_runtime::traits::StaticLookup;
 use sp_std::{collections::btree_map::BTreeMap, convert::TryFrom, prelude::*};
 
 use chainx_primitives::{AddrStr, AssetId, ChainAddress, Text};
-use log::{error, info};
 use xp_runtime::Memo;
 use xpallet_assets::{AssetRestrictions, BalanceOf, Chain, ChainT, WithdrawalLimit};
 use xpallet_gateway_records::{WithdrawalRecordId, WithdrawalState};

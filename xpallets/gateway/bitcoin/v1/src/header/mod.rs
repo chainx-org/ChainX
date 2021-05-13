@@ -2,12 +2,11 @@
 
 mod header_proof;
 
+use frame_support::log::{error, info};
 use sp_runtime::DispatchResult;
 use sp_std::{cmp::Ordering, prelude::*};
 
 use light_bitcoin::primitives::{hash_rev, H256};
-
-use log::{error, info};
 
 use crate::types::{BtcHeaderIndex, BtcHeaderInfo};
 use crate::{Config, ConfirmedIndex, Error, MainChain, Pallet};

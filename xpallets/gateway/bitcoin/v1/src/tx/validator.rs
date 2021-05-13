@@ -3,12 +3,11 @@
 use frame_support::{
     dispatch::{DispatchError, DispatchResult},
     ensure,
+    log::{debug, error},
 };
 use sp_std::prelude::Vec;
 
 use light_bitcoin::{chain::Transaction, primitives::H256, script::Script};
-
-use log::{debug, error};
 
 use crate::{trustee::get_hot_trustee_redeem_script, types::BtcRelayedTx, Config, Error};
 

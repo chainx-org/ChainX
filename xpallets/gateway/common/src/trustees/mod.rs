@@ -2,10 +2,13 @@
 
 pub mod bitcoin;
 
-use frame_support::{dispatch::DispatchError, traits::SortedMembers};
+use frame_support::{
+    dispatch::DispatchError,
+    log::{error, warn},
+    traits::SortedMembers,
+};
 use sp_std::{convert::TryFrom, marker::PhantomData, prelude::*};
 
-use log::{error, warn};
 use xpallet_assets::Chain;
 use xpallet_support::traits::MultiSig;
 

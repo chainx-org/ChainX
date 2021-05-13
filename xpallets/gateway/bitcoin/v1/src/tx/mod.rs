@@ -3,7 +3,10 @@
 mod secp256k1_verifier;
 pub mod validator;
 
-use frame_support::{dispatch::DispatchResult, log};
+use frame_support::{
+    dispatch::DispatchResult,
+    log::{self, debug, error, info, warn},
+};
 use sp_runtime::{traits::Zero, SaturatedConversion};
 use sp_std::prelude::*;
 
@@ -14,7 +17,6 @@ use light_bitcoin::{
 };
 
 use chainx_primitives::AssetId;
-use log::{debug, error, info, warn};
 use xp_gateway_bitcoin::{BtcDepositInfo, BtcTxMetaType, BtcTxTypeDetector};
 use xp_gateway_common::AccountExtractor;
 use xpallet_assets::ChainT;

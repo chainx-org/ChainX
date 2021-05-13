@@ -1,6 +1,7 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 use super::*;
+use frame_support::log;
 
 impl<T: Config> Module<T> {
     /// Returns a new validator set for the new era.

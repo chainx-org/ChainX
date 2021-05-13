@@ -1,7 +1,6 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 use super::*;
-use log::debug;
 use xp_mining_staking::SessionIndex;
 
 mod proposal09;

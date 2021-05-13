@@ -31,6 +31,7 @@ use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult},
     ensure,
+    log::{debug, error, info},
     traits::{Currency, Get, HandleLifetime, LockableCurrency, ReservableCurrency},
     Parameter, StorageDoubleMap,
 };
@@ -41,7 +42,6 @@ use sp_runtime::traits::{
 };
 
 use chainx_primitives::AssetId;
-use log::{debug, error, info};
 pub use xpallet_assets_registrar::{AssetInfo, Chain};
 use xpallet_support::traits::TreasuryAccount;
 

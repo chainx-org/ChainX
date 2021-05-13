@@ -21,6 +21,7 @@ use sp_std::prelude::*;
 
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
+    log::warn,
     dispatch::{DispatchError, DispatchResult},
     ensure,
     storage::IterableStorageMap,
@@ -30,7 +31,6 @@ use frame_system::{ensure_root, ensure_signed};
 use sp_runtime::traits::{SaturatedConversion, Zero};
 
 use chainx_primitives::AssetId;
-use log::warn;
 use xp_mining_common::{
     Claim, ComputeMiningWeight, MiningWeight as _, RewardPotAccountFor, WeightType,
     ZeroMiningWeightError,

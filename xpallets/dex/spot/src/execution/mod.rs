@@ -4,7 +4,7 @@ mod asset;
 mod order;
 mod state;
 
-use log::debug;
+use frame_support::log::debug;
 
 use super::*;
 use crate::types::*;

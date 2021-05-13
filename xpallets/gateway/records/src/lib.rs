@@ -18,6 +18,7 @@ use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult},
     ensure, IterableStorageMap,
+    log::{error, info},
 };
 use frame_system::ensure_root;
 use sp_runtime::traits::StaticLookup;
@@ -25,7 +26,6 @@ use sp_runtime::traits::StaticLookup;
 use orml_utilities::with_transaction_result;
 
 use chainx_primitives::{AddrStr, AssetId};
-use log::{error, info};
 use xp_runtime::Memo;
 use xpallet_assets::{AssetType, BalanceOf, Chain};
 use xpallet_support::try_addr;

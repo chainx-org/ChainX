@@ -1,10 +1,12 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use frame_support::{IterableStorageDoubleMap, StorageDoubleMap};
+use frame_support::{
+    log::{debug, error, info, warn},
+    IterableStorageDoubleMap, StorageDoubleMap,
+};
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
 use chainx_primitives::{AssetId, ChainAddress, ReferralId};
-use log::{debug, error, info, warn};
 use xpallet_assets::Chain;
 use xpallet_support::{traits::Validator, try_addr, try_str};
 

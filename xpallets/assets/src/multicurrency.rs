@@ -8,6 +8,7 @@ use sp_std::{convert::TryInto, prelude::*};
 
 use frame_support::{
     ensure,
+    log::error,
     traits::{BalanceStatus, LockIdentifier},
     transactional, IterableStorageDoubleMap,
 };
@@ -18,7 +19,6 @@ use orml_traits::{
 };
 
 use chainx_primitives::AssetId;
-use log::error;
 use xpallet_support::traits::TreasuryAccount;
 
 use crate::types::{AssetType, BalanceLock};

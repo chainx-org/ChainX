@@ -1,6 +1,10 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use frame_support::{dispatch::DispatchResult, traits::UnixTime};
+use frame_support::{
+    dispatch::DispatchResult,
+    log::{debug, error, info, warn},
+    traits::UnixTime,
+};
 use sp_runtime::RuntimeDebug;
 use sp_std::{cmp, convert::TryFrom};
 
@@ -9,8 +13,6 @@ use light_bitcoin::{
     keys::Network,
     primitives::{hash_rev, Compact, H256, U256},
 };
-
-use log::{debug, error, info, warn};
 
 use crate::types::{BtcHeaderInfo, BtcParams};
 use crate::{Config, Error, Pallet};
