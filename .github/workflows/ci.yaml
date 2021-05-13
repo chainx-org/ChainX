@@ -10,8 +10,28 @@ env:
   RUSTUP_MAX_RETRIES: 10
 
 jobs:
-  rust:
-    name: Rust
+  rustfmt:
+    name: Rustfmt
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        toolchain: [nightly]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+      uses: actions-rs/toolchain@v1
+      with:
+        components: rustfmt
+
+    - name: Format
+      run: cargo fmt -- --check
+
+  test:
+    name: Test
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -30,7 +50,6 @@ jobs:
         target: wasm32-unknown-unknown
         profile: minimal
         override: true
-        components: rustfmt, rust-src, clippy
 
     - if: matrix.os == 'ubuntu-latest'
       run: sudo chown -R $(whoami):$(id -ng) ~/.cargo/
@@ -42,9 +61,6 @@ jobs:
           ~/.cargo/git
           target
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-    - name: Format
-      run: cargo fmt -- --check
 
     - name: Test
       run: cargo test --workspace -- --test-threads 1
