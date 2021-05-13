@@ -13,7 +13,7 @@ use light_bitcoin::{
 use log::{debug, error, info, warn};
 
 use crate::types::{BtcHeaderInfo, BtcParams};
-use crate::{Config, Error, Module};
+use crate::{Config, Error, Pallet};
 
 pub struct HeaderVerifier<'a> {
     pub work: HeaderWork<'a>,
@@ -36,8 +36,8 @@ impl<'a> HeaderVerifier<'a> {
     }
 
     pub fn check<T: Config>(&self) -> DispatchResult {
-        let params: BtcParams = Module::<T>::params_info();
-        let network_id: Network = Module::<T>::network_id();
+        let params: BtcParams = Pallet::<T>::params_info();
+        let network_id: Network = Pallet::<T>::network_id();
         if let Network::Mainnet = network_id {
             self.work.check::<T>(&params)?;
         }
@@ -94,7 +94,7 @@ pub fn work_required<T: Config>(
         return RequiredWork::Value(max_bits);
     }
 
-    let parent_header: BtcHeader = Module::<T>::headers(&parent_hash)
+    let parent_header: BtcHeader = Pallet::<T>::headers(&parent_hash)
         .expect("pre header must exist here")
         .header;
 
@@ -130,17 +130,17 @@ fn work_required_retarget<T: Config>(
     // bits of last block
     let last_bits = parent_header.bits;
 
-    let (_, genesis_height) = Module::<T>::genesis_info();
+    let (_, genesis_height) = Pallet::<T>::genesis_info();
     let mut retarget_header = parent_header;
     if retarget_num < genesis_height {
         // retarget_header = genesis_header;
         return RequiredWork::NotCheck;
     } else {
-        let hash_list = Module::<T>::block_hash_for(&retarget_num);
+        let hash_list = Pallet::<T>::block_hash_for(&retarget_num);
         for h in hash_list {
             // look up in main chain
-            if Module::<T>::main_chain(h) {
-                let info = Module::<T>::headers(h).expect("block header must exist at here.");
+            if Pallet::<T>::main_chain(h) {
+                let info = Pallet::<T>::headers(h).expect("block header must exist at here.");
                 retarget_header = info.header;
                 break;
             };
