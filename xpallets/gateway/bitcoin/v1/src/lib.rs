@@ -408,53 +408,65 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn best_index)]
     pub(crate) type BestIndex<T: Config> = StorageValue<_, BtcHeaderIndex, ValueQuery>;
+
     /// confirmed header info
     #[pallet::storage]
     #[pallet::getter(fn confirmed_index)]
     pub(crate) type ConfirmedIndex<T: Config> = StorageValue<_, BtcHeaderIndex>;
+
     /// block hash list for a height, include forked header hash
     #[pallet::storage]
     #[pallet::getter(fn block_hash_for)]
     pub(crate) type BlockHashFor<T: Config> =
         StorageMap<_, Twox64Concat, u32, Vec<H256>, ValueQuery>;
+
     /// mark this blockhash is in mainchain
     #[pallet::storage]
     #[pallet::getter(fn main_chain)]
     pub(crate) type MainChain<T: Config> = StorageMap<_, Identity, H256, bool, ValueQuery>;
+
     /// all valid blockheader (include forked blockheader)
     #[pallet::storage]
     #[pallet::getter(fn headers)]
     pub(crate) type Headers<T: Config> = StorageMap<_, Identity, H256, BtcHeaderInfo>;
+
     /// mark tx has been handled, in case re-handle this tx, and log handle result
     #[pallet::storage]
     #[pallet::getter(fn tx_state)]
     pub(crate) type TxState<T: Config> = StorageMap<_, Identity, H256, BtcTxState>;
+
     /// unclaimed deposit info, addr => tx_hash, btc value,
     #[pallet::storage]
     #[pallet::getter(fn pending_deposits)]
     pub(crate) type PendingDeposits<T: Config> =
         StorageMap<_, Blake2_128Concat, BtcAddress, Vec<BtcDepositCache>, ValueQuery>;
+
     /// withdrawal tx outs for account, tx_hash => outs ( out index => withdrawal account )
     #[pallet::storage]
     #[pallet::getter(fn withdrawal_proposal)]
     pub(crate) type WithdrawalProposal<T: Config> =
         StorageValue<_, BtcWithdrawalProposal<T::AccountId>>;
+
     /// get GenesisInfo (header, height)
     #[pallet::storage]
     #[pallet::getter(fn genesis_info)]
     pub(crate) type GenesisInfo<T: Config> = StorageValue<_, (BtcHeader, u32), ValueQuery>;
+
     /// get ParamsInfo from genesis_config
     #[pallet::storage]
     #[pallet::getter(fn params_info)]
     pub(crate) type ParamsInfo<T: Config> = StorageValue<_, BtcParams, ValueQuery>;
+
     ///  NetworkId for testnet or mainnet
     #[pallet::storage]
     #[pallet::getter(fn network_id)]
     pub(crate) type NetworkId<T: Config> = StorageValue<_, BtcNetwork, ValueQuery>;
+
     /// get ConfirmationNumber from genesis_config
     #[pallet::storage]
     #[pallet::getter(fn confirmation_number)]
     pub(crate) type ConfirmationNumber<T: Config> = StorageValue<_, u32, ValueQuery>;
+
     /// get BtcWithdrawalFee from genesis_config
     #[pallet::storage]
     #[pallet::getter(fn btc_withdrawal_fee)]
@@ -463,15 +475,18 @@ pub mod pallet {
     pub fn DefaultForMinDeposit<T: Config>() -> u64 {
         1 * 100000
     }
+
     /// min deposit value limit, default is 10w sotashi(0.001 BTC)
     #[pallet::storage]
     #[pallet::getter(fn btc_min_deposit)]
     pub(crate) type BtcMinDeposit<T: Config> =
         StorageValue<_, u64, ValueQuery, DefaultForMinDeposit<T>>;
+
     /// max withdraw account count in bitcoin withdrawal transaction
     #[pallet::storage]
     #[pallet::getter(fn max_withdrawal_count)]
     pub(crate) type MaxWithdrawalCount<T: Config> = StorageValue<_, u32, ValueQuery>;
+
     #[pallet::storage]
     #[pallet::getter(fn verifier)]
     pub(crate) type Verifier<T: Config> = StorageValue<_, BtcTxVerifier, ValueQuery>;
