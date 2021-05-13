@@ -25,17 +25,24 @@ const ASSET_TYPES: [AssetType; 5] = [
     AssetType::ReservedDexSpot,
 ];
 
-/// Concrete type of asset balance.
+/// Concrete type of non-native asset balance.
+///
+/// NOTE: The native token also reserves an AssetId in this module, but it's
+/// handle by Balances runtime module in fact.
 #[derive(PartialEq, PartialOrd, Ord, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum AssetType {
     /// Free balance.
     Usable,
-    /// For the
+    /// Placeholder for the future use.
+    ///
+    /// Unused for now.
     Locked,
+    /// General reserved balance.
+    ///
     /// Unused for now.
     Reserved,
-    /// Reserved balance in gateway::records.
+    /// Reserved balance when an account redeems its bridged asset.
     ReservedWithdrawal,
     /// Reserved balance for creating order in DEX.
     ReservedDexSpot,

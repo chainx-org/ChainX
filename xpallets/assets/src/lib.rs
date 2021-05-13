@@ -62,7 +62,7 @@ pub trait Config: xpallet_assets_registrar::Config {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 
-    /// The native balance.
+    /// The native currency.
     type Currency: ReservableCurrency<Self::AccountId>
         + LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
 
@@ -345,29 +345,34 @@ impl<T: Config> Module<T> {
     }
 }
 
-// public read interface
+// Public read functions.
 impl<T: Config> Module<T> {
+    /// Returns the total issuance of asset `id` by far.
     pub fn total_issuance(id: &AssetId) -> BalanceOf<T> {
         let map = Self::total_asset_balance(id);
         map.values().fold(Zero::zero(), |acc, &x| acc + x)
     }
 
-    pub fn total_asset_balance_of(id: &AssetId, type_: AssetType) -> BalanceOf<T> {
+    /// Returns the total balance of asset `id` given the specific asset type `ty`.
+    pub fn total_asset_balance_of(id: &AssetId, ty: AssetType) -> BalanceOf<T> {
         Self::total_asset_balance(id)
-            .get(&type_)
+            .get(&ty)
             .copied()
             .unwrap_or_default()
     }
 
+    /// Returns the sum of all kinds of `who`'s balances given asset `id`.
     pub fn all_type_asset_balance(who: &T::AccountId, id: &AssetId) -> BalanceOf<T> {
         let map = Self::asset_balance(who, id);
         map.values().fold(Zero::zero(), |acc, &x| acc + x)
     }
 
-    pub fn asset_balance_of(who: &T::AccountId, id: &AssetId, type_: AssetType) -> BalanceOf<T> {
-        Self::asset_typed_balance(who, id, type_)
+    /// Returns the balance of `who` given the asset `id` and type `ty`.
+    pub fn asset_balance_of(who: &T::AccountId, id: &AssetId, ty: AssetType) -> BalanceOf<T> {
+        Self::asset_typed_balance(who, id, ty)
     }
 
+    /// Returns the free balance of `who` for asset `id`.
     pub fn usable_balance(who: &T::AccountId, id: &AssetId) -> BalanceOf<T> {
         Self::asset_typed_balance(who, id, AssetType::Usable)
     }
@@ -386,7 +391,7 @@ impl<T: Config> Module<T> {
     }
 }
 
-// public write interface
+// Public write functions.
 impl<T: Config> Module<T> {
     /// Sets the free balance of `who` without sanity checks and triggering the asset changed hook.
     #[cfg(feature = "std")]
@@ -394,6 +399,7 @@ impl<T: Config> Module<T> {
         Self::make_type_balance_be(who, id, AssetType::Usable, value);
     }
 
+    /// Increases the Usable balance of `who` given the asset `id` by this `value`.
     pub fn issue(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
         Self::ensure_not_native_asset(id)?;
         xpallet_assets_registrar::Module::<T>::ensure_asset_is_valid(id)?;
