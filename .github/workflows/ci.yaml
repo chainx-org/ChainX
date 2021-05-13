@@ -78,7 +78,7 @@ jobs:
       run: cargo clippy
 
   runtime_benchmarks:
-    name: Runtime benchmarks
+    name: Runtime Benchmarks
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -97,7 +97,6 @@ jobs:
         target: wasm32-unknown-unknown
         profile: minimal
         override: true
-        components: rustfmt, rust-src, clippy
 
     - name: Runtime benchmarks
       run: cargo test --no-run --features runtime-benchmarks
