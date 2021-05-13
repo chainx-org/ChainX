@@ -513,7 +513,7 @@ pub mod pallet {
         pub btc_withdrawal_fee: u64,
         pub max_withdrawal_count: u32,
         pub verifier: BtcTxVerifier,
-        pub(crate) _marker: sp_std::marker::PhantomData<I>,
+        pub _marker: sp_std::marker::PhantomData<I>,
     }
 
     #[cfg(feature = "std")]
