@@ -528,12 +528,12 @@ pub mod pallet {
             let genesis_hash = &self.genesis_hash.clone();
             let (genesis_header, genesis_height) = &self.genesis_info.clone();
             let genesis_index = BtcHeaderIndex {
-                hash: genesis_hash,
+                hash: *genesis_hash,
                 height: genesis_height.clone(),
             };
             let header_info = BtcHeaderInfo {
-                header: genesis_header,
-                height: genesis_height,
+                header: *genesis_header,
+                height: *genesis_height,
             };
 
             Headers::<T>::insert(&self.genesis_hash.clone(), header_info);
