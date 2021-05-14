@@ -27,7 +27,7 @@ use crate::{
     BalanceOf, Config, Error, Event, Pallet, PendingDeposits, WithdrawalProposal,
 };
 
-pub fn process_tx<T: Config>(
+pub fn process_tx<T: Config<I>, I: 'static>(
     tx: Transaction,
     prev_tx: Option<Transaction>,
     network: Network,
@@ -46,8 +46,8 @@ pub fn process_tx<T: Config>(
 
     let tx_type = meta_type.ref_into();
     let result = match meta_type {
-        BtcTxMetaType::<_>::Deposit(deposit_info) => deposit::<T>(tx.hash(), deposit_info),
-        BtcTxMetaType::<_>::Withdrawal => withdraw::<T>(tx),
+        BtcTxMetaType::<_>::Deposit(deposit_info) => deposit::<T, I>(tx.hash(), deposit_info),
+        BtcTxMetaType::<_>::Withdrawal => withdraw::<T, I>(tx),
         BtcTxMetaType::HotAndCold | BtcTxMetaType::TrusteeTransition => BtcTxResult::Success,
         // mark `Irrelevance` be `Failure` so that it could be replayed in the future
         BtcTxMetaType::<_>::Irrelevance => BtcTxResult::Failure,
@@ -56,14 +56,17 @@ pub fn process_tx<T: Config>(
     BtcTxState { tx_type, result }
 }
 
-fn deposit<T: Config>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) -> BtcTxResult {
+fn deposit<T: Config<I>, I: 'static>(
+    txid: H256,
+    deposit_info: BtcDepositInfo<T::AccountId>,
+) -> BtcTxResult {
     let account_info = match (deposit_info.op_return, deposit_info.input_addr) {
         (Some((account, referral)), Some(input_addr)) => {
             let input_addr = addr2vecu8(&input_addr);
             // remove old unbinding deposit info
-            remove_pending_deposit::<T>(&input_addr, &account);
+            remove_pending_deposit::<T, I>(&input_addr, &account);
             // update or override binding info
-            T::AddressBinding::update_binding(Pallet::<T>::chain(), input_addr, account.clone());
+            T::AddressBinding::update_binding(Pallet::<T, I>::chain(), input_addr, account.clone());
             AccountInfo::<T::AccountId>::Account((account, referral))
         }
         (Some((account, referral)), None) => {
@@ -78,7 +81,7 @@ fn deposit<T: Config>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) ->
         (None, Some(input_addr)) => {
             // no opreturn but have input addr, use input addr to get accountid
             let addr_bytes = addr2vecu8(&input_addr);
-            match T::AddressBinding::address(Pallet::<T>::chain(), addr_bytes) {
+            match T::AddressBinding::address(Pallet::<T, I>::chain(), addr_bytes) {
                 Some(account) => AccountInfo::Account((account, None)),
                 None => AccountInfo::Address(input_addr),
             }
@@ -95,11 +98,11 @@ fn deposit<T: Config>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) ->
     match account_info {
         AccountInfo::<_>::Account((account, referral)) => {
             T::ReferralBinding::update_binding(
-                &<Pallet<T> as ChainT<_>>::ASSET_ID,
+                &<Pallet<T, I> as ChainT<_>>::ASSET_ID,
                 &account,
                 referral,
             );
-            match deposit_token::<T>(txid, &account, deposit_info.deposit_value) {
+            match deposit_token::<T, I>(txid, &account, deposit_info.deposit_value) {
                 Ok(_) => {
                     info!(
                         "[deposit] Deposit tx ({:?}) success, who:{:?}, balance:{}",
@@ -113,7 +116,7 @@ fn deposit<T: Config>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) ->
             }
         }
         AccountInfo::<_>::Address(input_addr) => {
-            insert_pending_deposit::<T>(&input_addr, txid, deposit_info.deposit_value);
+            insert_pending_deposit::<T, I>(&input_addr, txid, deposit_info.deposit_value);
             info!(
                 "[deposit] Deposit tx ({:?}) into pending, addr:{:?}, balance:{}",
                 hash_rev(txid),
@@ -125,13 +128,17 @@ fn deposit<T: Config>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) ->
     }
 }
 
-fn deposit_token<T: Config>(txid: H256, who: &T::AccountId, balance: u64) -> DispatchResult {
-    let id: AssetId = <Pallet<T> as ChainT<_>>::ASSET_ID;
+fn deposit_token<T: Config<I>, I: 'static>(
+    txid: H256,
+    who: &T::AccountId,
+    balance: u64,
+) -> DispatchResult {
+    let id: AssetId = <Pallet<T, I> as ChainT<_>>::ASSET_ID;
 
     let value: BalanceOf<T> = balance.saturated_into();
     match <xpallet_gateway_records::Module<T>>::deposit(&who, id, value) {
         Ok(()) => {
-            Pallet::<T>::deposit_event(Event::<T>::Deposited(txid, who.clone(), value));
+            Pallet::<T, I>::deposit_event(Event::<T, I>::Deposited(txid, who.clone(), value));
             Ok(())
         }
         Err(err) => {
@@ -144,18 +151,21 @@ fn deposit_token<T: Config>(txid: H256, who: &T::AccountId, balance: u64) -> Dis
     }
 }
 
-pub fn remove_pending_deposit<T: Config>(input_address: &BtcAddress, who: &T::AccountId) {
+pub fn remove_pending_deposit<T: Config<I>, I: 'static>(
+    input_address: &BtcAddress,
+    who: &T::AccountId,
+) {
     // notice this would delete this cache
-    let records = PendingDeposits::<T>::take(input_address);
+    let records = PendingDeposits::<T, I>::take(input_address);
     for record in records {
         // ignore error
-        let _ = deposit_token::<T>(record.txid, who, record.balance);
+        let _ = deposit_token::<T, I>(record.txid, who, record.balance);
         info!(
             "[remove_pending_deposit] Use pending info to re-deposit, who:{:?}, balance:{}, cached_tx:{:?}",
             who, record.balance, record.txid,
         );
 
-        Pallet::<T>::deposit_event(Event::<T>::PendingDepositRemoved(
+        Pallet::<T, I>::deposit_event(Event::<T, I>::PendingDepositRemoved(
             who.clone(),
             record.balance.saturated_into(),
             record.txid,
@@ -164,12 +174,16 @@ pub fn remove_pending_deposit<T: Config>(input_address: &BtcAddress, who: &T::Ac
     }
 }
 
-fn insert_pending_deposit<T: Config>(input_address: &Address, txid: H256, balance: u64) {
+fn insert_pending_deposit<T: Config<I>, I: 'static>(
+    input_address: &Address,
+    txid: H256,
+    balance: u64,
+) {
     let addr_bytes = addr2vecu8(input_address);
 
     let cache = BtcDepositCache { txid, balance };
 
-    PendingDeposits::<T>::mutate(&addr_bytes, |list| {
+    PendingDeposits::<T, I>::mutate(&addr_bytes, |list| {
         if !list.contains(&cache) {
             log::debug!(
                 target: "runtime::bitcoin",
@@ -180,13 +194,16 @@ fn insert_pending_deposit<T: Config>(input_address: &Address, txid: H256, balanc
             );
             list.push(cache);
 
-            Pallet::<T>::deposit_event(Event::<T>::UnclaimedDeposit(txid, addr_bytes.clone()));
+            Pallet::<T, I>::deposit_event(Event::<T, I>::UnclaimedDeposit(
+                txid,
+                addr_bytes.clone(),
+            ));
         }
     });
 }
 
-fn withdraw<T: Config>(tx: Transaction) -> BtcTxResult {
-    if let Some(proposal) = WithdrawalProposal::<T>::take() {
+fn withdraw<T: Config<I>, I: 'static>(tx: Transaction) -> BtcTxResult {
+    if let Some(proposal) = WithdrawalProposal::<T, I>::take() {
         log::debug!(
             target: "runtime::bitcoin",
             "[withdraw] Withdraw tx {:?}, proposal:{:?}",
@@ -219,11 +236,11 @@ fn withdraw<T: Config>(tx: Transaction) -> BtcTxResult {
                 }
             }
 
-            let btc_withdrawal_fee = Pallet::<T>::btc_withdrawal_fee();
+            let btc_withdrawal_fee = Pallet::<T, I>::btc_withdrawal_fee();
             // real withdraw value would reduce withdraw_fee
             total -=
                 (proposal.withdrawal_id_list.len() as u64 * btc_withdrawal_fee).saturated_into();
-            Pallet::<T>::deposit_event(Event::<T>::Withdrawn(
+            Pallet::<T, I>::deposit_event(Event::<T, I>::Withdrawn(
                 tx_hash,
                 proposal.withdrawal_id_list,
                 total,
@@ -235,9 +252,12 @@ fn withdraw<T: Config>(tx: Transaction) -> BtcTxResult {
                 tx_hash, proposal_hash, proposal.withdrawal_id_list
             );
             // re-store proposal into storage.
-            WithdrawalProposal::<T>::put(proposal);
+            WithdrawalProposal::<T, I>::put(proposal);
 
-            Pallet::<T>::deposit_event(Event::<T>::WithdrawalFatalErr(proposal_hash, tx_hash));
+            Pallet::<T, I>::deposit_event(Event::<T, I>::WithdrawalFatalErr(
+                proposal_hash,
+                tx_hash,
+            ));
             BtcTxResult::Failure
         }
     } else {
@@ -246,7 +266,7 @@ fn withdraw<T: Config>(tx: Transaction) -> BtcTxResult {
             tx.hash()
         );
         // no proposal, but find a withdraw tx, it's a fatal error in withdrawal
-        Pallet::<T>::deposit_event(Event::<T>::WithdrawalFatalErr(
+        Pallet::<T, I>::deposit_event(Event::<T, I>::WithdrawalFatalErr(
             tx.hash(),
             Default::default(),
         ));
@@ -256,7 +276,10 @@ fn withdraw<T: Config>(tx: Transaction) -> BtcTxResult {
 }
 
 /// Returns Ok if `tx1` and `tx2` are the same transaction.
-pub fn ensure_identical<T: Config>(tx1: &Transaction, tx2: &Transaction) -> DispatchResult {
+pub fn ensure_identical<T: Config<I>, I: 'static>(
+    tx1: &Transaction,
+    tx2: &Transaction,
+) -> DispatchResult {
     if tx1.version == tx2.version
         && tx1.outputs == tx2.outputs
         && tx1.lock_time == tx2.lock_time
@@ -272,7 +295,7 @@ pub fn ensure_identical<T: Config>(tx1: &Transaction, tx2: &Transaction) -> Disp
                     tx1,
                     tx2
                 );
-                return Err(Error::<T>::MismatchedTx.into());
+                return Err(Error::<T, I>::MismatchedTx.into());
             }
         }
         return Ok(());
@@ -281,7 +304,7 @@ pub fn ensure_identical<T: Config>(tx1: &Transaction, tx2: &Transaction) -> Disp
         target: xp_logging::RUNTIME_TARGET,
         "The transaction text does not match the original text to be signed",
     );
-    Err(Error::<T>::MismatchedTx.into())
+    Err(Error::<T, I>::MismatchedTx.into())
 }
 
 #[inline]

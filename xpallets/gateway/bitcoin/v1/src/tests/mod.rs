@@ -10,7 +10,7 @@ use xp_gateway_common::AccountExtractor;
 
 use light_bitcoin::script::Script;
 
-use crate::mock::{Test, XGatewayBitcoin};
+use crate::mock::*;
 use crate::Config;
 
 #[test]

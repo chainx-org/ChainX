@@ -51,7 +51,7 @@ impl Signature {
     }
 }
 
-pub fn verify_sig_impl<T: Config>(
+pub fn verify_sig_impl<T: Config<I>, I: 'static>(
     sig: &Bytes,
     pubkey: &Bytes,
     tx: &Transaction,
@@ -60,15 +60,16 @@ pub fn verify_sig_impl<T: Config>(
 ) -> DispatchResult {
     let tx_signer: TransactionInputSigner = tx.clone().into();
     // TODO WARNNING!!! when support WitnessV0, the `input_amount` must set value
-    let checker = TransactionSignatureChecker::<T> {
+    let checker = TransactionSignatureChecker::<T, I> {
         input_index: index,
         input_amount: 0,
         signer: tx_signer,
         _marker: Default::default(),
     };
     let sighashtype = 1; // Sighsh all
-    let signature = Signature::parse_der_lax(sig).map_err(|_| Error::<T>::ConstructBadSign)?;
-    let pubkey = Public::try_from(pubkey.as_slice()).map_err(|_| Error::<T>::InvalidPublicKey)?;
+    let signature = Signature::parse_der_lax(sig).map_err(|_| Error::<T, I>::ConstructBadSign)?;
+    let pubkey =
+        Public::try_from(pubkey.as_slice()).map_err(|_| Error::<T, I>::InvalidPublicKey)?;
 
     let script_code: Script = script_pubkey.clone().into();
     checker.check_signature(
@@ -80,14 +81,14 @@ pub fn verify_sig_impl<T: Config>(
     )
 }
 
-pub struct TransactionSignatureChecker<T: Config> {
+pub struct TransactionSignatureChecker<T: Config<I>, I: 'static> {
     pub signer: TransactionInputSigner,
     pub input_index: usize,
     pub input_amount: u64,
-    _marker: sp_std::marker::PhantomData<T>,
+    _marker: sp_std::marker::PhantomData<(T, I)>,
 }
 
-impl<T: Config> TransactionSignatureChecker<T> {
+impl<T: Config<I>, I: 'static> TransactionSignatureChecker<T, I> {
     fn check_signature(
         &self,
         signature: &Signature,
@@ -116,28 +117,28 @@ impl<T: Config> TransactionSignatureChecker<T> {
         let mut sig: [u8; 65] = [0; 65];
         (&mut sig[0..64]).copy_from_slice(&signature.serialize());
 
-        fn convert<T: Config>(e: EcdsaVerifyError) -> Error<T> {
+        fn convert<T: Config<I>, I: 'static>(e: EcdsaVerifyError) -> Error<T, I> {
             match e {
-                EcdsaVerifyError::BadRS | EcdsaVerifyError::BadV => Error::<T>::ConstructBadSign,
-                EcdsaVerifyError::BadSignature => Error::<T>::BadSignature,
+                EcdsaVerifyError::BadRS | EcdsaVerifyError::BadV => Error::<T, I>::ConstructBadSign,
+                EcdsaVerifyError::BadSignature => Error::<T, I>::BadSignature,
             }
         }
 
         // try recover id 0:
         sig[64] = 0;
         let recover_pub = secp256k1_ecdsa_recover_compressed(&sig, hash.as_fixed_bytes())
-            .map_err(convert::<T>)?;
+            .map_err(convert::<T, I>)?;
         if &recover_pub[..] == pubkey.as_ref() {
             return Ok(());
         }
         // try recover id 1:
         sig[64] = 1;
         let recover_pub = secp256k1_ecdsa_recover_compressed(&sig, hash.as_fixed_bytes())
-            .map_err(convert::<T>)?;
+            .map_err(convert::<T, I>)?;
         if &recover_pub[..] == pubkey.as_ref() {
             return Ok(());
         }
 
-        Err(Error::<T>::VerifySignFailed)?
+        Err(Error::<T, I>::VerifySignFailed)?
     }
 }

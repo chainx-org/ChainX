@@ -414,6 +414,7 @@ fn build_genesis(
             btc_withdrawal_fee: 500000,
             max_withdrawal_count: 100,
             verifier: BtcTxVerifier::Recover,
+            ..Default::default()
         },
         xpallet_mining_staking: dev::XStakingConfig {
             validators,

@@ -6,7 +6,9 @@ use hex_literal::hex;
 
 #[cfg(feature = "std")]
 use frame_support::traits::GenesisBuild;
-use frame_support::{parameter_types, sp_io, traits::UnixTime, weights::Weight};
+use frame_support::{
+    instances::Instance1, parameter_types, sp_io, traits::UnixTime, weights::Weight,
+};
 use frame_system::EnsureSignedBy;
 use sp_core::H256;
 use sp_keyring::sr25519;
@@ -179,7 +181,7 @@ impl Config for Test {
     type WeightInfo = ();
 }
 
-pub type XGatewayBitcoinErr = Error<Test>;
+pub type XGatewayBitcoinErr = Error<Test, ()>;
 
 pub(crate) fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {
     (
@@ -252,6 +254,7 @@ impl ExtBuilder {
             confirmation_number: 4,
             btc_withdrawal_fee: 500000,
             max_withdrawal_count: 100,
+            _marker: sp_std::marker::PhantomData::<()>,
         }
         .assimilate_storage(&mut storage);
 
@@ -327,6 +330,7 @@ impl ExtBuilder {
             confirmation_number: 4,
             btc_withdrawal_fee: 500000,
             max_withdrawal_count: 100,
+            _marker: sp_std::marker::PhantomData::<()>,
         }
         .assimilate_storage(&mut storage);
 

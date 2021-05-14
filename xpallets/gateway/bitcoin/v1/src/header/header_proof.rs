@@ -22,7 +22,7 @@ pub struct HeaderVerifier<'a> {
 }
 
 impl<'a> HeaderVerifier<'a> {
-    pub fn new<T: Config>(header_info: &'a BtcHeaderInfo) -> Self {
+    pub fn new<T: Config<I>, I: 'static>(header_info: &'a BtcHeaderInfo) -> Self {
         let now = T::UnixTime::now();
         // if convert from u64 to u32 failed (unix timestamp should not be greater than u32::MAX),
         // ignore timestamp check, timestamp check are not important
@@ -35,16 +35,16 @@ impl<'a> HeaderVerifier<'a> {
         }
     }
 
-    pub fn check<T: Config>(&self) -> DispatchResult {
-        let params: BtcParams = Pallet::<T>::params_info();
-        let network_id: Network = Pallet::<T>::network_id();
+    pub fn check<T: Config<I>, I: 'static>(&self) -> DispatchResult {
+        let params: BtcParams = Pallet::<T, I>::params_info();
+        let network_id: Network = Pallet::<T, I>::network_id();
         if let Network::Mainnet = network_id {
-            self.work.check::<T>(&params)?;
+            self.work.check::<T, I>(&params)?;
         }
-        self.proof_of_work.check::<T>(&params)?;
+        self.proof_of_work.check::<T, I>(&params)?;
         // ignore this in benchmarks
         #[cfg(not(feature = "runtime-benchmarks"))]
-        self.timestamp.check::<T>(&params)?;
+        self.timestamp.check::<T, I>(&params)?;
 
         Ok(())
     }
@@ -65,9 +65,9 @@ impl<'a> HeaderWork<'a> {
         HeaderWork { info }
     }
 
-    fn check<T: Config>(&self, params: &BtcParams) -> DispatchResult {
+    fn check<T: Config<I>, I: 'static>(&self, params: &BtcParams) -> DispatchResult {
         let previous_header_hash = self.info.header.previous_header_hash;
-        let work = work_required::<T>(previous_header_hash, self.info.height, params);
+        let work = work_required::<T, I>(previous_header_hash, self.info.height, params);
         match work {
             RequiredWork::Value(work) => {
                 if work != self.info.header.bits {
@@ -75,7 +75,7 @@ impl<'a> HeaderWork<'a> {
                         "[check_header_work] nBits do not match difficulty rules, work:{:?}, header bits:{:?}, height:{}",
                         work, self.info.header.bits, self.info.height
                     );
-                    return Err(Error::<T>::HeaderNBitsNotMatch.into());
+                    return Err(Error::<T, I>::HeaderNBitsNotMatch.into());
                 }
                 Ok(())
             }
@@ -84,7 +84,7 @@ impl<'a> HeaderWork<'a> {
     }
 }
 
-pub fn work_required<T: Config>(
+pub fn work_required<T: Config<I>, I: 'static>(
     parent_hash: H256,
     height: u32,
     params: &BtcParams,
@@ -94,12 +94,12 @@ pub fn work_required<T: Config>(
         return RequiredWork::Value(max_bits);
     }
 
-    let parent_header: BtcHeader = Pallet::<T>::headers(&parent_hash)
+    let parent_header: BtcHeader = Pallet::<T, I>::headers(&parent_hash)
         .expect("pre header must exist here")
         .header;
 
     if is_retarget_height(height, params) {
-        let new_work = work_required_retarget::<T>(parent_header, height, params);
+        let new_work = work_required_retarget::<T, I>(parent_header, height, params);
         info!(
             "[work_required] Retarget new work required, height:{}, retargeting_interval:{}, new_work:{:?}",
             height, params.retargeting_interval(), new_work
@@ -118,7 +118,7 @@ fn is_retarget_height(height: u32, params: &BtcParams) -> bool {
 }
 
 /// Algorithm used for retargeting work every 2 weeks
-fn work_required_retarget<T: Config>(
+fn work_required_retarget<T: Config<I>, I: 'static>(
     parent_header: BtcHeader,
     height: u32,
     params: &BtcParams,
@@ -130,17 +130,17 @@ fn work_required_retarget<T: Config>(
     // bits of last block
     let last_bits = parent_header.bits;
 
-    let (_, genesis_height) = Pallet::<T>::genesis_info();
+    let (_, genesis_height) = Pallet::<T, I>::genesis_info();
     let mut retarget_header = parent_header;
     if retarget_num < genesis_height {
         // retarget_header = genesis_header;
         return RequiredWork::NotCheck;
     } else {
-        let hash_list = Pallet::<T>::block_hash_for(&retarget_num);
+        let hash_list = Pallet::<T, I>::block_hash_for(&retarget_num);
         for h in hash_list {
             // look up in main chain
-            if Pallet::<T>::main_chain(h) {
-                let info = Pallet::<T>::headers(h).expect("block header must exist at here.");
+            if Pallet::<T, I>::main_chain(h) {
+                let info = Pallet::<T, I>::headers(h).expect("block header must exist at here.");
                 retarget_header = info.header;
                 break;
             };
@@ -198,11 +198,11 @@ impl<'a> HeaderProofOfWork<'a> {
         Self { header }
     }
 
-    fn check<T: Config>(&self, params: &BtcParams) -> DispatchResult {
+    fn check<T: Config<I>, I: 'static>(&self, params: &BtcParams) -> DispatchResult {
         if is_valid_proof_of_work(params.max_bits(), self.header.bits, self.header.hash()) {
             Ok(())
         } else {
-            Err(Error::<T>::InvalidPoW.into())
+            Err(Error::<T, I>::InvalidPoW.into())
         }
     }
 }
@@ -231,7 +231,7 @@ impl<'a> HeaderTimestamp<'a> {
     }
 
     #[allow(unused)]
-    fn check<T: Config>(&self, params: &BtcParams) -> DispatchResult {
+    fn check<T: Config<I>, I: 'static>(&self, params: &BtcParams) -> DispatchResult {
         if let Some(current_time) = self.current_time {
             if self.header.time > current_time + params.block_max_future() {
                 error!(
@@ -240,7 +240,7 @@ impl<'a> HeaderTimestamp<'a> {
                     current_time,
                     params.block_max_future()
                 );
-                Err(Error::<T>::HeaderFuturisticTimestamp.into())
+                Err(Error::<T, I>::HeaderFuturisticTimestamp.into())
             } else {
                 Ok(())
             }
