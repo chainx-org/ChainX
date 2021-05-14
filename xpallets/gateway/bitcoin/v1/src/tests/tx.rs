@@ -2,7 +2,7 @@
 
 #![allow(non_upper_case_globals)]
 
-use frame_support::{assert_noop, assert_ok, instances::Instance1};
+use frame_support::{assert_noop, assert_ok};
 use sp_core::crypto::{set_default_ss58_version, Ss58AddressFormat};
 
 use light_bitcoin::{
@@ -115,30 +115,30 @@ fn mock_detect_transaction_type<T: Config<I>, I: 'static>(
 fn test_detect_tx_type() {
     set_default_ss58_version(Ss58AddressFormat::ChainXAccount);
 
-    match mock_detect_transaction_type::<Test, Instance1>(&deposit1, None) {
+    match mock_detect_transaction_type::<Test, _>(&deposit1, None) {
         BtcTxMetaType::Deposit(_) => {}
         _ => unreachable!("wrong type"),
     }
-    match mock_detect_transaction_type::<Test, Instance1>(&deposit2, None) {
+    match mock_detect_transaction_type::<Test, _>(&deposit2, None) {
         BtcTxMetaType::Deposit(info) => {
             assert!(info.input_addr.is_none() && info.op_return.is_some())
         }
         _ => unreachable!("wrong type"),
     }
 
-    match mock_detect_transaction_type::<Test, Instance1>(&deposit3_0, None) {
+    match mock_detect_transaction_type::<Test, _>(&deposit3_0, None) {
         BtcTxMetaType::Deposit(_) => {}
         _ => unreachable!("wrong type"),
     }
     // tx without opreturn, no input addr would parse nothing
-    match mock_detect_transaction_type::<Test, Instance1>(&deposit3_1, None) {
+    match mock_detect_transaction_type::<Test, _>(&deposit3_1, None) {
         BtcTxMetaType::Deposit(info) => {
             assert!(info.input_addr.is_none() && info.op_return.is_none())
         }
         _ => unreachable!("wrong type"),
     }
     // then provide prev tx
-    match mock_detect_transaction_type::<Test, Instance1>(&deposit3_1, Some(&deposit3_1_prev)) {
+    match mock_detect_transaction_type::<Test, _>(&deposit3_1, Some(&deposit3_1_prev)) {
         BtcTxMetaType::Deposit(info) => {
             assert!(info.input_addr.is_some() && info.op_return.is_none())
         }
@@ -146,20 +146,20 @@ fn test_detect_tx_type() {
     }
 
     // tx without opreturn, no input addr would parse nothing
-    match mock_detect_transaction_type::<Test, Instance1>(&deposit4_0, None) {
+    match mock_detect_transaction_type::<Test, _>(&deposit4_0, None) {
         BtcTxMetaType::Deposit(info) => {
             assert!(info.input_addr.is_none() && info.op_return.is_none())
         }
         _ => unreachable!("wrong type"),
     }
     // then provide prev tx
-    match mock_detect_transaction_type::<Test, Instance1>(&deposit4_0, Some(&deposit4_0_prev)) {
+    match mock_detect_transaction_type::<Test, _>(&deposit4_0, Some(&deposit4_0_prev)) {
         BtcTxMetaType::Deposit(info) => {
             assert!(info.input_addr.is_some() && info.op_return.is_none())
         }
         _ => unreachable!("wrong type"),
     }
-    match mock_detect_transaction_type::<Test, Instance1>(&deposit4_1, None) {
+    match mock_detect_transaction_type::<Test, _>(&deposit4_1, None) {
         BtcTxMetaType::Deposit(info) => {
             assert!(info.input_addr.is_none() && info.op_return.is_some())
         }
@@ -169,14 +169,14 @@ fn test_detect_tx_type() {
     // hot_to_cold
     // if not pass a prev, would judge to a deposit, but this deposit could not be handled due to
     // opreturn and input_addr are all none, or if all send to cold, it would be Irrelevance
-    match mock_detect_transaction_type::<Test, Instance1>(&hot_to_cold, None) {
+    match mock_detect_transaction_type::<Test, _>(&hot_to_cold, None) {
         BtcTxMetaType::Deposit(info) => {
             assert!(info.input_addr.is_none() && info.op_return.is_none())
         }
         _ => unreachable!("wrong type"),
     }
     // then if provide prev, it would be judge to a HotAndCold
-    match mock_detect_transaction_type::<Test, Instance1>(&hot_to_cold, Some(&hot_to_cold_prev)) {
+    match mock_detect_transaction_type::<Test, _>(&hot_to_cold, Some(&hot_to_cold_prev)) {
         BtcTxMetaType::HotAndCold => {}
         _ => unreachable!("wrong type"),
     }
@@ -184,14 +184,14 @@ fn test_detect_tx_type() {
     // cold_to_hot
     // if not pass a prev, would judge to a deposit, but this deposit could not be handled due to
     // opreturn and input_addr are all none
-    match mock_detect_transaction_type::<Test, Instance1>(&cold_to_hot, None) {
+    match mock_detect_transaction_type::<Test, _>(&cold_to_hot, None) {
         BtcTxMetaType::Deposit(info) => {
             assert!(info.input_addr.is_none() && info.op_return.is_none())
         }
         _ => unreachable!("wrong type"),
     }
     // then if provide prev, it would be judge to a HotAndCold
-    match mock_detect_transaction_type::<Test, Instance1>(&cold_to_hot, Some(&cold_to_hot_prev)) {
+    match mock_detect_transaction_type::<Test, _>(&cold_to_hot, Some(&cold_to_hot_prev)) {
         BtcTxMetaType::HotAndCold => {}
         _ => unreachable!("wrong type"),
     }
@@ -200,14 +200,14 @@ fn test_detect_tx_type() {
     // if not pass a prev, would judge to a deposit due to withdraw change.
     // if no change, would be Irrelevance
     // but this deposit could not be handled due to opreturn and input_addr are all none
-    match mock_detect_transaction_type::<Test, Instance1>(&withdraw, None) {
+    match mock_detect_transaction_type::<Test, _>(&withdraw, None) {
         BtcTxMetaType::Deposit(info) => {
             assert!(info.input_addr.is_none() && info.op_return.is_none())
         }
         _ => unreachable!("wrong type"),
     }
     // then if provide prev, it would be judge to a HotAndCold
-    match mock_detect_transaction_type::<Test, Instance1>(&withdraw, Some(&withdraw_prev)) {
+    match mock_detect_transaction_type::<Test, _>(&withdraw, Some(&withdraw_prev)) {
         BtcTxMetaType::Withdrawal => {}
         _ => unreachable!("wrong type"),
     }
@@ -238,26 +238,25 @@ fn mock_process_tx<T: Config<I>, I: 'static>(
 fn test_process_tx() {
     set_default_ss58_version(Ss58AddressFormat::ChainXAccount);
     ExtBuilder::default().build_and_execute(|| {
-        let r = mock_process_tx::<Test, Instance1>(deposit1.clone(), None);
+        let r = mock_process_tx::<Test, _>(deposit1.clone(), None);
         assert_eq!(r.result, BtcTxResult::Success);
-        let r = mock_process_tx::<Test, Instance1>(deposit2.clone(), None);
+        let r = mock_process_tx::<Test, _>(deposit2.clone(), None);
         assert_eq!(r.result, BtcTxResult::Success);
 
         // 3
         // with opreturn, and log input_addr => accountid map
-        let r = mock_process_tx::<Test, Instance1>(deposit3_0.clone(), None);
+        let r = mock_process_tx::<Test, _>(deposit3_0.clone(), None);
         assert_eq!(r.result, BtcTxResult::Success);
         assert_eq!(XAssets::usable_balance(&account3, &X_BTC), 100000000);
         // due to no deposit, would not record input_addr
         assert_eq!(XGatewayCommon::bound_addrs(&account3), Default::default());
 
         // no prev, would judge a failed deposit
-        let r = mock_process_tx::<Test, Instance1>(deposit3_1.clone(), None);
+        let r = mock_process_tx::<Test, _>(deposit3_1.clone(), None);
         assert_eq!(r.result, BtcTxResult::Failure);
         // with prev, would deposit use the input_addr, but due to no relationship of addr
         // and accountid before, thus this become a cache deposit
-        let r =
-            mock_process_tx::<Test, Instance1>(deposit3_1.clone(), Some(deposit3_1_prev.clone()));
+        let r = mock_process_tx::<Test, _>(deposit3_1.clone(), Some(deposit3_1_prev.clone()));
         assert_eq!(r.result, BtcTxResult::Success);
         assert_eq!(
             XGatewayBitcoin::pending_deposits(&deposit3_addr.to_vec()),
@@ -268,10 +267,9 @@ fn test_process_tx() {
         );
 
         // 4
-        let r = mock_process_tx::<Test, Instance1>(deposit4_0.clone(), None);
+        let r = mock_process_tx::<Test, _>(deposit4_0.clone(), None);
         assert_eq!(r.result, BtcTxResult::Failure);
-        let r =
-            mock_process_tx::<Test, Instance1>(deposit4_0.clone(), Some(deposit4_0_prev.clone()));
+        let r = mock_process_tx::<Test, _>(deposit4_0.clone(), Some(deposit4_0_prev.clone()));
         assert_eq!(r.result, BtcTxResult::Success);
         assert_eq!(
             XGatewayBitcoin::pending_deposits(&deposit4_addr.to_vec()),
@@ -283,8 +281,7 @@ fn test_process_tx() {
         // use a tx with opreturn to release deposit cache, must have prev
         // (if not have prev, just deposit this tx success, but not release deposit cache. Deposit
         // cache need a more opreturn tx with prev to release)
-        let r =
-            mock_process_tx::<Test, Instance1>(deposit4_1.clone(), Some(deposit4_1_prev.clone()));
+        let r = mock_process_tx::<Test, _>(deposit4_1.clone(), Some(deposit4_1_prev.clone()));
         assert_eq!(r.result, BtcTxResult::Success);
         // release the cache
         assert_eq!(
@@ -298,29 +295,27 @@ fn test_process_tx() {
         );
 
         // hot and cold
-        let r = mock_process_tx::<Test, Instance1>(hot_to_cold.clone(), None);
+        let r = mock_process_tx::<Test, _>(hot_to_cold.clone(), None);
         assert_eq!(r.result, BtcTxResult::Failure);
-        let r =
-            mock_process_tx::<Test, Instance1>(hot_to_cold.clone(), Some(hot_to_cold_prev.clone()));
+        let r = mock_process_tx::<Test, _>(hot_to_cold.clone(), Some(hot_to_cold_prev.clone()));
         assert_eq!(r.result, BtcTxResult::Success);
 
-        let r = mock_process_tx::<Test, Instance1>(cold_to_hot.clone(), None);
+        let r = mock_process_tx::<Test, _>(cold_to_hot.clone(), None);
         assert_eq!(r.result, BtcTxResult::Failure);
-        let r =
-            mock_process_tx::<Test, Instance1>(cold_to_hot.clone(), Some(cold_to_hot_prev.clone()));
+        let r = mock_process_tx::<Test, _>(cold_to_hot.clone(), Some(cold_to_hot_prev.clone()));
         assert_eq!(r.result, BtcTxResult::Success);
 
         // withdraw
-        WithdrawalProposal::<Test, Instance1>::put(BtcWithdrawalProposal {
+        WithdrawalProposal::<Test, _>::put(BtcWithdrawalProposal {
             sig_state: VoteResult::Unfinish,
             withdrawal_id_list: vec![],
             tx: withdraw.clone(),
             trustee_list: vec![],
         });
 
-        let r = mock_process_tx::<Test, Instance1>(withdraw.clone(), None);
+        let r = mock_process_tx::<Test, _>(withdraw.clone(), None);
         assert_eq!(r.result, BtcTxResult::Failure);
-        let r = mock_process_tx::<Test, Instance1>(withdraw.clone(), Some(withdraw_prev.clone()));
+        let r = mock_process_tx::<Test, _>(withdraw.clone(), Some(withdraw_prev.clone()));
         assert_eq!(r.result, BtcTxResult::Success);
     })
 }

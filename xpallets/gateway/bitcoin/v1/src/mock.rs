@@ -181,7 +181,7 @@ impl Config for Test {
     type WeightInfo = ();
 }
 
-pub type XGatewayBitcoinErr = Error<Test, Instance1>;
+pub type XGatewayBitcoinErr = Error<Test, ()>;
 
 pub(crate) fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {
     (
