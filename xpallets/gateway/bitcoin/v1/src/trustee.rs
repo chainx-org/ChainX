@@ -127,7 +127,7 @@ impl<T: Config<I>, I: 'static> TrusteeForChain<T::AccountId, BtcTrusteeType, Btc
             return Err(Error::<T, I>::InvalidPublicKey.into());
         }
 
-        if &raw_addr[1..33] >= &EC_P {
+        if &raw_addr[1..33] >= &EC_P[..] {
             error!("Not Compressed Public(EC_P)");
             return Err(Error::<T, I>::InvalidPublicKey.into());
         }
