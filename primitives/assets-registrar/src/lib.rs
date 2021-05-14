@@ -19,7 +19,7 @@ const CHAINS: [Chain; 5] = [
     Chain::Bitcoin,
     Chain::Ethereum,
     Chain::Polkadot,
-    Chain::Dogecoin
+    Chain::Dogecoin,
 ];
 
 /// The blockchain types.
@@ -35,7 +35,7 @@ pub enum Chain {
     /// Polkadot
     Polkadot,
     /// Dogecoin
-    Dogecoin
+    Dogecoin,
 }
 
 impl Default for Chain {
