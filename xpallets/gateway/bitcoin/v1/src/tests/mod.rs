@@ -6,8 +6,6 @@ mod tx;
 
 use sp_core::crypto::{set_default_ss58_version, Ss58AddressFormat};
 
-use frame_support::instances::Instance1;
-
 use xp_gateway_common::AccountExtractor;
 
 use light_bitcoin::script::Script;
@@ -30,5 +28,5 @@ fn test_account_ss58_version() {
             .to_vec(),
     );
     let data = script.to_bytes();
-    assert!(<Test as Config<Instance1>>::AccountExtractor::extract_account(&data).is_some());
+    assert!(<Test as Config>::AccountExtractor::extract_account(&data).is_some());
 }

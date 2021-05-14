@@ -59,7 +59,7 @@ frame_support::construct_runtime!(
         XAssets: xpallet_assets::{Pallet, Call, Storage, Event<T>, Config<T>},
         XGatewayRecords: xpallet_gateway_records::{Pallet, Call, Storage, Event<T>},
         XGatewayCommon: xpallet_gateway_common::{Pallet, Call, Storage, Event<T>, Config<T>},
-        XGatewayBitcoin: xpallet_gateway_bitcoin::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>},
+        XGatewayBitcoin: xpallet_gateway_bitcoin::{Pallet, Call, Storage, Event<T>, Config<T>},
     }
 );
 
@@ -166,23 +166,7 @@ impl UnixTime for Timestamp {
     }
 }
 
-// For benchmarking
 impl Config for Test {
-    type Event = ();
-    type UnixTime = Timestamp;
-    type AccountExtractor = xp_gateway_bitcoin::OpReturnExtractor;
-    type TrusteeSessionProvider =
-        xpallet_gateway_common::trustees::bitcoin::BtcTrusteeSessionManager<Test>;
-    type TrusteeOrigin = EnsureSignedBy<
-        xpallet_gateway_common::trustees::bitcoin::BtcTrusteeMultisig<Test>,
-        AccountId,
-    >;
-    type ReferralBinding = XGatewayCommon;
-    type AddressBinding = XGatewayCommon;
-    type WeightInfo = ();
-}
-
-impl Config<Instance1> for Test {
     type Event = ();
     type UnixTime = Timestamp;
     type AccountExtractor = xp_gateway_bitcoin::OpReturnExtractor;
@@ -254,7 +238,7 @@ impl ExtBuilder {
         // let (genesis_info, genesis_hash, network_id) = load_mock_btc_genesis_header_info();
         let genesis_hash = btc_genesis.0.hash();
         let network_id = btc_network;
-        let _ = xpallet_gateway_bitcoin::GenesisConfig::<Test, Instance1> {
+        let _ = xpallet_gateway_bitcoin::GenesisConfig::<Test> {
             genesis_trustees: vec![],
             genesis_info: btc_genesis,
             genesis_hash,
@@ -270,7 +254,7 @@ impl ExtBuilder {
             confirmation_number: 4,
             btc_withdrawal_fee: 500000,
             max_withdrawal_count: 100,
-            _marker: sp_std::marker::PhantomData::<Instance1>,
+            _marker: sp_std::marker::PhantomData::<()>,
         }
         .assimilate_storage(&mut storage);
 
@@ -330,7 +314,7 @@ impl ExtBuilder {
 
         let (genesis_info, genesis_hash, network_id) = load_mainnet_btc_genesis_header_info();
 
-        let _ = xpallet_gateway_bitcoin::GenesisConfig::<Test, Instance1> {
+        let _ = xpallet_gateway_bitcoin::GenesisConfig::<Test> {
             genesis_trustees,
             genesis_info,
             genesis_hash,
@@ -346,7 +330,7 @@ impl ExtBuilder {
             confirmation_number: 4,
             btc_withdrawal_fee: 500000,
             max_withdrawal_count: 100,
-            _marker: sp_std::marker::PhantomData::<Instance1>,
+            _marker: sp_std::marker::PhantomData::<()>,
         }
         .assimilate_storage(&mut storage);
 
