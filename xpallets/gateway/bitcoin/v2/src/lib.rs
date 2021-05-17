@@ -120,8 +120,10 @@ pub mod pallet {
         #[pallet::constant]
         type LiquidationThreshold: Get<u16>;
         /// Duration from `IssueRequest` opened to expired.
+        #[pallet::constant]
         type IssueRequestExpiredPeriod: Get<BlockNumberFor<Self>>;
         /// Duration from `RedeemRequest` opened to expired.
+        #[pallet::constant]
         type RedeemRequestExpiredPeriod: Get<BlockNumberFor<Self>>;
         /// Duration from `ExchangeRate` last updated to expired.
         #[pallet::constant]
