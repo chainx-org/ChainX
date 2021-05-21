@@ -7,7 +7,7 @@
 
 use sp_std::prelude::*;
 
-use frame_support::{decl_module, decl_storage};
+use frame_support::{decl_module, decl_storage, log::info};
 
 #[cfg(feature = "std")]
 use xp_genesis_builder::AllParams;
@@ -41,7 +41,8 @@ decl_storage! {
             xstaking::initialize::<T>(&config.params.xstaking);
             xmining_asset::initialize::<T>(&config.params.xmining_asset);
 
-            log::info!(
+            info!(
+                target: "runtime::genesis-builder",
                 "Took {:?}ms to orchestrate the exported state from ChainX 1.0",
                 now.elapsed().as_millis()
             );

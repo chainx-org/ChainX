@@ -3,12 +3,11 @@
 use frame_support::{
     dispatch::{DispatchError, DispatchResult},
     ensure,
+    log::{debug, error},
 };
 use sp_std::prelude::Vec;
 
 use light_bitcoin::{chain::Transaction, primitives::H256, script::Script};
-
-use log::{debug, error};
 
 use crate::{trustee::get_hot_trustee_redeem_script, types::BtcRelayedTx, Config, Error};
 
@@ -19,6 +18,7 @@ pub fn validate_transaction<T: Config<I>, I: 'static>(
 ) -> DispatchResult {
     let tx_hash = tx.raw.hash();
     debug!(
+        target: "runtime::bitcoin",
         "[validate_transaction] tx_hash:{:?}, relay tx:{:?}",
         tx_hash, tx
     );
@@ -32,6 +32,7 @@ pub fn validate_transaction<T: Config<I>, I: 'static>(
         .map_err(|_| Error::<T, I>::BadMerkleProof)?;
     if merkle_root != hash {
         error!(
+            target: "runtime::bitcoin",
             "[validate_transaction] Check merkle tree proof error, merkle_root:{:?}, hash:{:?}",
             merkle_root, hash
         );
@@ -49,6 +50,7 @@ pub fn validate_transaction<T: Config<I>, I: 'static>(
         let expected_id = tx.raw.inputs[0].previous_output.txid;
         if previous_txid != expected_id {
             error!(
+                target: "runtime::bitcoin",
                 "[validate_transaction] Relay previous tx's hash not equal to relay tx first input, expected_id:{:?}, prev:{:?}",
                 expected_id, previous_txid
             );
@@ -104,6 +106,7 @@ pub fn parse_and_check_signed_tx_impl<T: Config<I>, I: 'static>(
             });
             if !verify {
                 error!(
+                    target: "runtime::bitcoin",
                     "[parse_and_check_signed_tx] Verify sig failed, tx:{:?}, input:{:?}, bytes_redeem_script:{:?}",
                     tx, i, bytes_redeem_script
                 );

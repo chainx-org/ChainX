@@ -58,12 +58,12 @@ use self::{
 
 pub use pallet::*;
 
-// syntactic sugar for native log.
+// syntactic sugar for log.
 #[macro_export]
 macro_rules! native {
     ($level:tt, $patter:expr $(, $values:expr)* $(,)?) => {
         frame_support::log::$level!(
-            target: xp_logging::RUNTIME_TARGET,
+            target: "runtime::bitcoin",
             $patter $(, $values)*
         )
     };

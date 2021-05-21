@@ -32,6 +32,7 @@ use sp_std::prelude::*;
 
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage, ensure,
+    log::debug,
     storage::IterableStorageMap,
     traits::{Currency, ExistenceRequirement, Get, LockableCurrency, WithdrawReasons},
 };
@@ -43,7 +44,6 @@ use sp_runtime::{
 use sp_std::collections::btree_map::BTreeMap;
 
 use chainx_primitives::ReferralId;
-use log::debug;
 pub use xp_mining_common::RewardPotAccountFor;
 use xp_mining_common::{Claim, ComputeMiningWeight, Delta, ZeroMiningWeightError};
 use xp_mining_staking::{AssetMining, SessionIndex, UnbondedIndex};
@@ -1069,6 +1069,7 @@ impl<T: Config> Module<T> {
         value: BalanceOf<T>,
     ) -> Result<(), Error<T>> {
         debug!(
+            target: "runtime::mining::staking",
             "[apply_unbond] who:{:?}, target:{:?}, value:{:?}",
             who, target, value
         );

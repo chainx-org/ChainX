@@ -3,7 +3,10 @@
 mod secp256k1_verifier;
 pub mod validator;
 
-use frame_support::{dispatch::DispatchResult, log};
+use frame_support::{
+    dispatch::DispatchResult,
+    log::{self, debug, error, info, warn},
+};
 use sp_runtime::{traits::Zero, SaturatedConversion};
 use sp_std::prelude::*;
 
@@ -14,7 +17,6 @@ use light_bitcoin::{
 };
 
 use chainx_primitives::AssetId;
-use log::{debug, error, info, warn};
 use xp_gateway_bitcoin::{BtcDepositInfo, BtcTxMetaType, BtcTxTypeDetector};
 use xp_gateway_common::AccountExtractor;
 use xpallet_assets::ChainT;
@@ -72,6 +74,7 @@ fn deposit<T: Config<I>, I: 'static>(
         (Some((account, referral)), None) => {
             // has opreturn but no input addr
             debug!(
+                target: "runtime::bitcoin",
                 "[deposit] Deposit tx ({:?}) has no input addr, but has opreturn, who:{:?}",
                 hash_rev(txid),
                 account
@@ -88,6 +91,7 @@ fn deposit<T: Config<I>, I: 'static>(
         }
         (None, None) => {
             warn!(
+                target: "runtime::bitcoin",
                 "[deposit] Process deposit tx ({:?}) but missing valid opreturn and input addr",
                 hash_rev(txid)
             );
@@ -105,6 +109,7 @@ fn deposit<T: Config<I>, I: 'static>(
             match deposit_token::<T, I>(txid, &account, deposit_info.deposit_value) {
                 Ok(_) => {
                     info!(
+                        target: "runtime::bitcoin",
                         "[deposit] Deposit tx ({:?}) success, who:{:?}, balance:{}",
                         hash_rev(txid),
                         account,
@@ -118,6 +123,7 @@ fn deposit<T: Config<I>, I: 'static>(
         AccountInfo::<_>::Address(input_addr) => {
             insert_pending_deposit::<T, I>(&input_addr, txid, deposit_info.deposit_value);
             info!(
+                target: "runtime::bitcoin",
                 "[deposit] Deposit tx ({:?}) into pending, addr:{:?}, balance:{}",
                 hash_rev(txid),
                 try_str(addr2vecu8(&input_addr)),
@@ -143,6 +149,7 @@ fn deposit_token<T: Config<I>, I: 'static>(
         }
         Err(err) => {
             error!(
+                target: "runtime::bitcoin",
                 "[deposit_token] Deposit error:{:?}, must use root to fix it",
                 err
             );
@@ -161,6 +168,7 @@ pub fn remove_pending_deposit<T: Config<I>, I: 'static>(
         // ignore error
         let _ = deposit_token::<T, I>(record.txid, who, record.balance);
         info!(
+            target: "runtime::bitcoin",
             "[remove_pending_deposit] Use pending info to re-deposit, who:{:?}, balance:{}, cached_tx:{:?}",
             who, record.balance, record.txid,
         );
@@ -225,10 +233,11 @@ fn withdraw<T: Config<I>, I: 'static>(tx: Transaction) -> BtcTxResult {
 
                 match xpallet_gateway_records::Module::<T>::finish_withdrawal(*number, None) {
                     Ok(_) => {
-                        info!("[withdraw] Withdrawal ({}) completion", *number);
+                        info!(target: "runtime::bitcoin", "[withdraw] Withdrawal ({}) completion", *number);
                     }
                     Err(err) => {
                         error!(
+                            target: "runtime::bitcoin",
                             "[withdraw] Withdrawal ({}) error:{:?}, must use root to fix it",
                             *number, err
                         );
@@ -248,6 +257,7 @@ fn withdraw<T: Config<I>, I: 'static>(tx: Transaction) -> BtcTxResult {
             BtcTxResult::Success
         } else {
             error!(
+                target: "runtime::bitcoin",
                 "[withdraw] Withdraw error: mismatch (tx_hash:{:?}, proposal_hash:{:?}), id_list:{:?}, must use root to fix it",
                 tx_hash, proposal_hash, proposal.withdrawal_id_list
             );
@@ -262,6 +272,7 @@ fn withdraw<T: Config<I>, I: 'static>(tx: Transaction) -> BtcTxResult {
         }
     } else {
         error!(
+            target: "runtime::bitcoin",
             "[withdraw] Withdrawal error: proposal is EMPTY (tx_hash:{:?}), but receive a withdrawal tx, must use root to fix it",
             tx.hash()
         );
@@ -301,7 +312,7 @@ pub fn ensure_identical<T: Config<I>, I: 'static>(
         return Ok(());
     }
     log::error!(
-        target: xp_logging::RUNTIME_TARGET,
+        target: "runtime::bitcoin",
         "The transaction text does not match the original text to be signed",
     );
     Err(Error::<T, I>::MismatchedTx.into())

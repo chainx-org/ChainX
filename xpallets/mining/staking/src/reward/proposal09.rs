@@ -3,7 +3,6 @@
 //! New minted PCX distribution logic for ChainX Proposal 09.
 
 use super::*;
-use log::debug;
 
 impl<T: Config> Module<T> {
     fn generic_calculate_by_proportion<S: Into<u128>>(
@@ -124,6 +123,7 @@ impl<T: Config> Module<T> {
             Self::distribute_to_mining_assets(real_asset_mining_reward);
         if !unpaid_asset_mining_reward.is_zero() {
             debug!(
+                target: "runtime::mining::staking",
                 "[distribute_mining_rewards] unpaid_asset_mining_reward:{:?}",
                 unpaid_asset_mining_reward
             );

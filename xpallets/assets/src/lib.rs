@@ -31,6 +31,7 @@ use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult},
     ensure,
+    log::{debug, error, info},
     traits::{Currency, Get, HandleLifetime, LockableCurrency, ReservableCurrency},
     Parameter, StorageDoubleMap,
 };
@@ -41,7 +42,6 @@ use sp_runtime::traits::{
 };
 
 use chainx_primitives::AssetId;
-use log::{debug, error, info};
 pub use xpallet_assets_registrar::{AssetInfo, Chain};
 use xpallet_support::traits::TreasuryAccount;
 
@@ -62,6 +62,7 @@ pub trait Config: xpallet_assets_registrar::Config {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 
+    /// The native currency.
     type Currency: ReservableCurrency<Self::AccountId>
         + LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
 
@@ -76,10 +77,13 @@ pub trait Config: xpallet_assets_registrar::Config {
         + TryInto<BalanceOf<Self>>
         + TryFrom<BalanceOf<Self>>;
 
+    /// The treasury account.
     type TreasuryAccount: TreasuryAccount<Self::AccountId>;
 
+    /// The hook for doing something on the event of creating an account.
     type OnCreatedAccount: HandleLifetime<Self::AccountId>;
 
+    /// The hook triggered whenever the asset balance of an account is changed.
     type OnAssetChanged: OnAssetChanged<Self::AccountId, BalanceOf<Self>>;
 
     /// Weight information for extrinsics in this pallet.
@@ -190,7 +194,7 @@ decl_module! {
         ) -> DispatchResult {
             let transactor = ensure_signed(origin)?;
             let dest = T::Lookup::lookup(dest)?;
-            debug!("[transfer] from:{:?}, to:{:?}, id:{}, value:{:?}", transactor, dest, id, value);
+            debug!(target: "runtime::assets", "[transfer] from:{:?}, to:{:?}, id:{}, value:{:?}", transactor, dest, id, value);
             Self::can_transfer(&id)?;
 
             Self::move_usable_balance(&id, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;
@@ -211,7 +215,7 @@ decl_module! {
 
             let transactor = T::Lookup::lookup(transactor)?;
             let dest = T::Lookup::lookup(dest)?;
-            debug!("[force_transfer] from:{:?}, to:{:?}, id:{}, value:{:?}", transactor, dest, id, value);
+            debug!(target: "runtime::assets", "[force_transfer] from:{:?}, to:{:?}, id:{}, value:{:?}", transactor, dest, id, value);
             Self::can_transfer(&id)?;
             Self::move_usable_balance(&id, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;
             Ok(())
@@ -228,7 +232,7 @@ decl_module! {
             ensure_root(origin)?;
 
             let who = T::Lookup::lookup(who)?;
-            info!("[set_balance] Set balance by root, who:{:?}, id:{}, balances:{:?}", who, id, balances);
+            info!(target: "runtime::assets", "[set_balance] Set balance by root, who:{:?}, id:{}, balances:{:?}", who, id, balances);
             Self::set_balance_impl(&who, &id, balances)?;
             Ok(())
         }
@@ -307,7 +311,7 @@ impl<T: Config> Module<T> {
     #[inline]
     pub fn can_move(id: &AssetId) -> DispatchResult {
         if !Self::can_do(id, AssetRestrictions::MOVE) {
-            error!("Not allowed to move asset, id:{}", id);
+            error!(target: "runtime::assets", "Not allowed to move asset, id:{}", id);
             return Err(Error::<T>::ActionNotAllowed.into());
         }
         Ok(())
@@ -316,7 +320,7 @@ impl<T: Config> Module<T> {
     #[inline]
     pub fn can_transfer(id: &AssetId) -> DispatchResult {
         if !Self::can_do(id, AssetRestrictions::TRANSFER) {
-            error!("Not allowed to transfer asset, id:{}", id);
+            error!(target: "runtime::assets", "Not allowed to transfer asset, id:{}", id);
             return Err(Error::<T>::ActionNotAllowed.into());
         }
         Ok(())
@@ -325,7 +329,7 @@ impl<T: Config> Module<T> {
     #[inline]
     pub fn can_destroy_withdrawal(id: &AssetId) -> DispatchResult {
         if !Self::can_do(id, AssetRestrictions::DESTROY_WITHDRAWAL) {
-            error!("Not allowed to destroy withdrawal asset, id:{}", id);
+            error!(target: "runtime::assets", "Not allowed to destroy withdrawal asset, id:{}", id);
             return Err(Error::<T>::ActionNotAllowed.into());
         }
         Ok(())
@@ -334,36 +338,41 @@ impl<T: Config> Module<T> {
     #[inline]
     pub fn can_destroy_usable(id: &AssetId) -> DispatchResult {
         if !Self::can_do(id, AssetRestrictions::DESTROY_USABLE) {
-            error!("Not allowed to destroy usable asset, id:{}", id);
+            error!(target: "runtime::assets", "Not allowed to destroy usable asset, id:{}", id);
             return Err(Error::<T>::ActionNotAllowed.into());
         }
         Ok(())
     }
 }
 
-// public read interface
+// Public read functions.
 impl<T: Config> Module<T> {
+    /// Returns the total issuance of asset `id` by far.
     pub fn total_issuance(id: &AssetId) -> BalanceOf<T> {
         let map = Self::total_asset_balance(id);
         map.values().fold(Zero::zero(), |acc, &x| acc + x)
     }
 
-    pub fn total_asset_balance_of(id: &AssetId, type_: AssetType) -> BalanceOf<T> {
+    /// Returns the total balance of asset `id` given the specific asset type `ty`.
+    pub fn total_asset_balance_of(id: &AssetId, ty: AssetType) -> BalanceOf<T> {
         Self::total_asset_balance(id)
-            .get(&type_)
+            .get(&ty)
             .copied()
             .unwrap_or_default()
     }
 
+    /// Returns the sum of all kinds of `who`'s balances given asset `id`.
     pub fn all_type_asset_balance(who: &T::AccountId, id: &AssetId) -> BalanceOf<T> {
         let map = Self::asset_balance(who, id);
         map.values().fold(Zero::zero(), |acc, &x| acc + x)
     }
 
-    pub fn asset_balance_of(who: &T::AccountId, id: &AssetId, type_: AssetType) -> BalanceOf<T> {
-        Self::asset_typed_balance(who, id, type_)
+    /// Returns the balance of `who` given the asset `id` and type `ty`.
+    pub fn asset_balance_of(who: &T::AccountId, id: &AssetId, ty: AssetType) -> BalanceOf<T> {
+        Self::asset_typed_balance(who, id, ty)
     }
 
+    /// Returns the free balance of `who` for asset `id`.
     pub fn usable_balance(who: &T::AccountId, id: &AssetId) -> BalanceOf<T> {
         Self::asset_typed_balance(who, id, AssetType::Usable)
     }
@@ -382,7 +391,7 @@ impl<T: Config> Module<T> {
     }
 }
 
-// public write interface
+// Public write functions.
 impl<T: Config> Module<T> {
     /// Sets the free balance of `who` without sanity checks and triggering the asset changed hook.
     #[cfg(feature = "std")]
@@ -390,6 +399,7 @@ impl<T: Config> Module<T> {
         Self::make_type_balance_be(who, id, AssetType::Usable, value);
     }
 
+    /// Increases the Usable balance of `who` given the asset `id` by this `value`.
     pub fn issue(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
         Self::ensure_not_native_asset(id)?;
         xpallet_assets_registrar::Module::<T>::ensure_asset_is_valid(id)?;
@@ -428,7 +438,6 @@ impl<T: Config> Module<T> {
         to_type: AssetType,
         value: BalanceOf<T>,
     ) -> Result<(), AssetErr> {
-        // check
         Self::ensure_not_native_asset(id).map_err(|_| AssetErr::InvalidAsset)?;
         xpallet_assets_registrar::Module::<T>::ensure_asset_is_valid(id)
             .map_err(|_| AssetErr::InvalidAsset)?;
@@ -443,6 +452,7 @@ impl<T: Config> Module<T> {
         let to_balance = Self::asset_typed_balance(to, id, to_type);
 
         debug!(
+            target: "runtime::assets",
             "[move_balance] id:{}, from:[who:{:?}, type:{:?}, balance:{:?}], to:[who:{:?}, type:{:?}, balance:{:?}], value:{:?}",
             id, from, from_type, from_balance, to, to_type, to_balance, value
         );
@@ -513,7 +523,7 @@ impl<T: Config> Module<T> {
     }
 
     fn new_account(who: &T::AccountId) {
-        info!("[new_account] account:{:?}", who);
+        info!(target: "runtime::assets", "[new_account] account:{:?}", who);
         // FIXME: handle the result properly.
         let _ = T::OnCreatedAccount::created(who);
     }
@@ -594,6 +604,7 @@ impl<T: Config> Module<T> {
         let current = Self::asset_typed_balance(&who, id, type_);
 
         debug!(
+            target: "runtime::assets",
             "[issue] account:{:?}, asset:[id:{}, type:{:?}, current:{:?}, issue:{:?}]",
             who, id, type_, current, value
         );
@@ -617,6 +628,7 @@ impl<T: Config> Module<T> {
         let current = Self::asset_typed_balance(&who, id, type_);
 
         debug!(
+            target: "runtime::assets",
             "[destroy] account:{:?}, asset:[id:{}, type:{:?}, current:{:?}, destroy:{:?}]",
             who, id, type_, current, value
         );
@@ -670,6 +682,7 @@ impl<T: Config> Module<T> {
             if let Err(err) = result {
                 // should not fail, for set lock need to check free_balance, free_balance = usable + free
                 error!(
+                    target: "runtime::assets",
                     "[update_locks] Should not be failed when move asset (usable <=> locked), \
                     who:{:?}, asset:[id:{}, max_locked:{:?}, current_locked:{:?}], err:{:?}",
                     who, currency_id, max_locked, current_locked, err

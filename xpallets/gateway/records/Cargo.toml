@@ -6,7 +6,6 @@ edition = "2018"
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "2.0.0", features = ["derive"], default-features = false }
-log = { version = "0.4.14", default-features = true }
 serde = { version = "1.0", optional = true }
 
 # Substrate primitives
@@ -23,7 +22,6 @@ orml-utilities = { version = "0.4.0", default-features = false }
 
 # ChainX primitives
 chainx-primitives = { path = "../../../primitives", default-features = false }
-xp-logging = { path = "../../../primitives/logging", default-features = false }
 xp-protocol = { path = "../../../primitives/protocol", default-features = false }
 xp-runtime = { path = "../../../primitives/runtime", default-features = false }
 
@@ -41,7 +39,6 @@ pallet-balances = "3.0.0"
 default = ["std"]
 std = [
     "codec/std",
-    "log/std",
     "serde",
     # Substrate primitives
     "sp-runtime/std",
@@ -53,7 +50,6 @@ std = [
     "orml-utilities/std",
     # ChainX primitives
     "chainx-primitives/std",
-    "xp-logging/std",
     "xp-protocol/std",
     "xp-runtime/std",
     # ChainX pallets
