@@ -32,7 +32,7 @@ xpallet-gateway-records = { path = "../records", default-features = false }
 xpallet-support = { path = "../../support", default-features = false }
 
 # light-bitcoin
-light-bitcoin = { git = "https://github.com/chainx-org/light-bitcoin", branch = "master", default-features = false }
+light-bitcoin = { git = "https://github.com/chainx-org/light-bitcoin", branch = "btc-like", default-features = false }
 
 [dev-dependencies]
 lazy_static = "1.4"
