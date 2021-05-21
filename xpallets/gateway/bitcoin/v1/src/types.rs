@@ -186,6 +186,6 @@ pub enum BtcTxVerifier {
 
 impl Default for BtcTxVerifier {
     fn default() -> Self {
-        Self::Recover
+        BtcTxVerifier::Recover
     }
 }

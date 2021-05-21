@@ -36,8 +36,8 @@ use light_bitcoin::{
 };
 
 use chainx_primitives::{AssetId, ReferralId};
+use frame_support::log::{debug, error, info};
 use xp_gateway_common::AccountExtractor;
-use xp_logging::{debug, error, info};
 use xpallet_assets::{BalanceOf, Chain, ChainT, WithdrawalLimit};
 use xpallet_gateway_common::{
     traits::{AddressBinding, ReferralBinding, TrusteeSession},
@@ -58,12 +58,14 @@ use self::{
 
 pub use pallet::*;
 
-// syntactic sugar for log.
+const RUNTIME_TARGET: &str = "runtime::bitcoin::v1";
+
+// syntactic sugar for native log.
 #[macro_export]
 macro_rules! native {
     ($level:tt, $patter:expr $(, $values:expr)* $(,)?) => {
         frame_support::log::$level!(
-            target: "runtime::bitcoin",
+            target: RUNTIME_TARGET,
             $patter $(, $values)*
         )
     };

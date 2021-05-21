@@ -2,11 +2,12 @@
 
 mod header_proof;
 
-use frame_support::log::{error, info};
 use sp_runtime::DispatchResult;
 use sp_std::{cmp::Ordering, prelude::*};
 
 use light_bitcoin::primitives::{hash_rev, H256};
+
+use frame_support::log::{error, info};
 
 use crate::types::{BtcHeaderIndex, BtcHeaderInfo};
 use crate::{Config, ConfirmedIndex, Error, MainChain, Pallet};
@@ -48,7 +49,6 @@ fn look_back_confirmed_header<T: Config<I>, I: 'static>(
             // e.g. want to get the previous header of #98, but genesis height is 98,
             // obviously, we cannot find the header of #97.
             info!(
-                target: "runtime::bitcoin",
                 "[update_confirmed_header] Can not find header ({:?}), current reverse count:{}",
                 hash_rev(prev_hash),
                 cnt

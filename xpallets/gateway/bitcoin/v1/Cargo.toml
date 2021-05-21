@@ -29,7 +29,6 @@ orml-utilities = { version = "0.4.0", default-features = false }
 chainx-primitives = { path = "../../../../primitives", default-features = false }
 xp-gateway-bitcoin = { path = "../../../../primitives/gateway/bitcoin", default-features = false }
 xp-gateway-common = { path = "../../../../primitives/gateway/common", default-features = false }
-xp-logging = { path = "../../../../primitives/logging", default-features = false }
 xp-protocol = { path = "../../../../primitives/protocol", default-features = false }
 
 # ChainX pallets
@@ -56,33 +55,33 @@ xpallet-assets-registrar = { path = "../../../assets-registrar" }
 [features]
 default = ["std"]
 std = [
-  "bs58/std",
-  "codec/std",
-  "hex/std",
-  "serde",
-  # Substrate primitives
-  "sp-core/std",
-  "sp-io/std",
-  "sp-runtime/std",
-  "sp-std/std",
-  # Substrate pallets
-  "frame-support/std",
-  "frame-system/std",
-  "pallet-timestamp/std",
-  # Orml
-  "orml-utilities/std",
-  # ChainX primitives
-  "chainx-primitives/std",
-  "xp-gateway-bitcoin/std",
-  "xp-gateway-common/std",
-  "xp-protocol/std",
-  # ChainX pallets
-  "xpallet-assets/std",
-  "xpallet-gateway-common/std",
-  "xpallet-gateway-records/std",
-  "xpallet-support/std",
-  # light-bitcoin
-  "light-bitcoin/std",
+    "bs58/std",
+    "codec/std",
+    "hex/std",
+    "serde",
+    # Substrate primitives
+    "sp-core/std",
+    "sp-io/std",
+    "sp-runtime/std",
+    "sp-std/std",
+    # Substrate pallets
+    "frame-support/std",
+    "frame-system/std",
+    "pallet-timestamp/std",
+    # Orml
+    "orml-utilities/std",
+    # ChainX primitives
+    "chainx-primitives/std",
+    "xp-gateway-bitcoin/std",
+    "xp-gateway-common/std",
+    "xp-protocol/std",
+    # ChainX pallets
+    "xpallet-assets/std",
+    "xpallet-gateway-common/std",
+    "xpallet-gateway-records/std",
+    "xpallet-support/std",
+    # light-bitcoin
+    "light-bitcoin/std",
 ]
 runtime-benchmarks = ["frame-benchmarking"]
 ss58check = ["xp-gateway-common/ss58check"]
