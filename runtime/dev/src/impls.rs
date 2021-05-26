@@ -44,8 +44,8 @@ impl OnUnbalanced<NegativeImbalance> for DealWithFees {
         let to_author_numeric_amount = to_author.peek();
         let to_reward_pot_numeric_amount = to_reward_pot.peek();
 
-        let author = <pallet_authorship::Module<Runtime>>::author();
-        let reward_pot = <xpallet_mining_staking::Module<Runtime>>::reward_pot_for(&author);
+        let author = <pallet_authorship::Pallet<Runtime>>::author();
+        let reward_pot = <xpallet_mining_staking::Pallet<Runtime>>::reward_pot_for(&author);
 
         <pallet_balances::Pallet<Runtime>>::resolve_creating(&author, to_author);
         <pallet_balances::Pallet<Runtime>>::resolve_creating(&reward_pot, to_reward_pot);

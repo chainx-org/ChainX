@@ -301,7 +301,7 @@ pub fn ensure_identical<T: Config<I>, I: 'static>(
         return Ok(());
     }
     log::error!(
-        target: xp_logging::RUNTIME_TARGET,
+        target: "runtime::bitcoin::tx",
         "The transaction text does not match the original text to be signed",
     );
     Err(Error::<T, I>::MismatchedTx.into())

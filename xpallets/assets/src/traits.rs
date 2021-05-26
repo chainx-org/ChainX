@@ -64,6 +64,7 @@ pub trait OnAssetChanged<AccountId, Balance> {
         Ok(())
     }
 
+    /// Triggered after the balance has been set to a new value.
     fn on_set_balance(
         _id: &AssetId,
         _who: &AccountId,

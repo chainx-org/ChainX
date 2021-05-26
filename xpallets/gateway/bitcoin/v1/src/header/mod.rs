@@ -7,7 +7,7 @@ use sp_std::{cmp::Ordering, prelude::*};
 
 use light_bitcoin::primitives::{hash_rev, H256};
 
-use log::{error, info};
+use frame_support::log::{error, info};
 
 use crate::types::{BtcHeaderIndex, BtcHeaderInfo};
 use crate::{Config, ConfirmedIndex, Error, MainChain, Pallet};

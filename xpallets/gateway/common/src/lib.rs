@@ -24,14 +24,15 @@ pub mod weights;
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult},
-    ensure, IterableStorageMap,
+    ensure,
+    log::{error, info},
+    IterableStorageMap,
 };
 use frame_system::{ensure_root, ensure_signed};
 use sp_runtime::traits::StaticLookup;
 use sp_std::{collections::btree_map::BTreeMap, convert::TryFrom, prelude::*};
 
 use chainx_primitives::{AddrStr, AssetId, ChainAddress, Text};
-use log::{error, info};
 use xp_runtime::Memo;
 use xpallet_assets::{AssetRestrictions, BalanceOf, Chain, ChainT, WithdrawalLimit};
 use xpallet_gateway_records::{WithdrawalRecordId, WithdrawalState};
@@ -241,6 +242,7 @@ decl_module! {
             };
 
             info!(
+                target: "runtime::gateway::common",
                 "[transition_trustee_session] Try to transition trustees, chain:{:?}, new_trustees:{:?}",
                 chain,
                 new_trustees
@@ -383,6 +385,7 @@ impl<T: Config> Module<T> {
             (1..new_trustees.len()).any(|i| new_trustees[i..].contains(&new_trustees[i - 1]));
         if has_duplicate {
             error!(
+                target: "runtime::gateway::common",
                 "[try_generate_session_info] Duplicate account, candidates:{:?}",
                 new_trustees
             );
@@ -392,6 +395,7 @@ impl<T: Config> Module<T> {
         for accountid in new_trustees.into_iter() {
             let p = Self::trustee_intention_props_of(&accountid, chain).ok_or_else(|| {
                 error!(
+                    target: "runtime::gateway::common",
                     "[transition_trustee_session] Candidate {:?} has not registered as a trustee",
                     accountid
                 );

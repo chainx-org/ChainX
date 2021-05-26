@@ -22,6 +22,7 @@ use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult},
     ensure,
+    log::info,
     traits::Get,
     IterableStorageMap,
 };
@@ -139,7 +140,8 @@ decl_module! {
             asset.is_valid::<T>()?;
             ensure!(!Self::exists(&asset_id), Error::<T>::AssetAlreadyExists);
 
-            log::info!(
+            info!(
+                target: "runtime::assets-registrar",
                 "[register_asset] id:{}, info:{:?}, is_online:{}, has_mining_rights:{}",
                 asset_id, asset, is_online, has_mining_rights
             );

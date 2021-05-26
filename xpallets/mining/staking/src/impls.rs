@@ -242,6 +242,7 @@ impl<T: Config> Module<T> {
 impl<T: Config> Module<T> {
     fn new_session(session_index: SessionIndex) -> Option<Vec<T::AccountId>> {
         debug!(
+            target: "runtime::mining::staking",
             "[new_session] session_index:{:?}, current_era:{:?}",
             session_index,
             Self::current_era(),
@@ -296,6 +297,7 @@ impl<T: Config> Module<T> {
 
         let next_active_era = Self::active_era().map(|e| e.index + 1).unwrap_or(0);
         debug!(
+            target: "runtime::mining::staking",
             "[start_session] start_session:{}, next_active_era:{:?}",
             start_session, next_active_era
         );
@@ -398,7 +400,7 @@ where
         offenders: &[OffenceDetails<Reporter<T>, Offender<T>>],
         slash_fraction: &[Perbill],
         slash_session: SessionIndex,
-    ) -> Result<Weight, ()> {
+    ) -> Weight {
         let offenders_tuple = offenders
             .iter()
             .zip(slash_fraction)
@@ -410,6 +412,7 @@ where
             .collect::<BTreeMap<_, _>>();
 
         debug!(
+            target: "runtime::mining::staking",
             "Reported the offenders:{:?} happened in session {:?}",
             offenders_tuple, slash_session
         );
@@ -418,11 +421,7 @@ where
         // together later and then perform the slashing operation only once.
         <SessionOffenders<T>>::put(offenders_tuple);
 
-        Ok(1)
-    }
-
-    fn can_report() -> bool {
-        true
+        1
     }
 }
 

@@ -6,7 +6,6 @@ edition = "2018"
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
-log = { version = "0.4.14", default-features = true }
 serde = { version = "1.0.101", optional = true }
 
 # Substrate primitives
@@ -22,7 +21,6 @@ frame-system = { version = "3.0.0", default-features = false }
 
 # ChainX primitives
 chainx-primitives = { path = "../../../primitives", default-features = false }
-xp-logging = { path = "../../../primitives/logging", default-features = false }
 xp-mining-common = { path  = "../../../primitives/mining/common", default-features = false }
 xp-mining-staking = { path  = "../../../primitives/mining/staking", default-features = false }
 xp-protocol = { path = "../../../primitives/protocol", default-features = false }
@@ -46,7 +44,6 @@ pallet-timestamp = "3.0.0"
 default = ["std"]
 std = [
     "codec/std",
-    "log/std",
     "serde",
     # Substate primitives
     "sp-arithmetic/std",
@@ -58,7 +55,6 @@ std = [
     "frame-system/std",
     # ChainX primitives
     "chainx-primitives/std",
-    "xp-logging/std",
     "xp-mining-common/std",
     "xp-mining-staking/std",
     "xp-protocol/std",

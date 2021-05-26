@@ -15,7 +15,8 @@ use light_bitcoin::{
     script::{Builder, Opcode, Script},
 };
 
-use log::{debug, error, info};
+use frame_support::log::{debug, error, info};
+
 use xp_gateway_bitcoin::extract_output_addr;
 use xpallet_assets::Chain;
 use xpallet_gateway_common::{
@@ -206,7 +207,7 @@ impl<T: Config<I>, I: 'static> TrusteeForChain<T::AccountId, BtcTrusteeType, Btc
                 Error::<T, I>::GenerateMultisigFailed
             })?;
 
-        log::info!(
+        frame_support::log::info!(
             target: "runtime::bitcoin",
             "[generate_trustee_session_info] hot_addr:{:?}, cold_addr:{:?}, trustee_list:{:?}",
             hot_trustee_addr_info,
