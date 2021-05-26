@@ -4,11 +4,11 @@ use sp_arithmetic::traits::Saturating;
 use frame_support::{
     dispatch::DispatchResult,
     ensure,
-    traits::{Currency, Get, ReservableCurrency},
+    traits::{Get, ReservableCurrency},
 };
 
 use crate::pallet::{
-    BalanceOf, Collaterals, Config, CurrencyOf, Error, IssueRequest, Pallet, Vaults,
+    BalanceOf, Collaterals, Config, CurrencyOf, Error, Pallet,
 };
 
 impl<T: Config<I>, I: 'static> Pallet<T, I> {

@@ -60,9 +60,9 @@ pub use pallet::*;
 
 const RUNTIME_TARGET: &str = "runtime::bitcoin::v1";
 
-// syntactic sugar for native log.
+// syntactic sugar for log.
 #[macro_export]
-macro_rules! native {
+macro_rules! log {
     ($level:tt, $patter:expr $(, $values:expr)* $(,)?) => {
         frame_support::log::$level!(
             target: RUNTIME_TARGET,
@@ -133,7 +133,7 @@ pub mod pallet {
                 None
             };
             let relay_tx = relayed_info.into_relayed_tx(raw_tx);
-            native!(
+            log!(
                 debug,
                 "[push_transaction] from:{:?}, relay_tx:{:?}, prev_tx:{:?}",
                 _from,
@@ -160,7 +160,7 @@ pub mod pallet {
             Self::ensure_trustee(&from)?;
 
             let tx = Self::deserialize_tx(tx.as_slice())?;
-            native!(
+            log!(
                 debug,
                 "[create_withdraw_tx] from:{:?}, withdrawal list:{:?}, tx:{:?}",
                 from,
@@ -188,7 +188,7 @@ pub mod pallet {
             } else {
                 None
             };
-            native!(
+            log!(
                 debug,
                 "[sign_withdraw_tx] from:{:?}, vote_tx:{:?}",
                 from,
@@ -267,7 +267,7 @@ pub mod pallet {
                 .map(|_| ())
                 .or_else(ensure_root)?;
             let tx = Self::deserialize_tx(tx.as_slice())?;
-            native!(debug, "[force_replace_proposal_tx] new_tx:{:?}", tx);
+            log!(debug, "[force_replace_proposal_tx] new_tx:{:?}", tx);
             Self::force_replace_withdraw_tx(tx)?;
             Ok(().into())
         }
@@ -598,7 +598,7 @@ pub mod pallet {
             }
             // prev header should exist, thus we reject orphan block
             let prev_info = Self::headers(header.previous_header_hash).ok_or_else(|| {
-                native!(
+                log!(
                     error,
                     "[check_prev_and_convert] Can not find prev header, current header:{:?}",
                     header
