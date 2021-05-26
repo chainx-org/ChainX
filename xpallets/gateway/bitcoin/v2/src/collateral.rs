@@ -7,9 +7,7 @@ use frame_support::{
     traits::{Get, ReservableCurrency},
 };
 
-use crate::pallet::{
-    BalanceOf, Collaterals, Config, CurrencyOf, Error, Pallet,
-};
+use crate::pallet::{BalanceOf, Collaterals, Config, CurrencyOf, Error, Pallet};
 
 impl<T: Config<I>, I: 'static> Pallet<T, I> {
     /// Collateral of `vault`
