@@ -1,11 +1,12 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
+use std::net::SocketAddr;
+
 use sc_cli::{
     ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
     NetworkParams, Role, RuntimeVersion, SharedParams, SubstrateCli,
 };
 use sc_service::{config::PrometheusConfig, PartialComponents};
-use std::net::SocketAddr;
 
 use chainx_service::{self as service, new_partial};
 
