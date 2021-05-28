@@ -1,12 +1,126 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use sc_cli::{ChainSpec, Role, RuntimeVersion, SubstrateCli};
-use sc_service::PartialComponents;
+use std::net::SocketAddr;
+
+use sc_cli::{
+    ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
+    NetworkParams, Role, RuntimeVersion, SharedParams, SubstrateCli,
+};
+use sc_service::{config::PrometheusConfig, PartialComponents};
 
 use chainx_service::{self as service, new_partial};
 
 use crate::chain_spec;
 use crate::cli::{Cli, Subcommand};
+
+impl DefaultConfigurationValues for Cli {
+    fn p2p_listen_port() -> u16 {
+        20222
+    }
+
+    fn rpc_ws_listen_port() -> u16 {
+        8087
+    }
+
+    fn rpc_http_listen_port() -> u16 {
+        8086
+    }
+
+    fn prometheus_listen_port() -> u16 {
+        9615
+    }
+}
+
+impl CliConfiguration<Self> for Cli {
+    fn shared_params(&self) -> &SharedParams {
+        self.run.base.shared_params()
+    }
+
+    fn import_params(&self) -> Option<&ImportParams> {
+        self.run.base.import_params()
+    }
+
+    fn keystore_params(&self) -> Option<&KeystoreParams> {
+        self.run.base.keystore_params()
+    }
+
+    fn network_params(&self) -> Option<&NetworkParams> {
+        self.run.base.network_params()
+    }
+
+    fn role(&self, is_dev: bool) -> sc_cli::Result<sc_service::Role> {
+        self.run.base.role(is_dev)
+    }
+
+    fn transaction_pool(&self) -> sc_cli::Result<sc_service::config::TransactionPoolOptions> {
+        self.run.base.transaction_pool()
+    }
+
+    fn state_cache_child_ratio(&self) -> sc_cli::Result<Option<usize>> {
+        self.run.base.state_cache_child_ratio()
+    }
+
+    fn rpc_http(&self, default_listen_port: u16) -> sc_cli::Result<Option<SocketAddr>> {
+        self.run.base.rpc_http(default_listen_port)
+    }
+
+    fn rpc_ipc(&self) -> sc_cli::Result<Option<String>> {
+        self.run.base.rpc_ipc()
+    }
+
+    fn rpc_ws(&self, default_listen_port: u16) -> sc_cli::Result<Option<SocketAddr>> {
+        self.run.base.rpc_ws(default_listen_port)
+    }
+
+    fn rpc_methods(&self) -> sc_cli::Result<sc_service::config::RpcMethods> {
+        self.run.base.rpc_methods()
+    }
+
+    fn rpc_ws_max_connections(&self) -> sc_cli::Result<Option<usize>> {
+        self.run.base.rpc_ws_max_connections()
+    }
+
+    fn rpc_cors(&self, is_dev: bool) -> sc_cli::Result<Option<Vec<String>>> {
+        self.run.base.rpc_cors(is_dev)
+    }
+
+    fn prometheus_config(
+        &self,
+        default_listen_port: u16,
+    ) -> sc_cli::Result<Option<PrometheusConfig>> {
+        self.run.base.prometheus_config(default_listen_port)
+    }
+
+    fn telemetry_external_transport(
+        &self,
+    ) -> sc_cli::Result<Option<sc_service::config::ExtTransport>> {
+        self.run.base.telemetry_external_transport()
+    }
+
+    fn default_heap_pages(&self) -> sc_cli::Result<Option<u64>> {
+        self.run.base.default_heap_pages()
+    }
+
+    fn force_authoring(&self) -> sc_cli::Result<bool> {
+        self.run.base.force_authoring()
+    }
+
+    fn disable_grandpa(&self) -> sc_cli::Result<bool> {
+        self.run.base.disable_grandpa()
+    }
+
+    fn max_runtime_instances(&self) -> sc_cli::Result<Option<usize>> {
+        self.run.base.max_runtime_instances()
+    }
+
+    fn announce_block(&self) -> sc_cli::Result<bool> {
+        self.run.base.announce_block()
+    }
+
+    fn init<C: SubstrateCli>(&self) -> sc_cli::Result<()> {
+        unreachable!("ChainX is never initialized; qed");
+    }
+}
 
 impl SubstrateCli for Cli {
     fn impl_name() -> String {
@@ -96,6 +210,10 @@ pub fn run() -> sc_cli::Result<()> {
             set_default_ss58_version(chain_spec);
 
             runner.run_node_until_exit(|config| async move {
+                let config =
+                    SubstrateCli::create_configuration(&cli, &cli, config.task_executor.clone())
+                        .map_err(|err| format!("chain argument error: {:?}", err))?;
+
                 match config.role {
                     Role::Light => service::build_light(config),
                     _ => service::build_full(config),
