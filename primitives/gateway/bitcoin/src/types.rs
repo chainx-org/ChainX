@@ -25,6 +25,53 @@ pub enum BtcTxType {
     Irrelevance,
 }
 
+#[doc(hidden)]
+#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub enum RequestMetaType {
+    Issue,
+    Redeem,
+    Irrelevance,
+}
+
+#[doc(hidden)]
+#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub enum RequestType {
+    Issue(u128),
+    Redeem(u128),
+    Irrelevance,
+}
+
+#[doc(hidden)]
+impl RequestType {
+    pub fn ref_into(&self) -> RequestMetaType {
+        match self {
+            Self::Issue(_) => RequestMetaType::Issue,
+            Self::Redeem(_) => RequestMetaType::Redeem,
+            Self::Irrelevance => RequestMetaType::Irrelevance,
+        }
+    }
+}
+
+impl Default for RequestType {
+    fn default() -> Self {
+        Self::Irrelevance
+    }
+}
+
+#[doc(hidden)]
+#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct RequestInfo<AccountId> {
+    pub requester: AccountId,
+    pub requester_addr: Option<Address>,
+    pub vault_addr: Option<Address>,
+    pub amount: u64,
+    pub request_id: u128,
+    pub request_type: RequestMetaType,
+}
+
 impl Default for BtcTxType {
     fn default() -> Self {
         BtcTxType::Irrelevance

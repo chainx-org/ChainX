@@ -12,8 +12,9 @@ use light_bitcoin::{
     script::Script,
 };
 
+use crate::types::RequestMetaType;
 use crate::{
-    types::{BtcDepositInfo, BtcTxMetaType, TrusteePair},
+    types::{BtcDepositInfo, BtcTxMetaType, RequestInfo, RequestType, TrusteePair},
     utils::{
         extract_addr_from_transaction, extract_opreturn_data, extract_output_addr, is_trustee_addr,
     },
@@ -34,6 +35,86 @@ impl BtcTxTypeDetector {
         Self {
             network,
             min_deposit,
+        }
+    }
+
+    /// Parse btc transactions
+    ///
+    /// Used for xbridge, the function extracts `input_addr`, `output_addr`, `amount` and
+    /// `op_return` as tuple.
+    ///
+    /// `input_addr` could be none if is an `Issue` transaction.
+    /// `op_return` may be forgot by requester, thus it's ok to be `None`.
+    pub fn parse_transaction<AccountId, Extractor>(
+        &self,
+        tx: &Transaction,
+        prev_tx: Option<&Transaction>,
+        extract_account: Extractor,
+    ) -> (Option<Address>, Option<Address>, Option<AccountId>, u64)
+    where
+        AccountId: Debug,
+        Extractor: Fn(&[u8]) -> Option<(AccountId, Option<ReferralId>)>,
+    {
+        let input_addr = prev_tx.and_then(|prev_tx| {
+            let outpoint = &tx.inputs[0].previous_output;
+            extract_addr_from_transaction(prev_tx, outpoint.index as usize, self.network)
+        });
+
+        let output_info = tx
+            .outputs
+            .first()
+            .expect("Btc Transaction must have at least one output");
+
+        let output = extract_output_addr(output_info, self.network);
+
+        if let Some(output) = output {
+            //TODO(wangyafei): change `parse_deposit_transaction_outputs` signature from address
+            //pair to single address.
+            let (op_return, amount) = self.parse_deposit_transaction_outputs(
+                tx,
+                extract_account,
+                (output.clone(), output.clone()),
+            );
+
+            let op_return: Option<AccountId> = op_return.and_then(|tuple| Some(tuple.0));
+            (input_addr, Some(output), op_return, amount)
+        } else {
+            (input_addr, None, None, 0u64)
+        }
+    }
+
+    /// Detect transaction in Btc if an Issue/Redeem transaction for xbtc
+    pub fn detect_xbridge_transaction<AccountId, Extractor>(
+        &self,
+        tx: &Transaction,
+        prev_tx: &Transaction,
+        infos: &[RequestInfo<AccountId>],
+        extract_account: Extractor,
+    ) -> RequestType
+    where
+        AccountId: Debug + Eq + PartialEq + Clone,
+        Extractor: Fn(&[u8]) -> Option<(AccountId, Option<ReferralId>)>,
+    {
+        let (input, output, op_return, amount) =
+            self.parse_transaction(&tx, Some(&prev_tx), extract_account);
+
+        if let Some(matched_request) = infos.iter().find(|request_info| {
+            (request_info.request_type == RequestMetaType::Issue
+                && op_return == Some(request_info.requester.clone())
+                && output == request_info.vault_addr
+                && amount >= request_info.amount)
+                || (request_info.request_type == RequestMetaType::Redeem
+                    && input == request_info.vault_addr
+                    && output == request_info.requester_addr
+                    && amount >= request_info.amount)
+        }) {
+            match matched_request.request_type {
+                RequestMetaType::Issue => RequestType::Issue(matched_request.request_id),
+                RequestMetaType::Redeem => RequestType::Redeem(matched_request.request_id),
+                RequestMetaType::Irrelevance => RequestType::Irrelevance,
+            }
+        } else {
+            RequestType::default()
         }
     }
 
