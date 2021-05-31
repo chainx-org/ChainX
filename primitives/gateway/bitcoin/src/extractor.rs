@@ -1,10 +1,10 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use frame_support::log::{debug, error};
 use sp_core::crypto::AccountId32;
 use sp_std::prelude::Vec;
 
 use chainx_primitives::ReferralId;
+use frame_support::log::{debug, error};
 use xp_gateway_common::from_ss58_check;
 
 pub use xp_gateway_common::AccountExtractor;
