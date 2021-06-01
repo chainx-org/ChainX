@@ -93,7 +93,7 @@ impl<T: Config> ComputeMiningWeight<T::AccountId, T::BlockNumber> for Module<T> 
 // ```
 impl<T: Config> xpallet_assets::OnAssetChanged<T::AccountId, BalanceOf<T>> for Module<T> {
     fn on_issue_pre(target: &AssetId, source: &T::AccountId) {
-        let current_block = <frame_system::Module<T>>::block_number();
+        let current_block = <frame_system::Pallet<T>>::block_number();
         Self::init_receiver_mining_ledger(source, target, current_block);
 
         Self::update_mining_weights(source, target, current_block);
@@ -119,7 +119,7 @@ impl<T: Config> xpallet_assets::OnAssetChanged<T::AccountId, BalanceOf<T>> for M
             return;
         }
 
-        let current_block = <frame_system::Module<T>>::block_number();
+        let current_block = <frame_system::Pallet<T>>::block_number();
         Self::init_receiver_mining_ledger(to, asset_id, current_block);
 
         Self::update_miner_mining_weight(from, asset_id, current_block);
@@ -127,7 +127,7 @@ impl<T: Config> xpallet_assets::OnAssetChanged<T::AccountId, BalanceOf<T>> for M
     }
 
     fn on_destroy_pre(target: &AssetId, source: &T::AccountId) {
-        let current_block = <frame_system::Module<T>>::block_number();
+        let current_block = <frame_system::Pallet<T>>::block_number();
         Self::update_mining_weights(source, target, current_block);
     }
 }
@@ -199,7 +199,7 @@ impl<T: Config> Claim<T::AccountId> for Module<T> {
     type Error = Error<T>;
 
     fn claim(claimer: &T::AccountId, claimee: &Self::Claimee) -> Result<(), Error<T>> {
-        let current_block = <frame_system::Module<T>>::block_number();
+        let current_block = <frame_system::Pallet<T>>::block_number();
 
         let ClaimRestriction {
             staking_requirement,
@@ -241,7 +241,7 @@ impl<T: Config> xpallet_assets_registrar::RegistrarHandler for Module<T> {
         AssetLedgers::<T>::insert(
             asset_id,
             AssetLedger {
-                last_total_mining_weight_update: <frame_system::Module<T>>::block_number(),
+                last_total_mining_weight_update: <frame_system::Pallet<T>>::block_number(),
                 ..Default::default()
             },
         );

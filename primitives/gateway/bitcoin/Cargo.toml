@@ -18,7 +18,6 @@ frame-support = { version = "3.0.0", default-features = false }
 # ChainX primitives
 chainx-primitives = { path = "../../../primitives", default-features = false }
 xp-gateway-common = { path = "../../gateway/common", default-features = false }
-xp-logging = { path = "../../logging", default-features = false }
 
 # light-bitcoin
 light-bitcoin = { git = "https://github.com/chainx-org/light-bitcoin", branch = "master", default-features = false }
@@ -37,7 +36,6 @@ std = [
     # ChainX primitives
     "chainx-primitives/std",
     "xp-gateway-common/std",
-    "xp-logging/std",
     # light-bitcoin
     "light-bitcoin/std",
 ]

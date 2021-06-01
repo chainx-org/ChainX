@@ -1,6 +1,10 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use frame_support::{dispatch::DispatchResult, traits::UnixTime};
+use frame_support::{
+    dispatch::DispatchResult,
+    log::{debug, error, info, warn},
+    traits::UnixTime,
+};
 use sp_runtime::RuntimeDebug;
 use sp_std::{cmp, convert::TryFrom};
 
@@ -10,10 +14,8 @@ use light_bitcoin::{
     primitives::{hash_rev, Compact, H256, U256},
 };
 
-use xp_logging::{debug, error, info, warn};
-
 use crate::types::{BtcHeaderInfo, BtcParams};
-use crate::{Config, Error, Module};
+use crate::{Config, Error, Pallet};
 
 pub struct HeaderVerifier<'a> {
     pub work: HeaderWork<'a>,
@@ -36,8 +38,8 @@ impl<'a> HeaderVerifier<'a> {
     }
 
     pub fn check<T: Config>(&self) -> DispatchResult {
-        let params: BtcParams = Module::<T>::params_info();
-        let network_id: Network = Module::<T>::network_id();
+        let params: BtcParams = Pallet::<T>::params_info();
+        let network_id: Network = Pallet::<T>::network_id();
         if let Network::Mainnet = network_id {
             self.work.check::<T>(&params)?;
         }
@@ -72,6 +74,7 @@ impl<'a> HeaderWork<'a> {
             RequiredWork::Value(work) => {
                 if work != self.info.header.bits {
                     error!(
+                        target: "runtime::bitcoin",
                         "[check_header_work] nBits do not match difficulty rules, work:{:?}, header bits:{:?}, height:{}",
                         work, self.info.header.bits, self.info.height
                     );
@@ -94,19 +97,21 @@ pub fn work_required<T: Config>(
         return RequiredWork::Value(max_bits);
     }
 
-    let parent_header: BtcHeader = Module::<T>::headers(&parent_hash)
+    let parent_header: BtcHeader = Pallet::<T>::headers(&parent_hash)
         .expect("pre header must exist here")
         .header;
 
     if is_retarget_height(height, params) {
         let new_work = work_required_retarget::<T>(parent_header, height, params);
         info!(
+            target: "runtime::bitcoin",
             "[work_required] Retarget new work required, height:{}, retargeting_interval:{}, new_work:{:?}",
             height, params.retargeting_interval(), new_work
         );
         return new_work;
     }
     debug!(
+        target: "runtime::bitcoin",
         "[work_required] Use old work required, old bits:{:?}",
         parent_header.bits
     );
@@ -130,17 +135,17 @@ fn work_required_retarget<T: Config>(
     // bits of last block
     let last_bits = parent_header.bits;
 
-    let (_, genesis_height) = Module::<T>::genesis_info();
+    let (_, genesis_height) = Pallet::<T>::genesis_info();
     let mut retarget_header = parent_header;
     if retarget_num < genesis_height {
         // retarget_header = genesis_header;
         return RequiredWork::NotCheck;
     } else {
-        let hash_list = Module::<T>::block_hash_for(&retarget_num);
+        let hash_list = Pallet::<T>::block_hash_for(&retarget_num);
         for h in hash_list {
             // look up in main chain
-            if Module::<T>::main_chain(h) {
-                let info = Module::<T>::headers(h).expect("block header must exist at here.");
+            if Pallet::<T>::main_chain(h) {
+                let info = Pallet::<T>::headers(h).expect("block header must exist at here.");
                 retarget_header = info.header;
                 break;
             };
@@ -161,6 +166,7 @@ fn work_required_retarget<T: Config>(
     retarget /= U256::from(params.target_timespan_seconds());
 
     debug!(
+        target: "runtime::bitcoin",
         "[work_required_retarget] retarget:{}, maximum:{:?}",
         retarget, maximum
     );
@@ -235,6 +241,7 @@ impl<'a> HeaderTimestamp<'a> {
         if let Some(current_time) = self.current_time {
             if self.header.time > current_time + params.block_max_future() {
                 error!(
+                    target: "runtime::bitcoin",
                     "[check_header_timestamp] Header time:{}, current time:{}, max_future{:?}",
                     self.header.time,
                     current_time,
@@ -247,6 +254,7 @@ impl<'a> HeaderTimestamp<'a> {
         } else {
             // if get chain timestamp error, just ignore blockhead time check
             warn!(
+                target: "runtime::bitcoin",
                 "[check_header_timestamp] Header:{:?}, get unix timestamp error, ignore it",
                 hash_rev(self.header.hash())
             );

@@ -1,10 +1,12 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use frame_support::{IterableStorageDoubleMap, StorageDoubleMap};
+use frame_support::{
+    log::{debug, error, info, warn},
+    IterableStorageDoubleMap, StorageDoubleMap,
+};
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
 use chainx_primitives::{AssetId, ChainAddress, ReferralId};
-use xp_logging::{debug, error, info, warn};
 use xpallet_assets::Chain;
 use xpallet_support::{traits::Validator, try_addr, try_str};
 
@@ -17,6 +19,7 @@ impl<T: Config> ReferralBinding<T::AccountId> for Module<T> {
             Ok(chain) => chain,
             Err(err) => {
                 error!(
+                    target: "runtime::gateway::common",
                     "[update_referral_binding] Unexpected asset_id:{:?}, error:{:?}",
                     assert_id, err
                 );
@@ -33,6 +36,7 @@ impl<T: Config> ReferralBinding<T::AccountId> for Module<T> {
                     }
                     Some(channel) => {
                         debug!(
+                            target: "runtime::gateway::common",
                             "[update_referral_binding] Already has referral binding:[assert id:{}, chain:{:?}, who:{:?}, referral:{:?}]",
                             assert_id, chain, who, channel
                         );
@@ -40,6 +44,7 @@ impl<T: Config> ReferralBinding<T::AccountId> for Module<T> {
                 }
             } else {
                 warn!(
+                    target: "runtime::gateway::common",
                     "[update_referral_binding] {:?} has no referral, cannot update binding",
                     try_str(name)
                 );
@@ -59,6 +64,7 @@ impl<T: Config, Address: Into<Vec<u8>>> AddressBinding<T::AccountId, Address> fo
         if let Some(accountid) = AddressBindingOf::<T>::get(chain, &address) {
             if accountid != who {
                 debug!(
+                    target: "runtime::gateway::common",
                     "[update_address_binding] Current address binding need to changed (old:{:?} => new:{:?})",
                     accountid, who
                 );
@@ -77,6 +83,7 @@ impl<T: Config, Address: Into<Vec<u8>>> AddressBinding<T::AccountId, Address> fo
         });
 
         info!(
+            target: "runtime::gateway::common",
             "[update_address_binding] Update address binding:[chain:{:?}, addr:{:?}, who:{:?}]",
             chain,
             try_addr(&address),

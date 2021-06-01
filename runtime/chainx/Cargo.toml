@@ -42,7 +42,7 @@ pallet-balances = { version = "3.0.0", default-features = false }
 pallet-bounties = { version = "3.0.0", default-features = false }
 pallet-collective = { version = "3.0.0", default-features = false }
 pallet-democracy = { version = "3.0.0", default-features = false }
-pallet-elections-phragmen = { version = "3.0.0", default-features = false }
+pallet-elections-phragmen = { version = "4.0.0", default-features = false }
 pallet-grandpa = { version = "3.0.0", default-features = false }
 pallet-identity = { version = "3.0.0", default-features = false }
 pallet-im-online = { version = "3.0.0", default-features = false }
@@ -73,7 +73,6 @@ chainx-primitives = { path = "../../primitives", default-features = false }
 chainx-runtime-common = { path = "../common", default-features = false }
 # we use feature "ss58check" for using local runtime-interface to check address, if in parachain, do not use this feature
 xp-gateway-bitcoin = { path = "../../primitives/gateway/bitcoin", default-features = false, features = ["ss58check"] }
-xp-logging = { path = "../../primitives/logging", default-features = false }
 xp-mining-staking = { path = "../../primitives/mining/staking", default-features = false }
 xp-protocol = { path = "../../primitives/protocol", default-features = false }
 xp-runtime = { path = "../../primitives/runtime", default-features = false }
@@ -159,7 +158,6 @@ std = [
   "chainx-primitives/std",
   "chainx-runtime-common/std",
   "xp-gateway-bitcoin/std",
-  "xp-logging/std",
   "xp-mining-staking/std",
   "xp-protocol/std",
   "xp-runtime/std",

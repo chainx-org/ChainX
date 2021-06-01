@@ -31,13 +31,14 @@ use sp_runtime::{
         InvalidTransaction, TransactionPriority, TransactionSource, TransactionValidity,
         TransactionValidityError, ValidTransaction,
     },
-    ApplyExtrinsicResult, DispatchError, ModuleId, Perbill, Percent, Permill, RuntimeDebug,
+    ApplyExtrinsicResult, DispatchError, Perbill, Percent, Permill, RuntimeDebug,
 };
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
+use frame_support::PalletId;
 use frame_system::{EnsureOneOf, EnsureRoot, EnsureSignedBy};
 use pallet_grandpa::fg_primitives;
 use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
@@ -97,7 +98,7 @@ pub mod constants;
 /// Implementations of some helper traits passed into runtime modules as associated types.
 pub mod impls;
 
-use self::constants::{currency::*, fee::WeightToFee, time::*};
+use self::constants::{currency::*, time::*};
 use self::impls::{ChargeExtraFee, DealWithFees, SlowAdjustingFeeUpdate};
 
 /// This runtime version.
@@ -135,8 +136,6 @@ impl Filter<Call> for BaseFilter {
         !XSystem::is_paused(metadata)
     }
 }
-pub struct IsCallable;
-frame_support::impl_filter_stack!(IsCallable, BaseFilter, Call, is_callable);
 
 pub const FORBIDDEN_CALL: u8 = 255;
 pub const FORBIDDEN_ACCOUNT: u8 = 254;
@@ -230,6 +229,7 @@ impl frame_system::Config for Runtime {
     /// Weight information for the extrinsics of this pallet.
     type SystemWeightInfo = frame_system::weights::SubstrateWeight<Runtime>;
     type SS58Prefix = SS58Prefix;
+    type OnSetCode = ();
 }
 
 parameter_types! {
@@ -387,7 +387,7 @@ parameter_types! {
 impl pallet_transaction_payment::Config for Runtime {
     type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, DealWithFees>;
     type TransactionByteFee = TransactionByteFee;
-    type WeightToFee = WeightToFee;
+    type WeightToFee = IdentityFee<Balance>;
     type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
 }
 
@@ -404,7 +404,7 @@ impl pallet_im_online::Config for Runtime {
     type AuthorityId = ImOnlineId;
     type Event = Event;
     type ValidatorSet = Self;
-    type SessionDuration = SessionDuration;
+    type NextSessionRotation = Babe;
     type ReportUnresponsiveness = Offences;
     type UnsignedPriority = ImOnlineUnsignedPriority;
     type WeightInfo = pallet_im_online::weights::SubstrateWeight<Runtime>;
@@ -475,7 +475,7 @@ where
         );
         let raw_payload = SignedPayload::new(call, extra)
             .map_err(|e| {
-                debug::warn!("Unable to create signed payload: {:?}", e);
+                frame_support::log::warn!("Unable to create signed payload: {:?}", e);
             })
             .ok()?;
         let signature = raw_payload.using_encoded(|payload| C::sign(payload, public))?;
@@ -498,15 +498,10 @@ where
     type OverarchingCall = Call;
 }
 
-parameter_types! {
-    pub OffencesWeightSoftLimit: Weight = Perbill::from_percent(60) * MaximumBlockWeight::get();
-}
-
 impl pallet_offences::Config for Runtime {
     type Event = Event;
     type IdentificationTuple = xpallet_mining_staking::IdentificationTuple<Runtime>;
     type OnOffenceHandler = XStaking;
-    type WeightSoftLimit = OffencesWeightSoftLimit;
 }
 
 impl pallet_utility::Config for Runtime {
@@ -628,7 +623,7 @@ parameter_types! {
     pub const TermDuration: BlockNumber = 1 * DAYS;
     pub const DesiredMembers: u32 = 11;
     pub const DesiredRunnersUp: u32 = 7;
-    pub const ElectionsPhragmenModuleId: LockIdentifier = *b"pcx/phre";
+    pub const ElectionsPhragmenPalletId: LockIdentifier = *b"pcx/phre";
 }
 
 // Make sure that there are no more than `MaxMembers` members elected via elections-phragmen.
@@ -636,7 +631,7 @@ const_assert!(DesiredMembers::get() <= CouncilMaxMembers::get());
 
 impl pallet_elections_phragmen::Config for Runtime {
     type Event = Event;
-    type ModuleId = ElectionsPhragmenModuleId;
+    type PalletId = ElectionsPhragmenPalletId;
     type Currency = Balances;
     type ChangeMembers = Council;
     // NOTE: this implies that council's genesis members cannot be set directly and must come from
@@ -686,6 +681,8 @@ impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
     type PrimeOrigin = EnsureRootOrHalfCouncil;
     type MembershipInitialized = TechnicalCommittee;
     type MembershipChanged = TechnicalCommittee;
+    type MaxMembers = TechnicalMaxMembers;
+    type WeightInfo = pallet_membership::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -700,15 +697,16 @@ parameter_types! {
     pub const DataDepositPerByte: Balance = 1 * CENTS;
     pub const BountyDepositBase: Balance = 1 * DOLLARS;
     pub const BountyDepositPayoutDelay: BlockNumber = 4 * DAYS;
-    pub const TreasuryModuleId: ModuleId = ModuleId(*b"pcx/trsy");
+    pub const TreasuryPalletId: PalletId = PalletId(*b"pcx/trsy");
     pub const BountyUpdatePeriod: BlockNumber = 90 * DAYS;
     pub const MaximumReasonLength: u32 = 16384;
     pub const BountyCuratorDeposit: Permill = Permill::from_percent(50);
     pub const BountyValueMinimum: Balance = 10 * DOLLARS;
+    pub const MaxApprovals: u32 = 100;
 }
 
 impl pallet_treasury::Config for Runtime {
-    type ModuleId = TreasuryModuleId;
+    type PalletId = TreasuryPalletId;
     type Currency = Balances;
     type ApproveOrigin = EnsureOneOf<
         AccountId,
@@ -729,6 +727,7 @@ impl pallet_treasury::Config for Runtime {
     type BurnDestination = ();
     type SpendFunds = Bounties;
     type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
+    type MaxApprovals = MaxApprovals;
 }
 
 impl pallet_bounties::Config for Runtime {
@@ -991,7 +990,7 @@ impl xpallet_dex_spot::Config for Runtime {
 pub struct SimpleTreasuryAccount;
 impl xpallet_support::traits::TreasuryAccount<AccountId> for SimpleTreasuryAccount {
     fn treasury_account() -> AccountId {
-        TreasuryModuleId::get().into_account()
+        TreasuryPalletId::get().into_account()
     }
 }
 
@@ -1045,74 +1044,74 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic
     {
         // Basic stuff.
-        System: frame_system::{Module, Call, Config, Storage, Event<T>} = 0,
-        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage} = 1,
-        Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>} = 2,
+        System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
+        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Call, Storage} = 1,
+        Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 2,
 
         // Must be before session.
-        Babe: pallet_babe::{Module, Call, Storage, Config, ValidateUnsigned} = 3,
+        Babe: pallet_babe::{Pallet, Call, Storage, Config, ValidateUnsigned} = 3,
 
-        Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent} = 4,
-        Indices: pallet_indices::{Module, Call, Storage, Config<T>, Event<T>} = 5,
-        Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>} = 6,
-        TransactionPayment: pallet_transaction_payment::{Module, Storage} = 7,
+        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 4,
+        Indices: pallet_indices::{Pallet, Call, Storage, Config<T>, Event<T>} = 5,
+        Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 6,
+        TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 7,
 
         // Consensus support.
-        Authorship: pallet_authorship::{Module, Call, Storage, Inherent} = 8,
-        Offences: pallet_offences::{Module, Call, Storage, Event} = 9,
-        Historical: pallet_session_historical::{Module} = 10,
-        Session: pallet_session::{Module, Call, Storage, Event, Config<T>} = 11,
-        Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event} = 12,
-        ImOnline: pallet_im_online::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>} = 13,
-        AuthorityDiscovery: pallet_authority_discovery::{Module, Call, Config} = 14,
+        Authorship: pallet_authorship::{Pallet, Call, Storage, Inherent} = 8,
+        Offences: pallet_offences::{Pallet, Call, Storage, Event} = 9,
+        Historical: pallet_session_historical::{Pallet} = 10,
+        Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 11,
+        Grandpa: pallet_grandpa::{Pallet, Call, Storage, Config, Event} = 12,
+        ImOnline: pallet_im_online::{Pallet, Call, Storage, Event<T>, ValidateUnsigned, Config<T>} = 13,
+        AuthorityDiscovery: pallet_authority_discovery::{Pallet, Call, Config} = 14,
 
         // Governance stuff.
-        Democracy: pallet_democracy::{Module, Call, Storage, Config, Event<T>} = 15,
-        Council: pallet_collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>} = 16,
-        TechnicalCommittee: pallet_collective::<Instance2>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>} = 17,
-        Elections: pallet_elections_phragmen::{Module, Call, Storage, Event<T>, Config<T>} = 18,
-        TechnicalMembership: pallet_membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>} = 19,
-        Treasury: pallet_treasury::{Module, Call, Storage, Config, Event<T>} = 20,
+        Democracy: pallet_democracy::{Pallet, Call, Storage, Config, Event<T>} = 15,
+        Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 16,
+        TechnicalCommittee: pallet_collective::<Instance2>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 17,
+        Elections: pallet_elections_phragmen::{Pallet, Call, Storage, Event<T>, Config<T>} = 18,
+        TechnicalMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>} = 19,
+        Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>} = 20,
 
-        Identity: pallet_identity::{Module, Call, Storage, Event<T>} = 21,
+        Identity: pallet_identity::{Pallet, Call, Storage, Event<T>} = 21,
 
-        Utility: pallet_utility::{Module, Call, Event} = 22,
-        Multisig: pallet_multisig::{Module, Call, Storage, Event<T>} = 23,
+        Utility: pallet_utility::{Pallet, Call, Event} = 22,
+        Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 23,
 
         // ChainX basics.
-        XSystem: xpallet_system::{Module, Call, Storage, Event<T>, Config} = 24,
-        XAssetsRegistrar: xpallet_assets_registrar::{Module, Call, Storage, Event, Config} = 25,
-        XAssets: xpallet_assets::{Module, Call, Storage, Event<T>, Config<T>} = 26,
+        XSystem: xpallet_system::{Pallet, Call, Storage, Event<T>, Config} = 24,
+        XAssetsRegistrar: xpallet_assets_registrar::{Pallet, Call, Storage, Event, Config} = 25,
+        XAssets: xpallet_assets::{Pallet, Call, Storage, Event<T>, Config<T>} = 26,
 
         // Mining, must be after XAssets.
-        XStaking: xpallet_mining_staking::{Module, Call, Storage, Event<T>, Config<T>} = 27,
-        XMiningAsset: xpallet_mining_asset::{Module, Call, Storage, Event<T>, Config<T>} = 28,
+        XStaking: xpallet_mining_staking::{Pallet, Call, Storage, Event<T>, Config<T>} = 27,
+        XMiningAsset: xpallet_mining_asset::{Pallet, Call, Storage, Event<T>, Config<T>} = 28,
 
         // Crypto gateway stuff.
-        XGatewayRecords: xpallet_gateway_records::{Module, Call, Storage, Event<T>} = 29,
-        XGatewayCommon: xpallet_gateway_common::{Module, Call, Storage, Event<T>, Config<T>} = 30,
-        XGatewayBitcoin: xpallet_gateway_bitcoin::{Module, Call, Storage, Event<T>, Config<T>} = 31,
+        XGatewayRecords: xpallet_gateway_records::{Pallet, Call, Storage, Event<T>} = 29,
+        XGatewayCommon: xpallet_gateway_common::{Pallet, Call, Storage, Event<T>, Config<T>} = 30,
+        XGatewayBitcoin: xpallet_gateway_bitcoin::{Pallet, Call, Storage, Event<T>, Config<T>} = 31,
 
         // DEX
-        XSpot: xpallet_dex_spot::{Module, Call, Storage, Event<T>, Config<T>} = 32,
+        XSpot: xpallet_dex_spot::{Pallet, Call, Storage, Event<T>, Config<T>} = 32,
 
-        XGenesisBuilder: xpallet_genesis_builder::{Module, Config<T>} = 33,
+        XGenesisBuilder: xpallet_genesis_builder::{Pallet, Config<T>} = 33,
 
         // orml
         // we retain Currencies Call for this call may be used in future, but we do not need this now,
         // so that we filter it in BaseFilter.
-        Currencies: orml_currencies::{Module, Call, Event<T>} = 34,
+        Currencies: orml_currencies::{Pallet, Call, Event<T>} = 34,
 
         // It might be possible to merge this module into pallet_transaction_payment in future, thus
         // we put it at the end for keeping the extrinsic ordering.
-        XTransactionFee: xpallet_transaction_fee::{Module, Event<T>} = 35,
+        XTransactionFee: xpallet_transaction_fee::{Pallet, Event<T>} = 35,
 
-        Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>} = 36,
+        Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 36,
 
-        Proxy: pallet_proxy::{Module, Call, Storage, Event<T>} = 37,
+        Proxy: pallet_proxy::{Pallet, Call, Storage, Event<T>} = 37,
 
-        Bounties: pallet_bounties::{Module, Call, Storage, Event<T>} = 38,
-        Tips: pallet_tips::{Module, Call, Storage, Event<T>} = 39,
+        Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 38,
+        Tips: pallet_tips::{Pallet, Call, Storage, Event<T>} = 39,
     }
 );
 
@@ -1150,7 +1149,7 @@ pub type Executive = frame_executive::Executive<
     Block,
     frame_system::ChainContext<Runtime>,
     Runtime,
-    AllModules,
+    AllPallets,
 >;
 
 impl_runtime_apis! {
@@ -1176,10 +1175,7 @@ impl_runtime_apis! {
 
     impl sp_block_builder::BlockBuilder<Block> for Runtime {
         fn apply_extrinsic(extrinsic: <Block as BlockT>::Extrinsic) -> ApplyExtrinsicResult {
-            Executive::apply_extrinsic(extrinsic).map_err(|err| {
-                frame_support::debug::error!(target: xp_logging::RUNTIME_TARGET, "Apply extrinsic failed: {:?}", err);
-                err
-            })
+            Executive::apply_extrinsic(extrinsic)
         }
 
         fn finalize_block() -> <Block as BlockT>::Header {
@@ -1195,10 +1191,6 @@ impl_runtime_apis! {
             data: sp_inherents::InherentData,
         ) -> sp_inherents::CheckInherentsResult {
             data.check_extrinsics(&block)
-        }
-
-        fn random_seed() -> <Block as BlockT>::Hash {
-            RandomnessCollectiveFlip::random_seed()
         }
     }
 

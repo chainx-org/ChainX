@@ -7,7 +7,7 @@
 
 use sp_std::prelude::*;
 
-use frame_support::{decl_module, decl_storage};
+use frame_support::{decl_module, decl_storage, log::info};
 
 #[cfg(feature = "std")]
 use xp_genesis_builder::AllParams;
@@ -41,7 +41,8 @@ decl_storage! {
             xstaking::initialize::<T>(&config.params.xstaking);
             xmining_asset::initialize::<T>(&config.params.xmining_asset);
 
-            xp_logging::info!(
+            info!(
+                target: "runtime::genesis-builder",
                 "Took {:?}ms to orchestrate the exported state from ChainX 1.0",
                 now.elapsed().as_millis()
             );
@@ -99,7 +100,7 @@ mod genesis {
             let treasury_account =
                 <T as xpallet_mining_staking::Config>::TreasuryAccount::treasury_account();
 
-            let vesting_account = xpallet_mining_staking::Module::<T>::vesting_account();
+            let vesting_account = xpallet_mining_staking::Pallet::<T>::vesting_account();
 
             let mut total_issuance = T::Balance::default();
 
@@ -111,10 +112,10 @@ mod genesis {
                     let vesting_free = *free - initial_authorities_endowed;
                     set_free_balance(&vesting_account, &vesting_free);
                 } else if *who == *legacy_xbtc_pot {
-                    let new_xbtc_pot = xpallet_mining_asset::Module::<T>::reward_pot_for(&X_BTC);
+                    let new_xbtc_pot = xpallet_mining_asset::Pallet::<T>::reward_pot_for(&X_BTC);
                     set_free_balance(&new_xbtc_pot, free);
                 } else if let Some(validator) = validator_for::<T, _>(who, legacy_pots.iter()) {
-                    let new_pot = xpallet_mining_staking::Module::<T>::reward_pot_for(validator);
+                    let new_pot = xpallet_mining_staking::Pallet::<T>::reward_pot_for(validator);
                     set_free_balance(&new_pot, free);
                 } else {
                     set_free_balance(who, free);
@@ -135,7 +136,7 @@ mod genesis {
             xbtc_assets: &[FreeBalanceInfo<T::AccountId, AssetBalanceOf<T>>],
         ) {
             for FreeBalanceInfo { who, free } in xbtc_assets {
-                xpallet_assets::Module::<T>::force_set_free_balance(&X_BTC, who, *free);
+                xpallet_assets::Pallet::<T>::force_set_free_balance(&X_BTC, who, *free);
             }
         }
     }
@@ -153,7 +154,7 @@ mod genesis {
             let genesis_validators = validators.iter().map(|v| v.who.clone()).collect::<Vec<_>>();
 
             // Firstly register the genesis validators.
-            xpallet_mining_staking::Module::<T>::initialize_legacy_validators(validators)
+            xpallet_mining_staking::Pallet::<T>::initialize_legacy_validators(validators)
                 .expect("Failed to initialize genesis staking validators");
 
             // Then mock the validator bond themselves and set the vote weights.
@@ -171,7 +172,7 @@ mod genesis {
                     // Not all `nominee` are in `genesis_validators` because the dead
                     // validators in 1.0 have been dropped.
                     if genesis_validators.contains(nominee) {
-                        xpallet_mining_staking::Module::<T>::force_set_nominator_vote_weight(
+                        xpallet_mining_staking::Pallet::<T>::force_set_nominator_vote_weight(
                             nominator, nominee, *weight,
                         );
                         // Skip the validator self-bonding as it has already been processed
@@ -179,7 +180,7 @@ mod genesis {
                         if *nominee == *nominator {
                             continue;
                         }
-                        xpallet_mining_staking::Module::<T>::force_bond(
+                        xpallet_mining_staking::Pallet::<T>::force_bond(
                             nominator,
                             nominee,
                             *nomination,
@@ -204,16 +205,16 @@ mod genesis {
                 xbtc_miners,
                 xbtc_info,
             } = params;
-            let current_block = frame_system::Module::<T>::block_number();
+            let current_block = frame_system::Pallet::<T>::block_number();
             for XBtcMiner { who, weight } in xbtc_miners {
-                xpallet_mining_asset::Module::<T>::force_set_miner_mining_weight(
+                xpallet_mining_asset::Pallet::<T>::force_set_miner_mining_weight(
                     who,
                     &X_BTC,
                     *weight,
                     current_block,
                 );
             }
-            xpallet_mining_asset::Module::<T>::force_set_asset_mining_weight(
+            xpallet_mining_asset::Pallet::<T>::force_set_asset_mining_weight(
                 &X_BTC,
                 xbtc_info.weight,
                 current_block,

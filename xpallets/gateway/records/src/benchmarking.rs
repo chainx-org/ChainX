@@ -4,7 +4,7 @@ use frame_benchmarking::{benchmarks, whitelisted_caller};
 use frame_system::RawOrigin;
 
 use super::*;
-use crate::Module as XGatewayRecords;
+use crate::Pallet as XGatewayRecords;
 
 const ASSET_ID: AssetId = xp_protocol::X_BTC;
 
@@ -47,7 +47,7 @@ benchmarks! {
         let amount: BalanceOf<T> = 1000u32.into();
     }: _(RawOrigin::Root, receiver_lookup, ASSET_ID, amount)
     verify {
-        assert_eq!(xpallet_assets::Module::<T>::usable_balance(&receiver, &ASSET_ID), amount);
+        assert_eq!(xpallet_assets::Pallet::<T>::usable_balance(&receiver, &ASSET_ID), amount);
     }
 
     root_withdraw {

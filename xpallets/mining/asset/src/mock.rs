@@ -37,14 +37,14 @@ frame_support::construct_runtime!(
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
-        System: frame_system::{Module, Call, Config, Storage, Event<T>},
-        Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
-        Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-        Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
-        XAssetsRegistrar: xpallet_assets_registrar::{Module, Call, Config, Storage, Event},
-        XAssets: xpallet_assets::{Module, Call, Config<T>, Storage, Event<T>},
-        XStaking: xpallet_mining_staking::{Module, Call, Storage, Event<T>, Config<T>},
-        XMiningAsset: xpallet_mining_asset::{Module, Call, Storage, Event<T>, Config<T>} = 28,
+        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
+        Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+        Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
+        XAssetsRegistrar: xpallet_assets_registrar::{Pallet, Call, Config, Storage, Event},
+        XAssets: xpallet_assets::{Pallet, Call, Config<T>, Storage, Event<T>},
+        XStaking: xpallet_mining_staking::{Pallet, Call, Storage, Event<T>, Config<T>},
+        XMiningAsset: xpallet_mining_asset::{Pallet, Call, Storage, Event<T>, Config<T>} = 28,
     }
 );
 
@@ -76,6 +76,7 @@ impl frame_system::Config for Test {
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
     type SS58Prefix = SS58Prefix;
+    type OnSetCode = ();
 }
 
 parameter_types! {

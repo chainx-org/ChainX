@@ -22,13 +22,13 @@ use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult},
     ensure,
+    log::info,
     traits::Get,
     IterableStorageMap,
 };
 use frame_system::ensure_root;
 
 use chainx_primitives::{AssetId, Desc, Token};
-use xp_logging::info;
 
 pub use self::types::AssetInfo;
 pub use self::weights::WeightInfo;
@@ -141,6 +141,7 @@ decl_module! {
             ensure!(!Self::exists(&asset_id), Error::<T>::AssetAlreadyExists);
 
             info!(
+                target: "runtime::assets-registrar",
                 "[register_asset] id:{}, info:{:?}, is_online:{}, has_mining_rights:{}",
                 asset_id, asset, is_online, has_mining_rights
             );
@@ -308,7 +309,7 @@ impl<T: Config> Module<T> {
         AssetInfoOf::insert(&id, asset);
         AssetOnline::insert(&id, true);
 
-        RegisteredAt::<T>::insert(&id, frame_system::Module::<T>::block_number());
+        RegisteredAt::<T>::insert(&id, frame_system::Pallet::<T>::block_number());
 
         Ok(())
     }

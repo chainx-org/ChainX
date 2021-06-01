@@ -30,10 +30,10 @@ frame_support::construct_runtime!(
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
-        System: frame_system::{Module, Call, Config, Storage, Event<T>},
-        Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-        XAssetsRegistrar: xpallet_assets_registrar::{Module, Call, Config, Storage, Event},
-        XAssets: xpallet_assets::{Module, Call, Config<T>, Storage, Event<T>},
+        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+        XAssetsRegistrar: xpallet_assets_registrar::{Pallet, Call, Config, Storage, Event},
+        XAssets: xpallet_assets::{Pallet, Call, Config<T>, Storage, Event<T>},
     }
 );
 
@@ -65,6 +65,7 @@ impl frame_system::Config for Test {
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
     type SS58Prefix = SS58Prefix;
+    type OnSetCode = ();
 }
 parameter_types! {
     pub const ExistentialDeposit: u64 = 1;

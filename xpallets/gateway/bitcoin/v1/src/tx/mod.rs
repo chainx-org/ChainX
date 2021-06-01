@@ -3,7 +3,10 @@
 mod secp256k1_verifier;
 pub mod validator;
 
-use frame_support::{debug::native, dispatch::DispatchResult};
+use frame_support::{
+    dispatch::DispatchResult,
+    log::{self, debug, error, info, warn},
+};
 use sp_runtime::{traits::Zero, SaturatedConversion};
 use sp_std::prelude::*;
 
@@ -16,14 +19,12 @@ use light_bitcoin::{
 use chainx_primitives::AssetId;
 use xp_gateway_bitcoin::{BtcDepositInfo, BtcTxMetaType, BtcTxTypeDetector};
 use xp_gateway_common::AccountExtractor;
-use xp_logging::{debug, error, info, warn};
 use xpallet_assets::ChainT;
 use xpallet_gateway_common::traits::{AddressBinding, ReferralBinding};
 use xpallet_support::try_str;
 
 pub use self::validator::validate_transaction;
 use crate::{
-    native,
     types::{AccountInfo, BtcAddress, BtcDepositCache, BtcTxResult, BtcTxState},
     BalanceOf, Config, Error, Event, Pallet, PendingDeposits, WithdrawalProposal,
 };
@@ -70,6 +71,7 @@ fn deposit<T: Config>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) ->
         (Some((account, referral)), None) => {
             // has opreturn but no input addr
             debug!(
+                target: "runtime::bitcoin",
                 "[deposit] Deposit tx ({:?}) has no input addr, but has opreturn, who:{:?}",
                 hash_rev(txid),
                 account
@@ -86,6 +88,7 @@ fn deposit<T: Config>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) ->
         }
         (None, None) => {
             warn!(
+                target: "runtime::bitcoin",
                 "[deposit] Process deposit tx ({:?}) but missing valid opreturn and input addr",
                 hash_rev(txid)
             );
@@ -103,6 +106,7 @@ fn deposit<T: Config>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) ->
             match deposit_token::<T>(txid, &account, deposit_info.deposit_value) {
                 Ok(_) => {
                     info!(
+                        target: "runtime::bitcoin",
                         "[deposit] Deposit tx ({:?}) success, who:{:?}, balance:{}",
                         hash_rev(txid),
                         account,
@@ -116,6 +120,7 @@ fn deposit<T: Config>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) ->
         AccountInfo::<_>::Address(input_addr) => {
             insert_pending_deposit::<T>(&input_addr, txid, deposit_info.deposit_value);
             info!(
+                target: "runtime::bitcoin",
                 "[deposit] Deposit tx ({:?}) into pending, addr:{:?}, balance:{}",
                 hash_rev(txid),
                 try_str(addr2vecu8(&input_addr)),
@@ -137,6 +142,7 @@ fn deposit_token<T: Config>(txid: H256, who: &T::AccountId, balance: u64) -> Dis
         }
         Err(err) => {
             error!(
+                target: "runtime::bitcoin",
                 "[deposit_token] Deposit error:{:?}, must use root to fix it",
                 err
             );
@@ -152,6 +158,7 @@ pub fn remove_pending_deposit<T: Config>(input_address: &BtcAddress, who: &T::Ac
         // ignore error
         let _ = deposit_token::<T>(record.txid, who, record.balance);
         info!(
+            target: "runtime::bitcoin",
             "[remove_pending_deposit] Use pending info to re-deposit, who:{:?}, balance:{}, cached_tx:{:?}",
             who, record.balance, record.txid,
         );
@@ -172,8 +179,8 @@ fn insert_pending_deposit<T: Config>(input_address: &Address, txid: H256, balanc
 
     PendingDeposits::<T>::mutate(&addr_bytes, |list| {
         if !list.contains(&cache) {
-            native::debug!(
-                target: xp_logging::RUNTIME_TARGET,
+            log::debug!(
+                target: "runtime::bitcoin",
                 "[insert_pending_deposit] Add pending deposit, address:{:?}, txhash:{:?}, balance:{}",
                 try_str(&addr_bytes),
                 txid,
@@ -188,8 +195,8 @@ fn insert_pending_deposit<T: Config>(input_address: &Address, txid: H256, balanc
 
 fn withdraw<T: Config>(tx: Transaction) -> BtcTxResult {
     if let Some(proposal) = WithdrawalProposal::<T>::take() {
-        native::debug!(
-            target: xp_logging::RUNTIME_TARGET,
+        log::debug!(
+            target: "runtime::bitcoin",
             "[withdraw] Withdraw tx {:?}, proposal:{:?}",
             proposal,
             tx
@@ -209,10 +216,11 @@ fn withdraw<T: Config>(tx: Transaction) -> BtcTxResult {
 
                 match xpallet_gateway_records::Module::<T>::finish_withdrawal(*number, None) {
                     Ok(_) => {
-                        info!("[withdraw] Withdrawal ({}) completion", *number);
+                        info!(target: "runtime::bitcoin", "[withdraw] Withdrawal ({}) completion", *number);
                     }
                     Err(err) => {
                         error!(
+                            target: "runtime::bitcoin",
                             "[withdraw] Withdrawal ({}) error:{:?}, must use root to fix it",
                             *number, err
                         );
@@ -232,6 +240,7 @@ fn withdraw<T: Config>(tx: Transaction) -> BtcTxResult {
             BtcTxResult::Success
         } else {
             error!(
+                target: "runtime::bitcoin",
                 "[withdraw] Withdraw error: mismatch (tx_hash:{:?}, proposal_hash:{:?}), id_list:{:?}, must use root to fix it",
                 tx_hash, proposal_hash, proposal.withdrawal_id_list
             );
@@ -243,6 +252,7 @@ fn withdraw<T: Config>(tx: Transaction) -> BtcTxResult {
         }
     } else {
         error!(
+            target: "runtime::bitcoin",
             "[withdraw] Withdrawal error: proposal is EMPTY (tx_hash:{:?}), but receive a withdrawal tx, must use root to fix it",
             tx.hash()
         );
@@ -267,8 +277,8 @@ pub fn ensure_identical<T: Config>(tx1: &Transaction, tx2: &Transaction) -> Disp
             if tx1.inputs[i].previous_output != tx2.inputs[i].previous_output
                 || tx1.inputs[i].sequence != tx2.inputs[i].sequence
             {
-                native!(
-                    error,
+                log::error!(
+                    target: "runtime::bitcoin",
                     "[ensure_identical] Tx1 is different to Tx2, tx1:{:?}, tx2:{:?}",
                     tx1,
                     tx2
@@ -278,8 +288,8 @@ pub fn ensure_identical<T: Config>(tx1: &Transaction, tx2: &Transaction) -> Disp
         }
         return Ok(());
     }
-    native!(
-        error,
+    log::error!(
+        target: "runtime::bitcoin",
         "The transaction text does not match the original text to be signed",
     );
     Err(Error::<T>::MismatchedTx.into())

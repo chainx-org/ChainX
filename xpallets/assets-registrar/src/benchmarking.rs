@@ -1,9 +1,12 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use frame_benchmarking::benchmarks;
+use frame_benchmarking::{benchmarks, impl_benchmark_test_suite};
+use frame_support::StorageMap;
 use frame_system::RawOrigin;
 
-use super::*;
+use chainx_primitives::AssetId;
+
+use crate::{AssetInfo, AssetInfoOf, AssetOnline, Call, Chain, Config, Pallet};
 
 const ASSET_ID: AssetId = 8888;
 
@@ -28,7 +31,7 @@ benchmarks! {
 
     deregister {
         let asset_info = b_asset_info_test_data::<T>();
-        Module::<T>::register(RawOrigin::Root.into(), ASSET_ID, asset_info.clone(), true, true)?;
+        Pallet::<T>::register(RawOrigin::Root.into(), ASSET_ID, asset_info.clone(), true, true)?;
     }: _(RawOrigin::Root, ASSET_ID)
     verify {
         assert!(!AssetOnline::get(ASSET_ID));
@@ -36,8 +39,8 @@ benchmarks! {
 
     recover {
         let asset_info = b_asset_info_test_data::<T>();
-        Module::<T>::register(RawOrigin::Root.into(), ASSET_ID, asset_info.clone(), true, true)?;
-        Module::<T>::deregister(RawOrigin::Root.into(), ASSET_ID)?;
+        Pallet::<T>::register(RawOrigin::Root.into(), ASSET_ID, asset_info.clone(), true, true)?;
+        Pallet::<T>::deregister(RawOrigin::Root.into(), ASSET_ID)?;
     }: _(RawOrigin::Root, ASSET_ID, true)
     verify {
         assert!(AssetOnline::get(ASSET_ID));
@@ -45,7 +48,7 @@ benchmarks! {
 
     update_asset_info {
         let asset_info = b_asset_info_test_data::<T>();
-        Module::<T>::register(RawOrigin::Root.into(), ASSET_ID, asset_info.clone(), true, true)?;
+        Pallet::<T>::register(RawOrigin::Root.into(), ASSET_ID, asset_info.clone(), true, true)?;
     }: _(
         RawOrigin::Root,
         ASSET_ID,
@@ -62,19 +65,8 @@ benchmarks! {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::tests::{ExtBuilder, Test};
-    use frame_support::assert_ok;
-
-    #[test]
-    fn test_benchmarks() {
-        ExtBuilder::default().build(vec![]).execute_with(|| {
-            assert_ok!(test_benchmark_register::<Test>());
-            assert_ok!(test_benchmark_deregister::<Test>());
-            assert_ok!(test_benchmark_recover::<Test>());
-            assert_ok!(test_benchmark_update_asset_info::<Test>());
-        });
-    }
-}
+impl_benchmark_test_suite!(
+    Pallet,
+    crate::tests::ExtBuilder::default().build_with(),
+    crate::tests::Test,
+);

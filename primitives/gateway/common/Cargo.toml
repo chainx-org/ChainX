@@ -13,7 +13,6 @@ sp-core = { version = "3.0.0", default-features = false }
 frame-support = { version = "3.0.0", default-features = false }
 
 # ChainX primitives
-xp-logging = { path = "../../logging", default-features = false }
 xp-io = { path = "../../io", default-features = false, optional = true }
 
 [features]
@@ -25,7 +24,6 @@ std = [
     "sp-core/std",
     "frame-support/std",
     # ChainX primitives
-    "xp-logging/std",
     "xp-io/std",
 ]
 ss58check = ["xp-io"]

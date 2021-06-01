@@ -17,7 +17,9 @@ use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult},
-    ensure, IterableStorageMap,
+    ensure,
+    log::{error, info},
+    IterableStorageMap,
 };
 use frame_system::ensure_root;
 use sp_runtime::traits::StaticLookup;
@@ -25,7 +27,6 @@ use sp_runtime::traits::StaticLookup;
 use orml_utilities::with_transaction_result;
 
 use chainx_primitives::{AddrStr, AssetId};
-use xp_logging::{error, info};
 use xp_runtime::Memo;
 use xpallet_assets::{AssetType, BalanceOf, Chain};
 use xpallet_support::try_addr;
@@ -211,6 +212,7 @@ impl<T: Config> Module<T> {
         xpallet_assets::Module::<T>::ensure_not_native_asset(&asset_id)?;
 
         info!(
+            target: "runtime::gateway::records",
             "[deposit] who:{:?}, id:{}, balance:{:?}",
             who, asset_id, balance
         );
@@ -237,6 +239,7 @@ impl<T: Config> Module<T> {
 
         let id = Self::id();
         info!(
+            target: "runtime::gateway::records",
             "[apply_withdrawal] id:{}, who:{:?}, asset id:{}, balance:{:?}, addr:{:?}, memo:{}",
             id,
             who,
@@ -245,7 +248,7 @@ impl<T: Config> Module<T> {
             try_addr(&addr),
             ext
         );
-        let height = frame_system::Module::<T>::block_number();
+        let height = frame_system::Pallet::<T>::block_number();
         let record =
             WithdrawalRecordOf::<T>::new(who.clone(), asset_id, balance, addr, ext, height);
 
@@ -277,6 +280,7 @@ impl<T: Config> Module<T> {
     ) -> DispatchResult {
         if curr_state != WithdrawalState::Applying {
             error!(
+                target: "runtime::gateway::records",
                 "[process_withdrawal] id:{}, current withdrawal state ({:?}) must be `Applying`",
                 id, curr_state
             );
@@ -312,6 +316,7 @@ impl<T: Config> Module<T> {
     ) -> DispatchResult {
         if curr_state != WithdrawalState::Processing {
             error!(
+                target: "runtime::gateway::records",
                 "[recover_withdrawal] id:{}, current withdrawal state ({:?}) must be `Processing`",
                 id, curr_state
             );
@@ -329,6 +334,7 @@ impl<T: Config> Module<T> {
         let (record, curr_state) = Self::ensure_withdrawal_records_exists(id)?;
         if record.applicant() != who {
             error!(
+                target: "runtime::gateway::records",
                 "[cancel_withdrawal] id:{}, account {:?} is not the applicant {:?}",
                 id,
                 who,
@@ -348,6 +354,7 @@ impl<T: Config> Module<T> {
     ) -> DispatchResult {
         if curr_state != WithdrawalState::Applying {
             error!(
+                target: "runtime::gateway::records",
                 "[cancel_withdrawal] id:{}, current withdrawal state ({:?}) must be `Applying`",
                 id, curr_state
             );
@@ -397,6 +404,7 @@ impl<T: Config> Module<T> {
     ) -> DispatchResult {
         if curr_state != WithdrawalState::Processing {
             error!(
+                target: "runtime::gateway::records",
                 "[finish_withdrawal] id:{}, current withdrawal state ({:?}) must be `Processing`",
                 id, curr_state
             );
@@ -461,6 +469,7 @@ impl<T: Config> Module<T> {
             }
             _ => {
                 error!(
+                    target: "runtime::gateway::records",
                     "[set_withdrawal_state_by_root] Shouldn't happen normally, unless called by root, \
                     current state:{:?}, new state:{:?}",
                     curr_state, new_state
@@ -479,6 +488,7 @@ impl<T: Config> Module<T> {
         Self::ensure_asset_belongs_to_chain(record.asset_id(), chain)?;
         if state != WithdrawalState::Processing {
             error!(
+                target: "runtime::gateway::records",
                 "[set_withdrawal_state_by_trustees] id:{}, current withdrawal state ({:?}) must be `Processing`",
                 id, state
             );
@@ -489,6 +499,7 @@ impl<T: Config> Module<T> {
             WithdrawalState::RootFinish | WithdrawalState::RootCancel => { /*do nothing*/ }
             _ => {
                 error!(
+                    target: "runtime::gateway::records",
                     "[set_withdrawal_state_by_trustees] id:{}, new withdrawal state ({:?}) must be `RootFinish` or `RootCancel`",
                     id, new_state
                 );

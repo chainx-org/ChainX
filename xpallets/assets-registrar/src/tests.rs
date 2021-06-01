@@ -24,8 +24,8 @@ frame_support::construct_runtime!(
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
-        System: frame_system::{Module, Call, Config, Storage, Event<T>},
-        XAssetsRegistrar: xpallet_assets_registrar::{Module, Call, Config, Storage, Event},
+        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        XAssetsRegistrar: xpallet_assets_registrar::{Pallet, Call, Config, Storage, Event},
     }
 );
 
@@ -57,6 +57,7 @@ impl frame_system::Config for Test {
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
     type SS58Prefix = SS58Prefix;
+    type OnSetCode = ();
 }
 
 parameter_types! {
@@ -103,6 +104,12 @@ impl ExtBuilder {
 
         let ext = sp_io::TestExternalities::new(storage);
         ext
+    }
+
+    pub fn build_with(self) -> sp_io::TestExternalities {
+        let btc_assets = btc();
+        let assets = vec![(btc_assets.0, btc_assets.1, true, true)];
+        self.build(assets)
     }
 
     pub fn build_and_execute(self, test: impl FnOnce() -> ()) {

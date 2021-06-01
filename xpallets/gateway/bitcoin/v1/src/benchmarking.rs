@@ -9,8 +9,8 @@ use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
 use chainx_primitives::AssetId;
 use xp_gateway_bitcoin::BtcTxType;
-use xpallet_assets::{BalanceOf, Module as XAssets};
-use xpallet_gateway_records::{Module as XGatewayRecords, WithdrawalState};
+use xpallet_assets::{BalanceOf, Pallet as XAssets};
+use xpallet_gateway_records::{Pallet as XGatewayRecords, WithdrawalState};
 
 use light_bitcoin::{
     chain::{BlockHeader, Transaction},
@@ -19,7 +19,9 @@ use light_bitcoin::{
     serialization::{self, Reader},
 };
 
-use crate::{types::*, *};
+use crate::{
+    types::*, Call, Config, Pallet, PendingDeposits, TxState, Verifier, WithdrawalProposal,
+};
 
 const ASSET_ID: AssetId = xp_protocol::X_BTC;
 
@@ -79,7 +81,7 @@ fn prepare_withdrawal<T: Config>() -> Transaction {
 
     let alice = alice::<T>();
     let bob = bob::<T>();
-    let withdrawal_fee = Module::<T>::btc_withdrawal_fee();
+    let withdrawal_fee = Pallet::<T>::btc_withdrawal_fee();
 
     let balance1 = (9778400 + withdrawal_fee).saturated_into();
     let balance2 = (9900000 + withdrawal_fee).saturated_into();
@@ -134,7 +136,7 @@ fn prepare_headers<T: Config>(caller: &T::AccountId) {
             break;
         }
         let header = serialization::serialize(&header).into();
-        Module::<T>::push_header(RawOrigin::Signed(caller.clone()).into(), header).unwrap();
+        Pallet::<T>::push_header(RawOrigin::Signed(caller.clone()).into(), header).unwrap();
     }
 }
 
@@ -148,7 +150,7 @@ benchmarks! {
         let amount: BalanceOf<T> = 1000u32.into();
     }: _(RawOrigin::Signed(receiver), header_raw)
     verify {
-        assert!(Module::<T>::headers(&hash).is_some());
+        assert!(Pallet::<T>::headers(&hash).is_some());
     }
 
     push_transaction {
@@ -201,7 +203,7 @@ benchmarks! {
         let tx_raw: Vec<u8> = serialization::serialize(&tx).into();
         let prev_tx_raw: Vec<u8> = serialization::serialize(&prev_tx).into();
 
-        let btc_withdrawal_fee = Module::<T>::btc_withdrawal_fee();
+        let btc_withdrawal_fee = Pallet::<T>::btc_withdrawal_fee();
         let first_withdraw = (9778400 + btc_withdrawal_fee).saturated_into();
         let second_withdraw = (9900000 + btc_withdrawal_fee).saturated_into();
         XGatewayRecords::<T>::deposit(&caller, ASSET_ID, first_withdraw).unwrap();
@@ -244,7 +246,7 @@ benchmarks! {
         };
     }: _(RawOrigin::Root, best)
     verify {
-        assert_eq!(Module::<T>::best_index(), best);
+        assert_eq!(Pallet::<T>::best_index(), best);
     }
 
     set_confirmed_index {
@@ -254,7 +256,7 @@ benchmarks! {
         };
     }: _(RawOrigin::Root, confirmed)
     verify {
-        assert_eq!(Module::<T>::confirmed_index(), Some(confirmed));
+        assert_eq!(Pallet::<T>::confirmed_index(), Some(confirmed));
     }
 
     remove_pending {
@@ -277,7 +279,7 @@ benchmarks! {
         let receiver: T::AccountId = whitelisted_caller();
     }: _(RawOrigin::Root, addr.clone(), Some(receiver.clone()))
     verify {
-        assert!(Module::<T>::pending_deposits(&addr).is_empty());
+        assert!(Pallet::<T>::pending_deposits(&addr).is_empty());
         assert_eq!(XAssets::<T>::usable_balance(&receiver, &ASSET_ID), (100000000u32 + 200000000u32 + 300000000u32).into());
     }
 

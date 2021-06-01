@@ -37,13 +37,11 @@ use light_bitcoin::{
 
 use chainx_primitives::{AssetId, ReferralId};
 use xp_gateway_common::AccountExtractor;
-use xp_logging::{debug, error, info};
 use xpallet_assets::{BalanceOf, Chain, ChainT, WithdrawalLimit};
 use xpallet_gateway_common::{
     traits::{AddressBinding, ReferralBinding, TrusteeSession},
     trustees::bitcoin::BtcTrusteeAddrInfo,
 };
-use xpallet_support::try_addr;
 
 pub use self::types::{BtcAddress, BtcParams, BtcTxVerifier, BtcWithdrawalProposal};
 pub use self::weights::WeightInfo;
@@ -58,12 +56,12 @@ use self::{
 
 pub use pallet::*;
 
-// syntactic sugar for native log.
+// syntactic sugar for log.
 #[macro_export]
-macro_rules! native {
+macro_rules! log {
     ($level:tt, $patter:expr $(, $values:expr)* $(,)?) => {
-        frame_support::debug::native::$level!(
-            target: xp_logging::RUNTIME_TARGET,
+        frame_support::log::$level!(
+            target: "runtime::bitcoin",
             $patter $(, $values)*
         )
     };
@@ -107,7 +105,7 @@ pub mod pallet {
             let from = ensure_signed(origin)?;
             let header: BtcHeader =
                 deserialize(header.as_slice()).map_err(|_| Error::<T>::DeserializeErr)?;
-            debug!("[push_header] from:{:?}, header:{:?}", from, header);
+            log!(debug, "[push_header] from:{:?}, header:{:?}", from, header);
 
             Self::apply_push_header(header)?;
 
@@ -131,7 +129,7 @@ pub mod pallet {
                 None
             };
             let relay_tx = relayed_info.into_relayed_tx(raw_tx);
-            native!(
+            log!(
                 debug,
                 "[push_transaction] from:{:?}, relay_tx:{:?}, prev_tx:{:?}",
                 _from,
@@ -158,7 +156,7 @@ pub mod pallet {
             Self::ensure_trustee(&from)?;
 
             let tx = Self::deserialize_tx(tx.as_slice())?;
-            native!(
+            log!(
                 debug,
                 "[create_withdraw_tx] from:{:?}, withdrawal list:{:?}, tx:{:?}",
                 from,
@@ -186,7 +184,7 @@ pub mod pallet {
             } else {
                 None
             };
-            native!(
+            log!(
                 debug,
                 "[sign_withdraw_tx] from:{:?}, vote_tx:{:?}",
                 from,
@@ -235,7 +233,11 @@ pub mod pallet {
             if let Some(w) = who {
                 remove_pending_deposit::<T>(&addr, &w);
             } else {
-                info!("[remove_pending] Release pending deposit directly, not deposit to someone, addr:{:?}", try_addr(&addr));
+                log!(
+                    info,
+                    "[remove_pending] Release pending deposit directly, not deposit to someone, addr:{:?}",
+                    xpallet_support::try_addr(&addr)
+                );
                 PendingDeposits::<T>::remove(&addr);
             }
             Ok(().into())
@@ -265,7 +267,7 @@ pub mod pallet {
                 .map(|_| ())
                 .or_else(ensure_root)?;
             let tx = Self::deserialize_tx(tx.as_slice())?;
-            native!(debug, "[force_replace_proposal_tx] new_tx:{:?}", tx);
+            log!(debug, "[force_replace_proposal_tx] new_tx:{:?}", tx);
             Self::force_replace_withdraw_tx(tx)?;
             Ok(().into())
         }
@@ -575,7 +577,8 @@ pub mod pallet {
         pub(crate) fn apply_push_header(header: BtcHeader) -> DispatchResult {
             // current should not exist
             if Self::headers(&header.hash()).is_some() {
-                error!(
+                log!(
+                    error,
                     "[apply_push_header] The BTC header already exists, hash:{:?}",
                     header.hash()
                 );
@@ -583,7 +586,7 @@ pub mod pallet {
             }
             // prev header should exist, thus we reject orphan block
             let prev_info = Self::headers(header.previous_header_hash).ok_or_else(|| {
-                native!(
+                log!(
                     error,
                     "[check_prev_and_convert] Can not find prev header, current header:{:?}",
                     header
@@ -612,21 +615,25 @@ pub mod pallet {
                     }
                 });
 
-                debug!(
-                "[apply_push_header] Verify successfully, insert header to storage [height:{}, hash:{:?}, all hashes of the height:{:?}]",
-                header_info.height,
-                hash,
-                Self::block_hash_for(header_info.height)
-            );
+                log!(
+                    debug,
+                    "[apply_push_header] Verify successfully, insert header to storage [height:{}, hash:{:?}, all hashes of the height:{:?}]",
+                    header_info.height,
+                    hash,
+                    Self::block_hash_for(header_info.height)
+                );
 
                 let best_index = Self::best_index();
 
                 if header_info.height > best_index.height {
                     // note update_confirmed_header would mutate other storage depend on BlockHashFor
                     let confirmed_index = header::update_confirmed_header::<T>(&header_info);
-                    info!(
+                    log!(
+                        info,
                         "[apply_push_header] Update new height:{}, hash:{:?}, confirm:{:?}",
-                        header_info.height, hash, confirmed_index
+                        header_info.height,
+                        hash,
+                        confirmed_index
                     );
 
                     // new best index
@@ -637,9 +644,11 @@ pub mod pallet {
                     BestIndex::<T>::put(new_best_index);
                 } else {
                     // forked chain
-                    info!(
+                    log!(
+                        info,
                         "[apply_push_header] Best index {} larger than this height {}",
-                        best_index.height, header_info.height
+                        best_index.height,
+                        header_info.height
                     );
                     header::check_confirmed_header::<T>(&header_info)?;
                 };
@@ -655,7 +664,8 @@ pub mod pallet {
             let tx_hash = tx.raw.hash();
             let block_hash = tx.block_hash;
             let header_info = Pallet::<T>::headers(&tx.block_hash).ok_or_else(|| {
-                error!(
+                log!(
+                    error,
                     "[apply_push_transaction] Tx's block header ({:?}) must exist before",
                     block_hash
                 );
@@ -673,9 +683,10 @@ pub mod pallet {
             let confirmed = Self::confirmed_index().ok_or(Error::<T>::UnconfirmedTx)?;
             let height = header_info.height;
             if height > confirmed.height {
-                error!(
-                "[apply_push_transaction] Receive an unconfirmed tx (height:{}, hash:{:?}), confirmed index (height:{}, hash:{:?})", 
-                height, tx_hash, confirmed.height, confirmed.hash
+                log!(
+                    error,
+                    "[apply_push_transaction] Receive an unconfirmed tx (height:{}, hash:{:?}), confirmed index (height:{}, hash:{:?})",
+                    height, tx_hash, confirmed.height, confirmed.hash
             );
                 return Err(Error::<T>::UnconfirmedTx.into());
             }
@@ -684,10 +695,11 @@ pub mod pallet {
                 None => { /* do nothing */ }
                 Some(state) => {
                     if state.result == BtcTxResult::Success {
-                        error!(
-                        "[apply_push_transaction] Reject processed tx (hash:{:?}, type:{:?}, result:{:?})", 
-                        tx_hash, state.tx_type, state.result
-                    );
+                        log!(
+                            error,
+                            "[apply_push_transaction] Reject processed tx (hash:{:?}, type:{:?}, result:{:?})",
+                            tx_hash, state.tx_type, state.result
+                        );
                         return Err(Error::<T>::ReplayedTx.into());
                     }
                 }
@@ -723,10 +735,11 @@ pub mod pallet {
         fn check_addr(addr: &[u8], _: &[u8]) -> DispatchResult {
             // this addr is base58 addr
             let address = Self::verify_btc_address(addr).map_err(|err| {
-                error!(
+                log!(
+                    error,
                     "[verify_btc_address] Verify failed, error:{:?}, source addr:{:?}",
                     err,
-                    try_addr(addr)
+                    xpallet_support::try_addr(addr)
                 );
                 err
             })?;
@@ -739,7 +752,7 @@ pub mod pallet {
                     }
                 }
                 Err(err) => {
-                    error!("[check_addr] Can not get trustee addr:{:?}", err);
+                    log!(error, "[check_addr] Can not get trustee addr:{:?}", err);
                 }
             }
 

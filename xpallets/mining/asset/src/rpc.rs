@@ -70,7 +70,7 @@ impl<T: Config> Module<T> {
     pub fn mining_dividend(
         who: T::AccountId,
     ) -> BTreeMap<AssetId, MiningDividendInfo<BalanceOf<T>>> {
-        let current_block = <frame_system::Module<T>>::block_number();
+        let current_block = <frame_system::Pallet<T>>::block_number();
         MinerLedgers::<T>::iter_prefix(&who)
             .filter_map(|(asset_id, _)| {
                 match Self::compute_dividend_at(&who, &asset_id, current_block) {
