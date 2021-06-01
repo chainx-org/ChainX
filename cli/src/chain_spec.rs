@@ -417,8 +417,8 @@ fn build_genesis(
         },
         xpallet_mining_staking: dev::XStakingConfig {
             validators,
-            validator_count: 50,
-            sessions_per_era: 12,
+            validator_count: 1,
+            sessions_per_era: 2,
             vesting_account,
             glob_dist_ratio: (12, 88), // (Treasury, X-type Asset and Staking) = (12, 88)
             mining_ratio: (10, 90),    // (Asset Mining, Staking) = (10, 90)
