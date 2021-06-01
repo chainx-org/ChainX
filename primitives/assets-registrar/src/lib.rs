@@ -14,12 +14,13 @@ use sp_std::slice::Iter;
 
 use chainx_primitives::AssetId;
 
-const CHAINS: [Chain; 5] = [
+const CHAINS: [Chain; 6] = [
     Chain::ChainX,
     Chain::Bitcoin,
     Chain::Ethereum,
     Chain::Polkadot,
     Chain::Dogecoin,
+    Chain::Binance,
 ];
 
 /// The blockchain types.
@@ -36,6 +37,8 @@ pub enum Chain {
     Polkadot,
     /// Dogecoin
     Dogecoin,
+    /// Binance
+    Binance,
 }
 
 impl Default for Chain {
