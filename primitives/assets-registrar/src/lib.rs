@@ -36,6 +36,8 @@ pub enum Chain {
     Polkadot,
     /// Dogecoin
     Dogecoin,
+    /// Binance
+    Binance,
 }
 
 impl Default for Chain {
