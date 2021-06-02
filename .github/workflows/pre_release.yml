@@ -11,12 +11,12 @@ jobs:
     name: Prepare wasm
     runs-on: ubuntu-latest
     container:
-      image: chainxorg/srtool:nightly-2020-10-27
+      image: chainxorg/srtool:nightly-2021-03-01
       volumes:
         - ${{ github.workspace }}:/build
     env:
       PACKAGE: chainx-runtime
-      RUSTC_VERSION: nightly-2020-10-27
+      RUSTC_VERSION: nightly-2020-03-01
 
     steps:
     - uses: actions/checkout@v2
