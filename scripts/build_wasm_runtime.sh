@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-export RUSTC_VERSION=nightly-2021-03-01
-export PACKAGE=chainx-runtime
+RUSTC_VERSION=nightly-2021-03-01
+PACKAGE=chainx-runtime
 
 # Use the toolchain specified in chainxorg/srtool
 if [ -f rust-toolchain ]; then
