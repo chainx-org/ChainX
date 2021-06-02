@@ -40,7 +40,7 @@ RUN mv /usr/share/ca* /tmp && \
 
 RUN rm -rf /usr/bin /usr/sbin
 
-EXPOSE 20222 8086 8087
+EXPOSE 20222 8086 8087 9615
 
 VOLUME ["/data"]
 
