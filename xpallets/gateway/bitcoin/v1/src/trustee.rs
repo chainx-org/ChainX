@@ -492,7 +492,7 @@ pub(crate) fn create_multi_address<T: Config<I>, I: 'static>(
         kind: Type::P2SH,
         network: Pallet::<T, I>::network_id(),
         hash: dhash160(&redeem_script),
-        chain: T::ChainIdentity::get(),
+        chain: T::Chain::get(),
     };
     let script_bytes: Bytes = redeem_script.into();
     Some(BtcTrusteeAddrInfo {

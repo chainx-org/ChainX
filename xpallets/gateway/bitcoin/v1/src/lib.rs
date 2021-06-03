@@ -100,7 +100,10 @@ pub mod pallet {
         type ReferralBinding: ReferralBinding<Self::AccountId>;
         type AddressBinding: AddressBinding<Self::AccountId, BtcAddress>;
         type WeightInfo: WeightInfo;
-        type ChainIdentity: Get<light_bitcoin::keys::Chain>;
+        /// Specify which chain we are dealing with, e.g., Bitcoin, Dogecoin.
+        ///
+        /// Required as now Bitcoin forks like Dogecoin are supported as well.
+        type Chain: Get<light_bitcoin::keys::Chain>;
     }
 
     #[pallet::hooks]
