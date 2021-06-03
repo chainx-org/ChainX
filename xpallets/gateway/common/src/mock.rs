@@ -145,7 +145,7 @@ impl xpallet_gateway_bitcoin::Config for Test {
     type ReferralBinding = ();
     type AddressBinding = ();
     type WeightInfo = ();
-    type ChainIdentity = xpallet_gateway_bitcoin::types::BtcChain;
+    type Chain = xpallet_gateway_bitcoin::types::BtcChain;
 }
 
 pub struct MultisigAddr;
