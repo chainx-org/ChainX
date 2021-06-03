@@ -179,6 +179,7 @@ impl Config for Test {
     type ReferralBinding = XGatewayCommon;
     type AddressBinding = XGatewayCommon;
     type WeightInfo = ();
+    type Chain = crate::types::BtcChain;
 }
 
 pub type XGatewayBitcoinErr = Error<Test, ()>;

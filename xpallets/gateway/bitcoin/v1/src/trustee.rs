@@ -10,12 +10,15 @@ use sp_std::{convert::TryFrom, prelude::*};
 use light_bitcoin::{
     chain::Transaction,
     crypto::dhash160,
-    keys::{Address, Public, Type},
+    keys::{MultiAddress as Address, Public, Type},
     primitives::Bytes,
     script::{Builder, Opcode, Script},
 };
 
-use frame_support::log::{debug, error, info};
+use frame_support::{
+    log::{debug, error, info},
+    traits::Get,
+};
 
 use xp_gateway_bitcoin::extract_output_addr;
 use xpallet_assets::Chain;
@@ -489,6 +492,7 @@ pub(crate) fn create_multi_address<T: Config<I>, I: 'static>(
         kind: Type::P2SH,
         network: Pallet::<T, I>::network_id(),
         hash: dhash160(&redeem_script),
+        chain: T::Chain::get(),
     };
     let script_bytes: Bytes = redeem_script.into();
     Some(BtcTrusteeAddrInfo {
@@ -556,7 +560,8 @@ fn check_withdraw_tx_impl<T: Config<I>, I: 'static>(
     let btc_network = Pallet::<T, I>::network_id();
     let mut tx_withdraw_list = Vec::new();
     for output in &tx.outputs {
-        let addr = extract_output_addr(&output, btc_network).ok_or("not found addr in this out")?;
+        let addr =
+            extract_output_addr(&output, btc_network, None).ok_or("not found addr in this out")?;
         if addr.hash != hot_trustee_address.hash {
             // expect change to trustee_addr output
             tx_withdraw_list.push((addr, output.value + btc_withdrawal_fee));

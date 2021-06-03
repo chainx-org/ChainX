@@ -7,7 +7,7 @@
 mod header;
 pub mod trustee;
 mod tx;
-mod types;
+pub mod types;
 pub mod weights;
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
@@ -20,6 +20,11 @@ mod tests;
 use sp_runtime::SaturatedConversion;
 use sp_std::prelude::*;
 
+use frame_support::{
+    log::{debug, error, info},
+    traits::Get,
+};
+
 use orml_utilities::with_transaction_result;
 
 #[cfg(feature = "std")]
@@ -31,12 +36,11 @@ pub use light_bitcoin::{
 };
 use light_bitcoin::{
     chain::Transaction,
-    keys::{Address, DisplayLayout},
+    keys::{DisplayLayout, MultiAddress as Address},
     serialization::{deserialize, Reader},
 };
 
 use chainx_primitives::{AssetId, ReferralId};
-use frame_support::log::{debug, error, info};
 use xp_gateway_common::AccountExtractor;
 use xpallet_assets::{BalanceOf, Chain, ChainT, WithdrawalLimit};
 use xpallet_gateway_common::{
@@ -96,6 +100,10 @@ pub mod pallet {
         type ReferralBinding: ReferralBinding<Self::AccountId>;
         type AddressBinding: AddressBinding<Self::AccountId, BtcAddress>;
         type WeightInfo: WeightInfo;
+        /// Specify which chain we are dealing with, e.g., Bitcoin, Dogecoin.
+        ///
+        /// Required as now Bitcoin forks like Dogecoin are supported as well.
+        type Chain: Get<light_bitcoin::keys::Chain>;
     }
 
     #[pallet::hooks]

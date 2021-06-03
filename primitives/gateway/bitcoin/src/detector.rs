@@ -7,7 +7,7 @@ use frame_support::log::{debug, warn};
 
 use light_bitcoin::{
     chain::Transaction,
-    keys::{Address, Network},
+    keys::{MultiAddress as Address, Network},
     primitives::hash_rev,
     script::Script,
 };
@@ -65,7 +65,7 @@ impl BtcTxTypeDetector {
             .first()
             .expect("Btc Transaction must have at least one output");
 
-        let output = extract_output_addr(output_info, self.network);
+        let output = extract_output_addr(output_info, self.network, None);
 
         if let Some(output) = output {
             //TODO(wangyafei): change `parse_deposit_transaction_outputs` signature from address
@@ -156,7 +156,7 @@ impl BtcTxTypeDetector {
             let all_outputs_is_trustee = tx
                 .outputs
                 .iter()
-                .map(|output| extract_output_addr(output, self.network).unwrap_or_default())
+                .map(|output| extract_output_addr(output, self.network, None).unwrap_or_default())
                 .all(|addr| is_trustee_addr(addr, current_trustee_pair));
 
             if is_trustee_addr(input_addr, current_trustee_pair) {
@@ -288,7 +288,7 @@ impl BtcTxTypeDetector {
         let (hot_addr, _) = current_trustee_pair;
         for output in &tx.outputs {
             // extract destination address from the script of output.
-            if let Some(dest_addr) = extract_output_addr(output, self.network) {
+            if let Some(dest_addr) = extract_output_addr(output, self.network, None) {
                 // check if the script address of the output is the hot trustee address
                 if dest_addr.hash == hot_addr.hash && output.value > 0 {
                     deposit_value += output.value;

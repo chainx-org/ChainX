@@ -8,7 +8,7 @@ use sp_runtime::RuntimeDebug;
 
 use chainx_primitives::ReferralId;
 
-use light_bitcoin::keys::Address;
+use light_bitcoin::keys::MultiAddress as Address;
 
 /// (hot trustee address, cold trustee address)
 pub type TrusteePair = (Address, Address);

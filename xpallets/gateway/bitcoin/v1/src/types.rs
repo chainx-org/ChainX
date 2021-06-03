@@ -7,9 +7,11 @@ use serde::{Deserialize, Serialize};
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 
+use frame_support::traits::Get;
+
 use light_bitcoin::{
     chain::{BlockHeader as BtcHeader, Transaction as BtcTransaction},
-    keys::Address,
+    keys::{Chain, MultiAddress as Address},
     merkle::PartialMerkleTree,
     primitives::{Compact, H256},
 };
@@ -21,6 +23,20 @@ use xp_gateway_bitcoin::BtcTxType;
 /// like: "1Nekoo5VTe7yQQ8WFqrva2UbdyRMVYCP1t" or "3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy"
 /// not layout state or public or else.
 pub type BtcAddress = Vec<u8>;
+
+pub struct BtcChain;
+impl Get<Chain> for BtcChain {
+    fn get() -> Chain {
+        Chain::Bitcoin
+    }
+}
+
+pub struct DogeChain;
+impl Get<Chain> for DogeChain {
+    fn get() -> Chain {
+        Chain::Dogecoin
+    }
+}
 
 #[derive(Clone, RuntimeDebug)]
 pub struct BtcRelayedTx {

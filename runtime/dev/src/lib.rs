@@ -988,6 +988,7 @@ impl xpallet_gateway_bitcoin::Config for Runtime {
     type ReferralBinding = XGatewayCommon;
     type AddressBinding = XGatewayCommon;
     type WeightInfo = xpallet_gateway_bitcoin::weights::SubstrateWeight<Runtime>;
+    type Chain = xpallet_gateway_bitcoin::types::BtcChain;
 }
 
 parameter_types! {

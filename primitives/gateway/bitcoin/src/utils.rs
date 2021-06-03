@@ -6,7 +6,7 @@ use frame_support::log::{error, warn};
 
 use light_bitcoin::{
     chain::{Transaction, TransactionOutput},
-    keys::{Address, Network},
+    keys::{Chain, MultiAddress as Address, Network},
     script::{Opcode, Script, ScriptType},
 };
 
@@ -18,12 +18,16 @@ pub fn extract_addr_from_transaction(
 ) -> Option<Address> {
     tx.outputs
         .get(outpoint_index)
-        .and_then(|output| extract_output_addr(output, network))
+        .and_then(|output| extract_output_addr(output, network, None))
 }
 
 /// Extract address from a transaction output script.
 /// only support `p2pk`, `p2pkh` and `p2sh` output script
-pub fn extract_output_addr(output: &TransactionOutput, network: Network) -> Option<Address> {
+pub fn extract_output_addr(
+    output: &TransactionOutput,
+    network: Network,
+    chain: Option<Chain>,
+) -> Option<Address> {
     let script = Script::new(output.script_pubkey.clone());
 
     // only support `p2pk`, `p2pkh` and `p2sh` script
@@ -45,6 +49,7 @@ pub fn extract_output_addr(output: &TransactionOutput, network: Network) -> Opti
                     network,
                     kind: address.kind,
                     hash: address.hash,
+                    chain: chain.unwrap_or_default(),
                 })
             } else {
                 warn!(
