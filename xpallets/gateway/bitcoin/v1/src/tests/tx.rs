@@ -7,7 +7,7 @@ use sp_core::crypto::{set_default_ss58_version, Ss58AddressFormat};
 
 use light_bitcoin::{
     chain::Transaction,
-    keys::{Address, Network},
+    keys::{MultiAddress as Address, Network},
     merkle::PartialMerkleTree,
     serialization::{self, Reader},
 };

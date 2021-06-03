@@ -9,7 +9,7 @@ use sp_std::prelude::*;
 
 use light_bitcoin::{
     chain::Transaction,
-    keys::{Address, DisplayLayout, Network},
+    keys::{DisplayLayout, MultiAddress as Address, Network},
     primitives::{hash_rev, H256},
 };
 
