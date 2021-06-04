@@ -7,7 +7,7 @@ use frame_support::log::{debug, warn};
 
 use light_bitcoin::{
     chain::Transaction,
-    keys::{MultiAddress as Address, Network},
+    keys::{Chain, MultiAddress as Address, Network},
     primitives::hash_rev,
     script::Script,
 };
@@ -45,11 +45,13 @@ impl BtcTxTypeDetector {
     ///
     /// `input_addr` could be none if is an `Issue` transaction.
     /// `op_return` may be forgot by requester, thus it's ok to be `None`.
+    /// `chain` is where the transaction on. eg. bitcoin, dogcoin..
     pub fn parse_transaction<AccountId, Extractor>(
         &self,
         tx: &Transaction,
         prev_tx: Option<&Transaction>,
         extract_account: Extractor,
+        chain: Chain,
     ) -> (Option<Address>, Option<Address>, Option<AccountId>, u64)
     where
         AccountId: Debug,
@@ -65,7 +67,7 @@ impl BtcTxTypeDetector {
             .first()
             .expect("Btc Transaction must have at least one output");
 
-        let output = extract_output_addr(output_info, self.network, None);
+        let output = extract_output_addr(output_info, self.network, Some(chain));
 
         if let Some(output) = output {
             //TODO(wangyafei): change `parse_deposit_transaction_outputs` signature from address
@@ -90,13 +92,14 @@ impl BtcTxTypeDetector {
         prev_tx: &Transaction,
         infos: &[RequestInfo<AccountId>],
         extract_account: Extractor,
+        chain: Chain,
     ) -> RequestType
     where
         AccountId: Debug + Eq + PartialEq + Clone,
         Extractor: Fn(&[u8]) -> Option<(AccountId, Option<ReferralId>)>,
     {
         let (input, output, op_return, amount) =
-            self.parse_transaction(&tx, Some(&prev_tx), extract_account);
+            self.parse_transaction(&tx, Some(&prev_tx), extract_account, chain);
 
         if let Some(matched_request) = infos.iter().find(|request_info| {
             (request_info.request_type == RequestMetaType::Issue
