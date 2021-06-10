@@ -27,17 +27,6 @@ pub struct  AssetInfo {
     desc: Desc,
 }
 
-// impl Default for AssetInfo{
-//     fn default() -> Self {
-//         Self{
-//             token:Token::default(),
-//             token_name: Token::default(),
-//             chain: Chain::default(),
-//             decimals: 8,
-//             desc: Desc::default()
-//         }
-//     }
-// }
 impl fmt::Debug for AssetInfo {
     #[cfg(feature = "std")]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
