@@ -18,7 +18,10 @@ pub mod weights;
 
 use sp_std::prelude::*;
 
-use frame_support::{dispatch::DispatchResult, log::info, traits::GenesisBuild};
+use frame_support::{dispatch::DispatchResult, log::info};
+
+#[cfg(feature = "std")]
+use frame_support::traits::GenesisBuild;
 
 use chainx_primitives::{AssetId, Desc, Token};
 
@@ -344,7 +347,6 @@ pub mod pallet {
     }
 }
 
-#[cfg(feature = "std")]
 #[cfg(feature = "std")]
 impl GenesisConfig {
     /// Direct implementation of `GenesisBuild::assimilate_storage`.
