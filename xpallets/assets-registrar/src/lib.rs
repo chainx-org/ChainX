@@ -15,7 +15,6 @@ mod tests;
 mod types;
 mod verifier;
 pub mod weights;
-
 use sp_std::prelude::*;
 
 use frame_support::{
@@ -36,7 +35,7 @@ pub use pallet::*;
 pub mod pallet{
     use sp_std::marker::PhantomData;
     use frame_support::pallet_prelude::*;
-	use frame_system::pallet_prelude::*;
+    use frame_system::pallet_prelude::*;
     use super::*;
 
     #[pallet::pallet]
@@ -62,7 +61,7 @@ pub mod pallet{
     }
 
     #[pallet::event]
-	#[pallet::generate_deposit(pub(super) fn deposit_event)]
+    #[pallet::generate_deposit(pub(super) fn deposit_event)]
     /// Event for the XAssetRegistrar Module
     pub enum Event<T> {
     /// A new asset was registered. [asset_id, has_mining_rights]
