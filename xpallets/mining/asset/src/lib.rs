@@ -78,7 +78,7 @@ where
     T: xpallet_mining_staking::Config,
 {
     fn staked_of(who: &<T as frame_system::Config>::AccountId) -> u128 {
-        xpallet_mining_staking::Module::<T>::staked_of(who).saturated_into()
+        xpallet_mining_staking::Pallet::<T>::staked_of(who).saturated_into()
     }
 }
 

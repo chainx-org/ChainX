@@ -2,13 +2,15 @@
 
 use super::*;
 use crate::mock::*;
-use frame_support::{assert_err, assert_ok, traits::OnInitialize};
+use frame_support::{
+    assert_err, assert_ok, pallet_prelude::DispatchResultWithPostInfo, traits::OnInitialize,
+};
 
 fn t_issue_pcx(to: AccountId, value: Balance) {
     XStaking::mint(&to, value);
 }
 
-fn t_register(who: AccountId, initial_bond: Balance) -> DispatchResult {
+fn t_register(who: AccountId, initial_bond: Balance) -> DispatchResultWithPostInfo {
     let mut referral_id = who.to_string().as_bytes().to_vec();
 
     if referral_id.len() < 2 {
@@ -18,15 +20,20 @@ fn t_register(who: AccountId, initial_bond: Balance) -> DispatchResult {
     XStaking::register(Origin::signed(who), referral_id, initial_bond)
 }
 
-fn t_bond(who: AccountId, target: AccountId, value: Balance) -> DispatchResult {
+fn t_bond(who: AccountId, target: AccountId, value: Balance) -> DispatchResultWithPostInfo {
     XStaking::bond(Origin::signed(who), target, value)
 }
 
-fn t_rebond(who: AccountId, from: AccountId, to: AccountId, value: Balance) -> DispatchResult {
+fn t_rebond(
+    who: AccountId,
+    from: AccountId,
+    to: AccountId,
+    value: Balance,
+) -> DispatchResultWithPostInfo {
     XStaking::rebond(Origin::signed(who), from, to, value)
 }
 
-fn t_unbond(who: AccountId, target: AccountId, value: Balance) -> DispatchResult {
+fn t_unbond(who: AccountId, target: AccountId, value: Balance) -> DispatchResultWithPostInfo {
     XStaking::unbond(Origin::signed(who), target, value)
 }
 
@@ -34,7 +41,7 @@ fn t_withdraw_unbonded(
     who: AccountId,
     target: AccountId,
     unbonded_index: UnbondedIndex,
-) -> DispatchResult {
+) -> DispatchResultWithPostInfo {
     XStaking::unlock_unbonded_withdrawal(Origin::signed(who), target, unbonded_index)
 }
 
