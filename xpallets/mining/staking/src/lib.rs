@@ -144,7 +144,7 @@ pub mod pallet {
 
         /// Move the `value` of current nomination from one validator to another.
         #[pallet::weight(T::WeightInfo::rebond())]
-        fn rebond(
+        pub fn rebond(
             origin: OriginFor<T>,
             from: <T::Lookup as StaticLookup>::Source,
             to: <T::Lookup as StaticLookup>::Source,
@@ -183,7 +183,7 @@ pub mod pallet {
 
         /// Unnominate the `value` of bonded balance for validator `target`.
         #[pallet::weight(T::WeightInfo::unbond())]
-        fn unbond(
+        pub fn unbond(
             origin: OriginFor<T>,
             target: <T::Lookup as StaticLookup>::Source,
             #[pallet::compact] value: BalanceOf<T>,
@@ -198,7 +198,7 @@ pub mod pallet {
 
         /// Unlock the frozen unbonded balances that are due.
         #[pallet::weight(T::WeightInfo::unlock_unbonded_withdrawal())]
-        fn unlock_unbonded_withdrawal(
+        pub fn unlock_unbonded_withdrawal(
             origin: OriginFor<T>,
             target: <T::Lookup as StaticLookup>::Source,
             #[pallet::compact] unbonded_index: UnbondedIndex,
@@ -237,7 +237,7 @@ pub mod pallet {
 
         /// Claim the staking reward given the `target` validator.
         #[pallet::weight(T::WeightInfo::claim())]
-        fn claim(
+        pub fn claim(
             origin: OriginFor<T>,
             target: <T::Lookup as StaticLookup>::Source,
         ) -> DispatchResultWithPostInfo {
@@ -252,7 +252,7 @@ pub mod pallet {
 
         /// Declare the desire to validate for the origin account.
         #[pallet::weight(T::WeightInfo::validate())]
-        fn validate(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+        pub fn validate(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             ensure!(Self::is_validator(&sender), Error::<T>::NotValidator);
             Validators::<T>::mutate(sender, |validator| {
@@ -263,7 +263,7 @@ pub mod pallet {
 
         /// Declare no desire to validate for the origin account.
         #[pallet::weight(T::WeightInfo::chill())]
-        fn chill(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+        pub fn chill(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             ensure!(Self::is_validator(&sender), Error::<T>::NotValidator);
             if Self::is_active(&sender) {
@@ -312,7 +312,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(T::WeightInfo::set_validator_count())]
-        fn set_validator_count(
+        pub(crate) fn set_validator_count(
             origin: OriginFor<T>,
             #[pallet::compact] new: u32,
         ) -> DispatchResultWithPostInfo {
@@ -322,7 +322,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(T::WeightInfo::set_minimum_validator_count())]
-        fn set_minimum_validator_count(
+        pub(crate) fn set_minimum_validator_count(
             origin: OriginFor<T>,
             #[pallet::compact] new: u32,
         ) -> DispatchResultWithPostInfo {
@@ -332,7 +332,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(T::WeightInfo::set_bonding_duration())]
-        fn set_bonding_duration(
+        pub(crate) fn set_bonding_duration(
             origin: OriginFor<T>,
             #[pallet::compact] new: T::BlockNumber,
         ) -> DispatchResultWithPostInfo {
@@ -342,7 +342,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(T::WeightInfo::set_validator_bonding_duration())]
-        fn set_validator_bonding_duration(
+        pub(crate) fn set_validator_bonding_duration(
             origin: OriginFor<T>,
             #[pallet::compact] new: T::BlockNumber,
         ) -> DispatchResultWithPostInfo {
@@ -352,7 +352,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(T::WeightInfo::set_minimum_penalty())]
-        fn set_minimum_penalty(
+        pub(crate) fn set_minimum_penalty(
             origin: OriginFor<T>,
             #[pallet::compact] new: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
@@ -362,7 +362,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(T::WeightInfo::set_sessions_per_era())]
-        fn set_sessions_per_era(
+        pub(crate) fn set_sessions_per_era(
             origin: OriginFor<T>,
             #[pallet::compact] new: SessionIndex,
         ) -> DispatchResultWithPostInfo {
@@ -372,7 +372,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(10_000_000)]
-        fn set_immortals(
+        pub(crate) fn set_immortals(
             origin: OriginFor<T>,
             new: Vec<T::AccountId>,
         ) -> DispatchResultWithPostInfo {
@@ -391,7 +391,7 @@ pub mod pallet {
 
         /// Clear the records in Staking for leaked `BondedWithdrawal` frozen balances.
         #[pallet::weight(T::WeightInfo::unlock_unbonded_withdrawal())]
-        fn force_unlock_bonded_withdrawal(
+        pub(crate) fn force_unlock_bonded_withdrawal(
             origin: OriginFor<T>,
             who: T::AccountId,
         ) -> DispatchResultWithPostInfo {
@@ -405,7 +405,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(10_000_000)]
-        fn force_reset_staking_lock(
+        pub(crate) fn force_reset_staking_lock(
             origin: OriginFor<T>,
             accounts: Vec<T::AccountId>,
         ) -> DispatchResultWithPostInfo {
@@ -421,7 +421,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(10_000_000)]
-        fn force_set_lock(
+        pub(crate) fn force_set_lock(
             origin: OriginFor<T>,
             new_locks: Vec<(T::AccountId, BalanceOf<T>)>,
         ) -> DispatchResultWithPostInfo {

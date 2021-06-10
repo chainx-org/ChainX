@@ -1,16 +1,18 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use crate::Config;
-use crate::{self as xpallet_mining_staking, *};
-use frame_support::parameter_types;
+use std::{cell::RefCell, collections::HashSet};
+
+use frame_support::{parameter_types, traits::GenesisBuild};
 use sp_core::H256;
 use sp_runtime::{
     testing::{Header, UintAuthorityId},
     traits::{BlakeTwo256, IdentityLookup},
     Perbill,
 };
-use std::{cell::RefCell, collections::HashSet};
 use xp_mining_staking::SessionIndex;
+
+use crate::Config;
+use crate::{self as xpallet_mining_staking, *};
 
 pub const INIT_TIMESTAMP: u64 = 30_000;
 
@@ -303,13 +305,5 @@ impl ExtBuilder {
     pub fn build_and_execute(self, test: impl FnOnce() -> ()) {
         let mut ext = self.build();
         ext.execute_with(test);
-        // ext.execute_with(post_conditions);
     }
 }
-
-// pub type System = frame_system::Module<Test>;
-// pub type Balances = pallet_balances::Module<Test>;
-// pub type XAssets = xpallet_assets::Module<Test>;
-// pub type Session = pallet_session::Module<Test>;
-// pub type Timestamp = pallet_timestamp::Module<Test>;
-// pub type XStaking = Module<Test>;
