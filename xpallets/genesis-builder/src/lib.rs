@@ -5,9 +5,7 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use sp_std::prelude::*;
-
-use frame_support::{decl_module, decl_storage, log::info};
+use frame_support::log::info;
 
 #[cfg(feature = "std")]
 use xp_genesis_builder::AllParams;
@@ -16,37 +14,78 @@ use xpallet_assets::BalanceOf as AssetBalanceOf;
 #[cfg(feature = "std")]
 use xpallet_mining_staking::BalanceOf as StakingBalanceOf;
 
-pub trait Config:
-    pallet_balances::Config + xpallet_mining_asset::Config + xpallet_mining_staking::Config
-{
-}
+pub use self::pallet::*;
 
-decl_module! {
-    pub struct Module<T: Config> for enum Call where origin: T::Origin {}
-}
+#[frame_support::pallet]
+pub mod pallet {
+    #[cfg(feature = "std")]
+    use frame_support::traits::GenesisBuild;
+    use frame_support::traits::Hooks;
+    use frame_system::pallet_prelude::BlockNumberFor;
+    use sp_std::marker::PhantomData;
 
-decl_storage! {
-    trait Store for Module<T: Config> as XGenesisBuilder {}
-    add_extra_genesis {
-        config(params): AllParams<T::AccountId, T::Balance, AssetBalanceOf<T>, StakingBalanceOf<T>>;
-        config(root_endowed): T::Balance;
-        config(initial_authorities_endowed): T::Balance;
-        build(|config| {
-            use crate::genesis::{xassets, balances, xstaking, xmining_asset};
+    use super::*;
+
+    #[pallet::pallet]
+    #[pallet::generate_store(pub(crate) trait Store)]
+    pub struct Pallet<T>(PhantomData<T>);
+
+    #[pallet::config]
+    pub trait Config:
+        frame_system::Config
+        + pallet_balances::Config
+        + xpallet_mining_asset::Config
+        + xpallet_mining_staking::Config
+    {
+    }
+
+    #[pallet::hooks]
+    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
+
+    #[pallet::call]
+    impl<T: Config> Pallet<T> {}
+
+    #[pallet::genesis_config]
+    pub struct GenesisConfig<T: Config> {
+        pub params: AllParams<T::AccountId, T::Balance, AssetBalanceOf<T>, StakingBalanceOf<T>>,
+        pub root_endowed: T::Balance,
+        pub initial_authorities_endowed: T::Balance,
+    }
+
+    #[cfg(feature = "std")]
+    impl<T: Config> Default for GenesisConfig<T> {
+        fn default() -> Self {
+            Self {
+                params: Default::default(),
+                root_endowed: Default::default(),
+                initial_authorities_endowed: Default::default(),
+            }
+        }
+    }
+
+    #[pallet::genesis_build]
+    #[cfg(feature = "std")]
+    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+        fn build(&self) {
+            use crate::genesis::{balances, xassets, xmining_asset, xstaking};
 
             let now = std::time::Instant::now();
 
-            balances::initialize::<T>(&config.params.balances, config.root_endowed, config.initial_authorities_endowed);
-            xassets::initialize::<T>(&config.params.xassets);
-            xstaking::initialize::<T>(&config.params.xstaking);
-            xmining_asset::initialize::<T>(&config.params.xmining_asset);
+            balances::initialize::<T>(
+                &self.params.balances,
+                self.root_endowed,
+                self.initial_authorities_endowed,
+            );
+            xassets::initialize::<T>(&self.params.xassets);
+            xstaking::initialize::<T>(&self.params.xstaking);
+            xmining_asset::initialize::<T>(&self.params.xmining_asset);
 
             info!(
                 target: "runtime::genesis-builder",
                 "Took {:?}ms to orchestrate the exported state from ChainX 1.0",
                 now.elapsed().as_millis()
             );
-        })
+        }
     }
 }
 
