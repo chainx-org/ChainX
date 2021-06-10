@@ -6,13 +6,12 @@ use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
-use frame_support::storage::{IterableStorageDoubleMap, StorageDoubleMap, StorageMap};
 use sp_runtime::RuntimeDebug;
 
 use xp_mining_common::RewardPotAccountFor;
 
 use crate::{
-    types::*, BalanceOf, Config, LastRebondOf, Module, Nominations, SessionInterface,
+    types::*, BalanceOf, Config, LastRebondOf, Nominations, Pallet, SessionInterface,
     ValidatorLedgers, Validators,
 };
 
@@ -46,7 +45,7 @@ pub struct NominatorInfo<BlockNumber> {
     pub last_rebond: Option<BlockNumber>,
 }
 
-impl<T: Config> Module<T> {
+impl<T: Config> Pallet<T> {
     pub fn validators_info(
     ) -> Vec<ValidatorInfo<T::AccountId, BalanceOf<T>, VoteWeight, T::BlockNumber>> {
         Self::validator_set().map(Self::validator_info_of).collect()
