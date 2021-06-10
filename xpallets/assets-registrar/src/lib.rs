@@ -338,7 +338,7 @@ pub mod pallet {
             AssetOnline::<T>::insert(&id, true);
 
             RegisteredAt::<T>::insert(&id, frame_system::Pallet::<T>::block_number());
-            
+
             Ok(())
         }
     }
