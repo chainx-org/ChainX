@@ -95,13 +95,13 @@ pub mod pallet {
     /// Asset id list for each Chain.
     #[pallet::storage]
     #[pallet::getter(fn asset_ids_of)]
-    pub(super) type AssetIdsOf<T: Config> = 
+    pub(super) type AssetIdsOf<T: Config> =
         StorageMap<_, Twox64Concat, Chain, Vec<AssetId>, ValueQuery>;
 
     /// Asset info of each asset.
     #[pallet::storage]
     #[pallet::getter(fn asset_info_of)]
-    pub(super) type AssetInfoOf<T: Config> = 
+    pub(super) type AssetInfoOf<T: Config> =
         StorageMap<_, Twox64Concat, AssetId, Option<AssetInfo>, ValueQuery>;
 
     /// The map of asset to the online state.
@@ -338,7 +338,7 @@ pub mod pallet {
             AssetOnline::<T>::insert(&id, true);
 
             RegisteredAt::<T>::insert(&id, frame_system::Pallet::<T>::block_number());
-    
+            
             Ok(())
         }
     }
