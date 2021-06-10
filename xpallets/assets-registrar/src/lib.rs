@@ -29,7 +29,7 @@ pub use xp_assets_registrar::{Chain, RegistrarHandler};
 pub use pallet::*;
 
 #[frame_support::pallet]
-pub mod pallet{
+pub mod pallet {
     use super::*;
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
@@ -96,7 +96,7 @@ pub mod pallet{
     #[pallet::storage]
     #[pallet::getter(fn asset_ids_of)]
     pub(super) type AssetIdsOf<T: Config> = 
-        StorageMap<_,Twox64Concat, Chain, Vec<AssetId>, ValueQuery>;
+        StorageMap<_, Twox64Concat, Chain, Vec<AssetId>, ValueQuery>;
 
     /// Asset info of each asset.
     #[pallet::storage]
@@ -107,13 +107,12 @@ pub mod pallet{
     /// The map of asset to the online state.
     #[pallet::storage]
     #[pallet::getter(fn asset_online)]
-    pub(super) type AssetOnline<T: Config> = 
-        StorageMap<_, Twox64Concat, AssetId, bool, ValueQuery>;
+    pub(super) type AssetOnline<T: Config> = StorageMap<_, Twox64Concat, AssetId, bool, ValueQuery>;
 
     /// The map of asset to the block number at which the asset was registered.
     #[pallet::storage]
     #[pallet::getter(fn registered_at)]
-    pub(super) type RegisteredAt<T: Config> = 
+    pub(super) type RegisteredAt<T: Config> =
         StorageMap<_, Twox64Concat, AssetId, T::BlockNumber, ValueQuery>;
 
     /// add_extra_genesis
@@ -127,7 +126,7 @@ pub mod pallet{
         fn default() -> Self {
             Self {
                 assets: Default::default(),
-            } 
+            }
         }
     }
 
@@ -147,10 +146,8 @@ pub mod pallet{
         }
     }
 
-
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-
         /// Register a new foreign asset.
         ///
         /// This is a root-only operation.
@@ -161,7 +158,7 @@ pub mod pallet{
             asset: AssetInfo,
             is_online: bool,
             has_mining_rights: bool,
-        ) -> DispatchResult{
+        ) -> DispatchResult {
             ensure_root(origin)?;
 
             asset.is_valid::<T>()?;
@@ -336,10 +333,10 @@ pub mod pallet{
                     ids.push(id);
                 }
             });
-    
+
             AssetInfoOf::<T>::insert(&id, Some(asset));
             AssetOnline::<T>::insert(&id, true);
-    
+
             RegisteredAt::<T>::insert(&id, frame_system::Pallet::<T>::block_number());
     
             Ok(())
@@ -353,7 +350,7 @@ impl GenesisConfig {
     /// Direct implementation of `GenesisBuild::assimilate_storage`.
     pub fn assimilate_storage<T: Config>(
         &self,
-        storage: &mut sp_runtime::Storage
+        storage: &mut sp_runtime::Storage,
     ) -> Result<(), String> {
         <Self as GenesisBuild<T>>::assimilate_storage(self, storage)
     }

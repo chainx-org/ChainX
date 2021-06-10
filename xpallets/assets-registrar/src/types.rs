@@ -10,13 +10,13 @@ use sp_std::fmt;
 use chainx_primitives::{Decimals, Desc, Token};
 use xp_assets_registrar::Chain;
 
-use crate::verifier::*;
 use super::Config;
+use crate::verifier::*;
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct  AssetInfo {
+pub struct AssetInfo {
     #[cfg_attr(feature = "std", serde(with = "xp_rpc::serde_text"))]
     token: Token,
     #[cfg_attr(feature = "std", serde(with = "xp_rpc::serde_text"))]
