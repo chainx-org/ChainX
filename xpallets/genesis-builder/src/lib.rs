@@ -20,8 +20,6 @@ pub use self::pallet::*;
 pub mod pallet {
     #[cfg(feature = "std")]
     use frame_support::traits::GenesisBuild;
-    use frame_support::traits::Hooks;
-    use frame_system::pallet_prelude::BlockNumberFor;
     use sp_std::marker::PhantomData;
 
     use super::*;
@@ -38,12 +36,6 @@ pub mod pallet {
         + xpallet_mining_staking::Config
     {
     }
-
-    #[pallet::hooks]
-    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
-
-    #[pallet::call]
-    impl<T: Config> Pallet<T> {}
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
