@@ -37,7 +37,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        toolchain: [nightly]
+        toolchain: [nightly-2021-03-01]
 
     steps:
     - name: Checkout repository
@@ -75,7 +75,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        toolchain: [nightly]
+        toolchain: [nightly-2021-03-01]
 
     steps:
     - name: Checkout repository
@@ -100,7 +100,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        toolchain: [nightly]
+        toolchain: [nightly-2021-03-01]
 
     steps:
     - name: Checkout repository

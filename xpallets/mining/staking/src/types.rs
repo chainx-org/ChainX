@@ -16,7 +16,7 @@ use frame_support::log::debug;
 use xp_mining_common::{RewardPotAccountFor, WeightType};
 use xp_mining_staking::MiningPower;
 
-use crate::{AssetMining, BalanceOf, Config, EraIndex, Event, Module};
+use crate::{AssetMining, BalanceOf, Config, EraIndex, Event, Pallet};
 
 pub type VoteWeight = WeightType;
 
@@ -180,7 +180,7 @@ impl MiningDistribution {
     /// the mining assets, but its unit mining power starts to decrease compared to the inital FixedPower.
     fn asset_mining_vs_staking<T: Config>(&self) -> (u128, u128) {
         let total_staking_power =
-            crate::Module::<T>::total_staked().saturated_into::<MiningPower>();
+            crate::Pallet::<T>::total_staked().saturated_into::<MiningPower>();
         let total_asset_mining_power = T::AssetMining::total_asset_mining_power();
 
         // When:
@@ -257,7 +257,7 @@ impl<T: Config> Slasher<T> {
         expected_slash: BalanceOf<T>,
     ) -> SlashOutcome<BalanceOf<T>> {
         let reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(offender);
-        let reward_pot_balance = Module::<T>::free_balance(&reward_pot);
+        let reward_pot_balance = Pallet::<T>::free_balance(&reward_pot);
 
         debug!(
             target: "runtime::mining::staking",
@@ -274,7 +274,7 @@ impl<T: Config> Slasher<T> {
         if let Err(e) = self.do_slash(&reward_pot, actual_slash) {
             SlashOutcome::SlashFailed(e)
         } else {
-            Module::<T>::deposit_event(Event::<T>::Slashed(offender.clone(), actual_slash));
+            Pallet::<T>::deposit_event(Event::<T>::Slashed(offender.clone(), actual_slash));
             if is_insufficient_slash {
                 SlashOutcome::InsufficientSlash(actual_slash)
             } else {
@@ -285,6 +285,6 @@ impl<T: Config> Slasher<T> {
 
     /// Actually slash the account being punished, all slashed balance will go to the treasury.
     fn do_slash(&self, reward_pot: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
-        Module::<T>::transfer(reward_pot, &self.0, value)
+        Pallet::<T>::transfer(reward_pot, &self.0, value)
     }
 }

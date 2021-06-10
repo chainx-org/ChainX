@@ -3,8 +3,9 @@
 //! New minted PCX distribution logic for ChainX Proposal 09.
 
 use super::*;
+use sp_std::vec::Vec;
 
-impl<T: Config> Module<T> {
+impl<T: Config> Pallet<T> {
     fn generic_calculate_by_proportion<S: Into<u128>>(
         total_reward: BalanceOf<T>,
         mine: S,
