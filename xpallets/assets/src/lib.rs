@@ -55,19 +55,27 @@ pub use self::weights::WeightInfo;
 pub type BalanceOf<T> =
     <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
-/// The module's config trait.
-///
-/// `frame_system::Config` should always be included in our implied traits.
-pub trait Config: xpallet_assets_registrar::Config {
-    /// The overarching event type.
-    type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
+#[frame_support::pallet]
+pub mod pallet {
+    use super::*;
+    use super::*;
+    use frame_support::pallet_prelude::*;
+    use frame_system::pallet_prelude::*;
 
-    /// The native currency.
-    type Currency: ReservableCurrency<Self::AccountId>
+    /// The module's config trait.
+    ///
+    /// `frame_system::Config` should always be included in our implied traits.
+    #[pallet::config]
+    pub trait Config: xpallet_assets_registrar::Config {
+        /// The overarching event type.
+        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+        /// The native currency.
+        type Currency: ReservableCurrency<Self::AccountId>
         + LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
 
-    /// The amount type, should be signed version of `Balance`
-    type Amount: Parameter
+        /// The amount type, should be signed version of `Balance`
+        type Amount: Parameter
         + Member
         + Default
         + Copy
@@ -77,23 +85,23 @@ pub trait Config: xpallet_assets_registrar::Config {
         + TryInto<BalanceOf<Self>>
         + TryFrom<BalanceOf<Self>>;
 
-    /// The treasury account.
-    type TreasuryAccount: TreasuryAccount<Self::AccountId>;
+        /// The treasury account.
+        type TreasuryAccount: TreasuryAccount<Self::AccountId>;
 
-    /// The hook for doing something on the event of creating an account.
-    type OnCreatedAccount: HandleLifetime<Self::AccountId>;
+        /// The hook for doing something on the event of creating an account.
+        type OnCreatedAccount: HandleLifetime<Self::AccountId>;
 
-    /// The hook triggered whenever the asset balance of an account is changed.
-    type OnAssetChanged: OnAssetChanged<Self::AccountId, BalanceOf<Self>>;
+        /// The hook triggered whenever the asset balance of an account is changed.
+        type OnAssetChanged: OnAssetChanged<Self::AccountId, BalanceOf<Self>>;
 
-    /// Weight information for extrinsics in this pallet.
-    type WeightInfo: WeightInfo;
-}
+        /// Weight information for extrinsics in this pallet.
+        type WeightInfo: WeightInfo;
+    }
 
-decl_error! {
     /// Error for the Assets Module
-    pub enum Error for Module<T: Config> {
-        ///
+    #[pallet::error]
+    pub enum Error<T> {
+        /// Got and Invalid Asset
         InvalidAsset,
         /// Got an overflow after adding
         Overflow,
@@ -114,10 +122,8 @@ decl_error! {
         /// Account still has active reserved
         StillHasActiveReserved
     }
-}
-
-decl_event!(
-    pub enum Event<T>
+    #[pallet::event]
+pub enum Event<T>
     where
         <T as frame_system::Config>::AccountId,
         Balance = BalanceOf<T>,
@@ -131,6 +137,10 @@ decl_event!(
         /// Set asset balance of an account by root. [asset_id, who, asset_type, amount]
         BalanceSet(AssetId, AccountId, AssetType, Balance),
     }
+}
+
+decl_event!(
+    
 );
 
 decl_storage! {
