@@ -19,13 +19,10 @@ pub mod weights;
 use sp_std::prelude::*;
 
 use frame_support::{
-    dispatch::{DispatchError, DispatchResult},
-    ensure,
+    dispatch::{DispatchResult},
     log::info,
-    traits::Get,
-    IterableStorageMap,
+    traits::GenesisBuild,
 };
-use frame_system::ensure_root;
 
 use chainx_primitives::{AssetId, Desc, Token};
 
@@ -174,6 +171,7 @@ pub mod pallet{
         }
     }
 
+
     #[pallet::call]
     impl<T: Config> Pallet<T>{
 
@@ -270,7 +268,7 @@ pub mod pallet{
             if let Some(desc) = desc {
                 info.set_desc(desc);
             }
-            AssetInfoOf::<T>::insert(id, info);
+            AssetInfoOf::<T>::insert(id, Some(info));
             Ok(())
         }
     }
@@ -356,12 +354,25 @@ pub mod pallet{
                 }
             });
     
-            AssetInfoOf::<T>::insert(&id, asset);
-            AssetOnline::insert(&id, true);
+            AssetInfoOf::<T>::insert(&id, Some(asset));
+            AssetOnline::<T>::insert(&id, true);
     
             RegisteredAt::<T>::insert(&id, frame_system::Pallet::<T>::block_number());
     
             Ok(())
         }
     }
+}
+
+
+#[cfg(feature = "std")]
+#[cfg(feature = "std")]
+impl GenesisConfig {
+	/// Direct implementation of `GenesisBuild::assimilate_storage`.
+	pub fn assimilate_storage<T: Config>(
+		&self,
+		storage: &mut sp_runtime::Storage
+	) -> Result<(), String> {
+		<Self as GenesisBuild<T>>::assimilate_storage(self, storage)
+	}
 }
