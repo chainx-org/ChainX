@@ -110,6 +110,7 @@ pub mod pallet {
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
+    #[pallet::metadata(T::AccountId = "AccountId")]
     /// Event for the XSystem Module
     pub enum Event<T: Config> {
         /// An account was added to the blacklist. [who]
