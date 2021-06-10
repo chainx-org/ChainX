@@ -284,7 +284,7 @@ pub struct ReportLongevity;
 impl Get<u64> for ReportLongevity {
     fn get() -> u64 {
         xpallet_mining_staking::BondingDuration::<Runtime>::get() as u64
-            * xpallet_mining_staking::SessionsPerEra::get() as u64
+            * xpallet_mining_staking::SessionsPerEra::<Runtime>::get() as u64
             * EpochDuration::get()
     }
 }

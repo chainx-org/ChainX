@@ -147,14 +147,14 @@ benchmarks! {
         let c = 1000;
     }: _(RawOrigin::Root, c)
     verify {
-        assert_eq!(ValidatorCount::get(), c);
+        assert_eq!(ValidatorCount::<T>::get(), c);
     }
 
     set_minimum_validator_count {
         let c = 1000;
     }: _(RawOrigin::Root, c)
     verify {
-        assert_eq!(MinimumValidatorCount::get(), c);
+        assert_eq!(MinimumValidatorCount::<T>::get(), c);
     }
 
     set_bonding_duration {
@@ -182,7 +182,7 @@ benchmarks! {
         let c = 1000u32;
     }: _(RawOrigin::Root, c)
     verify {
-        assert_eq!(SessionsPerEra::get(), c);
+        assert_eq!(SessionsPerEra::<T>::get(), c);
     }
 }
 

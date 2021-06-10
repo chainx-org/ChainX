@@ -1,11 +1,12 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 use super::*;
+use sp_std::vec::Vec;
 use xp_mining_staking::SessionIndex;
 
 mod proposal09;
 
-impl<T: Config> Module<T> {
+impl<T: Config> Pallet<T> {
     /// Simple u32 power of 2 function - simply uses a bit shift
     #[inline]
     fn pow2(n: u32) -> BalanceOf<T> {
