@@ -15,6 +15,7 @@ mod tests;
 mod types;
 mod verifier;
 pub mod weights;
+
 use sp_std::prelude::*;
 
 use frame_support::{
@@ -64,7 +65,7 @@ pub mod pallet{
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     /// Event for the XAssetRegistrar Module
     pub enum Event<T> {
-    /// A new asset was registered. [asset_id, has_mining_rights]
+        /// A new asset was registered. [asset_id, has_mining_rights]
         Registered(AssetId,bool),
         /// A deregistered asset was recovered. [asset_id, has_mining_rights]
         Recovered(AssetId, bool),
@@ -95,9 +96,9 @@ pub mod pallet{
         AssetIsInvalid,
     }
 
+    /// Asset id list for each Chain.
     #[pallet::storage]
     #[pallet::getter(fn asset_ids_of)]
-    /// Asset id list for each Chain.
     pub(super) type AssetIdsOf<T: Config> = StorageMap<
         _,
         Twox64Concat, 
@@ -106,9 +107,9 @@ pub mod pallet{
         ValueQuery
     >;
 
+    /// Asset info of each asset.
     #[pallet::storage]
     #[pallet::getter(fn asset_info_of)]
-    /// Asset info of each asset.
     pub(super) type AssetInfoOf<T: Config> = StorageMap<
         _,
         Twox64Concat,
@@ -117,9 +118,9 @@ pub mod pallet{
         ValueQuery
     >;
 
+    /// The map of asset to the online state.
     #[pallet::storage]
     #[pallet::getter(fn asset_online)]
-    /// The map of asset to the online state.
     pub(super) type AssetOnline<T: Config> = StorageMap<
         _,
         Twox64Concat,
@@ -128,9 +129,9 @@ pub mod pallet{
         ValueQuery
     >;
 
+    /// The map of asset to the block number at which the asset was registered.
     #[pallet::storage]
     #[pallet::getter(fn registered_at)]
-    /// The map of asset to the block number at which the asset was registered.
     pub(super) type RegisteredAt<T: Config> = StorageMap<
         _,
         Twox64Concat,
