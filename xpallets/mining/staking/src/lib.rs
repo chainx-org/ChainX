@@ -116,17 +116,6 @@ pub mod pallet {
     #[pallet::generate_store(pub(super) trait Store)]
     pub struct Pallet<T>(_);
 
-    #[pallet::hooks]
-    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T>
-    // TODO_MAYBE_WHERE_CLAUSE
-    {
-        // TODO_ON_FINALIZE
-        // TODO_ON_INITIALIZE
-        // TODO_ON_RUNTIME_UPGRADE
-        // TODO_INTEGRITY_TEST
-        // TODO_OFFCHAIN_WORKER
-    }
-
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Nominate the `target` with `value` of the origin account's balance locked.
@@ -720,30 +709,17 @@ pub mod pallet {
     pub(super) type Immortals<T: Config> = StorageValue<_, Vec<T::AccountId>>;
 
     #[pallet::genesis_config]
-    pub struct GenesisConfig<T: Config>
-// TODO_MAYBE_WHERE_CLAUSE
-    {
-        #[doc = " The ideal number of staking participants."]
+    pub struct GenesisConfig<T: Config> {
         pub validator_count: u32,
-        #[doc = " Minimum number of staking participants before emergency conditions are imposed."]
         pub minimum_validator_count: u32,
-        #[doc = " Maximum number of staking participants before emergency conditions are imposed."]
         pub maximum_validator_count: u32,
-        #[doc = " The length of a staking era in sessions."]
         pub sessions_per_era: SessionIndex,
-        #[doc = " The length of the bonding duration in blocks."]
         pub bonding_duration: T::BlockNumber,
-        #[doc = " The length of the bonding duration in blocks for validator."]
         pub validator_bonding_duration: T::BlockNumber,
-        #[doc = " Maximum number of on-going unbonded chunk."]
         pub maximum_unbonded_chunk_size: u32,
-        #[doc = " The beneficiary account of vesting schedule."]
         pub vesting_account: T::AccountId,
-        #[doc = " Maximum value of total_bonded/self_bonded."]
         pub upper_bound_factor: u32,
-        #[doc = " Mode of era forcing."]
         pub force_era: Forcing,
-        #[doc = " Minimum penalty for each slash."]
         pub minimum_penalty: BalanceOf<T>,
         pub validators: Vec<(T::AccountId, ReferralId, BalanceOf<T>)>,
         pub glob_dist_ratio: (u32, u32),
@@ -752,9 +728,7 @@ pub mod pallet {
     }
 
     #[cfg(feature = "std")]
-    impl<T: Config> Default for GenesisConfig<T>
-    // TODO_MAYBE_WHERE_CLAUSE
-    {
+    impl<T: Config> Default for GenesisConfig<T> {
         fn default() -> Self {
             Self {
                 validator_count: Default::default(),
@@ -779,9 +753,7 @@ pub mod pallet {
     }
 
     #[pallet::genesis_build]
-    impl<T: Config> GenesisBuild<T> for GenesisConfig<T>
-    // TODO_MAYBE_WHERE_CLAUSE
-    {
+    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
         fn build(&self) {
             <ValidatorCount<T>>::put(self.validator_count);
             <MinimumValidatorCount<T>>::put(self.minimum_validator_count);
