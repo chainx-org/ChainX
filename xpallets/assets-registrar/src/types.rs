@@ -11,12 +11,12 @@ use chainx_primitives::{Decimals, Desc, Token};
 use xp_assets_registrar::Chain;
 
 use crate::verifier::*;
-use crate::Config;
+use super::Config;
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct AssetInfo {
+pub struct  AssetInfo {
     #[cfg_attr(feature = "std", serde(with = "xp_rpc::serde_text"))]
     token: Token,
     #[cfg_attr(feature = "std", serde(with = "xp_rpc::serde_text"))]
@@ -27,6 +27,17 @@ pub struct AssetInfo {
     desc: Desc,
 }
 
+// impl Default for AssetInfo{
+//     fn default() -> Self {
+//         Self{
+//             token:Token::default(),
+//             token_name: Token::default(),
+//             chain: Chain::default(),
+//             decimals: 8,
+//             desc: Desc::default()
+//         }
+//     }
+// }
 impl fmt::Debug for AssetInfo {
     #[cfg(feature = "std")]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

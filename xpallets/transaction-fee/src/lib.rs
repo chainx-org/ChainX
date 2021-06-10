@@ -53,7 +53,7 @@ decl_event!(
 
 impl<T: Config> Module<T>
 where
-    BalanceOf<T>: FixedPointOperand,
+    BalanceOf<T>: FixedPointOperand,    
 {
     /// Returns the details of fee for a particular transaction.
     ///
