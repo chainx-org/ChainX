@@ -169,8 +169,8 @@ benchmarks! {
         XGatewayRecords::<T>::deposit(&caller, ASSET_ID, 9900000u32.into()).unwrap();
         XGatewayRecords::<T>::withdraw(&caller, ASSET_ID, 9778400u32.into(), b"".to_vec(), b"".to_vec().into()).unwrap();
         XGatewayRecords::<T>::withdraw(&caller, ASSET_ID, 9900000u32.into(), b"".to_vec(), b"".to_vec().into()).unwrap();
-        xpallet_gateway_records::WithdrawalStateOf::insert(0, WithdrawalState::Processing);
-        xpallet_gateway_records::WithdrawalStateOf::insert(1, WithdrawalState::Processing);
+        XGatewayRecords::<T>::set_withdrawal_state(RawOrigin::Root.into(), 0, WithdrawalState::Processing);
+        XGatewayRecords::<T>::set_withdrawal_state(RawOrigin::Root.into(), 1, WithdrawalState::Processing);
 
         let proposal = BtcWithdrawalProposal::<T::AccountId> {
             sig_state: VoteResult::Finish,
