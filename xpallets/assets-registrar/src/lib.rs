@@ -66,7 +66,7 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     /// Event for the XAssetRegistrar Module
-    pub enum Event<T> {
+    pub enum Event<T: Config> {
         /// A new asset was registered. [asset_id, has_mining_rights]
         Registered(AssetId, bool),
         /// A deregistered asset was recovered. [asset_id, has_mining_rights]
