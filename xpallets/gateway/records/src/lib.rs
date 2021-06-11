@@ -55,6 +55,10 @@ pub mod pallet {
         type WeightInfo: WeightInfo;
     }
 
+    #[pallet::pallet]
+    #[pallet::generate_store(pub(crate) trait Store)]
+    pub struct Pallet<T>(PhantomData<T>);
+
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Deposit asset token.
@@ -151,10 +155,6 @@ pub mod pallet {
         /// Meet unexpected chain
         UnexpectedChain,
     }
-
-    #[pallet::pallet]
-    #[pallet::generate_store(pub(crate) trait Store)]
-    pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::type_value]
     pub fn DefaultForWithdrawalRecordId<T: Config>() -> WithdrawalRecordId {
