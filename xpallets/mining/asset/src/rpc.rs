@@ -6,7 +6,6 @@ use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
-use frame_support::storage::{IterableStorageDoubleMap, StorageMap, StorageValue};
 use sp_runtime::{RuntimeDebug, SaturatedConversion};
 
 use chainx_primitives::AssetId;
@@ -14,7 +13,7 @@ use xp_mining_common::RewardPotAccountFor;
 
 use crate::{
     types::*, AssetLedgers, BalanceOf, ClaimRestrictionOf, Config, FixedAssetPowerOf, MinerLedgers,
-    MiningPrevilegedAssets, Module,
+    MiningPrevilegedAssets, Pallet,
 };
 
 /// Mining asset info.
@@ -43,14 +42,14 @@ pub struct MiningDividendInfo<Balance> {
     pub insufficient_stake: Balance,
 }
 
-impl<T: Config> Module<T> {
+impl<T: Config> Pallet<T> {
     /// Get overall information about all mining assets.
     pub fn mining_assets(
     ) -> Vec<MiningAssetInfo<T::AccountId, BalanceOf<T>, MiningWeight, T::BlockNumber>> {
-        MiningPrevilegedAssets::get()
+        MiningPrevilegedAssets::<T>::get()
             .into_iter()
             .map(|asset_id| {
-                let mining_power = FixedAssetPowerOf::get(asset_id);
+                let mining_power = FixedAssetPowerOf::<T>::get(asset_id);
                 let reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(&asset_id);
                 let reward_pot_balance: BalanceOf<T> = Self::free_balance(&reward_pot);
                 let ledger_info: AssetLedger<MiningWeight, T::BlockNumber> =
