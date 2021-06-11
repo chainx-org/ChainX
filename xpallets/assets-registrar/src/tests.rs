@@ -25,7 +25,7 @@ frame_support::construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-        XAssetsRegistrar: xpallet_assets_registrar::{Pallet, Call, Config<T>, Storage, Event<T>},
+        XAssetsRegistrar: xpallet_assets_registrar::{Pallet, Call, Config, Storage, Event<T>},
     }
 );
 
