@@ -18,7 +18,11 @@ pub mod weights;
 
 use sp_std::prelude::*;
 
-use frame_support::{dispatch::{DispatchResult, DispatchError}, log::info, ensure};
+use frame_support::{
+    dispatch::{DispatchError, DispatchResult},
+    ensure,
+    log::info,
+};
 
 use chainx_primitives::{AssetId, Desc, Token};
 
@@ -254,9 +258,7 @@ pub mod pallet {
             Ok(())
         }
     }
-
 }
-
 
 impl<T: Config> Pallet<T> {
     /// Returns an iterator of all the asset ids of all chains so far.
@@ -273,7 +275,7 @@ impl<T: Config> Pallet<T> {
 
     /// Returns an iterator of tuple (AssetId, AssetInfo) of all assets.
     #[inline]
-    pub fn asset_infos() -> impl Iterator<Item = (AssetId,Option<AssetInfo>)> {
+    pub fn asset_infos() -> impl Iterator<Item = (AssetId, Option<AssetInfo>)> {
         AssetInfoOf::<T>::iter()
     }
 
@@ -348,16 +350,15 @@ impl<T: Config> Pallet<T> {
     }
 }
 
-
 #[cfg(feature = "std")]
 impl GenesisConfig {
-	/// Direct implementation of `GenesisBuild::assimilate_storage`.
-	///
-	/// Kept in order not to break dependency.
-	pub fn assimilate_storage<T: Config>(
-		&self,
-		storage: &mut sp_runtime::Storage
-	) -> Result<(), String> {
-		<Self as GenesisBuild<T>>::assimilate_storage(self, storage)
-	}
+    /// Direct implementation of `GenesisBuild::assimilate_storage`.
+    ///
+    /// Kept in order not to break dependency.
+    pub fn assimilate_storage<T: Config>(
+        &self,
+        storage: &mut sp_runtime::Storage,
+    ) -> Result<(), String> {
+        <Self as GenesisBuild<T>>::assimilate_storage(self, storage)
+    }
 }
