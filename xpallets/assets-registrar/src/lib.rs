@@ -18,12 +18,12 @@ pub mod weights;
 
 use sp_std::prelude::*;
 
-use frame_support::{dispatch::DispatchResult, log::info};
+use frame_support::{dispatch::{DispatchResult, DispatchError}, log::info, ensure};
+
+use chainx_primitives::{AssetId, Desc, Token};
 
 #[cfg(feature = "std")]
 use frame_support::traits::GenesisBuild;
-
-use chainx_primitives::{AssetId, Desc, Token};
 
 pub use self::types::AssetInfo;
 pub use self::weights::WeightInfo;
@@ -36,11 +36,10 @@ pub mod pallet {
     use super::*;
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
-    use sp_std::marker::PhantomData;
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
-    pub struct Pallet<T>(PhantomData<T>);
+    pub struct Pallet<T>(_);
 
     #[pallet::config]
     /// The module's config trait.
@@ -63,7 +62,7 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     /// Event for the XAssetRegistrar Module
-    pub enum Event<T> {
+    pub enum Event<T: Config> {
         /// A new asset was registered. [asset_id, has_mining_rights]
         Registered(AssetId, bool),
         /// A deregistered asset was recovered. [asset_id, has_mining_rights]
@@ -256,104 +255,109 @@ pub mod pallet {
         }
     }
 
-    impl<T: Config> Pallet<T> {
-        /// Returns an iterator of all the asset ids of all chains so far.
-        #[inline]
-        pub fn asset_ids() -> impl Iterator<Item = AssetId> {
-            Chain::iter().map(Self::asset_ids_of).flatten()
-        }
+}
 
-        /// Returns an iterator of all the valid asset ids of all chains so far.
-        #[inline]
-        pub fn valid_asset_ids() -> impl Iterator<Item = AssetId> {
-            Self::asset_ids().filter(Self::is_valid)
-        }
 
-        /// Returns an iterator of tuple (AssetId, AssetInfo) of all assets.
-        #[inline]
-        pub fn asset_infos() -> impl Iterator<Item = (AssetId, Option<AssetInfo>)> {
-            AssetInfoOf::<T>::iter()
-        }
+impl<T: Config> Pallet<T> {
+    /// Returns an iterator of all the asset ids of all chains so far.
+    #[inline]
+    pub fn asset_ids() -> impl Iterator<Item = AssetId> {
+        Chain::iter().map(Self::asset_ids_of).flatten()
+    }
 
-        /// Returns an iterator of tuple (AssetId, AssetInfo) of all valid assets.
-        #[inline]
-        pub fn valid_asset_infos() -> impl Iterator<Item = (AssetId, Option<AssetInfo>)> {
-            Self::asset_infos().filter(|(id, _)| Self::is_valid(id))
-        }
+    /// Returns an iterator of all the valid asset ids of all chains so far.
+    #[inline]
+    pub fn valid_asset_ids() -> impl Iterator<Item = AssetId> {
+        Self::asset_ids().filter(Self::is_valid)
+    }
 
-        /// Returns the chain of given asset `asset_id`.
-        pub fn chain_of(asset_id: &AssetId) -> Result<Chain, DispatchError> {
-            Self::asset_info_of(asset_id)
-                .map(|info| info.chain())
-                .ok_or_else(|| Error::<T>::AssetDoesNotExist.into())
-        }
+    /// Returns an iterator of tuple (AssetId, AssetInfo) of all assets.
+    #[inline]
+    pub fn asset_infos() -> impl Iterator<Item = (AssetId,Option<AssetInfo>)> {
+        AssetInfoOf::<T>::iter()
+    }
 
-        /// Returns the asset info of given `id`.
-        pub fn get_asset_info(id: &AssetId) -> Result<AssetInfo, DispatchError> {
-            if let Some(asset) = Self::asset_info_of(id) {
-                if Self::is_valid(id) {
-                    Ok(asset)
-                } else {
-                    Err(Error::<T>::AssetIsInvalid.into())
-                }
+    /// Returns an iterator of tuple (AssetId, AssetInfo) of all valid assets.
+    #[inline]
+    pub fn valid_asset_infos() -> impl Iterator<Item = (AssetId, Option<AssetInfo>)> {
+        Self::asset_infos().filter(|(id, _)| Self::is_valid(id))
+    }
+
+    /// Returns the chain of given asset `asset_id`.
+    pub fn chain_of(asset_id: &AssetId) -> Result<Chain, DispatchError> {
+        Self::asset_info_of(asset_id)
+            .map(|info| info.chain())
+            .ok_or_else(|| Error::<T>::AssetDoesNotExist.into())
+    }
+
+    /// Returns the asset info of given `id`.
+    pub fn get_asset_info(id: &AssetId) -> Result<AssetInfo, DispatchError> {
+        if let Some(asset) = Self::asset_info_of(id) {
+            if Self::is_valid(id) {
+                Ok(asset)
             } else {
-                Err(Error::<T>::AssetDoesNotExist.into())
+                Err(Error::<T>::AssetIsInvalid.into())
             }
+        } else {
+            Err(Error::<T>::AssetDoesNotExist.into())
         }
+    }
 
-        /// Returns true if the given `asset_id` is an online asset.
-        pub fn is_online(asset_id: &AssetId) -> bool {
-            Self::asset_online(asset_id)
-        }
+    /// Returns true if the given `asset_id` is an online asset.
+    pub fn is_online(asset_id: &AssetId) -> bool {
+        Self::asset_online(asset_id)
+    }
 
-        /// Returns true if the asset info record of given `asset_id` exists.
-        pub fn exists(asset_id: &AssetId) -> bool {
-            Self::asset_info_of(asset_id).is_some()
-        }
+    /// Returns true if the asset info record of given `asset_id` exists.
+    pub fn exists(asset_id: &AssetId) -> bool {
+        Self::asset_info_of(asset_id).is_some()
+    }
 
-        /// Returns true if the asset of given `asset_id` is valid (only check if still online currently).
-        pub fn is_valid(asset_id: &AssetId) -> bool {
-            Self::is_online(asset_id)
-        }
+    /// Returns true if the asset of given `asset_id` is valid (only check if still online currently).
+    pub fn is_valid(asset_id: &AssetId) -> bool {
+        Self::is_online(asset_id)
+    }
 
-        /// Helper function for checking the asset's existence.
-        pub fn ensure_asset_exists(id: &AssetId) -> DispatchResult {
-            ensure!(Self::exists(id), Error::<T>::AssetDoesNotExist);
-            Ok(())
-        }
+    /// Helper function for checking the asset's existence.
+    pub fn ensure_asset_exists(id: &AssetId) -> DispatchResult {
+        ensure!(Self::exists(id), Error::<T>::AssetDoesNotExist);
+        Ok(())
+    }
 
-        /// Helper function for checking the asset's validity.
-        pub fn ensure_asset_is_valid(id: &AssetId) -> DispatchResult {
-            ensure!(Self::is_valid(id), Error::<T>::AssetIsInvalid);
-            Ok(())
-        }
+    /// Helper function for checking the asset's validity.
+    pub fn ensure_asset_is_valid(id: &AssetId) -> DispatchResult {
+        ensure!(Self::is_valid(id), Error::<T>::AssetIsInvalid);
+        Ok(())
+    }
 
-        /// Actually register an asset.
-        fn apply_register(id: AssetId, asset: AssetInfo) -> DispatchResult {
-            let chain = asset.chain();
-            AssetIdsOf::<T>::mutate(chain, |ids| {
-                if !ids.contains(&id) {
-                    ids.push(id);
-                }
-            });
+    /// Actually register an asset.
+    fn apply_register(id: AssetId, asset: AssetInfo) -> DispatchResult {
+        let chain = asset.chain();
+        AssetIdsOf::<T>::mutate(chain, |ids| {
+            if !ids.contains(&id) {
+                ids.push(id);
+            }
+        });
 
-            AssetInfoOf::<T>::insert(&id, Some(asset));
-            AssetOnline::<T>::insert(&id, true);
+        AssetInfoOf::<T>::insert(&id, Some(asset));
+        AssetOnline::<T>::insert(&id, true);
 
-            RegisteredAt::<T>::insert(&id, frame_system::Pallet::<T>::block_number());
+        RegisteredAt::<T>::insert(&id, frame_system::Pallet::<T>::block_number());
 
-            Ok(())
-        }
+        Ok(())
     }
 }
 
+
 #[cfg(feature = "std")]
 impl GenesisConfig {
-    /// Direct implementation of `GenesisBuild::assimilate_storage`.
-    pub fn assimilate_storage<T: Config>(
-        &self,
-        storage: &mut sp_runtime::Storage,
-    ) -> Result<(), String> {
-        <Self as GenesisBuild<T>>::assimilate_storage(self, storage)
-    }
+	/// Direct implementation of `GenesisBuild::assimilate_storage`.
+	///
+	/// Kept in order not to break dependency.
+	pub fn assimilate_storage<T: Config>(
+		&self,
+		storage: &mut sp_runtime::Storage
+	) -> Result<(), String> {
+		<Self as GenesisBuild<T>>::assimilate_storage(self, storage)
+	}
 }
