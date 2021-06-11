@@ -10,7 +10,6 @@ use frame_support::{
     ensure,
     log::error,
     traits::{BalanceStatus, LockIdentifier},
-    transactional, IterableStorageDoubleMap,
 };
 
 use orml_traits::{
@@ -22,9 +21,11 @@ use chainx_primitives::AssetId;
 use xpallet_support::traits::TreasuryAccount;
 
 use crate::types::{AssetType, BalanceLock};
-use crate::{AssetBalance, BalanceOf, Config, Error, Module};
+use crate::{AssetBalance, BalanceOf, Config, Error, Pallet};
 
-impl<T: Config> MultiCurrency<T::AccountId> for Module<T> {
+use super::*;
+
+impl<T: Config> MultiCurrency<T::AccountId> for Pallet<T> {
     type CurrencyId = AssetId;
     type Balance = BalanceOf<T>;
 
@@ -93,7 +94,7 @@ impl<T: Config> MultiCurrency<T::AccountId> for Module<T> {
         amount: Self::Balance,
     ) -> DispatchResult {
         if amount.is_zero() {
-            return Ok(());
+            return Ok(().into());
         }
         Self::ensure_can_withdraw(currency_id, who, amount)?;
         match Self::can_destroy_usable(&currency_id) {
@@ -173,7 +174,7 @@ impl<T: Config> MultiCurrency<T::AccountId> for Module<T> {
     }
 }
 
-impl<T: Config> MultiCurrencyExtended<T::AccountId> for Module<T> {
+impl<T: Config> MultiCurrencyExtended<T::AccountId> for Pallet<T> {
     type Amount = T::Amount;
 
     fn update_balance(
@@ -182,7 +183,7 @@ impl<T: Config> MultiCurrencyExtended<T::AccountId> for Module<T> {
         by_amount: Self::Amount,
     ) -> DispatchResult {
         if by_amount.is_zero() {
-            return Ok(());
+            return Ok(().into());
         }
 
         let by_balance = TryInto::<Self::Balance>::try_into(by_amount.abs())
@@ -195,7 +196,7 @@ impl<T: Config> MultiCurrencyExtended<T::AccountId> for Module<T> {
     }
 }
 
-impl<T: Config> MultiReservableCurrency<T::AccountId> for Module<T> {
+impl<T: Config> MultiReservableCurrency<T::AccountId> for Pallet<T> {
     fn can_reserve(
         currency_id: Self::CurrencyId,
         who: &T::AccountId,
@@ -248,7 +249,7 @@ impl<T: Config> MultiReservableCurrency<T::AccountId> for Module<T> {
         value: Self::Balance,
     ) -> DispatchResult {
         if value.is_zero() {
-            return Ok(());
+            return Ok(())
         }
         Self::move_balance(
             &currency_id,
@@ -259,7 +260,7 @@ impl<T: Config> MultiReservableCurrency<T::AccountId> for Module<T> {
             value,
         )
         .map_err::<Error<T>, _>(Into::into)?;
-        Ok(())
+        Ok(().into())
     }
 
     fn unreserve(
@@ -326,7 +327,7 @@ impl<T: Config> MultiReservableCurrency<T::AccountId> for Module<T> {
     }
 }
 
-impl<T: Config> MultiLockableCurrency<T::AccountId> for Module<T> {
+impl<T: Config> MultiLockableCurrency<T::AccountId> for Pallet<T> {
     type Moment = T::BlockNumber;
 
     fn set_lock(
@@ -404,7 +405,7 @@ impl<T: Config> MultiLockableCurrency<T::AccountId> for Module<T> {
     }
 }
 
-impl<T: Config> MergeAccount<T::AccountId> for Module<T> {
+impl<T: Config> MergeAccount<T::AccountId> for Pallet<T> {
     #[transactional]
     fn merge_account(source: &T::AccountId, dest: &T::AccountId) -> DispatchResult {
         AssetBalance::<T>::iter_prefix(source).try_for_each(
@@ -424,7 +425,7 @@ impl<T: Config> MergeAccount<T::AccountId> for Module<T> {
                     dest,
                     Self::usable_balance(source, &currency_id),
                 )?;
-                Ok(())
+                Ok(().into())
             },
         )
     }

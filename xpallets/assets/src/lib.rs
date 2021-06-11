@@ -24,29 +24,28 @@ pub mod weights;
 use sp_std::{
     collections::btree_map::BTreeMap,
     convert::{TryFrom, TryInto},
-    prelude::*,
 };
 
 use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult},
     ensure,
     log::{debug, error, info},
     traits::{Currency, Get, HandleLifetime, LockableCurrency, ReservableCurrency},
-    Parameter, StorageDoubleMap,
+    Parameter
 };
+
 use frame_system::{ensure_root, ensure_signed, AccountInfo};
 use orml_traits::arithmetic::{Signed, SimpleArithmetic};
 use sp_runtime::traits::{
-    CheckedAdd, CheckedSub, MaybeSerializeDeserialize, Member, Saturating, StaticLookup, Zero,
+    CheckedAdd, CheckedSub, Saturating, Zero, StaticLookup,
 };
 
-use chainx_primitives::AssetId;
-pub use xpallet_assets_registrar::{AssetInfo, Chain};
 use xpallet_support::traits::TreasuryAccount;
-
-pub use self::traits::{ChainT, OnAssetChanged};
+use chainx_primitives::AssetId;
 use self::trigger::AssetChangedTrigger;
+
+pub use xpallet_assets_registrar::{AssetInfo, Chain};
+pub use self::traits::{ChainT, OnAssetChanged};
 pub use self::types::{
     AssetErr, AssetRestrictions, AssetType, BalanceLock, TotalAssetInfo, WithdrawalLimit,
 };
@@ -55,18 +54,20 @@ pub use self::weights::WeightInfo;
 pub type BalanceOf<T> =
     <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
+pub use pallet::*;
+
 #[frame_support::pallet]
 pub mod pallet {
-    use super::*;
     use super::*;
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
 
-    /// The module's config trait.
+    /// The pallet's config trait.
     ///
     /// `frame_system::Config` should always be included in our implied traits.
+    // #[pallet::disable_frame_system_supertrait_check]
     #[pallet::config]
-    pub trait Config: xpallet_assets_registrar::Config {
+    pub trait Config: frame_system::Config + xpallet_assets_registrar::Config {
         /// The overarching event type.
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
@@ -98,6 +99,94 @@ pub mod pallet {
         type WeightInfo: WeightInfo;
     }
 
+    #[pallet::pallet]
+    #[pallet::generate_store(pub(super) trait Store)]
+    pub struct Pallet<T>(_);
+
+    #[pallet::call]
+    impl<T: Config> Pallet<T> {
+        /// transfer between account
+        #[pallet::weight(<T as pallet::Config::WeightInfo>::transfer())]
+        pub fn transfer(
+            origin: OriginFor<T>,
+            dest: <T::Lookup as StaticLookup>::Source,
+            #[pallet::compact] id: AssetId,
+            #[pallet::compact] value: BalanceOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            let transactor = ensure_signed(origin)?;
+            let dest = T::Lookup::lookup(dest)?;
+            debug!(target: "runtime::assets", "[transfer] from:{:?}, to:{:?}, id:{}, value:{:?}", transactor, dest, id, value);
+            Self::can_transfer(&id)?;
+
+            Self::move_usable_balance(&id, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;
+
+            Ok(().into())
+        }
+
+        /// for transfer by root
+        #[pallet::weight(<T as pallet::Config::WeightInfo>::force_transfer())]
+        pub fn force_transfer(
+            origin: OriginFor<T>,
+            transactor: <T::Lookup as StaticLookup>::Source,
+            dest: <T::Lookup as StaticLookup>::Source,
+            #[pallet::compact] id: AssetId,
+            #[pallet::compact] value: BalanceOf<T>
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+
+            let transactor = T::Lookup::lookup(transactor)?;
+            let dest = T::Lookup::lookup(dest)?;
+            debug!(target: "runtime::assets", "[force_transfer] from:{:?}, to:{:?}, id:{}, value:{:?}", transactor, dest, id, value);
+            Self::can_transfer(&id)?;
+            Self::move_usable_balance(&id, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;
+            Ok(().into())
+        }
+
+        /// set free token for an account
+        #[pallet::weight(<T as pallet::Config::WeightInfo>::set_balance)]
+        pub fn set_balance(
+            origin: OriginFor<T>,
+            who: <T::Lookup as StaticLookup>::Source,
+            #[pallet::compact] id: AssetId,
+            balances: BTreeMap<AssetType, BalanceOf<T>>
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+
+            let who = T::Lookup::lookup(who)?;
+            info!(target: "runtime::assets", "[set_balance] Set balance by root, who:{:?}, id:{}, balances:{:?}", who, id, balances);
+            Self::set_balance_impl(&who, &id, balances)?;
+            Ok(().into())
+        }
+
+        #[pallet::weight(<T as pallet::Config::WeightInfo>::set_asset_limit())]
+        pub fn set_asset_limit(
+            origin: OriginFor<T>,
+            #[pallet::compact] id: AssetId,
+            restrictions: AssetRestrictions
+        ) -> DispatchResult {
+            ensure_root(origin)?;
+            Self::set_asset_restrictions(id, restrictions)
+        }
+    }
+
+    #[pallet::event]
+    #[pallet::generate_deposit(pub(super) fn deposit_event)]
+    #[pallet::metadata(T::AccountId = "AccountId", BalanceOf<T> = "Balance")]
+    pub enum Event<T: Config> {
+        /// Some balances of an asset was moved from one to another. [asset_id, from, from_type, to, to_type, amount]
+        Moved(AssetId, T::AccountId, AssetType, T::AccountId, AssetType, BalanceOf<T>),
+        /// New balances of an asset were issued. [asset_id, receiver, amount]
+        Issued(AssetId, T::AccountId, BalanceOf<T>),
+        /// Some balances of an asset were destoryed. [asset_id, who, amount]
+        Destroyed(AssetId, T::AccountId, BalanceOf<T>),
+        /// Set asset balance of an account by root. [asset_id, who, asset_type, amount]
+        BalanceSet(AssetId, T::AccountId, AssetType, BalanceOf<T>),
+    }
+
+    /// Old name generated by `decl_event`.
+    #[deprecated(note = "use `Event` instead")]
+    pub type RawEvent<T> = Event<T>;
+
     /// Error for the Assets Module
     #[pallet::error]
     pub enum Error<T> {
@@ -122,163 +211,117 @@ pub mod pallet {
         /// Account still has active reserved
         StillHasActiveReserved
     }
-    #[pallet::event]
-pub enum Event<T>
-    where
-        <T as frame_system::Config>::AccountId,
-        Balance = BalanceOf<T>,
-    {
-        /// Some balances of an asset was moved from one to another. [asset_id, from, from_type, to, to_type, amount]
-        Moved(AssetId, AccountId, AssetType, AccountId, AssetType, Balance),
-        /// New balances of an asset were issued. [asset_id, receiver, amount]
-        Issued(AssetId, AccountId, Balance),
-        /// Some balances of an asset were destoryed. [asset_id, who, amount]
-        Destroyed(AssetId, AccountId, Balance),
-        /// Set asset balance of an account by root. [asset_id, who, asset_type, amount]
-        BalanceSet(AssetId, AccountId, AssetType, Balance),
+
+    /// asset extend limit properties, set asset "can do", example, `CanTransfer`, `CanDestroyWithdrawal`
+    /// notice if not set AssetRestriction, default is true for this limit
+    /// if want let limit make sense, must set false for the limit
+    #[pallet::storage]
+    #[pallet::getter(fn asset_restrictions_of)]
+    pub type AssetRestrictionsOf<T: Config> = StorageMap<
+        _,
+        Twox64Concat,
+        AssetId,
+        AssetRestrictions,
+        ValueQuery
+    >;
+
+    /// asset balance for user&asset_id, use btree_map to accept different asset type
+    #[pallet::storage]
+    #[pallet::getter(fn asset_balance)]
+    pub type AssetBalance<T: Config> = StorageDoubleMap<
+        _,
+        Blake2_128Concat,
+        T::AccountId,
+        Twox64Concat,
+        AssetId,
+        BTreeMap<AssetType, BalanceOf<T>>,
+        ValueQuery
+    >;
+
+    /// Any liquidity locks of a token type under an account.
+    /// NOTE: Should only be accessed when setting, changing and freeing a lock.
+    #[pallet::storage]
+    #[pallet::getter(fn locks)]
+    pub type Locks<T: Config> = StorageDoubleMap<
+        _,
+        Blake2_128Concat,
+        T::AccountId,
+        Twox64Concat,
+        AssetId,
+        Vec<BalanceLock<BalanceOf<T>>>,
+        ValueQuery,
+    >;
+
+    /// asset balance for an asset_id, use btree_map to accept different asset type
+    #[pallet::storage]
+    #[pallet::getter(fn total_asset_balance)]
+    pub type TotalAssetBalance<T: Config> = StorageMap<
+        _,
+        Twox64Concat,
+        AssetId,
+        BTreeMap<AssetType, BalanceOf<T>>,
+        ValueQuery,
+    >;
+
+    #[pallet::genesis_config]
+    pub struct GenesisConfig<T: Config> {
+        pub assets_restrictions: Vec<(AssetId, AssetRestrictions)>,
+        pub endowed: BTreeMap<AssetId, Vec<(T::AccountId, BalanceOf<T>)>>,
     }
-}
 
-decl_event!(
-    
-);
-
-decl_storage! {
-    trait Store for Module<T: Config> as XAssets {
-        /// asset extend limit properties, set asset "can do", example, `CanTransfer`, `CanDestroyWithdrawal`
-        /// notice if not set AssetRestriction, default is true for this limit
-        /// if want let limit make sense, must set false for the limit
-        pub AssetRestrictionsOf get(fn asset_restrictions_of):
-            map hasher(twox_64_concat) AssetId => AssetRestrictions;
-
-        /// asset balance for user&asset_id, use btree_map to accept different asset type
-        pub AssetBalance get(fn asset_balance):
-            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) AssetId
-            => BTreeMap<AssetType, BalanceOf<T>>;
-
-        /// Any liquidity locks of a token type under an account.
-        /// NOTE: Should only be accessed when setting, changing and freeing a lock.
-        pub Locks get(fn locks):
-            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) AssetId
-            => Vec<BalanceLock<BalanceOf<T>>>;
-
-        /// asset balance for an asset_id, use btree_map to accept different asset type
-        pub TotalAssetBalance get(fn total_asset_balance):
-            map hasher(twox_64_concat) AssetId => BTreeMap<AssetType, BalanceOf<T>>;
+    #[cfg(feature = "std")]
+    impl<T: Config> Default for GenesisConfig<T> {
+        fn default() -> Self {
+            Self{
+                assets_restrictions: Default::default(),
+                endowed: Default::default(),
+            }
+        }
     }
-    add_extra_genesis {
-        config(assets_restrictions): Vec<(AssetId, AssetRestrictions)>;
-        config(endowed): BTreeMap<AssetId, Vec<(T::AccountId, BalanceOf<T>)>>;
-        build(|config| {
-            for (id, endowed) in &config.endowed {
-                if *id != T::NativeAssetId::get() {
-                    for (accountid, value) in endowed.iter() {
-                        Module::<T>::issue(id, accountid, *value)
-                            .expect("asset issuance during the genesis can not fail");
+    #[pallet::genesis_build]
+    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+        fn build(&self) {
+             let extra_genesis_builder: fn(&Self) = |config| {
+                 for (id, endowed) in &config.endowed {
+                    if *id != T::NativeAssetId::get() {
+                        for (accountid, value) in endowed.iter() {
+                            Pallet::<T>::issue(id, accountid, *value)
+                                .expect("asset issuance during the genesis can not fail");
+                        }
                     }
                 }
-            }
-            for (id, restrictions) in &config.assets_restrictions {
-                if *id != T::NativeAssetId::get() {
-                    Module::<T>::set_asset_restrictions(*id, *restrictions)
-                        .expect("should not fail in genesis, qed");
+                for (id, restrictions) in &config.assets_restrictions {
+                    if *id != T::NativeAssetId::get() {
+                        Pallet::<T>::set_asset_restrictions(*id, *restrictions)
+                            .expect("should not fail in genesis, qed");
+                    }
                 }
-            }
-        })
-    }
-}
-
-decl_module! {
-    pub struct Module<T: Config> for enum Call where origin: T::Origin {
-        type Error = Error<T>;
-
-        fn deposit_event() = default;
-
-        /// transfer between account
-        #[weight = 0]
-        pub fn transfer(
-            origin,
-            dest: <T::Lookup as StaticLookup>::Source,
-            #[compact] id: AssetId,
-            #[compact] value: BalanceOf<T>
-        ) -> DispatchResult {
-            let transactor = ensure_signed(origin)?;
-            let dest = T::Lookup::lookup(dest)?;
-            debug!(target: "runtime::assets", "[transfer] from:{:?}, to:{:?}, id:{}, value:{:?}", transactor, dest, id, value);
-            Self::can_transfer(&id)?;
-
-            Self::move_usable_balance(&id, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;
-
-            Ok(())
-        }
-
-        /// for transfer by root
-        #[weight = 0]
-        pub fn force_transfer(
-            origin,
-            transactor: <T::Lookup as StaticLookup>::Source,
-            dest: <T::Lookup as StaticLookup>::Source,
-            #[compact] id: AssetId,
-            #[compact] value: BalanceOf<T>
-        ) -> DispatchResult {
-            ensure_root(origin)?;
-
-            let transactor = T::Lookup::lookup(transactor)?;
-            let dest = T::Lookup::lookup(dest)?;
-            debug!(target: "runtime::assets", "[force_transfer] from:{:?}, to:{:?}, id:{}, value:{:?}", transactor, dest, id, value);
-            Self::can_transfer(&id)?;
-            Self::move_usable_balance(&id, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;
-            Ok(())
-        }
-
-        /// set free token for an account
-        #[weight = 0]
-        pub fn set_balance(
-            origin,
-            who: <T::Lookup as StaticLookup>::Source,
-            #[compact] id: AssetId,
-            balances: BTreeMap<AssetType, BalanceOf<T>>
-        ) -> DispatchResult {
-            ensure_root(origin)?;
-
-            let who = T::Lookup::lookup(who)?;
-            info!(target: "runtime::assets", "[set_balance] Set balance by root, who:{:?}, id:{}, balances:{:?}", who, id, balances);
-            Self::set_balance_impl(&who, &id, balances)?;
-            Ok(())
-        }
-
-        #[weight = <T as Config>::WeightInfo::set_asset_limit()]
-        pub fn set_asset_limit(origin, #[compact] id: AssetId, restrictions: AssetRestrictions) -> DispatchResult {
-            ensure_root(origin)?;
-            Self::set_asset_restrictions(id, restrictions)
+            };
+            extra_genesis_builder(self);
         }
     }
 }
 
-// others
-impl<T: Config> Module<T> {
+impl<T: Config> Pallet<T> {
     fn set_asset_restrictions(
         asset_id: AssetId,
         restrictions: AssetRestrictions,
     ) -> DispatchResult {
-        xpallet_assets_registrar::Module::<T>::ensure_asset_exists(&asset_id)?;
-        AssetRestrictionsOf::insert(asset_id, restrictions);
+        xpallet_assets_registrar::Pallet::<T>::ensure_asset_exists(&asset_id)?;
+        AssetRestrictionsOf::<T>::insert(asset_id, restrictions);
         Ok(())
     }
-}
 
-impl<T: Config> Module<T> {
-    pub fn ensure_not_native_asset(asset_id: &AssetId) -> DispatchResult {
+    pub fn ensure_not_native_asset(
+        asset_id: &AssetId
+    ) -> DispatchResult {
         ensure!(
             *asset_id != T::NativeAssetId::get(),
             Error::<T>::DenyNativeAsset
         );
         Ok(())
     }
-}
 
-// asset related
-impl<T: Config> Module<T> {
     /// Returns a map of all registered assets by far.
     pub fn total_asset_infos() -> BTreeMap<AssetId, TotalAssetInfo<BalanceOf<T>>> {
         xpallet_assets_registrar::Module::<T>::asset_infos()
@@ -313,7 +356,10 @@ impl<T: Config> Module<T> {
     }
 
     /// Retutrns whether `restriction` is applied for given asset `id`.
-    pub fn can_do(id: &AssetId, restriction: AssetRestrictions) -> bool {
+    pub fn can_do(
+        id: &AssetId,
+        restriction: AssetRestrictions
+    ) -> bool {
         !Self::asset_restrictions_of(id).contains(restriction)
     }
 
@@ -353,10 +399,8 @@ impl<T: Config> Module<T> {
         }
         Ok(())
     }
-}
 
-// Public read functions.
-impl<T: Config> Module<T> {
+    /// Public read functions.
     /// Returns the total issuance of asset `id` by far.
     pub fn total_issuance(id: &AssetId) -> BalanceOf<T> {
         let map = Self::total_asset_balance(id);
@@ -399,10 +443,7 @@ impl<T: Config> Module<T> {
 
         balance_for(Reserved) + balance_for(ReservedWithdrawal) + balance_for(ReservedDexSpot)
     }
-}
 
-// Public write functions.
-impl<T: Config> Module<T> {
     /// Sets the free balance of `who` without sanity checks and triggering the asset changed hook.
     #[cfg(feature = "std")]
     pub fn force_set_free_balance(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) {
@@ -520,10 +561,8 @@ impl<T: Config> Module<T> {
         }
         Ok(())
     }
-}
 
-/// token issue destroy reserve/unreserve, it's core function
-impl<T: Config> Module<T> {
+    /// token issue destroy reserve/unreserve, it's core function
     /// Returns the balance of `who` given `asset_id` and `ty`.
     fn asset_typed_balance(who: &T::AccountId, asset_id: &AssetId, ty: AssetType) -> BalanceOf<T> {
         Self::asset_balance(who, asset_id)
