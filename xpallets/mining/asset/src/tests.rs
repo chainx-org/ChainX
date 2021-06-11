@@ -2,7 +2,6 @@
 
 use frame_support::{
     assert_err, assert_ok,
-    pallet_prelude::DispatchResultWithPostInfo,
     traits::{Get, OnInitialize},
 };
 use frame_system::RawOrigin;
@@ -17,7 +16,7 @@ fn t_system_block_number_inc(number: BlockNumber) {
     System::set_block_number((System::block_number() + number).into());
 }
 
-fn t_bond(who: AccountId, target: AccountId, value: Balance) -> DispatchResultWithPostInfo {
+fn t_bond(who: AccountId, target: AccountId, value: Balance) -> DispatchResult {
     XStaking::bond(Origin::signed(who), target, value)
 }
 

@@ -150,7 +150,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             withdrawal_id_list: Vec<u32>,
             tx: Vec<u8>,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             let from = ensure_signed(origin)?;
             // committer must be in the trustee list
             Self::ensure_trustee(&from)?;
@@ -165,17 +165,14 @@ pub mod pallet {
             );
 
             Self::apply_create_withdraw(from, tx, withdrawal_id_list)?;
-            Ok(().into())
+            Ok(())
         }
 
         /// Trustees sign a withdrawal proposal. If `tx` is None, means this trustee vote to reject
         /// this proposal. If `tx` is Some(), the inner part must be a valid transaction with this
         /// trustee signature.
         #[pallet::weight(<T as Config>::WeightInfo::sign_withdraw_tx())]
-        pub fn sign_withdraw_tx(
-            origin: OriginFor<T>,
-            tx: Option<Vec<u8>>,
-        ) -> DispatchResultWithPostInfo {
+        pub fn sign_withdraw_tx(origin: OriginFor<T>, tx: Option<Vec<u8>>) -> DispatchResult {
             let from = ensure_signed(origin)?;
             Self::ensure_trustee(&from)?;
 
@@ -192,29 +189,23 @@ pub mod pallet {
             );
 
             Self::apply_sig_withdraw(from, tx)?;
-            Ok(().into())
+            Ok(())
         }
 
         /// Dangerous! Be careful to set BestIndex
         #[pallet::weight(<T as Config>::WeightInfo::set_best_index())]
-        pub fn set_best_index(
-            origin: OriginFor<T>,
-            index: BtcHeaderIndex,
-        ) -> DispatchResultWithPostInfo {
+        pub fn set_best_index(origin: OriginFor<T>, index: BtcHeaderIndex) -> DispatchResult {
             ensure_root(origin)?;
             BestIndex::<T>::put(index);
-            Ok(().into())
+            Ok(())
         }
 
         /// Dangerous! Be careful to set ConfirmedIndex
         #[pallet::weight(<T as Config>::WeightInfo::set_confirmed_index())]
-        pub fn set_confirmed_index(
-            origin: OriginFor<T>,
-            index: BtcHeaderIndex,
-        ) -> DispatchResultWithPostInfo {
+        pub fn set_confirmed_index(origin: OriginFor<T>, index: BtcHeaderIndex) -> DispatchResult {
             ensure_root(origin)?;
             ConfirmedIndex::<T>::put(index);
-            Ok(().into())
+            Ok(())
         }
 
         /// Allow root or trustees could remove pending deposits for an address and decide whether
@@ -225,7 +216,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             addr: BtcAddress,
             who: Option<T::AccountId>,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             T::TrusteeOrigin::try_origin(origin)
                 .map(|_| ())
                 .or_else(ensure_root)?;
@@ -240,16 +231,16 @@ pub mod pallet {
                 );
                 PendingDeposits::<T>::remove(&addr);
             }
-            Ok(().into())
+            Ok(())
         }
 
         /// Dangerous! remove current withdrawal proposal directly. Please check business logic before
         /// do this operation.
         #[pallet::weight(<T as Config>::WeightInfo::remove_proposal())]
-        pub fn remove_proposal(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+        pub fn remove_proposal(origin: OriginFor<T>) -> DispatchResult {
             ensure_root(origin)?;
             WithdrawalProposal::<T>::kill();
-            Ok(().into())
+            Ok(())
         }
 
         /// Dangerous! force replace current withdrawal proposal transaction. Please check business
@@ -259,17 +250,14 @@ pub mod pallet {
         /// a new valid transaction which outputs same to current proposal to replace current proposal
         /// transaction.)
         #[pallet::weight(<T as Config>::WeightInfo::force_replace_proposal_tx())]
-        pub fn force_replace_proposal_tx(
-            origin: OriginFor<T>,
-            tx: Vec<u8>,
-        ) -> DispatchResultWithPostInfo {
+        pub fn force_replace_proposal_tx(origin: OriginFor<T>, tx: Vec<u8>) -> DispatchResult {
             T::TrusteeOrigin::try_origin(origin)
                 .map(|_| ())
                 .or_else(ensure_root)?;
             let tx = Self::deserialize_tx(tx.as_slice())?;
             log!(debug, "[force_replace_proposal_tx] new_tx:{:?}", tx);
             Self::force_replace_withdraw_tx(tx)?;
-            Ok(().into())
+            Ok(())
         }
 
         /// Set bitcoin withdrawal fee
@@ -277,12 +265,12 @@ pub mod pallet {
         pub fn set_btc_withdrawal_fee(
             origin: OriginFor<T>,
             #[pallet::compact] fee: u64,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             T::TrusteeOrigin::try_origin(origin)
                 .map(|_| ())
                 .or_else(ensure_root)?;
             BtcWithdrawalFee::<T>::put(fee);
-            Ok(().into())
+            Ok(())
         }
 
         /// Set bitcoin deposit limit
@@ -290,12 +278,12 @@ pub mod pallet {
         pub fn set_btc_deposit_limit(
             origin: OriginFor<T>,
             #[pallet::compact] value: u64,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             T::TrusteeOrigin::try_origin(origin)
                 .map(|_| ())
                 .or_else(ensure_root)?;
             BtcMinDeposit::<T>::put(value);
-            Ok(().into())
+            Ok(())
         }
     }
 
