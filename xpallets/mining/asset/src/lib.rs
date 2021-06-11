@@ -46,7 +46,7 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use frame_support::pallet_prelude::*;
+    use frame_support::{dispatch::DispatchResult, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
 
     #[pallet::config]
@@ -80,7 +80,7 @@ pub mod pallet {
         pub(crate) fn claim(
             origin: OriginFor<T>,
             #[pallet::compact] target: AssetId,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
 
             ensure!(
@@ -90,7 +90,7 @@ pub mod pallet {
 
             <Self as Claim<T::AccountId>>::claim(&sender, &target)?;
 
-            Ok(().into())
+            Ok(())
         }
 
         #[pallet::weight(<T as Config>::WeightInfo::set_claim_staking_requirement())]
@@ -98,12 +98,12 @@ pub mod pallet {
             origin: OriginFor<T>,
             #[pallet::compact] asset_id: AssetId,
             #[pallet::compact] new: StakingRequirement,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             ensure_root(origin)?;
             ClaimRestrictionOf::<T>::mutate(asset_id, |restriction| {
                 restriction.staking_requirement = new;
             });
-            Ok(().into())
+            Ok(())
         }
 
         #[pallet::weight(<T as Config>::WeightInfo::set_claim_frequency_limit())]
@@ -111,12 +111,12 @@ pub mod pallet {
             origin: OriginFor<T>,
             #[pallet::compact] asset_id: AssetId,
             #[pallet::compact] new: T::BlockNumber,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             ensure_root(origin)?;
             ClaimRestrictionOf::<T>::mutate(asset_id, |restriction| {
                 restriction.frequency_limit = new;
             });
-            Ok(().into())
+            Ok(())
         }
 
         #[pallet::weight(<T as Config>::WeightInfo::set_asset_power())]
@@ -124,10 +124,10 @@ pub mod pallet {
             origin: OriginFor<T>,
             #[pallet::compact] asset_id: AssetId,
             #[pallet::compact] new: FixedAssetPower,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             ensure_root(origin)?;
             FixedAssetPowerOf::<T>::insert(asset_id, new);
-            Ok(().into())
+            Ok(())
         }
     }
 

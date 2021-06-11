@@ -2,7 +2,7 @@
 
 use codec::{Decode, Encode};
 use frame_benchmarking::{benchmarks, whitelisted_caller};
-use frame_support::storage::{StorageMap, StorageValue};
+use frame_support::storage::StorageMap;
 use frame_system::RawOrigin;
 use sp_runtime::{AccountId32, SaturatedConversion};
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};

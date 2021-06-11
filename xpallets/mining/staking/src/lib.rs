@@ -64,7 +64,7 @@ pub type EraIndex = u32;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use frame_support::pallet_prelude::*;
+    use frame_support::{dispatch::DispatchResult, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
 
     #[pallet::config]
@@ -124,7 +124,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             target: <T::Lookup as StaticLookup>::Source,
             #[pallet::compact] value: BalanceOf<T>,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
             let target = T::Lookup::lookup(target)?;
 
@@ -139,7 +139,7 @@ pub mod pallet {
             }
 
             Self::apply_bond(&sender, &target, value)?;
-            Ok(().into())
+            Ok(())
         }
 
         /// Move the `value` of current nomination from one validator to another.
@@ -149,7 +149,7 @@ pub mod pallet {
             from: <T::Lookup as StaticLookup>::Source,
             to: <T::Lookup as StaticLookup>::Source,
             #[pallet::compact] value: BalanceOf<T>,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
             let from = T::Lookup::lookup(from)?;
             let to = T::Lookup::lookup(to)?;
@@ -178,7 +178,7 @@ pub mod pallet {
             }
 
             Self::apply_rebond(&sender, &from, &to, value, current_block);
-            Ok(().into())
+            Ok(())
         }
 
         /// Unnominate the `value` of bonded balance for validator `target`.
@@ -187,13 +187,13 @@ pub mod pallet {
             origin: OriginFor<T>,
             target: <T::Lookup as StaticLookup>::Source,
             #[pallet::compact] value: BalanceOf<T>,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
             let target = T::Lookup::lookup(target)?;
 
             Self::can_unbond(&sender, &target, value)?;
             Self::apply_unbond(&sender, &target, value)?;
-            Ok(().into())
+            Ok(())
         }
 
         /// Unlock the frozen unbonded balances that are due.
@@ -202,7 +202,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             target: <T::Lookup as StaticLookup>::Source,
             #[pallet::compact] unbonded_index: UnbondedIndex,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
             let target = T::Lookup::lookup(target)?;
 
@@ -232,7 +232,7 @@ pub mod pallet {
             });
 
             Self::deposit_event(Event::<T>::Withdrawn(sender, value));
-            Ok(().into())
+            Ok(())
         }
 
         /// Claim the staking reward given the `target` validator.
@@ -240,30 +240,30 @@ pub mod pallet {
         pub fn claim(
             origin: OriginFor<T>,
             target: <T::Lookup as StaticLookup>::Source,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
             let target = T::Lookup::lookup(target)?;
 
             ensure!(Self::is_validator(&target), Error::<T>::NotValidator);
 
             <Self as Claim<T::AccountId>>::claim(&sender, &target)?;
-            Ok(().into())
+            Ok(())
         }
 
         /// Declare the desire to validate for the origin account.
         #[pallet::weight(T::WeightInfo::validate())]
-        pub fn validate(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+        pub fn validate(origin: OriginFor<T>) -> DispatchResult {
             let sender = ensure_signed(origin)?;
             ensure!(Self::is_validator(&sender), Error::<T>::NotValidator);
             Validators::<T>::mutate(sender, |validator| {
                 validator.is_chilled = false;
             });
-            Ok(().into())
+            Ok(())
         }
 
         /// Declare no desire to validate for the origin account.
         #[pallet::weight(T::WeightInfo::chill())]
-        pub fn chill(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+        pub fn chill(origin: OriginFor<T>) -> DispatchResult {
             let sender = ensure_signed(origin)?;
             ensure!(Self::is_validator(&sender), Error::<T>::NotValidator);
             if Self::is_active(&sender) {
@@ -276,7 +276,7 @@ pub mod pallet {
                 validator.is_chilled = true;
                 validator.last_chilled = Some(<frame_system::Pallet<T>>::block_number());
             });
-            Ok(().into())
+            Ok(())
         }
 
         /// Register to be a validator for the origin account.
@@ -292,7 +292,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             validator_nickname: ReferralId,
             #[pallet::compact] initial_bond: BalanceOf<T>,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
             Self::check_referral_id(&validator_nickname)?;
             ensure!(!Self::is_validator(&sender), Error::<T>::AlreadyValidator);
@@ -308,74 +308,74 @@ pub mod pallet {
             if !initial_bond.is_zero() {
                 Self::apply_bond(&sender, &sender, initial_bond)?;
             }
-            Ok(().into())
+            Ok(())
         }
 
         #[pallet::weight(T::WeightInfo::set_validator_count())]
         pub(crate) fn set_validator_count(
             origin: OriginFor<T>,
             #[pallet::compact] new: u32,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             ensure_root(origin)?;
             ValidatorCount::<T>::put(new);
-            Ok(().into())
+            Ok(())
         }
 
         #[pallet::weight(T::WeightInfo::set_minimum_validator_count())]
         pub(crate) fn set_minimum_validator_count(
             origin: OriginFor<T>,
             #[pallet::compact] new: u32,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             ensure_root(origin)?;
             MinimumValidatorCount::<T>::put(new);
-            Ok(().into())
+            Ok(())
         }
 
         #[pallet::weight(T::WeightInfo::set_bonding_duration())]
         pub(crate) fn set_bonding_duration(
             origin: OriginFor<T>,
             #[pallet::compact] new: T::BlockNumber,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             ensure_root(origin)?;
             BondingDuration::<T>::put(new);
-            Ok(().into())
+            Ok(())
         }
 
         #[pallet::weight(T::WeightInfo::set_validator_bonding_duration())]
         pub(crate) fn set_validator_bonding_duration(
             origin: OriginFor<T>,
             #[pallet::compact] new: T::BlockNumber,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             ensure_root(origin)?;
             ValidatorBondingDuration::<T>::put(new);
-            Ok(().into())
+            Ok(())
         }
 
         #[pallet::weight(T::WeightInfo::set_minimum_penalty())]
         pub(crate) fn set_minimum_penalty(
             origin: OriginFor<T>,
             #[pallet::compact] new: BalanceOf<T>,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             ensure_root(origin)?;
             MinimumPenalty::<T>::put(new);
-            Ok(().into())
+            Ok(())
         }
 
         #[pallet::weight(T::WeightInfo::set_sessions_per_era())]
         pub(crate) fn set_sessions_per_era(
             origin: OriginFor<T>,
             #[pallet::compact] new: SessionIndex,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             ensure_root(origin)?;
             SessionsPerEra::<T>::put(new);
-            Ok(().into())
+            Ok(())
         }
 
         #[pallet::weight(10_000_000)]
         pub(crate) fn set_immortals(
             origin: OriginFor<T>,
             new: Vec<T::AccountId>,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             ensure_root(origin)?;
             ensure!(
                 new.iter().find(|&v| !Self::is_validator(v)).is_none(),
@@ -386,7 +386,7 @@ pub mod pallet {
             } else {
                 Immortals::<T>::put(new);
             }
-            Ok(().into())
+            Ok(())
         }
 
         /// Clear the records in Staking for leaked `BondedWithdrawal` frozen balances.
@@ -394,21 +394,21 @@ pub mod pallet {
         pub(crate) fn force_unlock_bonded_withdrawal(
             origin: OriginFor<T>,
             who: T::AccountId,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             ensure_root(origin)?;
             Locks::<T>::mutate(&who, |locks| {
                 locks.remove(&LockedType::BondedWithdrawal);
             });
             Self::purge_unlockings(&who);
             Self::deposit_event(Event::<T>::ForceAllWithdrawn(who));
-            Ok(().into())
+            Ok(())
         }
 
         #[pallet::weight(10_000_000)]
         pub(crate) fn force_reset_staking_lock(
             origin: OriginFor<T>,
             accounts: Vec<T::AccountId>,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             ensure_root(origin)?;
             for who in accounts.iter() {
                 Locks::<T>::mutate(who, |locks| {
@@ -417,19 +417,19 @@ pub mod pallet {
                     Self::set_lock(who, *locks.entry(LockedType::Bonded).or_default());
                 });
             }
-            Ok(().into())
+            Ok(())
         }
 
         #[pallet::weight(10_000_000)]
         pub(crate) fn force_set_lock(
             origin: OriginFor<T>,
             new_locks: Vec<(T::AccountId, BalanceOf<T>)>,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             ensure_root(origin)?;
             for (who, new_lock) in new_locks {
                 Self::set_lock(&who, new_lock);
             }
-            Ok(().into())
+            Ok(())
         }
     }
 
