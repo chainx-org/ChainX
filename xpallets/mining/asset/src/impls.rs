@@ -55,7 +55,7 @@ impl<'a, T: Config> BaseMiningWeight<BalanceOf<T>, T::BlockNumber> for MinerLedg
     }
 }
 
-impl<T: Config> ComputeMiningWeight<T::AccountId, T::BlockNumber> for Module<T> {
+impl<T: Config> ComputeMiningWeight<T::AccountId, T::BlockNumber> for Pallet<T> {
     type Claimee = AssetId;
     type Error = Error<T>;
 
@@ -91,7 +91,7 @@ impl<T: Config> ComputeMiningWeight<T::AccountId, T::BlockNumber> for Module<T> 
 //     return Ok(());
 // }
 // ```
-impl<T: Config> xpallet_assets::OnAssetChanged<T::AccountId, BalanceOf<T>> for Module<T> {
+impl<T: Config> xpallet_assets::OnAssetChanged<T::AccountId, BalanceOf<T>> for Pallet<T> {
     fn on_issue_pre(target: &AssetId, source: &T::AccountId) {
         let current_block = <frame_system::Pallet<T>>::block_number();
         Self::init_receiver_mining_ledger(source, target, current_block);
@@ -132,7 +132,7 @@ impl<T: Config> xpallet_assets::OnAssetChanged<T::AccountId, BalanceOf<T>> for M
     }
 }
 
-impl<T: Config> Module<T> {
+impl<T: Config> Pallet<T> {
     /// Returns the tuple of (dividend, source_weight, target_weight, reward_pot_account).
     pub fn calculate_dividend_on_claim(
         claimer: &T::AccountId,
@@ -194,7 +194,7 @@ impl<T: Config> Module<T> {
     }
 }
 
-impl<T: Config> Claim<T::AccountId> for Module<T> {
+impl<T: Config> Claim<T::AccountId> for Pallet<T> {
     type Claimee = AssetId;
     type Error = Error<T>;
 
@@ -232,12 +232,12 @@ impl<T: Config> Claim<T::AccountId> for Module<T> {
     }
 }
 
-impl<T: Config> xpallet_assets_registrar::RegistrarHandler for Module<T> {
+impl<T: Config> xpallet_assets_registrar::RegistrarHandler for Pallet<T> {
     fn on_register(asset_id: &AssetId, has_mining_rights: bool) -> DispatchResult {
         if !has_mining_rights {
             return Ok(());
         }
-        MiningPrevilegedAssets::mutate(|i| i.push(*asset_id));
+        MiningPrevilegedAssets::<T>::mutate(|i| i.push(*asset_id));
         AssetLedgers::<T>::insert(
             asset_id,
             AssetLedger {
@@ -249,7 +249,7 @@ impl<T: Config> xpallet_assets_registrar::RegistrarHandler for Module<T> {
     }
 
     fn on_deregister(asset_id: &AssetId) -> DispatchResult {
-        MiningPrevilegedAssets::mutate(|v| {
+        MiningPrevilegedAssets::<T>::mutate(|v| {
             v.retain(|i| i != asset_id);
         });
         Ok(())
@@ -283,11 +283,11 @@ where
     }
 }
 
-impl<T: Config> xp_mining_staking::AssetMining<BalanceOf<T>> for Module<T> {
+impl<T: Config> xp_mining_staking::AssetMining<BalanceOf<T>> for Pallet<T> {
     /// Collects the mining power of all mining assets.
     fn asset_mining_power() -> Vec<(AssetId, MiningPower)> {
         // Currently only X-BTC asset.
-        FixedAssetPowerOf::iter()
+        FixedAssetPowerOf::<T>::iter()
             .map(|(asset_id, fixed_power)| {
                 let total_issuance = <xpallet_assets::Module<T>>::total_issuance(&asset_id);
                 (
