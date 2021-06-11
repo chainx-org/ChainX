@@ -46,10 +46,6 @@ pub mod pallet {
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
 
-    #[pallet::pallet]
-    #[pallet::generate_store(pub(crate) trait Store)]
-    pub struct Pallet<T>(PhantomData<T>);
-
     #[pallet::config]
     pub trait Config: frame_system::Config + xpallet_assets::Config {
         /// The overarching event type.
@@ -58,63 +54,6 @@ pub mod pallet {
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
     }
-
-    #[pallet::error]
-    pub enum Error<T> {
-        /// Id not in withdrawal records
-        NotExisted,
-        /// WithdrawalRecord state not `Applying`
-        NotApplyingState,
-        /// WithdrawalRecord state not `Processing`
-        NotProcessingState,
-        /// The applicant is not this account
-        InvalidAccount,
-        /// State only allow `RootFinish` and `RootCancel`
-        InvalidState,
-        /// Meet unexpected chain
-        UnexpectedChain,
-    }
-
-    #[pallet::event]
-    #[pallet::metadata(T::AccountId = "AccountId",BalanceOf<T> = "Balance", WithdrawalRecordOf<T> = "WithdrawalRecord")]
-    #[pallet::generate_deposit(pub(crate) fn deposit_event)]
-    pub enum Event<T: Config> {
-        /// An account deposited some asset. [who, asset_id, amount]
-        Deposited(T::AccountId, AssetId, BalanceOf<T>),
-        /// A withdrawal application was created. [withdrawal_id, record_info]
-        WithdrawalCreated(WithdrawalRecordId, WithdrawalRecordOf<T>),
-        /// A withdrawal proposal was processed. [withdrawal_id]
-        WithdrawalProcessed(WithdrawalRecordId),
-        /// A withdrawal proposal was recovered. [withdrawal_id]
-        WithdrawalRecovered(WithdrawalRecordId),
-        /// A withdrawal proposal was canceled. [withdrawal_id, withdrawal_state]
-        WithdrawalCanceled(WithdrawalRecordId, WithdrawalState),
-        /// A withdrawal proposal was finished successfully. [withdrawal_id, withdrawal_state]
-        WithdrawalFinished(WithdrawalRecordId, WithdrawalState),
-    }
-
-    #[pallet::type_value]
-    pub fn DefaultForWithdrawalRecordId<T: Config>() -> WithdrawalRecordId {
-        0
-    }
-
-    /// The id of next withdrawal record.
-    #[pallet::storage]
-    #[pallet::getter(fn id)]
-    pub(crate) type NextWithdrawalRecordId<T: Config> =
-        StorageValue<_, WithdrawalRecordId, ValueQuery, DefaultForWithdrawalRecordId<T>>;
-
-    /// Withdraw applications collection, use serial numbers to mark them.
-    #[pallet::storage]
-    #[pallet::getter(fn pending_withdrawals)]
-    pub(crate) type PendingWithdrawals<T: Config> =
-        StorageMap<_, Twox64Concat, WithdrawalRecordId, WithdrawalRecordOf<T>>;
-
-    /// The state of withdraw record corresponding to an id.
-    #[pallet::storage]
-    #[pallet::getter(fn state_of)]
-    pub(crate) type WithdrawalStateOf<T: Config> =
-        StorageMap<_, Twox64Concat, WithdrawalRecordId, WithdrawalState>;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -170,14 +109,75 @@ pub mod pallet {
         pub fn set_withdrawal_state_list(
             origin: OriginFor<T>,
             item: Vec<(WithdrawalRecordId, WithdrawalState)>,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             ensure_root(origin)?;
             for (withdrawal_id, state) in item {
                 let _ = Self::set_withdrawal_state_by_root(withdrawal_id, state);
             }
-            Ok(().into())
+            Ok(())
         }
     }
+
+    #[pallet::event]
+    #[pallet::metadata(T::AccountId = "AccountId", BalanceOf<T> = "Balance", WithdrawalRecordOf<T> = "WithdrawalRecord")]
+    #[pallet::generate_deposit(pub(crate) fn deposit_event)]
+    pub enum Event<T: Config> {
+        /// An account deposited some asset. [who, asset_id, amount]
+        Deposited(T::AccountId, AssetId, BalanceOf<T>),
+        /// A withdrawal application was created. [withdrawal_id, record_info]
+        WithdrawalCreated(WithdrawalRecordId, WithdrawalRecordOf<T>),
+        /// A withdrawal proposal was processed. [withdrawal_id]
+        WithdrawalProcessed(WithdrawalRecordId),
+        /// A withdrawal proposal was recovered. [withdrawal_id]
+        WithdrawalRecovered(WithdrawalRecordId),
+        /// A withdrawal proposal was canceled. [withdrawal_id, withdrawal_state]
+        WithdrawalCanceled(WithdrawalRecordId, WithdrawalState),
+        /// A withdrawal proposal was finished successfully. [withdrawal_id, withdrawal_state]
+        WithdrawalFinished(WithdrawalRecordId, WithdrawalState),
+    }
+
+    #[pallet::error]
+    pub enum Error<T> {
+        /// Id not in withdrawal records
+        NotExisted,
+        /// WithdrawalRecord state not `Applying`
+        NotApplyingState,
+        /// WithdrawalRecord state not `Processing`
+        NotProcessingState,
+        /// The applicant is not this account
+        InvalidAccount,
+        /// State only allow `RootFinish` and `RootCancel`
+        InvalidState,
+        /// Meet unexpected chain
+        UnexpectedChain,
+    }
+
+    #[pallet::pallet]
+    #[pallet::generate_store(pub(crate) trait Store)]
+    pub struct Pallet<T>(PhantomData<T>);
+
+    #[pallet::type_value]
+    pub fn DefaultForWithdrawalRecordId<T: Config>() -> WithdrawalRecordId {
+        0
+    }
+
+    /// The id of next withdrawal record.
+    #[pallet::storage]
+    #[pallet::getter(fn id)]
+    pub(crate) type NextWithdrawalRecordId<T: Config> =
+        StorageValue<_, WithdrawalRecordId, ValueQuery, DefaultForWithdrawalRecordId<T>>;
+
+    /// Withdraw applications collection, use serial numbers to mark them.
+    #[pallet::storage]
+    #[pallet::getter(fn pending_withdrawals)]
+    pub(crate) type PendingWithdrawals<T: Config> =
+        StorageMap<_, Twox64Concat, WithdrawalRecordId, WithdrawalRecordOf<T>>;
+
+    /// The state of withdraw record corresponding to an id.
+    #[pallet::storage]
+    #[pallet::getter(fn state_of)]
+    pub(crate) type WithdrawalStateOf<T: Config> =
+        StorageMap<_, Twox64Concat, WithdrawalRecordId, WithdrawalState>;
 }
 
 impl<T: Config> Pallet<T> {
