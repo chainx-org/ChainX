@@ -1,7 +1,6 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 use frame_benchmarking::{benchmarks, impl_benchmark_test_suite};
-use frame_support::StorageMap;
 use frame_system::RawOrigin;
 
 use chainx_primitives::AssetId;
@@ -26,7 +25,7 @@ benchmarks! {
         let asset_info = b_asset_info_test_data::<T>();
     }: _(RawOrigin::Root, ASSET_ID, asset_info.clone(), true, true)
     verify {
-        assert_eq!(AssetInfoOf::get(ASSET_ID), Some(asset_info));
+        assert_eq!(AssetInfoOf::<T>::get(ASSET_ID), Some(asset_info));
     }
 
     deregister {
@@ -34,7 +33,7 @@ benchmarks! {
         Pallet::<T>::register(RawOrigin::Root.into(), ASSET_ID, asset_info.clone(), true, true)?;
     }: _(RawOrigin::Root, ASSET_ID)
     verify {
-        assert!(!AssetOnline::get(ASSET_ID));
+        assert!(!AssetOnline::<T>::get(ASSET_ID));
     }
 
     recover {
@@ -43,7 +42,7 @@ benchmarks! {
         Pallet::<T>::deregister(RawOrigin::Root.into(), ASSET_ID)?;
     }: _(RawOrigin::Root, ASSET_ID, true)
     verify {
-        assert!(AssetOnline::get(ASSET_ID));
+        assert!(AssetOnline::<T>::get(ASSET_ID));
     }
 
     update_asset_info {
@@ -61,7 +60,7 @@ benchmarks! {
         new_asset_info.set_token(b"new_token".to_vec());
         new_asset_info.set_token_name(b"new_token_name".to_vec());
         new_asset_info.set_desc(b"new_desc".to_vec());
-        assert_eq!(AssetInfoOf::get(ASSET_ID).unwrap(), new_asset_info);
+        assert_eq!(AssetInfoOf::<T>::get(ASSET_ID).unwrap(), new_asset_info);
     }
 }
 
