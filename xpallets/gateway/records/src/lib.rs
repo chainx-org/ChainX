@@ -177,7 +177,7 @@ decl_module! {
 
 impl<T: Config> Module<T> {
     fn ensure_asset_belongs_to_chain(asset_id: AssetId, expected_chain: Chain) -> DispatchResult {
-        let asset_chain = xpallet_assets_registrar::Module::<T>::chain_of(&asset_id)?;
+        let asset_chain = xpallet_assets_registrar::Pallet::<T>::chain_of(&asset_id)?;
         ensure!(asset_chain == expected_chain, Error::<T>::UnexpectedChain);
         Ok(())
     }

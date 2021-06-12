@@ -268,7 +268,7 @@ where
 {
     fn reward_pot_account_for(asset_id: &AssetId) -> T::AccountId {
         let id_hash = T::Hashing::hash(&asset_id.to_le_bytes()[..]);
-        let registered_block = <xpallet_assets_registrar::Module<T>>::registered_at(asset_id);
+        let registered_block = <xpallet_assets_registrar::Pallet<T>>::registered_at(asset_id);
         let registered_block_hash =
             <T as frame_system::Config>::Hashing::hash(registered_block.encode().as_ref());
 

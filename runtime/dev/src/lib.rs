@@ -1333,7 +1333,7 @@ impl_runtime_apis! {
                 TransactionPayment::query_info(uxt, len)
             }
         }
-        fn query_fee_details(uxt: <Block as BlockT>::Extrinsic, len: u32) -> pallet_transaction_payment::FeeDetails<Balance> {
+        fn query_fee_details(_uxt: <Block as BlockT>::Extrinsic, _len: u32) -> pallet_transaction_payment::FeeDetails<Balance> {
             todo!("Migrate ChainX query_fee_details")
         }
     }

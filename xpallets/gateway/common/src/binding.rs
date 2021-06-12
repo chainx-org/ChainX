@@ -15,7 +15,7 @@ use crate::{AddressBindingOf, BoundAddressOf, Config, Module};
 
 impl<T: Config> ReferralBinding<T::AccountId> for Module<T> {
     fn update_binding(assert_id: &AssetId, who: &T::AccountId, referral_name: Option<ReferralId>) {
-        let chain = match xpallet_assets_registrar::Module::<T>::chain_of(assert_id) {
+        let chain = match xpallet_assets_registrar::Pallet::<T>::chain_of(assert_id) {
             Ok(chain) => chain,
             Err(err) => {
                 error!(
@@ -53,7 +53,7 @@ impl<T: Config> ReferralBinding<T::AccountId> for Module<T> {
     }
 
     fn referral(assert_id: &AssetId, who: &T::AccountId) -> Option<T::AccountId> {
-        let chain = xpallet_assets_registrar::Module::<T>::chain_of(assert_id).ok()?;
+        let chain = xpallet_assets_registrar::Pallet::<T>::chain_of(assert_id).ok()?;
         Self::referral_binding_of(who, chain)
     }
 }

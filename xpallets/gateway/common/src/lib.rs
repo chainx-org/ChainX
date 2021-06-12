@@ -302,7 +302,7 @@ impl<T: Config> Module<T> {
     pub fn withdrawal_limit(
         asset_id: &AssetId,
     ) -> Result<WithdrawalLimit<BalanceOf<T>>, DispatchError> {
-        let chain = xpallet_assets_registrar::Module::<T>::chain_of(asset_id)?;
+        let chain = xpallet_assets_registrar::Pallet::<T>::chain_of(asset_id)?;
         match chain {
             Chain::Bitcoin => T::Bitcoin::withdrawal_limit(&asset_id),
             _ => Err(Error::<T>::NotSupportedChain.into()),
@@ -317,7 +317,7 @@ impl<T: Config> Module<T> {
     ) -> DispatchResult {
         ext.check_validity()?;
 
-        let chain = xpallet_assets_registrar::Module::<T>::chain_of(&asset_id)?;
+        let chain = xpallet_assets_registrar::Pallet::<T>::chain_of(&asset_id)?;
         match chain {
             Chain::Bitcoin => {
                 // bitcoin do not need memo
