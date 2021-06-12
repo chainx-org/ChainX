@@ -158,7 +158,7 @@ pub mod pallet {
         ///
         /// This is a root-only operation.
         #[pallet::weight(T::WeightInfo::register())]
-        pub(super) fn register(
+        pub fn register(
             origin: OriginFor<T>,
             #[pallet::compact] asset_id: AssetId,
             asset: AssetInfo,
@@ -193,7 +193,7 @@ pub mod pallet {
         ///
         /// This is a root-only operation.
         #[pallet::weight(T::WeightInfo::deregister())]
-        pub(super) fn deregister(
+        pub fn deregister(
             origin: OriginFor<T>,
             #[pallet::compact] id: AssetId,
         ) -> DispatchResult {
@@ -214,7 +214,7 @@ pub mod pallet {
         ///
         /// This is a root-only operation.
         #[pallet::weight(T::WeightInfo::recover())]
-        pub(super) fn recover(
+        pub fn recover(
             origin: OriginFor<T>,
             #[pallet::compact] id: AssetId,
             has_mining_rights: bool,
@@ -235,7 +235,7 @@ pub mod pallet {
         ///
         /// This is a root-only operation.
         #[pallet::weight(T::WeightInfo::update_asset_info())]
-        pub(super) fn update_asset_info(
+        pub fn update_asset_info(
             origin: OriginFor<T>,
             #[pallet::compact] id: AssetId,
             token: Option<Token>,
