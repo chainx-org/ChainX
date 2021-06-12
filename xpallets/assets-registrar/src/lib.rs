@@ -193,10 +193,7 @@ pub mod pallet {
         ///
         /// This is a root-only operation.
         #[pallet::weight(T::WeightInfo::deregister())]
-        pub fn deregister(
-            origin: OriginFor<T>,
-            #[pallet::compact] id: AssetId,
-        ) -> DispatchResult {
+        pub fn deregister(origin: OriginFor<T>, #[pallet::compact] id: AssetId) -> DispatchResult {
             ensure_root(origin)?;
 
             ensure!(Self::is_valid(&id), Error::<T>::AssetIsInvalid);
