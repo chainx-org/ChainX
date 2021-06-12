@@ -19,59 +19,118 @@ pub mod weights;
 use sp_std::prelude::*;
 
 use frame_support::{
+    decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult},
     ensure,
     log::info,
+    traits::Get,
+    IterableStorageMap,
 };
+use frame_system::ensure_root;
 
 use chainx_primitives::{AssetId, Desc, Token};
-
-#[cfg(feature = "std")]
-use frame_support::traits::GenesisBuild;
 
 pub use self::types::AssetInfo;
 pub use self::weights::WeightInfo;
 pub use xp_assets_registrar::{Chain, RegistrarHandler};
 
-pub use pallet::*;
+/// The module's config trait.
+///
+/// `frame_system::Config` should always be included in our implied traits.
+pub trait Config: frame_system::Config {
+    /// The overarching event type.
+    type Event: From<Event> + Into<<Self as frame_system::Config>::Event>;
 
-#[frame_support::pallet]
-pub mod pallet {
-    use super::*;
-    use frame_support::pallet_prelude::*;
-    use frame_system::pallet_prelude::*;
+    /// Native asset Id.
+    type NativeAssetId: Get<AssetId>;
 
-    #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
-    pub struct Pallet<T>(_);
+    /// Handler for doing stuff after the asset is registered/deregistered.
+    type RegistrarHandler: RegistrarHandler;
 
-    #[pallet::config]
-    /// The module's config trait.
-    ///
-    /// `frame_system::Trait` should always be included in our implied traits.
-    pub trait Config: frame_system::Config {
-        /// The overarching event type.
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+    /// Weight information for extrinsics in this pallet.
+    type WeightInfo: WeightInfo;
+}
 
-        /// Native asset Id.
-        type NativeAssetId: Get<AssetId>;
-
-        /// Handler for doing stuff after the asset is registered/deregistered.
-        type RegistrarHandler: RegistrarHandler;
-
-        /// Weight information for extrinsics in this pallet.
-        type WeightInfo: WeightInfo;
+decl_event!(
+    /// Event for the XAssetRegistrar Module
+    pub enum Event {
+        /// A new asset was registered. [asset_id, has_mining_rights]
+        Registered(AssetId, bool),
+        /// A deregistered asset was recovered. [asset_id, has_mining_rights]
+        Recovered(AssetId, bool),
+        /// An asset was deregistered. [asset_id]
+        Deregistered(AssetId),
     }
+);
 
-    #[pallet::call]
-    impl<T: Config> Pallet<T> {
+decl_error! {
+    /// Error for the XAssetRegistrar Module
+    pub enum Error for Module<T: Config> {
+        /// Token symbol length is zero or too long
+        InvalidAssetTokenSymbolLength,
+        /// Token symbol char is invalid, only allow ASCII alphanumeric character or '-', '.', '|', '~'
+        InvalidAssetTokenSymbolChar,
+        /// Token name length is zero or too long
+        InvalidAssetTokenNameLength,
+        /// Desc length is zero or too long
+        InvalidAssetDescLength,
+        /// Text is invalid ASCII, only allow ASCII visible character [0x20, 0x7E]
+        InvalidAscii,
+        /// The asset already exists.
+        AssetAlreadyExists,
+        /// The asset does not exist.
+        AssetDoesNotExist,
+        /// The asset is already valid (online), no need to recover.
+        AssetAlreadyValid,
+        /// The asset is invalid (not online).
+        AssetIsInvalid,
+    }
+}
+
+decl_storage! {
+    trait Store for Module<T: Config> as XAssetsRegistrar {
+        /// Asset id list for each Chain.
+        pub AssetIdsOf get(fn asset_ids_of): map hasher(twox_64_concat) Chain => Vec<AssetId>;
+
+        /// Asset info of each asset.
+        pub AssetInfoOf get(fn asset_info_of): map hasher(twox_64_concat) AssetId => Option<AssetInfo>;
+
+        /// The map of asset to the online state.
+        pub AssetOnline get(fn asset_online): map hasher(twox_64_concat) AssetId => bool;
+
+        /// The map of asset to the block number at which the asset was registered.
+        pub RegisteredAt get(fn registered_at): map hasher(twox_64_concat) AssetId => T::BlockNumber;
+    }
+    add_extra_genesis {
+        config(assets): Vec<(AssetId, AssetInfo, bool, bool)>;
+        build(|config| {
+            for (id, asset, is_online, has_mining_rights) in &config.assets {
+                Module::<T>::register(
+                    frame_system::RawOrigin::Root.into(),
+                    *id,
+                    asset.clone(),
+                    *is_online,
+                    *has_mining_rights,
+                )
+                .expect("asset registeration during the genesis can not fail");
+            }
+        })
+    }
+}
+
+decl_module! {
+    pub struct Module<T: Config> for enum Call where origin: T::Origin {
+        type Error = Error<T>;
+
+        fn deposit_event() = default;
+
         /// Register a new foreign asset.
         ///
         /// This is a root-only operation.
-        #[pallet::weight(T::WeightInfo::register())]
+        #[weight = T::WeightInfo::register()]
         pub fn register(
-            origin: OriginFor<T>,
-            #[pallet::compact] asset_id: AssetId,
+            origin,
+            #[compact] asset_id: AssetId,
             asset: AssetInfo,
             is_online: bool,
             has_mining_rights: bool,
@@ -82,6 +141,7 @@ pub mod pallet {
             ensure!(!Self::exists(&asset_id), Error::<T>::AssetAlreadyExists);
 
             info!(
+                target: "runtime::assets-registrar",
                 "[register_asset] id:{}, info:{:?}, is_online:{}, has_mining_rights:{}",
                 asset_id, asset, is_online, has_mining_rights
             );
@@ -103,16 +163,17 @@ pub mod pallet {
         /// This asset will be marked as invalid.
         ///
         /// This is a root-only operation.
-        #[pallet::weight(T::WeightInfo::deregister())]
-        pub fn deregister(origin: OriginFor<T>, #[pallet::compact] id: AssetId) -> DispatchResult {
+        #[weight = T::WeightInfo::deregister()]
+        pub fn deregister(origin, #[compact] id: AssetId) -> DispatchResult {
             ensure_root(origin)?;
 
             ensure!(Self::is_valid(&id), Error::<T>::AssetIsInvalid);
 
-            AssetOnline::<T>::remove(id);
+            AssetOnline::remove(id);
 
             Self::deposit_event(Event::Deregistered(id));
             T::RegistrarHandler::on_deregister(&id)?;
+
             Ok(())
         }
 
@@ -121,18 +182,14 @@ pub mod pallet {
         /// `RegistrarHandler::on_register()` will be triggered again during the recover process.
         ///
         /// This is a root-only operation.
-        #[pallet::weight(T::WeightInfo::recover())]
-        pub fn recover(
-            origin: OriginFor<T>,
-            #[pallet::compact] id: AssetId,
-            has_mining_rights: bool,
-        ) -> DispatchResult {
+        #[weight = T::WeightInfo::recover()]
+        pub fn recover(origin, #[compact] id: AssetId, has_mining_rights: bool) -> DispatchResult {
             ensure_root(origin)?;
 
             ensure!(Self::exists(&id), Error::<T>::AssetDoesNotExist);
             ensure!(!Self::is_valid(&id), Error::<T>::AssetAlreadyValid);
 
-            AssetOnline::<T>::insert(id, true);
+            AssetOnline::insert(id, true);
 
             Self::deposit_event(Event::Recovered(id, has_mining_rights));
             T::RegistrarHandler::on_register(&id, has_mining_rights)?;
@@ -142,13 +199,13 @@ pub mod pallet {
         /// Update the asset info, all the new fields are optional.
         ///
         /// This is a root-only operation.
-        #[pallet::weight(T::WeightInfo::update_asset_info())]
+        #[weight = T::WeightInfo::update_asset_info()]
         pub fn update_asset_info(
-            origin: OriginFor<T>,
-            #[pallet::compact] id: AssetId,
+            origin,
+            #[compact] id: AssetId,
             token: Option<Token>,
             token_name: Option<Token>,
-            desc: Option<Desc>,
+            desc: Option<Desc>
         ) -> DispatchResult {
             ensure_root(origin)?;
 
@@ -162,102 +219,13 @@ pub mod pallet {
             if let Some(desc) = desc {
                 info.set_desc(desc);
             }
-            AssetInfoOf::<T>::insert(id, Some(info));
+            AssetInfoOf::insert(id, info);
             Ok(())
-        }
-    }
-
-    #[pallet::event]
-    #[pallet::generate_deposit(pub(super) fn deposit_event)]
-    /// Event for the XAssetRegistrar Module
-    pub enum Event<T: Config> {
-        /// A new asset was registered. [asset_id, has_mining_rights]
-        Registered(AssetId, bool),
-        /// A deregistered asset was recovered. [asset_id, has_mining_rights]
-        Recovered(AssetId, bool),
-        /// An asset was deregistered. [asset_id]
-        Deregistered(AssetId),
-    }
-
-    #[pallet::error]
-    /// Error for the XAssetRegistrar Module
-    pub enum Error<T> {
-        /// Token symbol length is zero or too long
-        InvalidAssetTokenSymbolLength,
-        /// Token symbol char is invalid, only allow ASCII alphanumeric character or '-', '.', '|', '~'
-        InvalidAssetTokenSymbolChar,
-        /// Token name length is zero or too long
-        InvalidAssetTokenNameLength,
-        /// Desc length is zero or too long
-        InvalidAssetDescLength,
-        /// Text is invalid ASCII, only allow ASCII visible character [0x20, 0x7E]
-        InvalidAscii,
-        /// The asset already exists.
-        AssetAlreadyExists,
-        /// The asset does not exist.
-        AssetDoesNotExist,
-        /// The asset is already valid (online), no need to recover.
-        AssetAlreadyValid,
-        /// The asset is invalid (not online).
-        AssetIsInvalid,
-    }
-
-    /// Asset id list for each Chain.
-    #[pallet::storage]
-    #[pallet::getter(fn asset_ids_of)]
-    pub(super) type AssetIdsOf<T: Config> =
-        StorageMap<_, Twox64Concat, Chain, Vec<AssetId>, ValueQuery>;
-
-    /// Asset info of each asset.
-    #[pallet::storage]
-    #[pallet::getter(fn asset_info_of)]
-    pub(super) type AssetInfoOf<T: Config> =
-        StorageMap<_, Twox64Concat, AssetId, Option<AssetInfo>, ValueQuery>;
-
-    /// The map of asset to the online state.
-    #[pallet::storage]
-    #[pallet::getter(fn asset_online)]
-    pub(super) type AssetOnline<T: Config> = StorageMap<_, Twox64Concat, AssetId, bool, ValueQuery>;
-
-    /// The map of asset to the block number at which the asset was registered.
-    #[pallet::storage]
-    #[pallet::getter(fn registered_at)]
-    pub(super) type RegisteredAt<T: Config> =
-        StorageMap<_, Twox64Concat, AssetId, T::BlockNumber, ValueQuery>;
-
-    /// add_extra_genesis
-    #[pallet::genesis_config]
-    pub struct GenesisConfig {
-        pub assets: Vec<(AssetId, AssetInfo, bool, bool)>,
-    }
-
-    #[cfg(feature = "std")]
-    impl Default for GenesisConfig {
-        fn default() -> Self {
-            Self {
-                assets: Default::default(),
-            }
-        }
-    }
-
-    #[pallet::genesis_build]
-    impl<T: Config> GenesisBuild<T> for GenesisConfig {
-        fn build(&self) {
-            for (id, asset, is_online, has_mining_rights) in &self.assets {
-                Pallet::<T>::register(
-                    frame_system::RawOrigin::Root.into(),
-                    *id,
-                    asset.clone(),
-                    *is_online,
-                    *has_mining_rights,
-                )
-                .expect("asset registeration during the genesis can not fail");
-            }
         }
     }
 }
 
-impl<T: Config> Pallet<T> {
+impl<T: Config> Module<T> {
     /// Returns an iterator of all the asset ids of all chains so far.
     #[inline]
     pub fn asset_ids() -> impl Iterator<Item = AssetId> {
@@ -272,13 +240,13 @@ impl<T: Config> Pallet<T> {
 
     /// Returns an iterator of tuple (AssetId, AssetInfo) of all assets.
     #[inline]
-    pub fn asset_infos() -> impl Iterator<Item = (AssetId, Option<AssetInfo>)> {
-        AssetInfoOf::<T>::iter()
+    pub fn asset_infos() -> impl Iterator<Item = (AssetId, AssetInfo)> {
+        AssetInfoOf::iter()
     }
 
     /// Returns an iterator of tuple (AssetId, AssetInfo) of all valid assets.
     #[inline]
-    pub fn valid_asset_infos() -> impl Iterator<Item = (AssetId, Option<AssetInfo>)> {
+    pub fn valid_asset_infos() -> impl Iterator<Item = (AssetId, AssetInfo)> {
         Self::asset_infos().filter(|(id, _)| Self::is_valid(id))
     }
 
@@ -332,30 +300,17 @@ impl<T: Config> Pallet<T> {
     /// Actually register an asset.
     fn apply_register(id: AssetId, asset: AssetInfo) -> DispatchResult {
         let chain = asset.chain();
-        AssetIdsOf::<T>::mutate(chain, |ids| {
+        AssetIdsOf::mutate(chain, |ids| {
             if !ids.contains(&id) {
                 ids.push(id);
             }
         });
 
-        AssetInfoOf::<T>::insert(&id, Some(asset));
-        AssetOnline::<T>::insert(&id, true);
+        AssetInfoOf::insert(&id, asset);
+        AssetOnline::insert(&id, true);
 
         RegisteredAt::<T>::insert(&id, frame_system::Pallet::<T>::block_number());
 
         Ok(())
-    }
-}
-
-#[cfg(feature = "std")]
-impl GenesisConfig {
-    /// Direct implementation of `GenesisBuild::assimilate_storage`.
-    ///
-    /// Kept in order not to break dependency.
-    pub fn assimilate_storage<T: Config>(
-        &self,
-        storage: &mut sp_runtime::Storage,
-    ) -> Result<(), String> {
-        <Self as GenesisBuild<T>>::assimilate_storage(self, storage)
     }
 }

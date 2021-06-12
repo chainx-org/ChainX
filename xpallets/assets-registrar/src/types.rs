@@ -10,10 +10,10 @@ use sp_std::fmt;
 use chainx_primitives::{Decimals, Desc, Token};
 use xp_assets_registrar::Chain;
 
-use super::Config;
 use crate::verifier::*;
+use crate::Config;
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct AssetInfo {

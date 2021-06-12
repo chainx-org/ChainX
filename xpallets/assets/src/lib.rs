@@ -251,7 +251,7 @@ impl<T: Config> Module<T> {
         asset_id: AssetId,
         restrictions: AssetRestrictions,
     ) -> DispatchResult {
-        xpallet_assets_registrar::Pallet::<T>::ensure_asset_exists(&asset_id)?;
+        xpallet_assets_registrar::Module::<T>::ensure_asset_exists(&asset_id)?;
         AssetRestrictionsOf::insert(asset_id, restrictions);
         Ok(())
     }
@@ -271,7 +271,7 @@ impl<T: Config> Module<T> {
 impl<T: Config> Module<T> {
     /// Returns a map of all registered assets by far.
     pub fn total_asset_infos() -> BTreeMap<AssetId, TotalAssetInfo<BalanceOf<T>>> {
-        xpallet_assets_registrar::Pallet::<T>::asset_infos()
+        xpallet_assets_registrar::Module::<T>::asset_infos()
             .filter_map(|(id, info)| {
                 if id == T::NativeAssetId::get() {
                     // ignore native asset
@@ -280,9 +280,9 @@ impl<T: Config> Module<T> {
                     let data = (
                         id,
                         TotalAssetInfo {
-                            info: xpallet_assets_registrar::AssetInfo::default(),
+                            info,
                             balance: Self::total_asset_balance(id),
-                            is_online: xpallet_assets_registrar::Pallet::<T>::is_online(&id),
+                            is_online: xpallet_assets_registrar::Module::<T>::is_online(&id),
                             restrictions: Self::asset_restrictions_of(id),
                         },
                     );
@@ -298,7 +298,7 @@ impl<T: Config> Module<T> {
     ) -> BTreeMap<AssetId, BTreeMap<AssetType, BalanceOf<T>>> {
         use frame_support::IterableStorageDoubleMap;
         AssetBalance::<T>::iter_prefix(who)
-            .filter(|(id, _)| xpallet_assets_registrar::Pallet::<T>::asset_online(id))
+            .filter(|(id, _)| xpallet_assets_registrar::Module::<T>::asset_online(id))
             .collect()
     }
 
@@ -346,7 +346,7 @@ impl<T: Config> Module<T> {
 }
 
 // Public read functions.
-impl<T: Config> Pallet<T> {
+impl<T: Config> Module<T> {
     /// Returns the total issuance of asset `id` by far.
     pub fn total_issuance(id: &AssetId) -> BalanceOf<T> {
         let map = Self::total_asset_balance(id);
@@ -392,7 +392,7 @@ impl<T: Config> Pallet<T> {
 }
 
 // Public write functions.
-impl<T: Config> Pallet<T> {
+impl<T: Config> Module<T> {
     /// Sets the free balance of `who` without sanity checks and triggering the asset changed hook.
     #[cfg(feature = "std")]
     pub fn force_set_free_balance(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) {
@@ -402,7 +402,7 @@ impl<T: Config> Pallet<T> {
     /// Increases the Usable balance of `who` given the asset `id` by this `value`.
     pub fn issue(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
         Self::ensure_not_native_asset(id)?;
-        xpallet_assets_registrar::Pallet::<T>::ensure_asset_is_valid(id)?;
+        xpallet_assets_registrar::Module::<T>::ensure_asset_is_valid(id)?;
 
         let _imbalance = Self::inner_issue(id, who, AssetType::Usable, value)?;
         Ok(())
@@ -414,7 +414,7 @@ impl<T: Config> Pallet<T> {
         value: BalanceOf<T>,
     ) -> DispatchResult {
         Self::ensure_not_native_asset(id)?;
-        xpallet_assets_registrar::Pallet::<T>::ensure_asset_is_valid(id)?;
+        xpallet_assets_registrar::Module::<T>::ensure_asset_is_valid(id)?;
         Self::can_destroy_withdrawal(id)?;
 
         Self::inner_destroy(id, who, AssetType::ReservedWithdrawal, value)?;
@@ -423,7 +423,7 @@ impl<T: Config> Pallet<T> {
 
     pub fn destroy_usable(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
         Self::ensure_not_native_asset(id)?;
-        xpallet_assets_registrar::Pallet::<T>::ensure_asset_is_valid(id)?;
+        xpallet_assets_registrar::Module::<T>::ensure_asset_is_valid(id)?;
         Self::can_destroy_usable(id)?;
 
         Self::inner_destroy(id, who, AssetType::Usable, value)?;
@@ -439,7 +439,7 @@ impl<T: Config> Pallet<T> {
         value: BalanceOf<T>,
     ) -> Result<(), AssetErr> {
         Self::ensure_not_native_asset(id).map_err(|_| AssetErr::InvalidAsset)?;
-        xpallet_assets_registrar::Pallet::<T>::ensure_asset_is_valid(id)
+        xpallet_assets_registrar::Module::<T>::ensure_asset_is_valid(id)
             .map_err(|_| AssetErr::InvalidAsset)?;
         Self::can_move(id).map_err(|_| AssetErr::NotAllow)?;
 
@@ -513,7 +513,7 @@ impl<T: Config> Pallet<T> {
 }
 
 /// token issue destroy reserve/unreserve, it's core function
-impl<T: Config> Pallet<T> {
+impl<T: Config> Module<T> {
     /// Returns the balance of `who` given `asset_id` and `ty`.
     fn asset_typed_balance(who: &T::AccountId, asset_id: &AssetId, ty: AssetType) -> BalanceOf<T> {
         Self::asset_balance(who, asset_id)

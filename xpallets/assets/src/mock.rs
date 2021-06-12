@@ -32,7 +32,7 @@ frame_support::construct_runtime!(
     {
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-        XAssetsRegistrar: xpallet_assets_registrar::{Pallet, Call, Config, Storage, Event<T>},
+        XAssetsRegistrar: xpallet_assets_registrar::{Pallet, Call, Config, Storage, Event},
         XAssets: xpallet_assets::{Pallet, Call, Config<T>, Storage, Event<T>},
     }
 );
