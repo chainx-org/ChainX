@@ -63,95 +63,6 @@ pub mod pallet {
         type WeightInfo: WeightInfo;
     }
 
-    #[pallet::event]
-    #[pallet::generate_deposit(pub(super) fn deposit_event)]
-    /// Event for the XAssetRegistrar Module
-    pub enum Event<T: Config> {
-        /// A new asset was registered. [asset_id, has_mining_rights]
-        Registered(AssetId, bool),
-        /// A deregistered asset was recovered. [asset_id, has_mining_rights]
-        Recovered(AssetId, bool),
-        /// An asset was deregistered. [asset_id]
-        Deregistered(AssetId),
-    }
-
-    #[pallet::error]
-    /// Error for the XAssetRegistrar Module
-    pub enum Error<T> {
-        /// Token symbol length is zero or too long
-        InvalidAssetTokenSymbolLength,
-        /// Token symbol char is invalid, only allow ASCII alphanumeric character or '-', '.', '|', '~'
-        InvalidAssetTokenSymbolChar,
-        /// Token name length is zero or too long
-        InvalidAssetTokenNameLength,
-        /// Desc length is zero or too long
-        InvalidAssetDescLength,
-        /// Text is invalid ASCII, only allow ASCII visible character [0x20, 0x7E]
-        InvalidAscii,
-        /// The asset already exists.
-        AssetAlreadyExists,
-        /// The asset does not exist.
-        AssetDoesNotExist,
-        /// The asset is already valid (online), no need to recover.
-        AssetAlreadyValid,
-        /// The asset is invalid (not online).
-        AssetIsInvalid,
-    }
-
-    /// Asset id list for each Chain.
-    #[pallet::storage]
-    #[pallet::getter(fn asset_ids_of)]
-    pub(super) type AssetIdsOf<T: Config> =
-        StorageMap<_, Twox64Concat, Chain, Vec<AssetId>, ValueQuery>;
-
-    /// Asset info of each asset.
-    #[pallet::storage]
-    #[pallet::getter(fn asset_info_of)]
-    pub(super) type AssetInfoOf<T: Config> =
-        StorageMap<_, Twox64Concat, AssetId, Option<AssetInfo>, ValueQuery>;
-
-    /// The map of asset to the online state.
-    #[pallet::storage]
-    #[pallet::getter(fn asset_online)]
-    pub(super) type AssetOnline<T: Config> = StorageMap<_, Twox64Concat, AssetId, bool, ValueQuery>;
-
-    /// The map of asset to the block number at which the asset was registered.
-    #[pallet::storage]
-    #[pallet::getter(fn registered_at)]
-    pub(super) type RegisteredAt<T: Config> =
-        StorageMap<_, Twox64Concat, AssetId, T::BlockNumber, ValueQuery>;
-
-    /// add_extra_genesis
-    #[pallet::genesis_config]
-    pub struct GenesisConfig {
-        pub assets: Vec<(AssetId, AssetInfo, bool, bool)>,
-    }
-
-    #[cfg(feature = "std")]
-    impl Default for GenesisConfig {
-        fn default() -> Self {
-            Self {
-                assets: Default::default(),
-            }
-        }
-    }
-
-    #[pallet::genesis_build]
-    impl<T: Config> GenesisBuild<T> for GenesisConfig {
-        fn build(&self) {
-            for (id, asset, is_online, has_mining_rights) in &self.assets {
-                Pallet::<T>::register(
-                    frame_system::RawOrigin::Root.into(),
-                    *id,
-                    asset.clone(),
-                    *is_online,
-                    *has_mining_rights,
-                )
-                .expect("asset registeration during the genesis can not fail");
-            }
-        }
-    }
-
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Register a new foreign asset.
@@ -253,6 +164,95 @@ pub mod pallet {
             }
             AssetInfoOf::<T>::insert(id, Some(info));
             Ok(())
+        }
+    }
+
+    #[pallet::event]
+    #[pallet::generate_deposit(pub(super) fn deposit_event)]
+    /// Event for the XAssetRegistrar Module
+    pub enum Event<T: Config> {
+        /// A new asset was registered. [asset_id, has_mining_rights]
+        Registered(AssetId, bool),
+        /// A deregistered asset was recovered. [asset_id, has_mining_rights]
+        Recovered(AssetId, bool),
+        /// An asset was deregistered. [asset_id]
+        Deregistered(AssetId),
+    }
+
+    #[pallet::error]
+    /// Error for the XAssetRegistrar Module
+    pub enum Error<T> {
+        /// Token symbol length is zero or too long
+        InvalidAssetTokenSymbolLength,
+        /// Token symbol char is invalid, only allow ASCII alphanumeric character or '-', '.', '|', '~'
+        InvalidAssetTokenSymbolChar,
+        /// Token name length is zero or too long
+        InvalidAssetTokenNameLength,
+        /// Desc length is zero or too long
+        InvalidAssetDescLength,
+        /// Text is invalid ASCII, only allow ASCII visible character [0x20, 0x7E]
+        InvalidAscii,
+        /// The asset already exists.
+        AssetAlreadyExists,
+        /// The asset does not exist.
+        AssetDoesNotExist,
+        /// The asset is already valid (online), no need to recover.
+        AssetAlreadyValid,
+        /// The asset is invalid (not online).
+        AssetIsInvalid,
+    }
+
+    /// Asset id list for each Chain.
+    #[pallet::storage]
+    #[pallet::getter(fn asset_ids_of)]
+    pub(super) type AssetIdsOf<T: Config> =
+        StorageMap<_, Twox64Concat, Chain, Vec<AssetId>, ValueQuery>;
+
+    /// Asset info of each asset.
+    #[pallet::storage]
+    #[pallet::getter(fn asset_info_of)]
+    pub(super) type AssetInfoOf<T: Config> =
+        StorageMap<_, Twox64Concat, AssetId, Option<AssetInfo>, ValueQuery>;
+
+    /// The map of asset to the online state.
+    #[pallet::storage]
+    #[pallet::getter(fn asset_online)]
+    pub(super) type AssetOnline<T: Config> = StorageMap<_, Twox64Concat, AssetId, bool, ValueQuery>;
+
+    /// The map of asset to the block number at which the asset was registered.
+    #[pallet::storage]
+    #[pallet::getter(fn registered_at)]
+    pub(super) type RegisteredAt<T: Config> =
+        StorageMap<_, Twox64Concat, AssetId, T::BlockNumber, ValueQuery>;
+
+    /// add_extra_genesis
+    #[pallet::genesis_config]
+    pub struct GenesisConfig {
+        pub assets: Vec<(AssetId, AssetInfo, bool, bool)>,
+    }
+
+    #[cfg(feature = "std")]
+    impl Default for GenesisConfig {
+        fn default() -> Self {
+            Self {
+                assets: Default::default(),
+            }
+        }
+    }
+
+    #[pallet::genesis_build]
+    impl<T: Config> GenesisBuild<T> for GenesisConfig {
+        fn build(&self) {
+            for (id, asset, is_online, has_mining_rights) in &self.assets {
+                Pallet::<T>::register(
+                    frame_system::RawOrigin::Root.into(),
+                    *id,
+                    asset.clone(),
+                    *is_online,
+                    *has_mining_rights,
+                )
+                .expect("asset registeration during the genesis can not fail");
+            }
         }
     }
 }
