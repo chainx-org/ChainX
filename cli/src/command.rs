@@ -84,11 +84,6 @@ pub fn run() -> sc_cli::Result<()> {
     let raw_cli_args = std::env::args().collect::<Vec<_>>();
     let cli = Cli::from_iter(crate::config::preprocess_cli_args(raw_cli_args));
 
-    // Try to enable the log rotation function if not a dev chain.
-    if !cli.run.base.shared_params.dev {
-        cli.try_init_logger()?;
-    }
-
     match &cli.subcommand {
         None => {
             let runner = cli.create_runner(&cli.run.base)?;

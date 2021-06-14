@@ -68,15 +68,5 @@ pub struct RunCmd {
     #[structopt(long = "config", value_name = "PATH", parse(from_os_str))]
     pub config_file: Option<std::path::PathBuf>,
 
-    #[structopt(flatten)]
-    pub logger: crate::logger::LoggerParams,
 }
 
-impl Cli {
-    pub fn try_init_logger(&self) -> sc_cli::Result<()> {
-        if !self.run.logger.no_log_rotation {
-            crate::logger::init(&self.run.base.log_filters()?, &self.run.logger)?;
-        }
-        Ok(())
-    }
-}

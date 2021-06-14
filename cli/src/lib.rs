@@ -10,7 +10,6 @@ mod cli;
 mod command;
 mod config;
 mod genesis;
-mod logger;
 
 pub use sc_cli::Result;
 
