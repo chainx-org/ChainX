@@ -6,7 +6,7 @@ use super::*;
 use sp_runtime::traits::CheckedAdd;
 use sp_std::cmp::Ordering;
 
-impl<T: Config> Module<T> {
+impl<T: Config> Pallet<T> {
     /// When the price is far from the current handicap, i.e.,
     /// - buy: less than the lowest_ask
     /// - sell: larger than the highest_bid
@@ -353,7 +353,7 @@ impl<T: Config> Module<T> {
         let pair = Self::trading_pair(pair_id)?;
 
         let trading_history_idx = Self::trading_history_index_of(pair_id);
-        TradingHistoryIndexOf::insert(pair_id, trading_history_idx + 1);
+        TradingHistoryIndexOf::<T>::insert(pair_id, trading_history_idx + 1);
 
         Self::update_order_on_execute(maker_order, &turnover, trading_history_idx);
         Self::update_order_on_execute(taker_order, &turnover, trading_history_idx);
