@@ -173,7 +173,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(<T as Config>::WeightInfo::set_handicap())]
-        fn set_handicap(
+        pub fn set_handicap(
             origin: OriginFor<T>,
             #[pallet::compact] pair_id: TradingPairId,
             new: Handicap<T::Price>,
@@ -185,7 +185,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(<T as Config>::WeightInfo::set_price_fluctuation())]
-        fn set_price_fluctuation(
+        pub fn set_price_fluctuation(
             origin: OriginFor<T>,
             #[pallet::compact] pair_id: TradingPairId,
             #[pallet::compact] new: PriceFluctuation,

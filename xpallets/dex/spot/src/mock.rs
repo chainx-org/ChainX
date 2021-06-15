@@ -17,6 +17,7 @@ use chainx_primitives::{AssetId, BlockNumber};
 use xp_protocol::{BTC_DECIMALS, PCX, PCX_DECIMALS, X_BTC, X_DOT};
 use xpallet_assets::{AssetInfo, AssetRestrictions, Chain};
 
+use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild;
 use crate::{self as xpallet_dex_spot, *};
 
 /// The AccountId alias in this test module.
