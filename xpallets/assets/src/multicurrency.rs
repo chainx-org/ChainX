@@ -10,6 +10,7 @@ use frame_support::{
     ensure,
     log::error,
     traits::{BalanceStatus, LockIdentifier},
+    transactional,
 };
 
 use orml_traits::{
@@ -22,8 +23,6 @@ use xpallet_support::traits::TreasuryAccount;
 
 use crate::types::{AssetType, BalanceLock};
 use crate::{AssetBalance, BalanceOf, Config, Error, Pallet};
-
-use super::*;
 
 impl<T: Config> MultiCurrency<T::AccountId> for Pallet<T> {
     type CurrencyId = AssetId;
@@ -249,7 +248,7 @@ impl<T: Config> MultiReservableCurrency<T::AccountId> for Pallet<T> {
         value: Self::Balance,
     ) -> DispatchResult {
         if value.is_zero() {
-            return Ok(())
+            return Ok(());
         }
         Self::move_balance(
             &currency_id,
