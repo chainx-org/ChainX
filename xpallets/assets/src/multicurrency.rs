@@ -93,7 +93,7 @@ impl<T: Config> MultiCurrency<T::AccountId> for Pallet<T> {
         amount: Self::Balance,
     ) -> DispatchResult {
         if amount.is_zero() {
-            return Ok(().into());
+            return Ok(());
         }
         Self::ensure_can_withdraw(currency_id, who, amount)?;
         match Self::can_destroy_usable(&currency_id) {
@@ -182,7 +182,7 @@ impl<T: Config> MultiCurrencyExtended<T::AccountId> for Pallet<T> {
         by_amount: Self::Amount,
     ) -> DispatchResult {
         if by_amount.is_zero() {
-            return Ok(().into());
+            return Ok(());
         }
 
         let by_balance = TryInto::<Self::Balance>::try_into(by_amount.abs())
@@ -259,7 +259,7 @@ impl<T: Config> MultiReservableCurrency<T::AccountId> for Pallet<T> {
             value,
         )
         .map_err::<Error<T>, _>(Into::into)?;
-        Ok(().into())
+        Ok(())
     }
 
     fn unreserve(
@@ -424,7 +424,7 @@ impl<T: Config> MergeAccount<T::AccountId> for Pallet<T> {
                     dest,
                     Self::usable_balance(source, &currency_id),
                 )?;
-                Ok(().into())
+                Ok(())
             },
         )
     }

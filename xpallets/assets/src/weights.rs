@@ -30,6 +30,7 @@ use sp_std::marker::PhantomData;
 
 /// Weight functions needed for xpallet_assets.
 pub trait WeightInfo {
+    fn zero() -> Weight;
     fn transfer() -> Weight;
     fn force_transfer() -> Weight;
     fn set_balance() -> Weight;
@@ -39,6 +40,9 @@ pub trait WeightInfo {
 /// Weights for xpallet_assets using the Substrate node and recommended hardware.
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
+    fn zero() -> Weight {
+        0 as Weight
+    }
     fn transfer() -> Weight {
         (252_811_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(8 as Weight))
@@ -63,6 +67,9 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
+    fn zero() -> Weight {
+        0 as Weight
+    }
     fn transfer() -> Weight {
         (252_811_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(8 as Weight))
