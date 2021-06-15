@@ -13,10 +13,11 @@
 
 mod types;
 
+use codec::DecodeLimit;
 use sp_std::prelude::*;
 
 use frame_support::{
-    decl_event, decl_module,
+    decl_event, decl_module, pallet,
     traits::Get,
     weights::{
         DispatchClass, DispatchInfo, GetDispatchInfo, Pays, PostDispatchInfo, Weight,
@@ -28,7 +29,8 @@ use sp_runtime::{
     FixedPointNumber, FixedPointOperand,
 };
 
-pub use self::types::{FeeDetails, InclusionFee};
+pub use self::types::FeeDetails;
+pub use pallet_transaction_payment::InclusionFee;
 
 type BalanceOf<T> = <<T as pallet_transaction_payment::Config>::OnChargeTransaction as pallet_transaction_payment::OnChargeTransaction<T>>::Balance;
 
@@ -123,6 +125,7 @@ where
 
             // the adjustable part of the fee.
             let unadjusted_weight_fee = Self::weight_to_fee(weight);
+
             let multiplier = pallet_transaction_payment::Module::<T>::next_fee_multiplier();
             // final adjusted weight fee.
             let adjusted_weight_fee = multiplier.saturating_mul_int(unadjusted_weight_fee);
@@ -134,19 +137,23 @@ where
                 .saturating_add(tip);
 
             FeeDetails {
-                inclusion_fee: Some(InclusionFee {
-                    base_fee,
-                    len_fee: fixed_len_fee,
-                    adjusted_weight_fee,
-                }),
-                tip,
+                partial_details: pallet_transaction_payment::FeeDetails {
+                    inclusion_fee: Some(pallet_transaction_payment::InclusionFee {
+                        base_fee,
+                        len_fee: fixed_len_fee,
+                        adjusted_weight_fee,
+                    }),
+                    tip,
+                },
                 extra_fee: 0u32.into(),
                 final_fee: total,
             }
         } else {
             FeeDetails {
-                inclusion_fee: None,
-                tip,
+                partial_details: pallet_transaction_payment::FeeDetails {
+                    inclusion_fee: None,
+                    tip,
+                },
                 extra_fee: 0u32.into(),
                 final_fee: tip,
             }

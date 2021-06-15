@@ -22,6 +22,7 @@ sp-runtime = "3.0.0"
 
 # Substrate pallets
 pallet-transaction-payment-rpc = "3.0.0"
+pallet-transaction-payment = { version = "3.0.0", default-features = false }
 
 xp-rpc = { path = "../../../primitives/rpc" }
 

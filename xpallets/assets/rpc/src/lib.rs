@@ -64,7 +64,7 @@ where
     C::Api: XAssetsRuntimeApi<Block, AccountId, Balance>,
     Block: BlockT,
     AccountId: Clone + Display + Codec,
-    Balance: Clone + Copy + Display + FromStr + Codec + Zero,
+    Balance: Clone + Copy + Display + FromStr + Codec + Zero + Default,
 {
     fn assets_by_account(
         &self,

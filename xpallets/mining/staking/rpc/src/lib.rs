@@ -100,8 +100,8 @@ where
     C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
     C::Api: XStakingRuntimeApi<Block, AccountId, Balance, VoteWeight, BlockNumber>,
     AccountId: Codec + Ord,
-    Balance: Codec + Display + FromStr,
-    VoteWeight: Codec + Display + FromStr,
+    Balance: Codec + Display + FromStr + Default,
+    VoteWeight: Codec + Display + FromStr + Default,
     BlockNumber: Codec,
 {
     fn validators(

@@ -171,7 +171,7 @@ where
     C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
     C::Api: XGatewayCommonRuntimeApi<Block, AccountId, Balance>,
     AccountId: Codec + Send + Sync + 'static,
-    Balance: Codec + Display + FromStr + Send + Sync + 'static + From<u64>,
+    Balance: Codec + Display + FromStr + Send + Sync + 'static + From<u64> + Default,
 {
     fn bound_addrs(
         &self,

@@ -92,9 +92,9 @@ where
     C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
     C::Api: XSpotRuntimeApi<Block, AccountId, Balance, BlockNumber, Price>,
     AccountId: Codec,
-    Balance: Codec + Display + FromStr,
+    Balance: Codec + Display + FromStr + Default,
     BlockNumber: Codec,
-    Price: Codec + Display + FromStr,
+    Price: Codec + Display + FromStr + Default,
 {
     fn trading_pairs(
         &self,
