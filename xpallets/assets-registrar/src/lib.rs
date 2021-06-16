@@ -43,7 +43,7 @@ pub mod pallet {
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
-    pub struct Pallet<T>(_);
+    pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::config]
     /// The module's config trait.
@@ -162,14 +162,14 @@ pub mod pallet {
             if let Some(desc) = desc {
                 info.set_desc(desc);
             }
-            AssetInfoOf::<T>::insert(id, Some(info));
+            AssetInfoOf::<T>::insert(id, info);
             Ok(())
         }
     }
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
-    /// Event for the XAssetRegistrar Module
+    /// Event for the XAssetRegistrar Pallet
     pub enum Event<T: Config> {
         /// A new asset was registered. [asset_id, has_mining_rights]
         Registered(AssetId, bool),
@@ -179,8 +179,8 @@ pub mod pallet {
         Deregistered(AssetId),
     }
 
+    /// Error for the XAssetRegistrar Pallet
     #[pallet::error]
-    /// Error for the XAssetRegistrar Module
     pub enum Error<T> {
         /// Token symbol length is zero or too long
         InvalidAssetTokenSymbolLength,
@@ -211,8 +211,7 @@ pub mod pallet {
     /// Asset info of each asset.
     #[pallet::storage]
     #[pallet::getter(fn asset_info_of)]
-    pub(super) type AssetInfoOf<T: Config> =
-        StorageMap<_, Twox64Concat, AssetId, Option<AssetInfo>, ValueQuery>;
+    pub(super) type AssetInfoOf<T: Config> = StorageMap<_, Twox64Concat, AssetId, AssetInfo>;
 
     /// The map of asset to the online state.
     #[pallet::storage]
@@ -243,16 +242,19 @@ pub mod pallet {
     #[pallet::genesis_build]
     impl<T: Config> GenesisBuild<T> for GenesisConfig {
         fn build(&self) {
-            for (id, asset, is_online, has_mining_rights) in &self.assets {
-                Pallet::<T>::register(
-                    frame_system::RawOrigin::Root.into(),
-                    *id,
-                    asset.clone(),
-                    *is_online,
-                    *has_mining_rights,
-                )
-                .expect("asset registeration during the genesis can not fail");
-            }
+            let extra_genesis_builder: fn(&Self) = |config| {
+                for (id, asset, is_online, has_mining_rights) in &config.assets {
+                    Pallet::<T>::register(
+                        frame_system::RawOrigin::Root.into(),
+                        *id,
+                        asset.clone(),
+                        *is_online,
+                        *has_mining_rights,
+                    )
+                    .expect("asset registeration during the genesis can not fail");
+                }
+            };
+            extra_genesis_builder(self);
         }
     }
 }
@@ -272,13 +274,13 @@ impl<T: Config> Pallet<T> {
 
     /// Returns an iterator of tuple (AssetId, AssetInfo) of all assets.
     #[inline]
-    pub fn asset_infos() -> impl Iterator<Item = (AssetId, Option<AssetInfo>)> {
+    pub fn asset_infos() -> impl Iterator<Item = (AssetId, AssetInfo)> {
         AssetInfoOf::<T>::iter()
     }
 
     /// Returns an iterator of tuple (AssetId, AssetInfo) of all valid assets.
     #[inline]
-    pub fn valid_asset_infos() -> impl Iterator<Item = (AssetId, Option<AssetInfo>)> {
+    pub fn valid_asset_infos() -> impl Iterator<Item = (AssetId, AssetInfo)> {
         Self::asset_infos().filter(|(id, _)| Self::is_valid(id))
     }
 
@@ -338,7 +340,7 @@ impl<T: Config> Pallet<T> {
             }
         });
 
-        AssetInfoOf::<T>::insert(&id, Some(asset));
+        AssetInfoOf::<T>::insert(&id, asset);
         AssetOnline::<T>::insert(&id, true);
 
         RegisteredAt::<T>::insert(&id, frame_system::Pallet::<T>::block_number());
@@ -347,7 +349,7 @@ impl<T: Config> Pallet<T> {
     }
 }
 
-#[cfg(feature = "std")]
+ #[cfg(feature = "std")]
 impl GenesisConfig {
     /// Direct implementation of `GenesisBuild::assimilate_storage`.
     ///

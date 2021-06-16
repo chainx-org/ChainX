@@ -272,7 +272,7 @@ impl<T: Config> Module<T> {
     /// Returns a map of all registered assets by far.
     pub fn total_asset_infos() -> BTreeMap<AssetId, TotalAssetInfo<BalanceOf<T>>> {
         xpallet_assets_registrar::Pallet::<T>::asset_infos()
-            .filter_map(|(id, _info)| {
+            .filter_map(|(id, info)| {
                 if id == T::NativeAssetId::get() {
                     // ignore native asset
                     None
@@ -280,7 +280,7 @@ impl<T: Config> Module<T> {
                     let data = (
                         id,
                         TotalAssetInfo {
-                            info: xpallet_assets_registrar::AssetInfo::default(),
+                            info,
                             balance: Self::total_asset_balance(id),
                             is_online: xpallet_assets_registrar::Pallet::<T>::is_online(&id),
                             restrictions: Self::asset_restrictions_of(id),
