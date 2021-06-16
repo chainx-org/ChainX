@@ -49,4 +49,3 @@ pub struct FeeDetails<Balance: Default> {
     pub extra_fee: Balance,
     pub final_fee: Balance,
 }
-
