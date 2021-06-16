@@ -3,8 +3,10 @@
 use std::{cell::RefCell, convert::TryFrom, time::Duration};
 
 use codec::{Decode, Encode};
-use frame_support::traits::UnixTime;
-use frame_support::{parameter_types, sp_io};
+use frame_support::{
+    parameter_types, sp_io,
+    traits::{GenesisBuild, UnixTime},
+};
 use frame_system::EnsureSignedBy;
 use sp_core::{crypto::UncheckedInto, H256};
 use sp_io::hashing::blake2_256;
@@ -14,7 +16,6 @@ use sp_runtime::{
     AccountId32, DispatchError, DispatchResult,
 };
 
-use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild;
 use chainx_primitives::AssetId;
 pub use xp_protocol::{X_BTC, X_ETH};
 use xpallet_assets::{AssetRestrictions, BalanceOf, ChainT, WithdrawalLimit};
