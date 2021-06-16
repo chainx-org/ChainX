@@ -57,7 +57,7 @@ pub struct Depth<Price, Balance> {
     pub bids: Vec<(Price, Balance)>,
 }
 
-impl<T: Config> Module<T> {
+impl<T: Config> Pallet<T> {
     /// Returns the range of a valid quotation for a trading pair.
     fn get_quotation_range(profile: &TradingPairProfile) -> (T::Price, T::Price) {
         let handicap = Self::handicap_of(profile.id);
