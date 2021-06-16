@@ -268,8 +268,8 @@ pub mod pallet {
         PriceFluctuationUpdated(TradingPairId, PriceFluctuation),
     }
 
-    #[pallet::error]
     /// Error for the spot module.
+    #[pallet::error]
     pub enum Error<T> {
         /// Price can not be zero, and must be an integer multiple of the tick decimals.
         InvalidPrice,

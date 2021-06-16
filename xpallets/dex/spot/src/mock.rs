@@ -5,7 +5,11 @@ use std::{
     collections::{BTreeMap, HashSet},
 };
 
-use frame_support::{parameter_types, traits::Get, weights::Weight};
+use frame_support::{
+    parameter_types,
+    traits::{GenesisBuild, Get},
+    weights::Weight,
+};
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
@@ -17,7 +21,6 @@ use chainx_primitives::{AssetId, BlockNumber};
 use xp_protocol::{BTC_DECIMALS, PCX, PCX_DECIMALS, X_BTC, X_DOT};
 use xpallet_assets::{AssetInfo, AssetRestrictions, Chain};
 
-use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild;
 use crate::{self as xpallet_dex_spot, *};
 
 /// The AccountId alias in this test module.
