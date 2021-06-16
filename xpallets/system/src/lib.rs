@@ -7,7 +7,7 @@ use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 use sp_runtime::traits::StaticLookup;
 
 use frame_support::{
-    dispatch::{CallMetadata, DispatchResultWithPostInfo},
+    dispatch::{CallMetadata, DispatchResult},
     traits::Currency,
 };
 
@@ -55,7 +55,7 @@ pub mod pallet {
             pallet: Vec<u8>,
             call: Option<Vec<u8>>,
             should_paused: bool,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             ensure_root(origin)?;
 
             let mut paused = Self::paused(&pallet);
@@ -83,7 +83,7 @@ pub mod pallet {
             } else {
                 Paused::<T>::insert(pallet, paused);
             }
-            Ok(().into())
+            Ok(())
         }
 
         /// Toggle the blacklist status of the given account id.
@@ -94,7 +94,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             who: <T::Lookup as StaticLookup>::Source,
             should_blacklist: bool,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             ensure_root(origin)?;
 
             let who = T::Lookup::lookup(who)?;
@@ -105,7 +105,7 @@ pub mod pallet {
                 Blacklist::<T>::remove(&who);
                 Self::deposit_event(Event::<T>::Unblacklisted(who));
             }
-            Ok(().into())
+            Ok(())
         }
     }
 
@@ -119,10 +119,6 @@ pub mod pallet {
         /// An account was removed from the blacklist. [who]
         Unblacklisted(T::AccountId),
     }
-
-    /// Error for the XSystem Pallet
-    #[pallet::error]
-    pub enum Error<T> {}
 
     /// Network property (Mainnet / Testnet).
     #[pallet::storage]
@@ -154,7 +150,6 @@ pub mod pallet {
     }
 
     #[pallet::genesis_build]
-    #[cfg(feature = "std")]
     impl<T: Config> GenesisBuild<T> for GenesisConfig {
         fn build(&self) {
             NetworkProps::<T>::put(self.network_props);
