@@ -316,8 +316,7 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
-    /// Asset related
-    ///
+    // Asset related
     /// Returns a map of all registered assets by far.
     pub fn total_asset_infos() -> BTreeMap<AssetId, TotalAssetInfo<BalanceOf<T>>> {
         xpallet_assets_registrar::Pallet::<T>::asset_infos()
@@ -392,8 +391,7 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
-    /// Public read functions.
-    ///
+    // Public read functions.
     /// Returns the total issuance of asset `id` by far.
     pub fn total_issuance(id: &AssetId) -> BalanceOf<T> {
         let map = Self::total_asset_balance(id);
@@ -555,8 +553,6 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
-    /// Token issue destroy reserve/unreserved, it's core function
-    ///
     /// Returns the balance of `who` given `asset_id` and `ty`.
     fn asset_typed_balance(who: &T::AccountId, asset_id: &AssetId, ty: AssetType) -> BalanceOf<T> {
         Self::asset_balance(who, asset_id)
