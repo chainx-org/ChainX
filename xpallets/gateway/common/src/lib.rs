@@ -53,6 +53,7 @@ pub mod pallet {
     #[pallet::config]
     pub trait Config: frame_system::Config + xpallet_gateway_records::Config {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
         type Validator: Validator<Self::AccountId>;
 
         type DetermineMultisigAddress: MultisigAddressFor<Self::AccountId>;
