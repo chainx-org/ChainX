@@ -1,6 +1,6 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use frame_support::{parameter_types, sp_io};
+use frame_support::{parameter_types, sp_io, traits::GenesisBuild};
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
@@ -8,9 +8,10 @@ use sp_runtime::{
 };
 
 use chainx_primitives::AssetId;
-pub use xp_protocol::{X_BTC, X_ETH};
 use xpallet_assets::AssetRestrictions;
 use xpallet_assets_registrar::AssetInfo;
+
+pub use xp_protocol::{X_BTC, X_ETH};
 
 use crate::{self as xpallet_gateway_records, *};
 

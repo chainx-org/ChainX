@@ -109,12 +109,12 @@ fn t_start_session(session_index: SessionIndex) {
 #[test]
 fn on_register_should_work() {
     ExtBuilder::default().build_and_execute(|| {
-        assert_eq!(MiningPrevilegedAssets::get(), Vec::<AssetId>::new());
+        assert_eq!(MiningPrevilegedAssets::<Test>::get(), Vec::<AssetId>::new());
 
         t_system_block_number_inc(1);
 
         assert_ok!(t_register_xbtc());
-        assert_eq!(MiningPrevilegedAssets::get(), vec![1]);
+        assert_eq!(MiningPrevilegedAssets::<Test>::get(), vec![1]);
         assert_eq!(
             <AssetLedgers<Test>>::get(1),
             AssetLedger {
@@ -129,12 +129,12 @@ fn on_register_should_work() {
 #[test]
 fn mining_weights_should_work_when_moving_xbtc() {
     ExtBuilder::default().build_and_execute(|| {
-        assert_eq!(MiningPrevilegedAssets::get(), Vec::<AssetId>::new());
+        assert_eq!(MiningPrevilegedAssets::<Test>::get(), Vec::<AssetId>::new());
 
         t_system_block_number_inc(1);
 
         assert_ok!(t_register_xbtc());
-        assert_eq!(MiningPrevilegedAssets::get(), vec![1]);
+        assert_eq!(MiningPrevilegedAssets::<Test>::get(), vec![1]);
         assert_eq!(
             <AssetLedgers<Test>>::get(1),
             AssetLedger {
@@ -230,7 +230,7 @@ fn mining_weights_should_work_when_moving_xbtc() {
 #[test]
 fn sum_of_miner_weights_and_asset_total_weights_should_equal() {
     ExtBuilder::default().build_and_execute(|| {
-        assert_eq!(MiningPrevilegedAssets::get(), Vec::<AssetId>::new());
+        assert_eq!(MiningPrevilegedAssets::<Test>::get(), Vec::<AssetId>::new());
 
         t_system_block_number_inc(1);
 

@@ -2,16 +2,17 @@
 
 use super::*;
 use frame_support::log;
+use sp_std::vec::Vec;
 
-impl<T: Config> Module<T> {
+impl<T: Config> Pallet<T> {
     /// Returns a new validator set for the new era.
     pub(crate) fn new_era(start_session_index: SessionIndex) -> Option<Vec<T::AccountId>> {
         // Increment or set current era.
-        let current_era = CurrentEra::mutate(|s| {
+        let current_era = CurrentEra::<T>::mutate(|s| {
             *s = Some(s.map(|s| s + 1).unwrap_or(0));
             s.unwrap()
         });
-        ErasStartSessionIndex::insert(&current_era, &start_session_index);
+        ErasStartSessionIndex::<T>::insert(&current_era, &start_session_index);
 
         // Set staking information for new era.
         let maybe_new_validators = Self::select_and_update_validators(current_era);
@@ -82,7 +83,7 @@ impl<T: Config> Module<T> {
             return None;
         }
 
-        let desired_validator_count = ValidatorCount::get() as usize;
+        let desired_validator_count = ValidatorCount::<T>::get() as usize;
 
         let validators = candidates
             .into_iter()

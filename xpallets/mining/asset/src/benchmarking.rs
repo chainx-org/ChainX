@@ -25,7 +25,7 @@ benchmarks! {
             true,
         ).unwrap();
 
-        FixedAssetPowerOf::insert(X_DOT, 100);
+        FixedAssetPowerOf::<T>::insert(X_DOT, 100);
 
         let miner = account("miner", u, SEED);
         xpallet_assets::Pallet::<T>::issue(&X_DOT, &miner, 1000u32.into())?;
@@ -63,7 +63,7 @@ benchmarks! {
         let c = 1000;
     }: _(RawOrigin::Root, X_BTC, c)
     verify {
-        assert_eq!(FixedAssetPowerOf::get(X_BTC), c);
+        assert_eq!(FixedAssetPowerOf::<T>::get(X_BTC), c);
     }
 }
 

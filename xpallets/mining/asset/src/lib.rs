@@ -20,11 +20,9 @@ mod tests;
 use sp_std::prelude::*;
 
 use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult},
     ensure,
     log::warn,
-    storage::IterableStorageMap,
     traits::{Currency, ExistenceRequirement},
 };
 use frame_system::{ensure_root, ensure_signed};
@@ -43,114 +41,113 @@ pub use self::rpc::*;
 pub use self::types::*;
 pub use self::weights::WeightInfo;
 
-pub trait Config: xpallet_assets::Config {
-    /// The overarching event type.
-    type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
+pub use pallet::*;
 
-    /// Get the staked balances of asset miner.
-    type StakingInterface: StakingInterface<Self::AccountId, u128>;
+#[frame_support::pallet]
+pub mod pallet {
+    use super::*;
+    use frame_support::{dispatch::DispatchResult, pallet_prelude::*};
+    use frame_system::pallet_prelude::*;
 
-    /// Get the possible referral of asset miner.
-    type GatewayInterface: GatewayInterface<Self::AccountId>;
+    #[pallet::config]
+    pub trait Config: frame_system::Config + xpallet_assets::Config {
+        /// The overarching event type.
+        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-    /// Get the treasury account.
-    type TreasuryAccount: TreasuryAccount<Self::AccountId>;
+        /// Get the staked balances of asset miner.
+        type StakingInterface: StakingInterface<Self::AccountId, u128>;
 
-    /// Generate the reward pot account for mining asset.
-    type DetermineRewardPotAccount: RewardPotAccountFor<Self::AccountId, AssetId>;
+        /// Get the possible referral of asset miner.
+        type GatewayInterface: GatewayInterface<Self::AccountId>;
 
-    type WeightInfo: WeightInfo;
-}
+        /// Get the treasury account.
+        type TreasuryAccount: TreasuryAccount<Self::AccountId>;
 
-pub trait StakingInterface<AccountId, Balance> {
-    /// Returns the amount of `who`s locked balances in Staking.
-    fn staked_of(who: &AccountId) -> Balance;
-}
+        /// Generate the reward pot account for mining asset.
+        type DetermineRewardPotAccount: RewardPotAccountFor<Self::AccountId, AssetId>;
 
-impl<AccountId, Balance: Default> StakingInterface<AccountId, Balance> for () {
-    fn staked_of(_: &AccountId) -> Balance {
-        Default::default()
+        type WeightInfo: WeightInfo;
     }
-}
 
-impl<T: Config> StakingInterface<<T as frame_system::Config>::AccountId, u128> for T
-where
-    T: xpallet_mining_staking::Config,
-{
-    fn staked_of(who: &<T as frame_system::Config>::AccountId) -> u128 {
-        xpallet_mining_staking::Module::<T>::staked_of(who).saturated_into()
+    #[pallet::pallet]
+    #[pallet::generate_store(pub(super) trait Store)]
+    pub struct Pallet<T>(PhantomData<T>);
+
+    #[pallet::call]
+    impl<T: Config> Pallet<T> {
+        /// Claims the staking reward given the `target` validator.
+        #[pallet::weight(<T as Config>::WeightInfo::claim())]
+        pub(crate) fn claim(
+            origin: OriginFor<T>,
+            #[pallet::compact] target: AssetId,
+        ) -> DispatchResult {
+            let sender = ensure_signed(origin)?;
+
+            ensure!(
+                Self::mining_previleged_assets().contains(&target),
+                Error::<T>::NotPrevilegedAsset
+            );
+
+            <Self as Claim<T::AccountId>>::claim(&sender, &target)?;
+
+            Ok(())
+        }
+
+        #[pallet::weight(<T as Config>::WeightInfo::set_claim_staking_requirement())]
+        pub(crate) fn set_claim_staking_requirement(
+            origin: OriginFor<T>,
+            #[pallet::compact] asset_id: AssetId,
+            #[pallet::compact] new: StakingRequirement,
+        ) -> DispatchResult {
+            ensure_root(origin)?;
+            ClaimRestrictionOf::<T>::mutate(asset_id, |restriction| {
+                restriction.staking_requirement = new;
+            });
+            Ok(())
+        }
+
+        #[pallet::weight(<T as Config>::WeightInfo::set_claim_frequency_limit())]
+        pub(crate) fn set_claim_frequency_limit(
+            origin: OriginFor<T>,
+            #[pallet::compact] asset_id: AssetId,
+            #[pallet::compact] new: T::BlockNumber,
+        ) -> DispatchResult {
+            ensure_root(origin)?;
+            ClaimRestrictionOf::<T>::mutate(asset_id, |restriction| {
+                restriction.frequency_limit = new;
+            });
+            Ok(())
+        }
+
+        #[pallet::weight(<T as Config>::WeightInfo::set_asset_power())]
+        pub(crate) fn set_asset_power(
+            origin: OriginFor<T>,
+            #[pallet::compact] asset_id: AssetId,
+            #[pallet::compact] new: FixedAssetPower,
+        ) -> DispatchResult {
+            ensure_root(origin)?;
+            FixedAssetPowerOf::<T>::insert(asset_id, new);
+            Ok(())
+        }
     }
-}
 
-pub trait GatewayInterface<AccountId> {
-    /// Returns the potential referral of `who` for `asset_id`.
-    fn referral_of(who: &AccountId, asset_id: AssetId) -> Option<AccountId>;
-}
-
-impl<AccountId> GatewayInterface<AccountId> for () {
-    fn referral_of(_: &AccountId, _: AssetId) -> Option<AccountId> {
-        None
-    }
-}
-
-decl_storage! {
-    trait Store for Module<T: Config> as XMiningAsset {
-        /// Possible reward for the new asset owners that does not have native coins yet.
-        pub DepositReward get(fn deposit_reward): BalanceOf<T> = 100_000u32.into();
-
-        /// Can not claim if the claimer violates the restriction.
-        pub ClaimRestrictionOf get(fn claim_restriction_of):
-            map hasher(twox_64_concat) AssetId => ClaimRestriction<T::BlockNumber>;
-
-        /// External Assets that have the mining rights.
-        pub MiningPrevilegedAssets get(fn mining_previleged_assets): Vec<AssetId>;
-
-        /// Mining weight information of the mining assets.
-        pub AssetLedgers get(fn asset_ledgers):
-            map hasher(twox_64_concat) AssetId => AssetLedger<MiningWeight, T::BlockNumber>;
-
-        /// The map from nominator to the vote weight ledger of all mining assets.
-        pub MinerLedgers get(fn miner_ledgers):
-            double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) AssetId
-            => MinerLedger<MiningWeight, T::BlockNumber>;
-
-        /// Mining power map of X-type assets.
-        pub FixedAssetPowerOf get(fn fixed_asset_power_of):
-            map hasher(twox_64_concat) AssetId => FixedAssetPower;
-    }
-    add_extra_genesis {
-        config(claim_restrictions): Vec<(AssetId, (StakingRequirement, T::BlockNumber))>;
-        config(mining_power_map): Vec<(AssetId, FixedAssetPower)>;
-        build(|config| {
-            for (asset_id, (staking_requirement, frequency_limit)) in &config.claim_restrictions {
-                ClaimRestrictionOf::<T>::insert(asset_id, ClaimRestriction {
-                    staking_requirement: *staking_requirement,
-                    frequency_limit: *frequency_limit
-                });
-            }
-            for(asset_id, fixed_power) in &config.mining_power_map {
-                FixedAssetPowerOf::insert(asset_id, fixed_power);
-            }
-        });
-    }
-}
-
-decl_event!(
-    pub enum Event<T>
-    where
-        Balance = BalanceOf<T>,
-        <T as frame_system::Config>::AccountId,
-    {
+    #[pallet::event]
+    #[pallet::generate_deposit(pub(super) fn deposit_event)]
+    #[pallet::metadata(T::AccountId = "AccountId", BalanceOf<T> = "Balance")]
+    pub enum Event<T: Config> {
         /// An asset miner claimed the mining reward. [claimer, asset_id, amount]
-        Claimed(AccountId, AssetId, Balance),
+        Claimed(T::AccountId, AssetId, BalanceOf<T>),
         /// Issue new balance to the reward pot. [reward_pot_account, amount]
-        Minted(AccountId, Balance),
+        Minted(T::AccountId, BalanceOf<T>),
     }
-);
 
-decl_error! {
+    /// Old name generated by `decl_event`.
+    #[deprecated(note = "use `Event` instead")]
+    pub type RawEvent<T> = Event<T>;
+
     /// Error for the staking module.
-    pub enum Error for Module<T: Config> {
+    #[pallet::error]
+    pub enum Error<T> {
         /// The asset does not have the mining rights.
         NotPrevilegedAsset,
         /// Claimer does not have enough Staking locked balance.
@@ -160,66 +157,139 @@ decl_error! {
         /// Zero mining weight.
         ZeroMiningWeight,
         /// Balances error.
-        DispatchError
+        DispatchError,
+    }
+
+    #[pallet::type_value]
+    pub fn DefaultForDepositReward<T: Config>() -> BalanceOf<T> {
+        100_000u32.into()
+    }
+
+    /// Possible reward for the new asset owners that does not have native coins yet.
+    #[pallet::storage]
+    #[pallet::getter(fn deposit_reward)]
+    pub type DepositReward<T: Config> =
+        StorageValue<_, BalanceOf<T>, ValueQuery, DefaultForDepositReward<T>>;
+
+    /// Can not claim if the claimer violates the restriction.
+    #[pallet::storage]
+    #[pallet::getter(fn claim_restriction_of)]
+    pub type ClaimRestrictionOf<T: Config> =
+        StorageMap<_, Twox64Concat, AssetId, ClaimRestriction<T::BlockNumber>, ValueQuery>;
+
+    /// External Assets that have the mining rights.
+    #[pallet::storage]
+    #[pallet::getter(fn mining_previleged_assets)]
+    pub type MiningPrevilegedAssets<T: Config> = StorageValue<_, Vec<AssetId>, ValueQuery>;
+
+    /// Mining weight information of the mining assets.
+    #[pallet::storage]
+    #[pallet::getter(fn asset_ledgers)]
+    pub type AssetLedgers<T: Config> =
+        StorageMap<_, Twox64Concat, AssetId, AssetLedger<MiningWeight, T::BlockNumber>, ValueQuery>;
+
+    /// The map from nominator to the vote weight ledger of all mining assets.
+    #[pallet::storage]
+    #[pallet::getter(fn miner_ledgers)]
+    pub type MinerLedgers<T: Config> = StorageDoubleMap<
+        _,
+        Twox64Concat,
+        T::AccountId,
+        Twox64Concat,
+        AssetId,
+        MinerLedger<MiningWeight, T::BlockNumber>,
+        ValueQuery,
+    >;
+
+    /// Mining power map of X-type assets.
+    #[pallet::storage]
+    #[pallet::getter(fn fixed_asset_power_of)]
+    pub type FixedAssetPowerOf<T: Config> =
+        StorageMap<_, Twox64Concat, AssetId, FixedAssetPower, ValueQuery>;
+
+    #[pallet::genesis_config]
+    pub struct GenesisConfig<T: Config> {
+        pub claim_restrictions: Vec<(AssetId, (StakingRequirement, T::BlockNumber))>,
+        pub mining_power_map: Vec<(AssetId, FixedAssetPower)>,
+    }
+
+    #[cfg(feature = "std")]
+    impl<T: Config> Default for GenesisConfig<T> {
+        fn default() -> Self {
+            Self {
+                claim_restrictions: Default::default(),
+                mining_power_map: Default::default(),
+            }
+        }
+    }
+
+    #[pallet::genesis_build]
+    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+        fn build(&self) {
+            let extra_genesis_builder: fn(&Self) = |config| {
+                for (asset_id, (staking_requirement, frequency_limit)) in &config.claim_restrictions
+                {
+                    ClaimRestrictionOf::<T>::insert(
+                        asset_id,
+                        ClaimRestriction {
+                            staking_requirement: *staking_requirement,
+                            frequency_limit: *frequency_limit,
+                        },
+                    );
+                }
+                for (asset_id, fixed_power) in &config.mining_power_map {
+                    FixedAssetPowerOf::<T>::insert(asset_id, fixed_power);
+                }
+            };
+            extra_genesis_builder(self);
+        }
+    }
+
+    pub trait StakingInterface<AccountId, Balance> {
+        /// Returns the amount of `who`s locked balances in Staking.
+        fn staked_of(who: &AccountId) -> Balance;
+    }
+
+    impl<AccountId, Balance: Default> StakingInterface<AccountId, Balance> for () {
+        fn staked_of(_: &AccountId) -> Balance {
+            Default::default()
+        }
+    }
+
+    impl<T: Config> StakingInterface<<T as frame_system::Config>::AccountId, u128> for T
+    where
+        T: xpallet_mining_staking::Config,
+    {
+        fn staked_of(who: &<T as frame_system::Config>::AccountId) -> u128 {
+            xpallet_mining_staking::Pallet::<T>::staked_of(who).saturated_into()
+        }
+    }
+
+    pub trait GatewayInterface<AccountId> {
+        /// Returns the potential referral of `who` for `asset_id`.
+        fn referral_of(who: &AccountId, asset_id: AssetId) -> Option<AccountId>;
+    }
+
+    impl<AccountId> GatewayInterface<AccountId> for () {
+        fn referral_of(_: &AccountId, _: AssetId) -> Option<AccountId> {
+            None
+        }
+    }
+
+    impl<T: Config> From<ZeroMiningWeightError> for Error<T> {
+        fn from(_: ZeroMiningWeightError) -> Self {
+            Self::ZeroMiningWeight
+        }
+    }
+
+    impl<T: Config> From<DispatchError> for Error<T> {
+        fn from(_: DispatchError) -> Self {
+            Self::DispatchError
+        }
     }
 }
 
-impl<T: Config> From<ZeroMiningWeightError> for Error<T> {
-    fn from(_: ZeroMiningWeightError) -> Self {
-        Self::ZeroMiningWeight
-    }
-}
-
-impl<T: Config> From<DispatchError> for Error<T> {
-    fn from(_: DispatchError) -> Self {
-        Self::DispatchError
-    }
-}
-
-decl_module! {
-    pub struct Module<T: Config> for enum Call where origin: T::Origin {
-        type Error = Error<T>;
-
-        fn deposit_event() = default;
-
-        /// Claims the staking reward given the `target` validator.
-        #[weight = <T as Config>::WeightInfo::claim()]
-        fn claim(origin, #[compact] target: AssetId) {
-            let sender = ensure_signed(origin)?;
-
-            ensure!(
-                Self::mining_previleged_assets().contains(&target),
-                Error::<T>::NotPrevilegedAsset
-            );
-
-            <Self as Claim<T::AccountId>>::claim(&sender, &target)?;
-        }
-
-        #[weight = <T as Config>::WeightInfo::set_claim_staking_requirement()]
-        fn set_claim_staking_requirement(origin, #[compact] asset_id: AssetId, #[compact] new: StakingRequirement) {
-            ensure_root(origin)?;
-            ClaimRestrictionOf::<T>::mutate(asset_id, |restriction| {
-                restriction.staking_requirement = new;
-            });
-        }
-
-        #[weight = <T as Config>::WeightInfo::set_claim_frequency_limit()]
-        fn set_claim_frequency_limit(origin, #[compact] asset_id: AssetId, #[compact] new: T::BlockNumber) {
-            ensure_root(origin)?;
-            ClaimRestrictionOf::<T>::mutate(asset_id, |restriction| {
-                restriction.frequency_limit = new;
-            });
-        }
-
-        #[weight = <T as Config>::WeightInfo::set_asset_power()]
-        fn set_asset_power(origin, #[compact] asset_id: AssetId, #[compact] new: FixedAssetPower) {
-            ensure_root(origin)?;
-            FixedAssetPowerOf::insert(asset_id, new);
-        }
-    }
-}
-
-impl<T: Config> Module<T> {
+impl<T: Config> Pallet<T> {
     #[inline]
     fn last_claim(who: &T::AccountId, asset_id: &AssetId) -> Option<T::BlockNumber> {
         MinerLedgers::<T>::get(who, asset_id).last_claim

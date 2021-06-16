@@ -2,7 +2,7 @@
 
 #![allow(non_upper_case_globals)]
 
-use frame_support::{assert_noop, assert_ok, storage::StorageValue};
+use frame_support::{assert_noop, assert_ok};
 use sp_core::crypto::{set_default_ss58_version, Ss58AddressFormat};
 
 use light_bitcoin::{

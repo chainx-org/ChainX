@@ -1,10 +1,11 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 use sp_std::ops::Mul;
+use sp_std::vec::Vec;
 
 use super::*;
 
-impl<T: Config> Module<T> {
+impl<T: Config> Pallet<T> {
     /// Returns the force chilled offenders if any after applying the slashings.
     ///
     /// The slashed balances will be moved to the treasury.
