@@ -3,8 +3,10 @@
 use std::{cell::RefCell, convert::TryFrom, time::Duration};
 
 use codec::{Decode, Encode};
-use frame_support::traits::UnixTime;
-use frame_support::{parameter_types, sp_io, traits::GenesisBuild};
+use frame_support::{
+    parameter_types, sp_io,
+    traits::{GenesisBuild, UnixTime},
+};
 use frame_system::EnsureSignedBy;
 use sp_core::{crypto::UncheckedInto, H256};
 use sp_io::hashing::blake2_256;

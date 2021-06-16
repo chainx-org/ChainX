@@ -9,7 +9,7 @@ use frame_support::log::debug;
 use super::*;
 use crate::types::*;
 
-impl<T: Config> Module<T> {
+impl<T: Config> Pallet<T> {
     fn check_bid_price(
         quote: T::Price,
         lowest_ask: T::Price,
