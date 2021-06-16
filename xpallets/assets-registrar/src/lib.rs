@@ -349,7 +349,7 @@ impl<T: Config> Pallet<T> {
     }
 }
 
- #[cfg(feature = "std")]
+#[cfg(feature = "std")]
 impl GenesisConfig {
     /// Direct implementation of `GenesisBuild::assimilate_storage`.
     ///
