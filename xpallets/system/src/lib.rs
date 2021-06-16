@@ -2,38 +2,35 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub use self::pallet::*;
+use sp_std::{collections::btree_map::BTreeMap, prelude::*};
+
+use sp_runtime::traits::StaticLookup;
+
+use frame_support::{
+    dispatch::{CallMetadata, DispatchResultWithPostInfo},
+    traits::Currency,
+};
+
+use frame_system::ensure_root;
+use xp_protocol::NetworkType;
+
+pub use pallet::*;
 
 const PALLET_MARK: &[u8; 1] = b"#";
 const ALWAYS_ALLOW: [&str; 1] = ["Sudo"];
 
-/// The module's config trait.
+/// The pallet's config trait.
 ///
 /// `frame_system::Config` should always be included in our implied traits.
 #[frame_support::pallet]
 pub mod pallet {
-    use sp_std::{collections::btree_map::BTreeMap, marker::PhantomData, vec::Vec};
-
-    #[cfg(feature = "std")]
-    use frame_support::traits::GenesisBuild;
-    use frame_support::{
-        dispatch::{CallMetadata, DispatchResultWithPostInfo},
-        pallet_prelude::{StorageMap, StorageValue, ValueQuery},
-        traits::{Currency, IsType},
-        Blake2_128Concat, Twox64Concat,
-    };
-    use frame_system::pallet_prelude::{ensure_root, OriginFor};
-
-    use sp_runtime::traits::StaticLookup;
-
-    use xp_protocol::NetworkType;
-
     use super::*;
+    use frame_support::pallet_prelude::*;
+    use frame_system::pallet_prelude::*;
 
-    #[pallet::pallet]
-    #[pallet::generate_store(pub(crate) trait Store)]
-    pub struct Pallet<T>(PhantomData<T>);
-
+    /// The pallet's config trait.
+    ///
+    /// `frame_system::Config` should always be included in our implied traits.
     #[pallet::config]
     pub trait Config: frame_system::Config {
         /// The overarching event type.
@@ -42,6 +39,10 @@ pub mod pallet {
         /// The currency mechanism.
         type Currency: Currency<Self::AccountId>;
     }
+
+    #[pallet::pallet]
+    #[pallet::generate_store(pub(crate) trait Store)]
+    pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -108,10 +109,10 @@ pub mod pallet {
         }
     }
 
+    /// Event for the XSystem Pallet
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     #[pallet::metadata(T::AccountId = "AccountId")]
-    /// Event for the XSystem Module
     pub enum Event<T: Config> {
         /// An account was added to the blacklist. [who]
         Blacklisted(T::AccountId),
@@ -119,19 +120,23 @@ pub mod pallet {
         Unblacklisted(T::AccountId),
     }
 
+    /// Error for the XSystem Pallet
+    #[pallet::error]
+    pub enum Error<T> {}
+
+    /// Network property (Mainnet / Testnet).
     #[pallet::storage]
     #[pallet::getter(fn network_props)]
-    /// Network property (Mainnet / Testnet).
     pub type NetworkProps<T> = StorageValue<_, NetworkType, ValueQuery>;
 
+    /// Paused pallet call
     #[pallet::storage]
     #[pallet::getter(fn paused)]
-    /// Paused pallet call.
     pub type Paused<T> = StorageMap<_, Twox64Concat, Vec<u8>, BTreeMap<Vec<u8>, ()>, ValueQuery>;
 
+    /// The accounts that are blocked
     #[pallet::storage]
     #[pallet::getter(fn blacklist)]
-    /// The accounts that are blocked.
     pub type Blacklist<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, bool, ValueQuery>;
 
     #[pallet::genesis_config]
@@ -155,32 +160,32 @@ pub mod pallet {
             NetworkProps::<T>::put(self.network_props);
         }
     }
+}
 
-    impl<T: Config> Pallet<T> {
-        /// Returns true if the given pallet call has been paused.
-        pub fn is_paused(metadata: CallMetadata) -> bool {
-            if ALWAYS_ALLOW.contains(&metadata.pallet_name) {
-                return false;
-            }
-
-            let p = Self::paused(metadata.pallet_name.as_bytes());
-            // check whether this pallet has been paused
-            if p.get(&PALLET_MARK[..]).is_some() {
-                return true;
-            }
-            // check whether this pallet call has been paused
-            if p.get(metadata.function_name.as_bytes()).is_some() {
-                return true;
-            }
-            // no pause
-            false
+impl<T: Config> Pallet<T> {
+    /// Returns true if the given pallet call has been paused.
+    pub fn is_paused(metadata: CallMetadata) -> bool {
+        if ALWAYS_ALLOW.contains(&metadata.pallet_name) {
+            return false;
         }
 
-        /// Returns the blocked account id list.
-        pub fn get_blacklist() -> Vec<T::AccountId> {
-            Blacklist::<T>::iter()
-                .filter_map(|(account, blocked)| if blocked { Some(account) } else { None })
-                .collect()
+        let p = Self::paused(metadata.pallet_name.as_bytes());
+        // check whether this pallet has been paused
+        if p.get(&PALLET_MARK[..]).is_some() {
+            return true;
         }
+        // check whether this pallet call has been paused
+        if p.get(metadata.function_name.as_bytes()).is_some() {
+            return true;
+        }
+        // no pause
+        false
+    }
+
+    /// Returns the blocked account id list.
+    pub fn get_blacklist() -> Vec<T::AccountId> {
+        Blacklist::<T>::iter()
+            .filter_map(|(account, blocked)| if blocked { Some(account) } else { None })
+            .collect()
     }
 }
