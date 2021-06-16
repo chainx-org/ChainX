@@ -44,7 +44,7 @@ frame_support::construct_runtime!(
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
         Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
-        XAssetsRegistrar: xpallet_assets_registrar::{Pallet, Call, Config, Storage, Event},
+        XAssetsRegistrar: xpallet_assets_registrar::{Pallet, Call, Config, Storage, Event<T>},
         XAssets: xpallet_assets::{Pallet, Call, Config<T>, Storage, Event<T>},
         XStaking: xpallet_mining_staking::{Pallet, Call, Storage, Event<T>, Config<T>},
         XMiningAsset: xpallet_mining_asset::{Pallet, Call, Storage, Event<T>, Config<T>} = 28,
