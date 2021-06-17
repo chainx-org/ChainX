@@ -80,101 +80,34 @@ where
     ) -> FeeDetails<BalanceOf<T>>
     where
         T: Send + Sync,
-        BalanceOf<T>: Send + Sync,
+        BalanceOf<T>: Send + Sync + Default,
         T::Call: Dispatchable<Info = DispatchInfo>,
     {
         let dispatch_info = <Extrinsic as GetDispatchInfo>::get_dispatch_info(&unchecked_extrinsic);
-        Self::compute_fee(len, &dispatch_info, 0u32.into())
-    }
-
-    pub fn compute_fee(
-        len: u32,
-        info: &DispatchInfoOf<T::Call>,
-        tip: BalanceOf<T>,
-    ) -> FeeDetails<BalanceOf<T>>
-    where
-        T::Call: Dispatchable<Info = DispatchInfo>,
-    {
-        Self::compute_fee_raw(len, info.weight, tip, info.pays_fee, info.class)
-    }
-
-    /// Returns the details of the actual post dispatch fee for a particular transaction.
-    ///
-    /// Identical to `compute_fee_details` with the only difference that the post dispatch corrected
-    /// weight is used for the weight fee calculation.
-    pub fn compute_actual_fee_details(
-        len: u32,
-        info: &DispatchInfoOf<T::Call>,
-        post_info: &PostDispatchInfoOf<T::Call>,
-        tip: BalanceOf<T>,
-    ) -> FeeDetails<BalanceOf<T>>
-    where
-        T::Call: Dispatchable<Info = DispatchInfo, PostInfo = PostDispatchInfo>,
-    {
-        Self::compute_fee_raw(
+        let details = pallet_transaction_payment::Module::<T>::compute_fee_details(
             len,
-            post_info.calc_actual_weight(info),
-            tip,
-            post_info.pays_fee(info),
-            info.class,
-        )
-    }
-
-    fn compute_fee_raw(
-        len: u32,
-        weight: Weight,
-        tip: BalanceOf<T>,
-        pays_fee: Pays,
-        class: DispatchClass,
-    ) -> FeeDetails<BalanceOf<T>> {
-        if pays_fee == Pays::Yes {
-            let len = <BalanceOf<T>>::from(len);
-            let per_byte = T::TransactionByteFee::get();
-
-            // length fee. this is not adjusted.
-            let fixed_len_fee = per_byte.saturating_mul(len);
-
-            // the adjustable part of the fee.
-            let unadjusted_weight_fee = Self::weight_to_fee(weight);
-
-            let multiplier = pallet_transaction_payment::Module::<T>::next_fee_multiplier();
-            // final adjusted weight fee.
-            let adjusted_weight_fee = multiplier.saturating_mul_int(unadjusted_weight_fee);
-
-            let base_fee = Self::weight_to_fee(T::BlockWeights::get().get(class).base_extrinsic);
-            let total = base_fee
-                .saturating_add(fixed_len_fee)
-                .saturating_add(adjusted_weight_fee)
-                .saturating_add(tip);
-
-            FeeDetails {
-                base: pallet_transaction_payment::FeeDetails {
-                    inclusion_fee: Some(pallet_transaction_payment::InclusionFee {
-                        base_fee,
-                        len_fee: fixed_len_fee,
-                        adjusted_weight_fee,
-                    }),
-                    tip,
-                },
-                extra_fee: 0u32.into(),
-                final_fee: total,
+            &dispatch_info,
+            0u32.into(),
+        );
+        let details_clone = details.clone();
+        match details.inclusion_fee {
+            Some(fee) => {
+                let total = fee
+                    .base_fee
+                    .saturating_add(fee.len_fee)
+                    .saturating_add(fee.adjusted_weight_fee)
+                    .saturating_add(details.tip);
+                FeeDetails {
+                    base: details_clone,
+                    extra_fee: 0u32.into(),
+                    final_fee: total,
+                }
             }
-        } else {
-            FeeDetails {
-                base: pallet_transaction_payment::FeeDetails {
-                    inclusion_fee: None,
-                    tip,
-                },
+            None => FeeDetails {
+                base: details_clone,
                 extra_fee: 0u32.into(),
-                final_fee: tip,
-            }
+                final_fee: details.tip,
+            },
         }
-    }
-
-    fn weight_to_fee(weight: Weight) -> BalanceOf<T> {
-        // cap the weight to the maximum defined in runtime, otherwise it will be the
-        // `Bounded` maximum of its data type, which is not desired.
-        let capped_weight = weight.min(T::BlockWeights::get().max_block);
-        T::WeightToFee::calc(&capped_weight)
     }
 }
