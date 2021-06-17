@@ -41,12 +41,8 @@ pub mod pallet {
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
 
-    #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
-    pub struct Pallet<T>(PhantomData<T>);
-
     #[pallet::config]
-    /// The module's config trait.
+    /// The pallet's config trait.
     ///
     /// `frame_system::Trait` should always be included in our implied traits.
     pub trait Config: frame_system::Config {
@@ -62,6 +58,10 @@ pub mod pallet {
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
     }
+
+    #[pallet::pallet]
+    #[pallet::generate_store(pub(super) trait Store)]
+    pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -167,9 +167,9 @@ pub mod pallet {
         }
     }
 
+    /// Event for the XAssetRegistrar Pallet
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
-    /// Event for the XAssetRegistrar Pallet
     pub enum Event<T: Config> {
         /// A new asset was registered. [asset_id, has_mining_rights]
         Registered(AssetId, bool),
