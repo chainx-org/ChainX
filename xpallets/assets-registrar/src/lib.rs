@@ -239,6 +239,7 @@ pub mod pallet {
         }
     }
 
+    #[cfg(feature = "std")]
     #[pallet::genesis_build]
     impl<T: Config> GenesisBuild<T> for GenesisConfig {
         fn build(&self) {
@@ -346,18 +347,5 @@ impl<T: Config> Pallet<T> {
         RegisteredAt::<T>::insert(&id, frame_system::Pallet::<T>::block_number());
 
         Ok(())
-    }
-}
-
-#[cfg(feature = "std")]
-impl GenesisConfig {
-    /// Direct implementation of `GenesisBuild::assimilate_storage`.
-    ///
-    /// Kept in order not to break dependency.
-    pub fn assimilate_storage<T: Config>(
-        &self,
-        storage: &mut sp_runtime::Storage,
-    ) -> Result<(), String> {
-        <Self as GenesisBuild<T>>::assimilate_storage(self, storage)
     }
 }
