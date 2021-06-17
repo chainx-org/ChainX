@@ -41,10 +41,10 @@ pub mod pallet {
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
 
-    #[pallet::config]
     /// The pallet's config trait.
     ///
     /// `frame_system::Trait` should always be included in our implied traits.
+    #[pallet::config]
     pub trait Config: frame_system::Config {
         /// The overarching event type.
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
