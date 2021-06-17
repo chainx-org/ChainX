@@ -26,9 +26,6 @@ use frame_support::{
 
 use chainx_primitives::{AssetId, Desc, Token};
 
-#[cfg(feature = "std")]
-use frame_support::traits::GenesisBuild;
-
 pub use self::types::AssetInfo;
 pub use self::weights::WeightInfo;
 pub use xp_assets_registrar::{Chain, RegistrarHandler};
@@ -82,6 +79,7 @@ pub mod pallet {
             ensure!(!Self::exists(&asset_id), Error::<T>::AssetAlreadyExists);
 
             info!(
+                target: "runtime::assets-registrar",
                 "[register_asset] id:{}, info:{:?}, is_online:{}, has_mining_rights:{}",
                 asset_id, asset, is_online, has_mining_rights
             );

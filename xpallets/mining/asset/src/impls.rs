@@ -13,7 +13,7 @@ use super::*;
 
 impl<'a, T: Config> BaseMiningWeight<BalanceOf<T>, T::BlockNumber> for AssetLedgerWrapper<'a, T> {
     fn amount(&self) -> BalanceOf<T> {
-        xpallet_assets::Module::<T>::total_issuance(&self.asset_id)
+        xpallet_assets::Pallet::<T>::total_issuance(&self.asset_id)
     }
 
     fn last_acum_weight(&self) -> WeightType {
@@ -35,7 +35,7 @@ impl<'a, T: Config> BaseMiningWeight<BalanceOf<T>, T::BlockNumber> for AssetLedg
 
 impl<'a, T: Config> BaseMiningWeight<BalanceOf<T>, T::BlockNumber> for MinerLedgerWrapper<'a, T> {
     fn amount(&self) -> BalanceOf<T> {
-        xpallet_assets::Module::<T>::all_type_asset_balance(&self.miner, &self.asset_id)
+        xpallet_assets::Pallet::<T>::all_type_asset_balance(&self.miner, &self.asset_id)
     }
 
     fn last_acum_weight(&self) -> WeightType {
@@ -268,7 +268,7 @@ where
 {
     fn reward_pot_account_for(asset_id: &AssetId) -> T::AccountId {
         let id_hash = T::Hashing::hash(&asset_id.to_le_bytes()[..]);
-        let registered_block = <xpallet_assets_registrar::Module<T>>::registered_at(asset_id);
+        let registered_block = <xpallet_assets_registrar::Pallet<T>>::registered_at(asset_id);
         let registered_block_hash =
             <T as frame_system::Config>::Hashing::hash(registered_block.encode().as_ref());
 
@@ -289,7 +289,7 @@ impl<T: Config> xp_mining_staking::AssetMining<BalanceOf<T>> for Pallet<T> {
         // Currently only X-BTC asset.
         FixedAssetPowerOf::<T>::iter()
             .map(|(asset_id, fixed_power)| {
-                let total_issuance = <xpallet_assets::Module<T>>::total_issuance(&asset_id);
+                let total_issuance = <xpallet_assets::Pallet<T>>::total_issuance(&asset_id);
                 (
                     asset_id,
                     total_issuance
