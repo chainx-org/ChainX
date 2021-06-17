@@ -222,10 +222,13 @@ impl ExtBuilder {
             assets_restrictions.push((a, c))
         }
 
-        let _ = xpallet_assets_registrar::GenesisConfig {
-            assets: init_assets,
-        }
-        .assimilate_storage::<Test>(&mut storage);
+        GenesisBuild::<Test>::assimilate_storage(
+            &xpallet_assets_registrar::GenesisConfig {
+                assets: init_assets,
+            },
+            &mut storage,
+        )
+        .unwrap();
 
         let _ = xpallet_assets::GenesisConfig::<Test> {
             assets_restrictions,
@@ -278,10 +281,13 @@ impl ExtBuilder {
             assets_restrictions.push((a, c))
         }
 
-        let _ = xpallet_assets_registrar::GenesisConfig {
-            assets: init_assets,
-        }
-        .assimilate_storage::<Test>(&mut storage);
+        GenesisBuild::<Test>::assimilate_storage(
+            &xpallet_assets_registrar::GenesisConfig {
+                assets: init_assets,
+            },
+            &mut storage,
+        )
+        .unwrap();
 
         let _ = xpallet_assets::GenesisConfig::<Test> {
             assets_restrictions,

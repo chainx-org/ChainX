@@ -239,7 +239,6 @@ pub mod pallet {
         }
     }
 
-    #[cfg(feature = "std")]
     #[pallet::genesis_build]
     impl<T: Config> GenesisBuild<T> for GenesisConfig {
         fn build(&self) {

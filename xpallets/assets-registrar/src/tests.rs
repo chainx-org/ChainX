@@ -1,6 +1,6 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use frame_support::{assert_noop, assert_ok, parameter_types, sp_io};
+use frame_support::{assert_noop, assert_ok, parameter_types, sp_io, traits::GenesisBuild};
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
@@ -98,9 +98,11 @@ impl ExtBuilder {
             .build_storage::<Test>()
             .unwrap();
 
-        xpallet_assets_registrar::GenesisConfig { assets }
-            .assimilate_storage::<Test>(&mut storage)
-            .unwrap();
+        GenesisBuild::<Test>::assimilate_storage(
+            &xpallet_assets_registrar::GenesisConfig { assets },
+            &mut storage,
+        )
+        .unwrap();
 
         let ext = sp_io::TestExternalities::new(storage);
         ext

@@ -192,10 +192,15 @@ impl ExtBuilder {
             init_assets.push((a, b, d, e));
             assets_restrictions.push((a, c))
         }
-        let _ = xpallet_assets_registrar::GenesisConfig {
-            assets: init_assets,
-        }
-        .assimilate_storage::<Test>(&mut storage);
+
+        GenesisBuild::<Test>::assimilate_storage(
+            &xpallet_assets_registrar::GenesisConfig {
+                assets: init_assets,
+            },
+            &mut storage,
+        )
+        .unwrap();
+
         let endowed = BTreeMap::new();
         let _ = xpallet_assets::GenesisConfig::<Test> {
             assets_restrictions,

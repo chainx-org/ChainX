@@ -324,8 +324,12 @@ impl ExtBuilder {
         }
         .assimilate_storage(&mut storage);
 
-        let _ = xpallet_assets_registrar::GenesisConfig { assets: vec![] }
-            .assimilate_storage::<Test>(&mut storage);
+        GenesisBuild::<Test>::assimilate_storage(
+            &xpallet_assets_registrar::GenesisConfig { assets: vec![] },
+            &mut storage,
+        )
+        .unwrap();
+
         let _ = xpallet_assets::GenesisConfig::<Test> {
             assets_restrictions: vec![],
             endowed: BTreeMap::new(),
