@@ -1325,7 +1325,7 @@ impl_runtime_apis! {
                 TransactionPayment::query_info(uxt, len)
             }
         }
-        fn query_fee_details(uxt: <Block as BlockT>::Extrinsic, len: u32) -> pallet_transaction_payment_rpc_runtime_api::FeeDetails<Balance> {
+        fn query_fee_details(uxt: <Block as BlockT>::Extrinsic, len: u32) -> pallet_transaction_payment::FeeDetails<Balance> {
             TransactionPayment::query_fee_details(uxt, len)
         }
     }
@@ -1335,12 +1335,13 @@ impl_runtime_apis! {
             uxt: <Block as BlockT>::Extrinsic,
             len: u32,
         ) -> xpallet_transaction_fee::FeeDetails<Balance> {
+            todo!("migrate");
             if let Some(extra_fee) = ChargeExtraFee::has_extra_fee(&uxt.function) {
-                let base = XTransactionFee::query_fee_details(uxt, len);
+                let details = XTransactionFee::query_fee_details(uxt, len);
                 xpallet_transaction_fee::FeeDetails {
                     extra_fee,
-                    final_fee: base.final_fee + extra_fee,
-                    ..base
+                    final_fee: details.final_fee + extra_fee,
+                    ..details
                 }
             } else {
                 XTransactionFee::query_fee_details(uxt, len)

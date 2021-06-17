@@ -80,10 +80,10 @@ pub type RpcVoteWeight<Weight> = RpcU128<Weight>;
 
 /// A helper struct for handling u128 serialization/deserialization of RPC.
 /// See https://github.com/polkadot-js/api/issues/2464 for details (shit!).
-#[derive(Eq, PartialEq, Copy, Clone, Debug, Serialize, Deserialize, Default)]
+#[derive(Eq, PartialEq, Copy, Clone, Debug, Serialize, Deserialize)]
 pub struct RpcU128<T: Display + FromStr>(#[serde(with = "self::serde_num_str")] T);
 
-impl<T: Display + FromStr + Default> From<T> for RpcU128<T> {
+impl<T: Display + FromStr> From<T> for RpcU128<T> {
     fn from(value: T) -> Self {
         RpcU128(value)
     }

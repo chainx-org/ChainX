@@ -68,16 +68,14 @@ where
 
         api.query_fee_details(&at, uxt, encoded_len)
             .map(|fee_details| FeeDetails {
-                base: pallet_transaction_payment::FeeDetails {
-                    inclusion_fee: fee_details.base.inclusion_fee.map(|fee| {
-                        pallet_transaction_payment::InclusionFee {
-                            base_fee: fee.base_fee.into(),
-                            len_fee: fee.len_fee.into(),
-                            adjusted_weight_fee: fee.adjusted_weight_fee.into(),
-                        }
-                    }),
-                    tip: fee_details.base.tip.into(),
-                },
+                inclusion_fee: fee_details.inclusion_fee.map(|fee| {
+                    pallet_transaction_payment::InclusionFee {
+                        base_fee: fee.base_fee.into(),
+                        len_fee: fee.len_fee.into(),
+                        adjusted_weight_fee: fee.adjusted_weight_fee.into(),
+                    }
+                }),
+                tip: fee_details.tip.into(),
                 extra_fee: fee_details.extra_fee.into(),
                 final_fee: fee_details.final_fee.into(),
             })

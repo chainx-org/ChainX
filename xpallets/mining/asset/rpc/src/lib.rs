@@ -85,8 +85,8 @@ where
     C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
     C::Api: XMiningAssetRuntimeApi<Block, AccountId, Balance, MiningWeight, BlockNumber>,
     AccountId: Codec,
-    Balance: Codec + Display + FromStr + Default,
-    MiningWeight: Codec + Display + FromStr + Default,
+    Balance: Codec + Display + FromStr,
+    MiningWeight: Codec + Display + FromStr,
     BlockNumber: Codec,
 {
     fn mining_assets(

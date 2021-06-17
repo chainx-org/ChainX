@@ -13,20 +13,12 @@
 
 mod types;
 
-use codec::DecodeLimit;
 use sp_std::prelude::*;
 
-use frame_support::{
-    //decl_event, decl_module, pallet,
-    traits::Get,
-    weights::{
-        DispatchClass, DispatchInfo, GetDispatchInfo, Pays, PostDispatchInfo, Weight,
-        WeightToFeePolynomial,
-    },
-};
+use frame_support::weights::{DispatchInfo, GetDispatchInfo};
 use sp_runtime::{
-    traits::{DispatchInfoOf, Dispatchable, PostDispatchInfoOf, Saturating},
-    FixedPointNumber, FixedPointOperand,
+    traits::{Dispatchable, Saturating},
+    FixedPointOperand,
 };
 
 pub use self::types::FeeDetails;
@@ -40,7 +32,6 @@ pub use pallet::*;
 pub mod pallet {
     use super::*;
     use frame_support::pallet_prelude::*;
-    use frame_system::pallet_prelude::*;
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(crate) trait Store)]
@@ -89,7 +80,7 @@ where
             &dispatch_info,
             0u32.into(),
         );
-        let details_clone = details.clone();
+
         match details.inclusion_fee {
             Some(fee) => {
                 let total = fee
@@ -98,13 +89,15 @@ where
                     .saturating_add(fee.adjusted_weight_fee)
                     .saturating_add(details.tip);
                 FeeDetails {
-                    base: details_clone,
+                    inclusion_fee: Some(fee),
+                    tip: details.tip,
                     extra_fee: 0u32.into(),
                     final_fee: total,
                 }
             }
             None => FeeDetails {
-                base: details_clone,
+                inclusion_fee: None,
+                tip: details.tip,
                 extra_fee: 0u32.into(),
                 final_fee: details.tip,
             },
