@@ -52,7 +52,7 @@ where
     Block: BlockT,
     C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
     C::Api: XTransactionFeeRuntimeApi<Block, Balance>,
-    Balance: Codec + MaybeDisplay + MaybeFromStr + Default,
+    Balance: Codec + MaybeDisplay + MaybeFromStr,
 {
     fn query_fee_details(
         &self,
