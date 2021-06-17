@@ -97,7 +97,7 @@ impl<T: Config> Pallet<T> {
     }
 
     fn currency_decimals_of(asset_id: AssetId) -> Option<u8> {
-        <xpallet_assets_registrar::Module<T>>::asset_info_of(asset_id).map(|x| x.decimals())
+        <xpallet_assets_registrar::Pallet<T>>::asset_info_of(asset_id).map(|x| x.decimals())
     }
 
     /// Converts the base currency to the quote currency given the trading pair.

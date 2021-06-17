@@ -44,7 +44,7 @@ frame_support::construct_runtime!(
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
         Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
-        XAssetsRegistrar: xpallet_assets_registrar::{Pallet, Call, Config, Storage, Event},
+        XAssetsRegistrar: xpallet_assets_registrar::{Pallet, Call, Config, Storage, Event<T>},
         XAssets: xpallet_assets::{Pallet, Call, Config<T>, Storage, Event<T>},
         XStaking: xpallet_mining_staking::{Pallet, Call, Storage, Event<T>, Config<T>},
         XMiningAsset: xpallet_mining_asset::{Pallet, Call, Storage, Event<T>, Config<T>} = 28,
@@ -324,8 +324,12 @@ impl ExtBuilder {
         }
         .assimilate_storage(&mut storage);
 
-        let _ = xpallet_assets_registrar::GenesisConfig { assets: vec![] }
-            .assimilate_storage::<Test>(&mut storage);
+        GenesisBuild::<Test>::assimilate_storage(
+            &xpallet_assets_registrar::GenesisConfig { assets: vec![] },
+            &mut storage,
+        )
+        .unwrap();
+
         let _ = xpallet_assets::GenesisConfig::<Test> {
             assets_restrictions: vec![],
             endowed: BTreeMap::new(),
