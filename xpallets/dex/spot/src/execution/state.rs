@@ -7,7 +7,7 @@ use crate::types::Side::{Buy, Sell};
 use sp_runtime::traits::{CheckedAdd, CheckedSub};
 
 /// Internal mutables
-impl<T: Config> Module<T> {
+impl<T: Config> Pallet<T> {
     /// It's worth noting that the handicap is not always related to some real orders, i.e.,
     /// current lowest_ask(or highest_bid) is suprious.
     ///

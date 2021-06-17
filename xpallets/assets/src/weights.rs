@@ -32,7 +32,7 @@ use sp_std::marker::PhantomData;
 pub trait WeightInfo {
     fn transfer() -> Weight;
     fn force_transfer() -> Weight;
-    fn set_balance(n: u32) -> Weight;
+    fn set_balance() -> Weight;
     fn set_asset_limit() -> Weight;
 }
 
@@ -49,7 +49,7 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
             .saturating_add(T::DbWeight::get().reads(8 as Weight))
             .saturating_add(T::DbWeight::get().writes(6 as Weight))
     }
-    fn set_balance(_n: u32) -> Weight {
+    fn set_balance() -> Weight {
         (218_742_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(3 as Weight))
             .saturating_add(T::DbWeight::get().writes(3 as Weight))
@@ -73,7 +73,7 @@ impl WeightInfo for () {
             .saturating_add(RocksDbWeight::get().reads(8 as Weight))
             .saturating_add(RocksDbWeight::get().writes(6 as Weight))
     }
-    fn set_balance(_n: u32) -> Weight {
+    fn set_balance() -> Weight {
         (218_742_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(3 as Weight))
             .saturating_add(RocksDbWeight::get().writes(3 as Weight))

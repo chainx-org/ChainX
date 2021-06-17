@@ -5,7 +5,11 @@ use std::{
     collections::{BTreeMap, HashSet},
 };
 
-use frame_support::{parameter_types, traits::Get, weights::Weight};
+use frame_support::{
+    parameter_types,
+    traits::{GenesisBuild, Get},
+    weights::Weight,
+};
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
