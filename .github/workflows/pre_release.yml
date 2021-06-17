@@ -2,7 +2,7 @@ on:
   push:
     # Sequence of patterns matched against refs/tags
     tags:
-      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+      - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
 
 name: Create Pre-release
 
@@ -17,41 +17,39 @@ jobs:
     env:
       PACKAGE: chainx-runtime
       RUSTC_VERSION: nightly-2020-03-01
+      VERBOSE: 1
 
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-    - uses: actions/setup-python@v2
-      with:
-        python-version: '3.8'
-        architecture: 'x64'
+      - name: Setup Python
+        shell: bash
+        run: |
+        apt update && apt install python3
 
-    - name: Build
-      shell: bash
-      run: |
-        cd /build
-        pwd
-        scripts/ci/dump_spec_version.py
-        ls -la
-        build --json | tee srtool_output.json
-        scripts/ci/generate_release_note.py | tee release_note.md
+      - name: Build
+        shell: bash
+        run: |
+          mv /build/rust-toolchain /build/rust-toolchain.bak
+          build --json | tee srtool_output.json
+          scripts/ci/generate_release_note.py | tee release_note.md
+          mv /build/rust-toolchain.bak /build/rust-toolchain
 
-    - name: Upload release note
-      uses: actions/upload-artifact@v2
-      with:
-        name: release_note.md
-        path: release_note.md
+      - name: Upload release note
+        uses: actions/upload-artifact@v2
+        with:
+          name: release_note.md
+          path: release_note.md
 
-    - name: Upload chainx runtime wasm
-      uses: actions/upload-artifact@v2
-      with:
-        name: chainx_runtime.compact.wasm
-        path: target/srtool/release/wbuild/chainx-runtime/chainx_runtime.compact.wasm
-
+      - name: Upload chainx runtime wasm
+        uses: actions/upload-artifact@v2
+        with:
+          name: chainx_runtime.compact.wasm
+          path: target/srtool/release/wbuild/chainx-runtime/chainx_runtime.compact.wasm
 
   release:
     name: Create Pre-release
-    needs: ['prepare-wasm']
+    needs: ["prepare-wasm"]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -86,53 +84,53 @@ jobs:
         os: [ubuntu-18.04, ubuntu-20.04, ubuntu-latest]
 
     steps:
-    - uses: hecrj/setup-rust-action@master
-      with:
-        rust-version: stable
+      - uses: hecrj/setup-rust-action@master
+        with:
+          rust-version: stable
 
-    - uses: actions/checkout@v1
+      - uses: actions/checkout@v1
 
-    - name: Install Rust toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        target: wasm32-unknown-unknown
-        profile: minimal
-        override: true
-        components: rustfmt, rust-src, clippy
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: wasm32-unknown-unknown
+          profile: minimal
+          override: true
+          components: rustfmt, rust-src, clippy
 
-    - name: Build
-      run: cargo build --release
+      - name: Build
+        run: cargo build --release
 
-    - name: Get the version
-      id: get_version
-      run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/}
+      - name: Get the version
+        id: get_version
+        run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/}
 
-    - name: Upload binaries to release
-      uses: svenstaro/upload-release-action@v1-release
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: target/release/chainx
-        asset_name: chainx-${{ steps.get_version.outputs.VERSION }}-${{ matrix.os }}-x86_64-unknown-linux-gnu
-        tag: ${{ github.ref }}
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v1-release
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: target/release/chainx
+          asset_name: chainx-${{ steps.get_version.outputs.VERSION }}-${{ matrix.os }}-x86_64-unknown-linux-gnu
+          tag: ${{ github.ref }}
 
   publish-wasm:
     name: Publish wasm
-    needs: ['release']
+    needs: ["release"]
     runs-on: ubuntu-latest
 
     steps:
-    - name: Download artifacts
-      uses: actions/download-artifact@v2
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
 
-    - name: Get the version
-      id: get_version
-      run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/}
+      - name: Get the version
+        id: get_version
+        run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/}
 
-    - name: Upload binaries to release
-      uses: svenstaro/upload-release-action@v1-release
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: chainx_runtime.compact.wasm/chainx_runtime.compact.wasm
-        asset_name: chainx_runtime-${{ steps.get_version.outputs.VERSION }}.compact.wasm
-        tag: ${{ github.ref }}
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v1-release
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: chainx_runtime.compact.wasm/chainx_runtime.compact.wasm
+          asset_name: chainx_runtime-${{ steps.get_version.outputs.VERSION }}.compact.wasm
+          tag: ${{ github.ref }}
