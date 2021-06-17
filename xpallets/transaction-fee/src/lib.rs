@@ -17,7 +17,7 @@ use codec::DecodeLimit;
 use sp_std::prelude::*;
 
 use frame_support::{
-    decl_event, decl_module, pallet,
+    //decl_event, decl_module, pallet,
     traits::Get,
     weights::{
         DispatchClass, DispatchInfo, GetDispatchInfo, Pays, PostDispatchInfo, Weight,
@@ -34,26 +34,37 @@ pub use pallet_transaction_payment::InclusionFee;
 
 type BalanceOf<T> = <<T as pallet_transaction_payment::Config>::OnChargeTransaction as pallet_transaction_payment::OnChargeTransaction<T>>::Balance;
 
-pub trait Config: pallet_transaction_payment::Config {}
+pub use pallet::*;
 
-decl_module! {
-    pub struct Module<T: Config> for enum Call where origin: T::Origin {}
-}
+#[frame_support::pallet]
+pub mod pallet {
+    use super::*;
+    use frame_support::pallet_prelude::*;
+    use frame_system::pallet_prelude::*;
 
-decl_event!(
-    /// Event for the XTransactionFee Module
-    pub enum Event<T>
-    where
-        Balance = BalanceOf<T>,
-        <T as frame_system::Config>::AccountId,
-    {
+    #[pallet::pallet]
+    #[pallet::generate_store(pub(crate) trait Store)]
+    pub struct Pallet<T>(PhantomData<T>);
+
+    #[pallet::config]
+    pub trait Config: frame_system::Config + pallet_transaction_payment::Config {
+        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+    }
+
+    #[pallet::call]
+    impl<T: Config> Pallet<T> {}
+
+    #[pallet::event]
+    #[pallet::metadata(T::AccountId = "AccountId", BalanceOf<T> = "Balance")] // Optional
+    #[pallet::generate_deposit(pub(super) fn deposit_event)] // Optional
+    pub enum Event<T: Config> {
         /// Transaction fee was paid to the block author and its reward pot in 1:9.
         /// [author, author_fee, reward_pot, reward_pot_fee]
-        FeePaid(AccountId, Balance, AccountId, Balance),
+        FeePaid(T::AccountId, BalanceOf<T>, T::AccountId, BalanceOf<T>),
     }
-);
+}
 
-impl<T: Config> Module<T>
+impl<T: Config> Pallet<T>
 where
     BalanceOf<T>: FixedPointOperand,
 {
@@ -137,7 +148,7 @@ where
                 .saturating_add(tip);
 
             FeeDetails {
-                partial_details: pallet_transaction_payment::FeeDetails {
+                base: pallet_transaction_payment::FeeDetails {
                     inclusion_fee: Some(pallet_transaction_payment::InclusionFee {
                         base_fee,
                         len_fee: fixed_len_fee,
@@ -150,7 +161,7 @@ where
             }
         } else {
             FeeDetails {
-                partial_details: pallet_transaction_payment::FeeDetails {
+                base: pallet_transaction_payment::FeeDetails {
                     inclusion_fee: None,
                     tip,
                 },

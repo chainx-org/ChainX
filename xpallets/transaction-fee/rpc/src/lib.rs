@@ -20,7 +20,7 @@ use sp_runtime::{
 use pallet_transaction_payment_rpc::Error;
 
 use xp_rpc::RpcBalance;
-use xpallet_transaction_fee_rpc_runtime_api::{FeeDetails, InclusionFee};
+use xpallet_transaction_fee_rpc_runtime_api::FeeDetails;
 
 pub use xpallet_transaction_fee_rpc_runtime_api::XTransactionFeeApi as XTransactionFeeRuntimeApi;
 
@@ -68,27 +68,15 @@ where
 
         api.query_fee_details(&at, uxt, encoded_len)
             .map(|fee_details| FeeDetails {
-                // inclusion_fee: fee_details.inclusion_fee.map(|fee| InclusionFee {
-                //     base_fee: fee.base_fee.into(),
-                //     len_fee: fee.len_fee.into(),
-                //     adjusted_weight_fee: fee.adjusted_weight_fee.into(),
-                // }),
-                // tip: fee_details.tip.into(),
-                // partial_details: {inclusion_fee: fee_details.partial_details.inclusion_fee.map(|fee| InclusionFee {
-                //         base_fee: fee.base_fee.into(),
-                //         len_fee: fee.len_fee.into(),
-                //         adjusted_weight_fee: fee.adjusted_weight_fee.into(),
-                //     }),
-                // tip: fee_details.partial_details.tip.into()},
-                partial_details: pallet_transaction_payment::FeeDetails {
-                    inclusion_fee: fee_details.partial_details.inclusion_fee.map(|fee| {
+                base: pallet_transaction_payment::FeeDetails {
+                    inclusion_fee: fee_details.base.inclusion_fee.map(|fee| {
                         pallet_transaction_payment::InclusionFee {
                             base_fee: fee.base_fee.into(),
                             len_fee: fee.len_fee.into(),
                             adjusted_weight_fee: fee.adjusted_weight_fee.into(),
                         }
                     }),
-                    tip: fee_details.partial_details.tip.into(),
+                    tip: fee_details.base.tip.into(),
                 },
                 extra_fee: fee_details.extra_fee.into(),
                 final_fee: fee_details.final_fee.into(),

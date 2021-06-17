@@ -396,7 +396,9 @@ impl pallet_transaction_payment::Config for Runtime {
     type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
 }
 
-impl xpallet_transaction_fee::Config for Runtime {}
+impl xpallet_transaction_fee::Config for Runtime {
+    type Event = Event;
+}
 
 parameter_types! {
     pub const SessionDuration: BlockNumber = EPOCH_DURATION_IN_BLOCKS;

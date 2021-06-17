@@ -391,7 +391,9 @@ impl pallet_transaction_payment::Config for Runtime {
     type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
 }
 
-impl xpallet_transaction_fee::Config for Runtime {}
+impl xpallet_transaction_fee::Config for Runtime {
+    type Event = Event;
+}
 
 parameter_types! {
     pub const SessionDuration: BlockNumber = EPOCH_DURATION_IN_BLOCKS;
@@ -1324,10 +1326,6 @@ impl_runtime_apis! {
             }
         }
         fn query_fee_details(uxt: <Block as BlockT>::Extrinsic, len: u32) -> pallet_transaction_payment_rpc_runtime_api::FeeDetails<Balance> {
-            //todo!("Migrate ChainX query_fee_details")
-            //In https://github.com/paritytech/substrate/blob/master/frame/transaction-payment/rpc/runtime-api/src/lib.rs , the function(query_fee_details)
-            //in trait(TransactionPaymentApi) returns the result FeeDetails which has been defined in frame before , so there is no need to take
-            // care of the property extra_fee,maybe the function here is useless..
             TransactionPayment::query_fee_details(uxt, len)
         }
     }
@@ -1338,11 +1336,11 @@ impl_runtime_apis! {
             len: u32,
         ) -> xpallet_transaction_fee::FeeDetails<Balance> {
             if let Some(extra_fee) = ChargeExtraFee::has_extra_fee(&uxt.function) {
-                let partial_details = XTransactionFee::query_fee_details(uxt, len);
+                let base = XTransactionFee::query_fee_details(uxt, len);
                 xpallet_transaction_fee::FeeDetails {
                     extra_fee,
-                    final_fee: partial_details.final_fee + extra_fee,
-                    ..partial_details
+                    final_fee: base.final_fee + extra_fee,
+                    ..base
                 }
             } else {
                 XTransactionFee::query_fee_details(uxt, len)
