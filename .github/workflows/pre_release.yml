@@ -17,7 +17,6 @@ jobs:
     env:
       PACKAGE: chainx-runtime
       RUSTC_VERSION: nightly-2020-03-01
-      VERBOSE: 1
 
     steps:
       - uses: actions/checkout@v2
@@ -25,12 +24,14 @@ jobs:
       - name: Setup Python
         shell: bash
         run: |
-        apt update && apt install python3
+          apt update && apt install -y python3
 
       - name: Build
         shell: bash
         run: |
+          cd /build
           mv /build/rust-toolchain /build/rust-toolchain.bak
+          scripts/ci/dump_spec_version.py
           build --json | tee srtool_output.json
           scripts/ci/generate_release_note.py | tee release_note.md
           mv /build/rust-toolchain.bak /build/rust-toolchain
@@ -45,7 +46,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: chainx_runtime.compact.wasm
-          path: target/srtool/release/wbuild/chainx-runtime/chainx_runtime.compact.wasm
+          path: runtime/chainx/target/srtool/release/wbuild/chainx-runtime/chainx_runtime.compact.wasm
 
   release:
     name: Create Pre-release
@@ -93,7 +94,7 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
+          toolchain: nightly-2021-03-01
           target: wasm32-unknown-unknown
           profile: minimal
           override: true
