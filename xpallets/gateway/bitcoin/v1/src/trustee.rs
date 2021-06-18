@@ -285,7 +285,7 @@ impl<T: Config> Pallet<T> {
             return Err(Error::<T>::InvalidSignCount.into());
         };
 
-        xpallet_gateway_records::Module::<T>::process_withdrawals(
+        xpallet_gateway_records::Pallet::<T>::process_withdrawals(
             &withdrawal_id_list,
             Chain::Bitcoin,
         )?;
@@ -408,7 +408,7 @@ impl<T: Config> Pallet<T> {
 
                     // release withdrawal for applications
                     for id in proposal.withdrawal_id_list.iter() {
-                        let _ = xpallet_gateway_records::Module::<T>::recover_withdrawal(
+                        let _ = xpallet_gateway_records::Pallet::<T>::recover_withdrawal(
                             *id,
                             Chain::Bitcoin,
                         );
@@ -568,7 +568,7 @@ fn check_withdraw_tx_impl<T: Config>(
     // withdrawal addr list for account withdrawal application
     let mut appl_withdrawal_list: Vec<(Address, u64)> = Vec::new();
     for withdraw_index in withdrawal_id_list.iter() {
-        let record = xpallet_gateway_records::Module::<T>::pending_withdrawals(withdraw_index)
+        let record = xpallet_gateway_records::Pallet::<T>::pending_withdrawals(withdraw_index)
             .ok_or(Error::<T>::NoWithdrawalRecord)?;
         // record.addr() is base58
         // verify btc address would conveRelayedTx a base58 addr to Address

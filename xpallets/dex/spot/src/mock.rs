@@ -41,7 +41,7 @@ frame_support::construct_runtime!(
     {
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-        XAssetsRegistrar: xpallet_assets_registrar::{Pallet, Call, Config, Storage, Event},
+        XAssetsRegistrar: xpallet_assets_registrar::{Pallet, Call, Config, Storage, Event<T>},
         XAssets: xpallet_assets::{Pallet, Call, Storage, Event<T>, Config<T>},
         XSpot: xpallet_dex_spot::{Pallet, Call, Storage, Event<T>, Config<T>},
     }
@@ -192,10 +192,15 @@ impl ExtBuilder {
             init_assets.push((a, b, d, e));
             assets_restrictions.push((a, c))
         }
-        let _ = xpallet_assets_registrar::GenesisConfig {
-            assets: init_assets,
-        }
-        .assimilate_storage::<Test>(&mut storage);
+
+        GenesisBuild::<Test>::assimilate_storage(
+            &xpallet_assets_registrar::GenesisConfig {
+                assets: init_assets,
+            },
+            &mut storage,
+        )
+        .unwrap();
+
         let endowed = BTreeMap::new();
         let _ = xpallet_assets::GenesisConfig::<Test> {
             assets_restrictions,

@@ -182,7 +182,7 @@ pub mod pallet {
 
 impl<T: Config> Pallet<T> {
     fn ensure_asset_belongs_to_chain(asset_id: AssetId, expected_chain: Chain) -> DispatchResult {
-        let asset_chain = xpallet_assets_registrar::Module::<T>::chain_of(&asset_id)?;
+        let asset_chain = xpallet_assets_registrar::Pallet::<T>::chain_of(&asset_id)?;
         ensure!(asset_chain == expected_chain, Error::<T>::UnexpectedChain);
         Ok(())
     }
@@ -192,7 +192,7 @@ impl<T: Config> Pallet<T> {
         asset_id: AssetId,
         value: BalanceOf<T>,
     ) -> DispatchResult {
-        let available = xpallet_assets::Module::<T>::usable_balance(who, &asset_id);
+        let available = xpallet_assets::Pallet::<T>::usable_balance(who, &asset_id);
         ensure!(
             available >= value,
             xpallet_assets::Error::<T>::InsufficientBalance
@@ -214,7 +214,7 @@ impl<T: Config> Pallet<T> {
     ///
     /// NOTE: this function has included deposit_init and deposit_finish (not wait for block confirm)
     pub fn deposit(who: &T::AccountId, asset_id: AssetId, balance: BalanceOf<T>) -> DispatchResult {
-        xpallet_assets::Module::<T>::ensure_not_native_asset(&asset_id)?;
+        xpallet_assets::Pallet::<T>::ensure_not_native_asset(&asset_id)?;
 
         info!(
             target: "runtime::gateway::records",
@@ -222,7 +222,7 @@ impl<T: Config> Pallet<T> {
             who, asset_id, balance
         );
 
-        xpallet_assets::Module::<T>::issue(&asset_id, who, balance)?;
+        xpallet_assets::Pallet::<T>::issue(&asset_id, who, balance)?;
         Self::deposit_event(Event::<T>::Deposited(who.clone(), asset_id, balance));
         Ok(())
     }
@@ -239,7 +239,7 @@ impl<T: Config> Pallet<T> {
         addr: AddrStr,
         ext: Memo,
     ) -> DispatchResult {
-        xpallet_assets::Module::<T>::ensure_not_native_asset(&asset_id)?;
+        xpallet_assets::Pallet::<T>::ensure_not_native_asset(&asset_id)?;
         Self::ensure_withdrawal_available_balance(who, asset_id, balance)?;
 
         let id = Self::id();
@@ -515,7 +515,7 @@ impl<T: Config> Pallet<T> {
     }
 
     fn lock(who: &T::AccountId, asset_id: AssetId, value: BalanceOf<T>) -> DispatchResult {
-        xpallet_assets::Module::<T>::move_balance(
+        xpallet_assets::Pallet::<T>::move_balance(
             &asset_id,
             who,
             AssetType::Usable,
@@ -528,7 +528,7 @@ impl<T: Config> Pallet<T> {
     }
 
     fn unlock(who: &T::AccountId, asset_id: AssetId, value: BalanceOf<T>) -> DispatchResult {
-        xpallet_assets::Module::<T>::move_balance(
+        xpallet_assets::Pallet::<T>::move_balance(
             &asset_id,
             who,
             AssetType::ReservedWithdrawal,
@@ -541,7 +541,7 @@ impl<T: Config> Pallet<T> {
     }
 
     fn destroy(who: &T::AccountId, asset_id: AssetId, value: BalanceOf<T>) -> DispatchResult {
-        xpallet_assets::Module::<T>::destroy_reserved_withdrawal(&asset_id, &who, value)?;
+        xpallet_assets::Pallet::<T>::destroy_reserved_withdrawal(&asset_id, &who, value)?;
         Ok(())
     }
 }
