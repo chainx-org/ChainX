@@ -205,7 +205,7 @@ impl TradingPairProfile {
 
     /// The maximum ticks that the price can deviate from the handicap.
     pub fn calc_fluctuation<T: Config>(&self) -> Tick {
-        let price_fluctuation = <Module<T>>::price_fluctuation_of(self.id);
+        let price_fluctuation = <Pallet<T>>::price_fluctuation_of(self.id);
         price_fluctuation
             .saturated_into::<Tick>()
             .saturating_mul(self.tick())

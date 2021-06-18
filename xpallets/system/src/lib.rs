@@ -7,71 +7,55 @@ use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 use sp_runtime::traits::StaticLookup;
 
 use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage,
     dispatch::{CallMetadata, DispatchResult},
     traits::Currency,
-    IterableStorageMap,
 };
-use frame_system::ensure_root;
 
+use frame_system::ensure_root;
 use xp_protocol::NetworkType;
+
+pub use pallet::*;
 
 const PALLET_MARK: &[u8; 1] = b"#";
 const ALWAYS_ALLOW: [&str; 1] = ["Sudo"];
 
-/// The module's config trait.
+/// The pallet's config trait.
 ///
 /// `frame_system::Config` should always be included in our implied traits.
-pub trait Config: frame_system::Config {
-    /// The overarching event type.
-    type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
+#[frame_support::pallet]
+pub mod pallet {
+    use super::*;
+    use frame_support::pallet_prelude::*;
+    use frame_system::pallet_prelude::*;
 
-    /// The currency mechanism.
-    type Currency: Currency<Self::AccountId>;
-}
+    /// The pallet's config trait.
+    ///
+    /// `frame_system::Config` should always be included in our implied traits.
+    #[pallet::config]
+    pub trait Config: frame_system::Config {
+        /// The overarching event type.
+        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-decl_error! {
-    /// Error for the XSystem Module
-    pub enum Error for Module<T: Config> {}
-}
-
-decl_event!(
-    /// Event for the XSystem Module
-    pub enum Event<T>
-    where
-        <T as frame_system::Config>::AccountId,
-    {
-        /// An account was added to the blacklist. [who]
-        Blacklisted(AccountId),
-        /// An account was removed from the blacklist. [who]
-        Unblacklisted(AccountId),
+        /// The currency mechanism.
+        type Currency: Currency<Self::AccountId>;
     }
-);
 
-decl_storage! {
-    trait Store for Module<T: Config> as XSystem {
-        /// Network property (Mainnet / Testnet).
-        pub NetworkProps get(fn network_props) config(): NetworkType;
+    #[pallet::pallet]
+    #[pallet::generate_store(pub(crate) trait Store)]
+    pub struct Pallet<T>(PhantomData<T>);
 
-        /// Paused pallet call.
-        pub Paused get(fn paused): map hasher(twox_64_concat) Vec<u8> => BTreeMap<Vec<u8>, ()>;
-
-        /// The accounts that are blocked.
-        pub Blacklist get(fn blacklist): map hasher(blake2_128_concat) T::AccountId => bool;
-    }
-}
-
-decl_module! {
-    pub struct Module<T: Config> for enum Call where origin: T::Origin {
-        type Error = Error<T>;
-
-        fn deposit_event() = default;
-
+    #[pallet::call]
+    impl<T: Config> Pallet<T> {
         /// Modify the paused status of the given pallet call.
         ///
         /// This is a root-only operation.
-        #[weight = 0]
-        pub fn modify_paused(origin, pallet: Vec<u8>, call: Option<Vec<u8>>, should_paused: bool) -> DispatchResult {
+        #[pallet::weight(0)]
+        pub fn modify_paused(
+            origin: OriginFor<T>,
+            pallet: Vec<u8>,
+            call: Option<Vec<u8>>,
+            should_paused: bool,
+        ) -> DispatchResult {
             ensure_root(origin)?;
 
             let mut paused = Self::paused(&pallet);
@@ -95,9 +79,9 @@ decl_module! {
             }
 
             if paused.is_empty() {
-                Paused::remove(&pallet);
+                Paused::<T>::remove(&pallet);
             } else {
-                Paused::insert(pallet, paused);
+                Paused::<T>::insert(pallet, paused);
             }
             Ok(())
         }
@@ -105,8 +89,12 @@ decl_module! {
         /// Toggle the blacklist status of the given account id.
         ///
         /// This is a root-only operation.
-        #[weight = 0]
-        fn toggle_blacklist(origin, who: <T::Lookup as StaticLookup>::Source, should_blacklist: bool) -> DispatchResult {
+        #[pallet::weight(0)]
+        fn toggle_blacklist(
+            origin: OriginFor<T>,
+            who: <T::Lookup as StaticLookup>::Source,
+            should_blacklist: bool,
+        ) -> DispatchResult {
             ensure_root(origin)?;
 
             let who = T::Lookup::lookup(who)?;
@@ -120,9 +108,56 @@ decl_module! {
             Ok(())
         }
     }
+
+    /// Event for the XSystem Pallet
+    #[pallet::event]
+    #[pallet::generate_deposit(pub(crate) fn deposit_event)]
+    #[pallet::metadata(T::AccountId = "AccountId")]
+    pub enum Event<T: Config> {
+        /// An account was added to the blacklist. [who]
+        Blacklisted(T::AccountId),
+        /// An account was removed from the blacklist. [who]
+        Unblacklisted(T::AccountId),
+    }
+
+    /// Network property (Mainnet / Testnet).
+    #[pallet::storage]
+    #[pallet::getter(fn network_props)]
+    pub type NetworkProps<T> = StorageValue<_, NetworkType, ValueQuery>;
+
+    /// Paused pallet call
+    #[pallet::storage]
+    #[pallet::getter(fn paused)]
+    pub type Paused<T> = StorageMap<_, Twox64Concat, Vec<u8>, BTreeMap<Vec<u8>, ()>, ValueQuery>;
+
+    /// The accounts that are blocked
+    #[pallet::storage]
+    #[pallet::getter(fn blacklist)]
+    pub type Blacklist<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, bool, ValueQuery>;
+
+    #[pallet::genesis_config]
+    pub struct GenesisConfig {
+        pub network_props: NetworkType,
+    }
+
+    #[cfg(feature = "std")]
+    impl Default for GenesisConfig {
+        fn default() -> Self {
+            Self {
+                network_props: Default::default(),
+            }
+        }
+    }
+
+    #[pallet::genesis_build]
+    impl<T: Config> GenesisBuild<T> for GenesisConfig {
+        fn build(&self) {
+            NetworkProps::<T>::put(self.network_props);
+        }
+    }
 }
 
-impl<T: Config> Module<T> {
+impl<T: Config> Pallet<T> {
     /// Returns true if the given pallet call has been paused.
     pub fn is_paused(metadata: CallMetadata) -> bool {
         if ALWAYS_ALLOW.contains(&metadata.pallet_name) {

@@ -5,7 +5,7 @@
 use super::*;
 use xpallet_assets::AssetType::{self, ReservedDexSpot, Usable};
 
-impl<T: Config> Module<T> {
+impl<T: Config> Pallet<T> {
     /// Delivery the assets to maker and taker respectively when executing the order.
     pub(super) fn delivery_asset_to_each_other(
         maker_order_side: Side,

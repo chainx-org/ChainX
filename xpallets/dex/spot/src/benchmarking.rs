@@ -88,7 +88,7 @@ benchmarks! {
     set_price_fluctuation {
     }: _(RawOrigin::Root, PAIR_ID, 1000)
     verify {
-        assert_eq!(PriceFluctuationOf::get(PAIR_ID), 1000);
+        assert_eq!(PriceFluctuationOf::<T>::get(PAIR_ID), 1000);
     }
 
     add_trading_pair {

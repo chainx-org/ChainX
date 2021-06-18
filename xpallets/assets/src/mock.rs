@@ -8,7 +8,7 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 
-use frame_support::{parameter_types, sp_io};
+use frame_support::{parameter_types, sp_io, traits::GenesisBuild};
 
 use chainx_primitives::AssetId;
 pub use xp_protocol::X_BTC;

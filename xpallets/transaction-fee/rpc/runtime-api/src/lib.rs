@@ -1,18 +1,18 @@
-// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+// // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-//! Runtime API definition for transaction fee module.
+// //! Runtime API definition for transaction fee module.
 
-#![cfg_attr(not(feature = "std"), no_std)]
+// #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::Codec;
-use sp_runtime::traits::{MaybeDisplay, MaybeFromStr};
+// use codec::Codec;
+// use sp_runtime::traits::{MaybeDisplay, MaybeFromStr};
 
-pub use xpallet_transaction_fee::{FeeDetails, InclusionFee};
+// pub use xpallet_transaction_fee::{FeeDetails, InclusionFee};
 
-sp_api::decl_runtime_apis! {
-    pub trait XTransactionFeeApi<Balance: Default> where
-        Balance: Codec + MaybeDisplay + MaybeFromStr,
-    {
-        fn query_fee_details(uxt: Block::Extrinsic, len: u32) -> FeeDetails<Balance>;
-    }
-}
+// sp_api::decl_runtime_apis! {
+//     pub trait XTransactionFeeApi<Balance> where
+//         Balance: Codec + MaybeDisplay + MaybeFromStr,
+//     {
+//         fn query_fee_details(uxt: Block::Extrinsic, len: u32) -> FeeDetails<Balance>;
+//     }
+// }
