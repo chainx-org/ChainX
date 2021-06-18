@@ -2,30 +2,28 @@
 
 //! RPC interface for the transaction fee module.
 
-use codec::{Codec, Decode};
-use jsonrpc_core::serde_json::Number;
-use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
-use jsonrpc_derive::rpc;
-use sp_runtime::generic::Header;
 use std::fmt::Debug;
 use std::sync::Arc;
 
-use chainx_runtime::impls::ChargeExtraFee;
-use chainx_runtime::UncheckedExtrinsic;
-use pallet_transaction_payment::InclusionFee;
-use pallet_transaction_payment_rpc::Error;
+use codec::{Codec, Decode};
+use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
+use jsonrpc_derive::rpc;
+
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_core::Bytes;
 use sp_runtime::{
-    generic,
     generic::BlockId,
     traits::{Block as BlockT, MaybeDisplay, MaybeFromStr},
 };
-use xp_rpc::{RpcBalance, RpcU128};
-use xpallet_transaction_fee::FeeDetails;
-//pub use xpallet_transaction_fee_rpc_runtime_api::XTransactionFeeApi as XTransactionFeeRuntimeApi;
-pub use pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi as XTransactionFeeRuntimeApi;
+
+use pallet_transaction_payment_rpc::Error;
+
+use xp_rpc::RpcBalance;
+use xpallet_transaction_fee_rpc_runtime_api::{FeeDetails, InclusionFee};
+
+pub use xpallet_transaction_fee_rpc_runtime_api::XTransactionFeeApi as XTransactionFeeRuntimeApi;
+
 #[rpc]
 pub trait XTransactionFeeApi<BlockHash, ResponseType> {
     #[rpc(name = "xfee_queryDetails")]
@@ -55,7 +53,6 @@ where
     C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
     C::Api: XTransactionFeeRuntimeApi<Block, Balance>,
     Balance: Codec + MaybeDisplay + MaybeFromStr,
-    RpcU128<Balance>: From<u32> + From<u128>,
 {
     fn query_fee_details(
         &self,
@@ -67,49 +64,20 @@ where
 
         let encoded_len = encoded_xt.len() as u32;
 
-        let uxt: <Block as BlockT>::Extrinsic =
-            Decode::decode(&mut &*encoded_xt).map_err(into_rpc_err)?;
+        let uxt: Block::Extrinsic = Decode::decode(&mut &*encoded_xt).map_err(into_rpc_err)?;
 
-        let result = api
-            .query_fee_details(&at, uxt, encoded_len)
-            .map(|fee_details| pallet_transaction_payment::FeeDetails {
+        api.query_fee_details(&at, uxt, encoded_len)
+            .map(|fee_details| FeeDetails {
                 inclusion_fee: fee_details.inclusion_fee.map(|fee| InclusionFee {
                     base_fee: fee.base_fee.into(),
                     len_fee: fee.len_fee.into(),
                     adjusted_weight_fee: fee.adjusted_weight_fee.into(),
                 }),
                 tip: fee_details.tip.into(),
+                extra_fee: fee_details.extra_fee.into(),
+                final_fee: fee_details.final_fee.into(),
             })
-            .map_err(into_rpc_err);
-        let base = match result {
-            Ok(res) => res,
-            Err(Error) => return Err(Error),
-        };
-        let uxt_clone = uxt.clone();
-        if let Some(extra_fee) = ChargeExtraFee::has_extra_fee(&uxt.function) {
-            let base_clone = base.clone();
-            let total = match base.inclusion_fee {
-                Some(fee) => fee
-                    .base_fee
-                    .saturating_add(fee.len_fee)
-                    .saturating_add(fee.adjusted_weight_fee)
-                    .saturating_add(base.tip),
-                None => 0,
-            };
-            Ok(FeeDetails {
-                inclusion_fee: base_clone.inclusion_fee,
-                tip: base.tip,
-                extra_fee: extra_fee.into(),
-                final_fee: total + extra_fee,
-            })
-        } else {
-            Ok(FeeDetails {
-                inclusion_fee: base.inclusion_fee,
-                tip: base.tip,
-                extra_fee: 0u32.into(),
-                final_fee: base.tip,
-            })
-        }
+            .map_err(into_rpc_err)
     }
 }
 

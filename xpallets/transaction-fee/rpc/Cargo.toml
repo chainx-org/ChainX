@@ -27,8 +27,6 @@ pallet-transaction-payment = { version = "3.0.0", default-features = false }
 xp-rpc = { path = "../../../primitives/rpc" }
 
 # ChainX pallets api
-chainx-runtime = {path = "../../../runtime/chainx",default-features = false}
-xpallet-transaction-fee = { path = "../", default-features = false }
 xpallet-transaction-fee-rpc-runtime-api = { path = "./runtime-api" }
 
 
