@@ -420,8 +420,7 @@ impl frame_support::traits::ValidatorSet<AccountId> for Runtime {
     }
 
     fn validators() -> Vec<Self::ValidatorId> {
-        // TODO: return the active validator set in Staking.
-        Session::validators()
+        XStaking::active_validator_set().collect()
     }
 }
 
