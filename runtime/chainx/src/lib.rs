@@ -422,8 +422,7 @@ impl frame_support::traits::ValidatorSet<AccountId> for Runtime {
     }
 
     fn validators() -> Vec<Self::ValidatorId> {
-        // TODO: return the active validator set in Staking.
-        Session::validators()
+        XStaking::active_validator_set().collect()
     }
 }
 
@@ -1149,355 +1148,311 @@ pub type Executive = frame_executive::Executive<
 >;
 
 impl_runtime_apis! {
-impl sp_api::Core<Block> for Runtime {
-    fn version() -> RuntimeVersion {
-        VERSION
-    }
+    impl sp_api::Core<Block> for Runtime {
+        fn version() -> RuntimeVersion {
+            VERSION
+        }
 
-    fn execute_block(block: Block) {
-        Executive::execute_block(block)
-    }
+        fn execute_block(block: Block) {
+            Executive::execute_block(block)
+        }
 
-    fn initialize_block(header: &<Block as BlockT>::Header) {
-        Executive::initialize_block(header)
-    }
-}
-
-impl sp_api::Metadata<Block> for Runtime {
-    fn metadata() -> OpaqueMetadata {
-        Runtime::metadata().into()
-    }
-}
-
-impl sp_block_builder::BlockBuilder<Block> for Runtime {
-    fn apply_extrinsic(extrinsic: <Block as BlockT>::Extrinsic) -> ApplyExtrinsicResult {
-        Executive::apply_extrinsic(extrinsic)
-    }
-
-    fn finalize_block() -> <Block as BlockT>::Header {
-        Executive::finalize_block()
-    }
-
-    fn inherent_extrinsics(data: sp_inherents::InherentData) -> Vec<<Block as BlockT>::Extrinsic> {
-        data.create_extrinsics()
-    }
-
-    fn check_inherents(
-        block: Block,
-        data: sp_inherents::InherentData,
-    ) -> sp_inherents::CheckInherentsResult {
-        data.check_extrinsics(&block)
-    }
-}
-
-impl sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block> for Runtime {
-    fn validate_transaction(
-        source: TransactionSource,
-        tx: <Block as BlockT>::Extrinsic,
-    ) -> TransactionValidity {
-        Executive::validate_transaction(source, tx)
-    }
-}
-
-impl sp_offchain::OffchainWorkerApi<Block> for Runtime {
-    fn offchain_worker(header: &<Block as BlockT>::Header) {
-        Executive::offchain_worker(header)
-    }
-}
-
-impl sp_consensus_babe::BabeApi<Block> for Runtime {
-    fn configuration() -> sp_consensus_babe::BabeGenesisConfiguration {
-        // The choice of `c` parameter (where `1 - c` represents the
-        // probability of a slot being empty), is done in accordance to the
-        // slot duration and expected target block time, for safely
-        // resisting network delays of maximum two seconds.
-        // <https://research.web3.foundation/en/latest/polkadot/BABE/Babe/#6-practical-results>
-        sp_consensus_babe::BabeGenesisConfiguration {
-            slot_duration: Babe::slot_duration(),
-            epoch_length: EpochDuration::get(),
-            c: PRIMARY_PROBABILITY,
-            genesis_authorities: Babe::authorities(),
-            randomness: Babe::randomness(),
-            allowed_slots: sp_consensus_babe::AllowedSlots::PrimaryAndSecondaryVRFSlots,
+        fn initialize_block(header: &<Block as BlockT>::Header) {
+            Executive::initialize_block(header)
         }
     }
 
-    fn current_epoch_start() -> sp_consensus_babe::Slot {
-        Babe::current_epoch_start()
+    impl sp_api::Metadata<Block> for Runtime {
+        fn metadata() -> OpaqueMetadata {
+            Runtime::metadata().into()
+        }
     }
 
-    fn current_epoch() -> sp_consensus_babe::Epoch {
-        Babe::current_epoch()
+    impl sp_block_builder::BlockBuilder<Block> for Runtime {
+        fn apply_extrinsic(extrinsic: <Block as BlockT>::Extrinsic) -> ApplyExtrinsicResult {
+            Executive::apply_extrinsic(extrinsic)
+        }
+
+        fn finalize_block() -> <Block as BlockT>::Header {
+            Executive::finalize_block()
+        }
+
+        fn inherent_extrinsics(data: sp_inherents::InherentData) -> Vec<<Block as BlockT>::Extrinsic> {
+            data.create_extrinsics()
+        }
+
+        fn check_inherents(
+            block: Block,
+            data: sp_inherents::InherentData,
+        ) -> sp_inherents::CheckInherentsResult {
+            data.check_extrinsics(&block)
+        }
     }
 
-    fn next_epoch() -> sp_consensus_babe::Epoch {
-        Babe::next_epoch()
+    impl sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block> for Runtime {
+        fn validate_transaction(
+            source: TransactionSource,
+            tx: <Block as BlockT>::Extrinsic,
+        ) -> TransactionValidity {
+            Executive::validate_transaction(source, tx)
+        }
     }
 
-    fn generate_key_ownership_proof(
-        _slot: sp_consensus_babe::Slot,
-        authority_id: sp_consensus_babe::AuthorityId,
-    ) -> Option<sp_consensus_babe::OpaqueKeyOwnershipProof> {
-        Historical::prove((sp_consensus_babe::KEY_TYPE, authority_id))
-            .map(|p| p.encode())
-            .map(sp_consensus_babe::OpaqueKeyOwnershipProof::new)
+    impl sp_offchain::OffchainWorkerApi<Block> for Runtime {
+        fn offchain_worker(header: &<Block as BlockT>::Header) {
+            Executive::offchain_worker(header)
+        }
     }
 
-    fn submit_report_equivocation_unsigned_extrinsic(
-        equivocation_proof: sp_consensus_babe::EquivocationProof<<Block as BlockT>::Header>,
-        key_owner_proof: sp_consensus_babe::OpaqueKeyOwnershipProof,
-    ) -> Option<()> {
-        let key_owner_proof = key_owner_proof.decode()?;
-
-        Babe::submit_unsigned_equivocation_report(
-            equivocation_proof,
-            key_owner_proof,
-        )
-    }
-}
-
-impl sp_session::SessionKeys<Block> for Runtime {
-    fn generate_session_keys(seed: Option<Vec<u8>>) -> Vec<u8> {
-        SessionKeys::generate(seed)
-    }
-
-    fn decode_session_keys(
-        encoded: Vec<u8>,
-    ) -> Option<Vec<(Vec<u8>, KeyTypeId)>> {
-        SessionKeys::decode_into_raw_public_keys(&encoded)
-    }
-}
-
-impl fg_primitives::GrandpaApi<Block> for Runtime {
-    fn grandpa_authorities() -> GrandpaAuthorityList {
-        Grandpa::grandpa_authorities()
-    }
-
-    fn submit_report_equivocation_unsigned_extrinsic(
-        equivocation_proof: fg_primitives::EquivocationProof<
-            <Block as BlockT>::Hash,
-            NumberFor<Block>,
-        >,
-        key_owner_proof: fg_primitives::OpaqueKeyOwnershipProof,
-    ) -> Option<()> {
-        let key_owner_proof = key_owner_proof.decode()?;
-
-        Grandpa::submit_unsigned_equivocation_report(
-            equivocation_proof,
-            key_owner_proof,
-        )
-    }
-
-    fn generate_key_ownership_proof(
-        _set_id: fg_primitives::SetId,
-        authority_id: GrandpaId,
-    ) -> Option<fg_primitives::OpaqueKeyOwnershipProof> {
-        Historical::prove((fg_primitives::KEY_TYPE, authority_id))
-            .map(|p| p.encode())
-            .map(fg_primitives::OpaqueKeyOwnershipProof::new)
-    }
-}
-
-impl sp_authority_discovery::AuthorityDiscoveryApi<Block> for Runtime {
-    fn authorities() -> Vec<AuthorityDiscoveryId> {
-        AuthorityDiscovery::authorities()
-    }
-}
-
-impl frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Index> for Runtime {
-    fn account_nonce(account: AccountId) -> Index {
-        System::account_nonce(account)
-    }
-}
-
-impl pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance> for Runtime {
-    fn query_info(
-        uxt: <Block as BlockT>::Extrinsic,
-        len: u32,
-    ) -> pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo<Balance> {
-        if let Some(extra_fee) = ChargeExtraFee::has_extra_fee(&uxt.function) {
-            let base_info = TransactionPayment::query_info(uxt, len);
-            pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo {
-                partial_fee: base_info.partial_fee + extra_fee,
-                ..base_info
+    impl sp_consensus_babe::BabeApi<Block> for Runtime {
+        fn configuration() -> sp_consensus_babe::BabeGenesisConfiguration {
+            // The choice of `c` parameter (where `1 - c` represents the
+            // probability of a slot being empty), is done in accordance to the
+            // slot duration and expected target block time, for safely
+            // resisting network delays of maximum two seconds.
+            // <https://research.web3.foundation/en/latest/polkadot/BABE/Babe/#6-practical-results>
+            sp_consensus_babe::BabeGenesisConfiguration {
+                slot_duration: Babe::slot_duration(),
+                epoch_length: EpochDuration::get(),
+                c: PRIMARY_PROBABILITY,
+                genesis_authorities: Babe::authorities(),
+                randomness: Babe::randomness(),
+                allowed_slots: sp_consensus_babe::AllowedSlots::PrimaryAndSecondaryVRFSlots,
             }
-        } else {
-            TransactionPayment::query_info(uxt, len)
+        }
+
+        fn current_epoch_start() -> sp_consensus_babe::Slot {
+            Babe::current_epoch_start()
+        }
+
+        fn current_epoch() -> sp_consensus_babe::Epoch {
+            Babe::current_epoch()
+        }
+
+        fn next_epoch() -> sp_consensus_babe::Epoch {
+            Babe::next_epoch()
+        }
+
+        fn generate_key_ownership_proof(
+            _slot: sp_consensus_babe::Slot,
+            authority_id: sp_consensus_babe::AuthorityId,
+        ) -> Option<sp_consensus_babe::OpaqueKeyOwnershipProof> {
+            Historical::prove((sp_consensus_babe::KEY_TYPE, authority_id))
+                .map(|p| p.encode())
+                .map(sp_consensus_babe::OpaqueKeyOwnershipProof::new)
+        }
+
+        fn submit_report_equivocation_unsigned_extrinsic(
+            equivocation_proof: sp_consensus_babe::EquivocationProof<<Block as BlockT>::Header>,
+            key_owner_proof: sp_consensus_babe::OpaqueKeyOwnershipProof,
+        ) -> Option<()> {
+            let key_owner_proof = key_owner_proof.decode()?;
+
+            Babe::submit_unsigned_equivocation_report(
+                equivocation_proof,
+                key_owner_proof,
+            )
         }
     }
-    fn query_fee_details(uxt: <Block as BlockT>::Extrinsic, len: u32) -> pallet_transaction_payment::FeeDetails<Balance> {
-        TransactionPayment::query_fee_details(uxt, len)
-    }
-}
 
-impl xpallet_transaction_fee_rpc_runtime_api::XTransactionFeeApi<Block, Balance> for Runtime {
-    fn query_fee_details(
-        uxt: <Block as BlockT>::Extrinsic,
-        len: u32,
-    ) -> xpallet_transaction_fee::FeeDetails<Balance> {
+    impl sp_session::SessionKeys<Block> for Runtime {
+        fn generate_session_keys(seed: Option<Vec<u8>>) -> Vec<u8> {
+            SessionKeys::generate(seed)
+        }
+
+        fn decode_session_keys(
+            encoded: Vec<u8>,
+        ) -> Option<Vec<(Vec<u8>, KeyTypeId)>> {
+            SessionKeys::decode_into_raw_public_keys(&encoded)
+        }
+    }
+
+    impl fg_primitives::GrandpaApi<Block> for Runtime {
+        fn grandpa_authorities() -> GrandpaAuthorityList {
+            Grandpa::grandpa_authorities()
+        }
+
+        fn submit_report_equivocation_unsigned_extrinsic(
+            equivocation_proof: fg_primitives::EquivocationProof<
+                <Block as BlockT>::Hash,
+                NumberFor<Block>,
+            >,
+            key_owner_proof: fg_primitives::OpaqueKeyOwnershipProof,
+        ) -> Option<()> {
+            let key_owner_proof = key_owner_proof.decode()?;
+
+            Grandpa::submit_unsigned_equivocation_report(
+                equivocation_proof,
+                key_owner_proof,
+            )
+        }
+
+        fn generate_key_ownership_proof(
+            _set_id: fg_primitives::SetId,
+            authority_id: GrandpaId,
+        ) -> Option<fg_primitives::OpaqueKeyOwnershipProof> {
+            Historical::prove((fg_primitives::KEY_TYPE, authority_id))
+                .map(|p| p.encode())
+                .map(fg_primitives::OpaqueKeyOwnershipProof::new)
+        }
+    }
+
+    impl sp_authority_discovery::AuthorityDiscoveryApi<Block> for Runtime {
+        fn authorities() -> Vec<AuthorityDiscoveryId> {
+            AuthorityDiscovery::authorities()
+        }
+    }
+
+    impl frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Index> for Runtime {
+        fn account_nonce(account: AccountId) -> Index {
+            System::account_nonce(account)
+        }
+    }
+
+    impl pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance> for Runtime {
+        fn query_info(
+            uxt: <Block as BlockT>::Extrinsic,
+            len: u32,
+        ) -> pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo<Balance> {
+            if let Some(extra_fee) = ChargeExtraFee::has_extra_fee(&uxt.function) {
+                let base_info = TransactionPayment::query_info(uxt, len);
+                pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo {
+                    partial_fee: base_info.partial_fee + extra_fee,
+                    ..base_info
+                }
+            } else {
+                TransactionPayment::query_info(uxt, len)
+            }
+        }
+        fn query_fee_details(uxt: <Block as BlockT>::Extrinsic, len: u32) -> pallet_transaction_payment::FeeDetails<Balance> {
+            TransactionPayment::query_fee_details(uxt, len)
+        }
+    }
+
+    impl xpallet_transaction_fee_rpc_runtime_api::XTransactionFeeApi<Block, Balance> for Runtime {
+        fn query_fee_details(
+            uxt: <Block as BlockT>::Extrinsic,
+            len: u32,
+        ) -> xpallet_transaction_fee::FeeDetails<Balance> {
             let extra_fee = ChargeExtraFee::has_extra_fee(&uxt.function);
             let base = TransactionPayment::query_fee_details(uxt, len);
             xpallet_transaction_fee::FeeDetails::add_extra_fee_or_not(extra_fee,base)
-    }
-}
 
-impl xpallet_assets_rpc_runtime_api::XAssetsApi<Block, AccountId, Balance> for Runtime {
-    fn assets_for_account(who: AccountId) -> BTreeMap<AssetId, BTreeMap<AssetType, Balance>> {
-        XAssets::valid_assets_of(&who)
+        }
     }
 
-    fn assets() -> BTreeMap<AssetId, TotalAssetInfo<Balance>> {
-        XAssets::total_asset_infos()
-    }
-}
+    impl xpallet_assets_rpc_runtime_api::XAssetsApi<Block, AccountId, Balance> for Runtime {
+        fn assets_for_account(who: AccountId) -> BTreeMap<AssetId, BTreeMap<AssetType, Balance>> {
+            XAssets::valid_assets_of(&who)
+        }
 
-impl
-    xpallet_mining_staking_rpc_runtime_api::XStakingApi<
-        Block,
-        AccountId,
-        Balance,
-        VoteWeight,
-        BlockNumber,
-    > for Runtime
-{
-    fn validators() -> Vec<ValidatorInfo<AccountId, Balance, VoteWeight, BlockNumber>> {
-        XStaking::validators_info()
-    }
-    fn validator_info_of(
-        who: AccountId,
-    ) -> ValidatorInfo<AccountId, Balance, VoteWeight, BlockNumber> {
-        XStaking::validator_info_of(who)
-    }
-    fn staking_dividend_of(who: AccountId) -> BTreeMap<AccountId, Balance> {
-        XStaking::staking_dividend_of(who)
-    }
-    fn nomination_details_of(
-        who: AccountId,
-    ) -> BTreeMap<AccountId, NominatorLedger<Balance, VoteWeight, BlockNumber>> {
-        XStaking::nomination_details_of(who)
-    }
-    fn nominator_info_of(who: AccountId) -> NominatorInfo<BlockNumber> {
-        XStaking::nominator_info_of(who)
-    }
-}
-
-impl xpallet_dex_spot_rpc_runtime_api::XSpotApi<Block, AccountId, Balance, BlockNumber, Balance>
-    for Runtime
-{
-    fn trading_pairs() -> Vec<FullPairInfo<Balance, BlockNumber>> {
-        XSpot::trading_pairs()
+        fn assets() -> BTreeMap<AssetId, TotalAssetInfo<Balance>> {
+            XAssets::total_asset_infos()
+        }
     }
 
-    fn orders(
-        who: AccountId,
-        page_index: u32,
-        page_size: u32,
-    ) -> Vec<RpcOrder<TradingPairId, AccountId, Balance, Balance, BlockNumber>> {
-        XSpot::orders(who, page_index, page_size)
+    impl xpallet_mining_staking_rpc_runtime_api::XStakingApi<Block, AccountId, Balance, VoteWeight, BlockNumber> for Runtime {
+        fn validators() -> Vec<ValidatorInfo<AccountId, Balance, VoteWeight, BlockNumber>> {
+            XStaking::validators_info()
+        }
+        fn validator_info_of(who: AccountId) -> ValidatorInfo<AccountId, Balance, VoteWeight, BlockNumber> {
+            XStaking::validator_info_of(who)
+        }
+        fn staking_dividend_of(who: AccountId) -> BTreeMap<AccountId, Balance> {
+            XStaking::staking_dividend_of(who)
+        }
+        fn nomination_details_of(who: AccountId) -> BTreeMap<AccountId, NominatorLedger<Balance, VoteWeight, BlockNumber>> {
+            XStaking::nomination_details_of(who)
+        }
+        fn nominator_info_of(who: AccountId) -> NominatorInfo<BlockNumber> {
+            XStaking::nominator_info_of(who)
+        }
     }
 
-    fn depth(pair_id: TradingPairId, depth_size: u32) -> Option<Depth<Balance, Balance>> {
-        XSpot::depth(pair_id, depth_size)
-    }
-}
+    impl xpallet_dex_spot_rpc_runtime_api::XSpotApi<Block, AccountId, Balance, BlockNumber, Balance> for Runtime {
+        fn trading_pairs() -> Vec<FullPairInfo<Balance, BlockNumber>> {
+            XSpot::trading_pairs()
+        }
 
-impl
-    xpallet_mining_asset_rpc_runtime_api::XMiningAssetApi<
-        Block,
-        AccountId,
-        Balance,
-        MiningWeight,
-        BlockNumber,
-    > for Runtime
-{
-    fn mining_assets() -> Vec<MiningAssetInfo<AccountId, Balance, MiningWeight, BlockNumber>> {
-        XMiningAsset::mining_assets()
+        fn orders(who: AccountId, page_index: u32, page_size: u32) -> Vec<RpcOrder<TradingPairId, AccountId, Balance, Balance, BlockNumber>> {
+            XSpot::orders(who, page_index, page_size)
+        }
+
+        fn depth(pair_id: TradingPairId, depth_size: u32) -> Option<Depth<Balance, Balance>> {
+            XSpot::depth(pair_id, depth_size)
+        }
     }
 
-    fn mining_dividend(who: AccountId) -> BTreeMap<AssetId, MiningDividendInfo<Balance>> {
-        XMiningAsset::mining_dividend(who)
+    impl xpallet_mining_asset_rpc_runtime_api::XMiningAssetApi<Block, AccountId, Balance, MiningWeight, BlockNumber> for Runtime {
+        fn mining_assets() -> Vec<MiningAssetInfo<AccountId, Balance, MiningWeight, BlockNumber>> {
+            XMiningAsset::mining_assets()
+        }
+
+        fn mining_dividend(who: AccountId) -> BTreeMap<AssetId, MiningDividendInfo<Balance>> {
+            XMiningAsset::mining_dividend(who)
+        }
+
+        fn miner_ledger(who: AccountId) -> BTreeMap<AssetId, MinerLedger<MiningWeight, BlockNumber>> {
+            XMiningAsset::miner_ledger(who)
+        }
     }
 
-    fn miner_ledger(who: AccountId) -> BTreeMap<AssetId, MinerLedger<MiningWeight, BlockNumber>> {
-        XMiningAsset::miner_ledger(who)
-    }
-}
+    impl xpallet_gateway_records_rpc_runtime_api::XGatewayRecordsApi<Block, AccountId, Balance, BlockNumber> for Runtime {
+        fn withdrawal_list() -> BTreeMap<u32, Withdrawal<AccountId, Balance, BlockNumber>> {
+            XGatewayRecords::withdrawal_list()
+        }
 
-impl
-    xpallet_gateway_records_rpc_runtime_api::XGatewayRecordsApi<
-        Block,
-        AccountId,
-        Balance,
-        BlockNumber,
-    > for Runtime
-{
-    fn withdrawal_list() -> BTreeMap<u32, Withdrawal<AccountId, Balance, BlockNumber>> {
-        XGatewayRecords::withdrawal_list()
+        fn withdrawal_list_by_chain(chain: Chain) -> BTreeMap<u32, Withdrawal<AccountId, Balance, BlockNumber>> {
+            XGatewayRecords::withdrawals_list_by_chain(chain)
+        }
     }
 
-    fn withdrawal_list_by_chain(
-        chain: Chain,
-    ) -> BTreeMap<u32, Withdrawal<AccountId, Balance, BlockNumber>> {
-        XGatewayRecords::withdrawals_list_by_chain(chain)
-    }
-}
+    impl xpallet_gateway_common_rpc_runtime_api::XGatewayCommonApi<Block, AccountId, Balance> for Runtime {
+        fn bound_addrs(who: AccountId) -> BTreeMap<Chain, Vec<ChainAddress>> {
+            XGatewayCommon::bound_addrs(&who)
+        }
 
-impl xpallet_gateway_common_rpc_runtime_api::XGatewayCommonApi<Block, AccountId, Balance>
-    for Runtime
-{
-    fn bound_addrs(who: AccountId) -> BTreeMap<Chain, Vec<ChainAddress>> {
-        XGatewayCommon::bound_addrs(&who)
-    }
+        fn withdrawal_limit(asset_id: AssetId) -> Result<WithdrawalLimit<Balance>, DispatchError> {
+            XGatewayCommon::withdrawal_limit(&asset_id)
+        }
 
-    fn withdrawal_limit(asset_id: AssetId) -> Result<WithdrawalLimit<Balance>, DispatchError> {
-        XGatewayCommon::withdrawal_limit(&asset_id)
-    }
+        fn verify_withdrawal(asset_id: AssetId, value: Balance, addr: AddrStr, memo: Memo) -> Result<(), DispatchError> {
+            XGatewayCommon::verify_withdrawal(asset_id, value, &addr, &memo)
+        }
 
-    fn verify_withdrawal(
-        asset_id: AssetId,
-        value: Balance,
-        addr: AddrStr,
-        memo: Memo,
-    ) -> Result<(), DispatchError> {
-        XGatewayCommon::verify_withdrawal(asset_id, value, &addr, &memo)
-    }
+        fn trustee_multisigs() -> BTreeMap<Chain, AccountId> {
+            XGatewayCommon::trustee_multisigs()
+        }
 
-    fn trustee_multisigs() -> BTreeMap<Chain, AccountId> {
-        XGatewayCommon::trustee_multisigs()
-    }
+        fn trustee_properties(chain: Chain, who: AccountId) -> Option<GenericTrusteeIntentionProps> {
+            XGatewayCommon::trustee_intention_props_of(who, chain)
+        }
 
-    fn trustee_properties(chain: Chain, who: AccountId) -> Option<GenericTrusteeIntentionProps> {
-        XGatewayCommon::trustee_intention_props_of(who, chain)
-    }
+        fn trustee_session_info(chain: Chain) -> Option<GenericTrusteeSessionInfo<AccountId>> {
+            let number = XGatewayCommon::trustee_session_info_len(chain)
+                .checked_sub(1)
+                .unwrap_or_else(u32::max_value);
+            XGatewayCommon::trustee_session_info_of(chain, number)
+        }
 
-    fn trustee_session_info(chain: Chain) -> Option<GenericTrusteeSessionInfo<AccountId>> {
-        let number = XGatewayCommon::trustee_session_info_len(chain)
-            .checked_sub(1)
-            .unwrap_or_else(u32::max_value);
-        XGatewayCommon::trustee_session_info_of(chain, number)
+        fn generate_trustee_session_info(chain: Chain, candidates: Vec<AccountId>) -> Result<GenericTrusteeSessionInfo<AccountId>, DispatchError> {
+            let info = XGatewayCommon::try_generate_session_info(chain, candidates)?;
+            // check multisig address
+            let _ = XGatewayCommon::generate_multisig_addr(chain, &info)?;
+            Ok(info)
+        }
     }
 
-    fn generate_trustee_session_info(
-        chain: Chain,
-        candidates: Vec<AccountId>,
-    ) -> Result<GenericTrusteeSessionInfo<AccountId>, DispatchError> {
-        let info = XGatewayCommon::try_generate_session_info(chain, candidates)?;
-        // check multisig address
-        let _ = XGatewayCommon::generate_multisig_addr(chain, &info)?;
-        Ok(info)
-    }
-}
+    #[cfg(feature = "runtime-benchmarks")]
+    impl frame_benchmarking::Benchmark<Block> for Runtime {
+        fn dispatch_benchmark(
+            config: frame_benchmarking::BenchmarkConfig
+        ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, RuntimeString> {
+            use frame_benchmarking::{Benchmarking, BenchmarkBatch, add_benchmark, TrackedStorageKey};
 
-#[cfg(feature = "runtime-benchmarks")]
-impl frame_benchmarking::Benchmark<Block> for Runtime {
-    fn dispatch_benchmark(
-        config: frame_benchmarking::BenchmarkConfig,
-    ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, RuntimeString> {
-        use frame_benchmarking::{add_benchmark, BenchmarkBatch, Benchmarking, TrackedStorageKey};
+            impl frame_system_benchmarking::Config for Runtime {}
 
-        impl frame_system_benchmarking::Config for Runtime {}
-
-        let whitelist: Vec<TrackedStorageKey> = vec![
+            let whitelist: Vec<TrackedStorageKey> = vec![
                 // // Block Number
                 hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef702a5c1b19ab7a04f536c519aca4983ac").to_vec().into(),
                 // // Total Issuance
@@ -1512,22 +1467,21 @@ impl frame_benchmarking::Benchmark<Block> for Runtime {
                 hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef7b99d880ec681799c0cf30e8886371da95ecffd7b6c0f78751baa9d281e0bfa3a6d6f646c70792f74727372790000000000000000000000000000000000000000").to_vec().into(),
             ];
 
-        let mut batches = Vec::<BenchmarkBatch>::new();
-        let params = (&config, &whitelist);
+            let mut batches = Vec::<BenchmarkBatch>::new();
+            let params = (&config, &whitelist);
 
-        add_benchmark!(params, batches, xpallet_assets, XAssets);
-        add_benchmark!(params, batches, xpallet_assets_registrar, XAssetsRegistrar);
-        add_benchmark!(params, batches, xpallet_mining_asset, XMiningAsset);
-        add_benchmark!(params, batches, xpallet_mining_staking, XStaking);
-        add_benchmark!(params, batches, xpallet_gateway_records, XGatewayRecords);
-        add_benchmark!(params, batches, xpallet_gateway_common, XGatewayCommon);
-        add_benchmark!(params, batches, xpallet_gateway_bitcoin, XGatewayBitcoin);
-        add_benchmark!(params, batches, xpallet_dex_spot, XSpot);
+            add_benchmark!(params, batches, xpallet_assets, XAssets);
+            add_benchmark!(params, batches, xpallet_assets_registrar, XAssetsRegistrar);
+            add_benchmark!(params, batches, xpallet_mining_asset, XMiningAsset);
+            add_benchmark!(params, batches, xpallet_mining_staking, XStaking);
+            add_benchmark!(params, batches, xpallet_gateway_records, XGatewayRecords);
+            add_benchmark!(params, batches, xpallet_gateway_common, XGatewayCommon);
+            add_benchmark!(params, batches, xpallet_gateway_bitcoin, XGatewayBitcoin);
+            add_benchmark!(params, batches, xpallet_dex_spot, XSpot);
 
-        if batches.is_empty() {
-            return Err("Benchmark not found for this pallet.".into());
-        }
-        Ok(batches)
+            if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
+            Ok(batches)
         }
     }
+
 }
