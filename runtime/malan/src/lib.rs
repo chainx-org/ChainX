@@ -1342,33 +1342,12 @@ impl_runtime_apis! {
             uxt: <Block as BlockT>::Extrinsic,
             len: u32,
         ) -> xpallet_transaction_fee::FeeDetails<Balance> {
-            if let Some(extra_fee) = ChargeExtraFee::has_extra_fee(&uxt.function) {
+                let extra_fee = ChargeExtraFee::has_extra_fee(&uxt.function);
                 let base = TransactionPayment::query_fee_details(uxt, len);
-                let base_clone = base.clone();
-                let total = match base.inclusion_fee {
-                Some(fee) => fee
-                    .base_fee
-                    .saturating_add(fee.len_fee)
-                    .saturating_add(fee.adjusted_weight_fee)
-                    .saturating_add(base.tip),
-                None => 0,};
-            xpallet_transaction_fee::FeeDetails {
-                inclusion_fee: base_clone.inclusion_fee,
-                tip: base.tip,
-                extra_fee: extra_fee.into(),
-                final_fee: total + extra_fee,
-            }
-            } else {
-                let base = TransactionPayment::query_fee_details(uxt, len);
-                xpallet_transaction_fee::FeeDetails {
-                    inclusion_fee: base.inclusion_fee,
-                    tip: base.tip,
-                    extra_fee: 0u32.into(),
-                    final_fee: base.tip,
-                }
-            }
+                xpallet_transaction_fee::FeeDetails::add_extra_fee_or_not(extra_fee,base)
         }
     }
+
     impl xpallet_assets_rpc_runtime_api::XAssetsApi<Block, AccountId, Balance> for Runtime {
         fn assets_for_account(who: AccountId) -> BTreeMap<AssetId, BTreeMap<AssetType, Balance>> {
             XAssets::valid_assets_of(&who)
