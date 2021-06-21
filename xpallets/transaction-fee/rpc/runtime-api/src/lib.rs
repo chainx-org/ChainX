@@ -1,6 +1,6 @@
-// // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-// //! Runtime API definition for transaction fee module.
+//! Runtime API definition for transaction fee module.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 

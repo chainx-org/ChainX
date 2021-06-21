@@ -5,6 +5,7 @@ use pallet_transaction_payment::InclusionFee;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
+use sp_runtime::traits::AtLeast32BitUnsigned;
 use sp_runtime::RuntimeDebug;
 
 /// The `final_fee` is composed of:
@@ -26,4 +27,40 @@ pub struct FeeDetails<Balance> {
     pub tip: Balance,
     pub extra_fee: Balance,
     pub final_fee: Balance,
+}
+
+impl<Balance: AtLeast32BitUnsigned + Copy> FeeDetails<Balance> {
+    pub fn add_extra_fee_or_not(
+        extra_fee: Option<Balance>,
+        base: pallet_transaction_payment::FeeDetails<Balance>,
+    ) -> FeeDetails<Balance> {
+        match extra_fee {
+            Some(fee) => {
+                let total = pallet_transaction_payment::FeeDetails::final_fee(&base);
+                FeeDetails {
+                    extra_fee: fee,
+                    final_fee: total + fee,
+                    ..base.into()
+                }
+            }
+            None => FeeDetails {
+                extra_fee: 0u32.into(),
+                final_fee: base.tip,
+                ..base.into()
+            },
+        }
+    }
+}
+
+impl<Balance: From<u32>> From<pallet_transaction_payment::FeeDetails<Balance>>
+    for FeeDetails<Balance>
+{
+    fn from(details: pallet_transaction_payment::FeeDetails<Balance>) -> FeeDetails<Balance> {
+        FeeDetails {
+            inclusion_fee: details.inclusion_fee,
+            tip: details.tip,
+            extra_fee: 0u32.into(),
+            final_fee: 0u32.into(),
+        }
+    }
 }
