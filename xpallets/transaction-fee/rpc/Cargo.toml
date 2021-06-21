@@ -27,5 +27,3 @@ xp-rpc = { path = "../../../primitives/rpc" }
 
 # ChainX pallets api
 xpallet-transaction-fee-rpc-runtime-api = { path = "./runtime-api" }
-
-
