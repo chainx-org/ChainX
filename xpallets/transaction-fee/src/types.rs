@@ -30,37 +30,31 @@ pub struct FeeDetails<Balance> {
 }
 
 impl<Balance: AtLeast32BitUnsigned + Copy> FeeDetails<Balance> {
-    pub fn add_extra_fee_or_not(
-        extra_fee: Option<Balance>,
+    pub fn new(
         base: pallet_transaction_payment::FeeDetails<Balance>,
-    ) -> FeeDetails<Balance> {
-        match extra_fee {
-            Some(fee) => {
-                let total = pallet_transaction_payment::FeeDetails::final_fee(&base);
-                FeeDetails {
-                    extra_fee: fee,
-                    final_fee: total + fee,
-                    ..base.into()
-                }
-            }
-            None => FeeDetails {
-                extra_fee: 0u32.into(),
-                final_fee: base.tip,
+        maybe_extra_fee: Option<Balance>,
+    ) -> Self {
+        match maybe_extra_fee {
+            Some(extra_fee) => Self {
+                extra_fee,
+                final_fee: base.final_fee() + extra_fee,
                 ..base.into()
             },
+            None => base.into(),
         }
     }
 }
 
-impl<Balance: From<u32>> From<pallet_transaction_payment::FeeDetails<Balance>>
+impl<Balance: AtLeast32BitUnsigned + Copy> From<pallet_transaction_payment::FeeDetails<Balance>>
     for FeeDetails<Balance>
 {
-    fn from(details: pallet_transaction_payment::FeeDetails<Balance>) -> FeeDetails<Balance> {
-        FeeDetails {
+    fn from(details: pallet_transaction_payment::FeeDetails<Balance>) -> Self {
+        let final_fee = details.final_fee();
+        Self {
             inclusion_fee: details.inclusion_fee,
             tip: details.tip,
             extra_fee: 0u32.into(),
-            final_fee: 0u32.into(),
+            final_fee,
         }
     }
 }

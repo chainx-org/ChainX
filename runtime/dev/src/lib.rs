@@ -1344,9 +1344,9 @@ impl_runtime_apis! {
             uxt: <Block as BlockT>::Extrinsic,
             len: u32,
         ) -> xpallet_transaction_fee::FeeDetails<Balance> {
-                let extra_fee = ChargeExtraFee::has_extra_fee(&uxt.function);
+                let maybe_extra = ChargeExtraFee::has_extra_fee(&uxt.function);
                 let base = TransactionPayment::query_fee_details(uxt, len);
-                xpallet_transaction_fee::FeeDetails::add_extra_fee_or_not(extra_fee,base)
+                xpallet_transaction_fee::FeeDetails::new(base, maybe_extra)
         }
     }
 
