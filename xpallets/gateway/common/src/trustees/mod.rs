@@ -14,7 +14,7 @@ use xpallet_support::traits::MultiSig;
 
 use crate::traits::{BytesLike, ChainProvider, TrusteeSession};
 use crate::types::TrusteeSessionInfo;
-use crate::{Config, Error, Module};
+use crate::{Config, Error, Pallet};
 
 pub struct TrusteeSessionManager<T: Config, TrusteeAddress>(
     PhantomData<T>,
@@ -29,7 +29,7 @@ impl<T: Config, TrusteeAddress: BytesLike + ChainProvider>
     ) -> Result<TrusteeSessionInfo<T::AccountId, TrusteeAddress>, DispatchError> {
         let chain = TrusteeAddress::chain();
         let generic_info =
-            Module::<T>::trustee_session_info_of(chain, number).ok_or_else(|| {
+            Pallet::<T>::trustee_session_info_of(chain, number).ok_or_else(|| {
                 error!(
                     target: "runtime::gateway::common",
                     "[trustee_session] Can not find session info, chain:{:?}, number:{}",
@@ -46,7 +46,7 @@ impl<T: Config, TrusteeAddress: BytesLike + ChainProvider>
     fn current_trustee_session(
     ) -> Result<TrusteeSessionInfo<T::AccountId, TrusteeAddress>, DispatchError> {
         let chain = TrusteeAddress::chain();
-        let number = match Module::<T>::trustee_session_info_len(chain).checked_sub(1) {
+        let number = match Pallet::<T>::trustee_session_info_len(chain).checked_sub(1) {
             Some(r) => r,
             None => u32::max_value(),
         };
@@ -56,7 +56,7 @@ impl<T: Config, TrusteeAddress: BytesLike + ChainProvider>
     fn last_trustee_session(
     ) -> Result<TrusteeSessionInfo<T::AccountId, TrusteeAddress>, DispatchError> {
         let chain = TrusteeAddress::chain();
-        let number = match Module::<T>::trustee_session_info_len(chain).checked_sub(2) {
+        let number = match Pallet::<T>::trustee_session_info_len(chain).checked_sub(2) {
             Some(r) => r,
             None => u32::max_value(),
         };
@@ -72,7 +72,7 @@ impl<T: Config, TrusteeAddress: BytesLike + ChainProvider>
 
     #[cfg(feature = "std")]
     fn genesis_trustee(chain: Chain, trustees: &[T::AccountId]) {
-        Module::<T>::transition_trustee_session_impl(chain, trustees.to_vec())
+        Pallet::<T>::transition_trustee_session_impl(chain, trustees.to_vec())
             .expect("trustee session transition can not fail; qed");
     }
 }
@@ -86,7 +86,7 @@ impl<T: Config, C: ChainProvider> TrusteeMultisigProvider<T, C> {
 
 impl<T: Config, C: ChainProvider> MultiSig<T::AccountId> for TrusteeMultisigProvider<T, C> {
     fn multisig() -> T::AccountId {
-        Module::<T>::trustee_multisig_addr(C::chain())
+        Pallet::<T>::trustee_multisig_addr(C::chain())
     }
 }
 

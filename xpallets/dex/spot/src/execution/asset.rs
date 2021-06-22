@@ -97,7 +97,7 @@ impl<T: Config> Pallet<T> {
             NativeReserves::<T>::mutate(who, |reserved| *reserved += value);
         } else {
             ensure!(
-                <xpallet_assets::Module<T>>::usable_balance(who, &asset_id) >= value,
+                <xpallet_assets::Pallet<T>>::usable_balance(who, &asset_id) >= value,
                 Error::<T>::InsufficientBalance
             );
             Self::move_foreign_asset(asset_id, who, Usable, who, ReservedDexSpot, value)?;
@@ -153,7 +153,7 @@ impl<T: Config> Pallet<T> {
         to_ty: AssetType,
         value: BalanceOf<T>,
     ) -> DispatchResult {
-        <xpallet_assets::Module<T>>::move_balance(&asset_id, from, from_ty, to, to_ty, value)
-            .map_err(|_| DispatchError::Other("Unexpected error from assets Module"))
+        <xpallet_assets::Pallet<T>>::move_balance(&asset_id, from, from_ty, to, to_ty, value)
+            .map_err(|_| DispatchError::Other("Unexpected error from assets Pallet"))
     }
 }

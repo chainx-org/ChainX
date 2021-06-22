@@ -426,8 +426,7 @@ impl frame_support::traits::ValidatorSet<AccountId> for Runtime {
     }
 
     fn validators() -> Vec<Self::ValidatorId> {
-        // TODO: return the active validator set in Staking.
-        Session::validators()
+        XStaking::active_validator_set().collect()
     }
 }
 
@@ -1088,7 +1087,7 @@ construct_runtime!(
 
         // ChainX basics.
         XSystem: xpallet_system::{Pallet, Call, Storage, Event<T>, Config},
-        XAssetsRegistrar: xpallet_assets_registrar::{Pallet, Call, Storage, Event, Config},
+        XAssetsRegistrar: xpallet_assets_registrar::{Pallet, Call, Storage, Event<T>, Config},
         XAssets: xpallet_assets::{Pallet, Call, Storage, Event<T>, Config<T>},
 
         // Mining, must be after XAssets.
