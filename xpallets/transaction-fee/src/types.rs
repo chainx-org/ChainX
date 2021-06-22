@@ -1,12 +1,12 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 use codec::{Decode, Encode};
-use pallet_transaction_payment::InclusionFee;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
-use sp_runtime::traits::AtLeast32BitUnsigned;
-use sp_runtime::RuntimeDebug;
+use sp_runtime::{traits::AtLeast32BitUnsigned, RuntimeDebug};
+
+use pallet_transaction_payment::InclusionFee;
 
 /// The `final_fee` is composed of:
 ///   - (Optional) `inclusion_fee`: Only the `Pays::Yes` transaction can have the inclusion fee.
@@ -25,6 +25,7 @@ pub struct FeeDetails<Balance> {
     // Do not serialize and deserialize `tip` as we actually can not pass any tip to the RPC.
     #[cfg_attr(feature = "std", serde(skip))]
     pub tip: Balance,
+    /// Additional fee for some ChainX specific calls.
     pub extra_fee: Balance,
     pub final_fee: Balance,
 }
