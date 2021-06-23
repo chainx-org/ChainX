@@ -391,7 +391,9 @@ impl pallet_transaction_payment::Config for Runtime {
     type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
 }
 
-impl xpallet_transaction_fee::Config for Runtime {}
+impl xpallet_transaction_fee::Config for Runtime {
+    type Event = Event;
+}
 
 parameter_types! {
     pub const SessionDuration: BlockNumber = EPOCH_DURATION_IN_BLOCKS;
@@ -1330,7 +1332,7 @@ impl_runtime_apis! {
             }
         }
         fn query_fee_details(uxt: <Block as BlockT>::Extrinsic, len: u32) -> pallet_transaction_payment::FeeDetails<Balance> {
-            todo!("Migrate ChainX query_fee_details")
+            TransactionPayment::query_fee_details(uxt, len)
         }
     }
 
@@ -1339,17 +1341,9 @@ impl_runtime_apis! {
             uxt: <Block as BlockT>::Extrinsic,
             len: u32,
         ) -> xpallet_transaction_fee::FeeDetails<Balance> {
-            if let Some(extra_fee) = ChargeExtraFee::has_extra_fee(&uxt.function) {
-                let details = XTransactionFee::query_fee_details(uxt, len);
-                xpallet_transaction_fee::FeeDetails {
-                    extra_fee,
-                    final_fee: details.final_fee + extra_fee,
-                    ..details
-                }
-            } else {
-                XTransactionFee::query_fee_details(uxt, len)
-            }
-
+            let maybe_extra = ChargeExtraFee::has_extra_fee(&uxt.function);
+            let base = TransactionPayment::query_fee_details(uxt, len);
+            xpallet_transaction_fee::FeeDetails::new(base, maybe_extra)
         }
     }
 

@@ -4,31 +4,9 @@ use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
-use sp_runtime::RuntimeDebug;
+use sp_runtime::{traits::AtLeast32BitUnsigned, RuntimeDebug};
 
-/// The base fee and adjusted weight and length fees constitute the _inclusion fee,_ which is
-/// the minimum fee for a transaction to be included in a block.
-///
-/// ```ignore
-/// inclusion_fee = base_fee + len_fee + [targeted_fee_adjustment * weight_fee];
-/// ```
-#[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct InclusionFee<Balance> {
-    /// This is the minimum amount a user pays for a transaction. It is declared
-    /// as a base _weight_ in the runtime and converted to a fee using `WeightToFee`.
-    pub base_fee: Balance,
-    /// The length fee, the amount paid for the encoded length (in bytes) of the transaction.
-    pub len_fee: Balance,
-    /// - `targeted_fee_adjustment`: This is a multiplier that can tune the final fee based on
-    ///     the congestion of the network.
-    /// - `weight_fee`: This amount is computed based on the weight of the transaction. Weight
-    /// accounts for the execution time of a transaction.
-    ///
-    /// adjusted_weight_fee = targeted_fee_adjustment * weight_fee
-    pub adjusted_weight_fee: Balance,
-}
+use pallet_transaction_payment::InclusionFee;
 
 /// The `final_fee` is composed of:
 ///   - (Optional) `inclusion_fee`: Only the `Pays::Yes` transaction can have the inclusion fee.
@@ -42,9 +20,42 @@ pub struct InclusionFee<Balance> {
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct FeeDetails<Balance> {
+    /// The minimum fee for a transaction to be included in a block.
     pub inclusion_fee: Option<InclusionFee<Balance>>,
-    /// Some calls might be charged extra fee besides the essential `inclusion_fee`.
-    pub extra_fee: Balance,
+    // Do not serialize and deserialize `tip` as we actually can not pass any tip to the RPC.
+    #[cfg_attr(feature = "std", serde(skip))]
     pub tip: Balance,
+    /// Additional fee for some ChainX specific calls.
+    pub extra_fee: Balance,
     pub final_fee: Balance,
+}
+
+impl<Balance: AtLeast32BitUnsigned + Copy> FeeDetails<Balance> {
+    pub fn new(
+        base: pallet_transaction_payment::FeeDetails<Balance>,
+        maybe_extra_fee: Option<Balance>,
+    ) -> Self {
+        match maybe_extra_fee {
+            Some(extra_fee) => Self {
+                extra_fee,
+                final_fee: base.final_fee() + extra_fee,
+                ..base.into()
+            },
+            None => base.into(),
+        }
+    }
+}
+
+impl<Balance: AtLeast32BitUnsigned + Copy> From<pallet_transaction_payment::FeeDetails<Balance>>
+    for FeeDetails<Balance>
+{
+    fn from(details: pallet_transaction_payment::FeeDetails<Balance>) -> Self {
+        let final_fee = details.final_fee();
+        Self {
+            inclusion_fee: details.inclusion_fee,
+            tip: details.tip,
+            extra_fee: 0u32.into(),
+            final_fee,
+        }
+    }
 }
