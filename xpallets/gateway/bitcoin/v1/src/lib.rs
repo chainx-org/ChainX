@@ -22,7 +22,6 @@ use sp_std::prelude::*;
 
 use frame_support::{
     log::{debug, error, info},
-    traits::Get,
 };
 
 use orml_utilities::with_transaction_result;

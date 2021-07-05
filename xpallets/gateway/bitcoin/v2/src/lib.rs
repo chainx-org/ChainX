@@ -32,8 +32,11 @@ mod collateral;
 mod mock;
 #[cfg(test)]
 mod tests;
+#[cfg(any(feature = "runtime-benchmarks", test))]
+mod benchmarking;
 
 pub mod types;
+pub mod weights;
 
 #[frame_support::pallet]
 #[allow(dead_code)]
@@ -87,7 +90,7 @@ pub mod pallet {
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(crate) trait Store)]
-    pub struct Pallet<T, I = ()>(PhantomData<(T, I)>);
+    pub struct Pallet<T, I = ()>(_);
 
     #[pallet::config]
     pub trait Config<I: 'static = ()>: frame_system::Config + xpallet_assets::Config {

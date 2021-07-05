@@ -1553,6 +1553,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, xpallet_gateway_records, XGatewayRecords);
             add_benchmark!(params, batches, xpallet_gateway_common, XGatewayCommon);
             add_benchmark!(params, batches, xpallet_gateway_bitcoin, XGatewayBitcoin);
+            add_benchmark!(params, batches, xpallet_gateway_bitcoin_v2_pallet, XGatewayBridgeBtc);
             add_benchmark!(params, batches, xpallet_dex_spot, XSpot);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }

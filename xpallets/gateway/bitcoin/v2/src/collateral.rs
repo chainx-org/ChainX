@@ -45,10 +45,12 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 }
 
 impl<T: Config<I>, I: 'static> Pallet<T, I> {
+    #[inline]
     pub(crate) fn target_asset_of(who: &T::AccountId) -> BalanceOf<T> {
         xpallet_assets::Pallet::<T>::usable_balance(who, &T::TargetAssetId::get())
     }
-
+    
+    #[inline]
     pub(crate) fn token_asset_of(who: &T::AccountId) -> BalanceOf<T> {
         xpallet_assets::Pallet::<T>::usable_balance(who, &T::TokenAssetId::get())
     }

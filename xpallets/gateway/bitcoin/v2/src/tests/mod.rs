@@ -2,7 +2,7 @@ mod utils;
 
 use sp_arithmetic::Percent;
 
-use frame_support::{assert_err, assert_ok, instances::Instance1};
+use frame_support::{assert_err, assert_ok};
 use frame_system::RawOrigin;
 
 use super::mock::*;
@@ -25,7 +25,7 @@ fn test_register_vault() {
         );
         assert_err!(
             t_register_vault(Alice, 10, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna"),
-            pallet::Error::<Test, Instance1>::CollateralAmountTooSmall
+            pallet::Error::<Test>::CollateralAmountTooSmall
         );
         assert_ok!(t_register_vault(
             Alice,
@@ -34,11 +34,11 @@ fn test_register_vault() {
         ));
         assert_err!(
             t_register_vault(Alice, 2000, "3LrrqZ2LtZxAcroVaYKgM6yDeRszV2sY1r"),
-            pallet::Error::<Test, Instance1>::VaultAlreadyRegistered
+            pallet::Error::<Test>::VaultAlreadyRegistered
         );
         assert_err!(
             t_register_vault(Bob, 2000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna"),
-            pallet::Error::<Test, Instance1>::BtcAddressOccupied
+            pallet::Error::<Test>::BtcAddressOccupied
         );
 
         // Dogecoin
@@ -56,7 +56,7 @@ fn test_add_extra_collateral() {
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
         assert_err!(
             XGatewayBitcoin::add_extra_collateral(Origin::signed(Alice), 100),
-            pallet::Error::<Test, Instance1>::VaultNotFound
+            pallet::Error::<Test>::VaultNotFound
         );
         assert_ok!(t_register_vault(
             Alice,
@@ -91,7 +91,7 @@ fn test_update_exchange_rate() {
 
         assert_err!(
             XGatewayBitcoin::update_exchange_rate(Origin::signed(Bob), new_exchange_rate.clone()),
-            pallet::Error::<Test, Instance1>::NotOracle
+            pallet::Error::<Test>::NotOracle
         );
         assert_ok!(XGatewayBitcoin::force_update_oracles(
             Origin::root(),
@@ -204,7 +204,7 @@ fn test_issue_request() {
 
         assert_err!(
             XGatewayBitcoin::execute_issue(Origin::signed(Alice), 1, vec![], vec![], vec![],),
-            pallet::Error::<Test, Instance1>::IssueRequestNotFound
+            pallet::Error::<Test>::IssueRequestNotFound
         );
     })
 }
@@ -220,7 +220,7 @@ fn test_cancel_issue_request() {
         System::set_block_number(5000);
         assert_err!(
             XGatewayBitcoin::cancel_issue(Origin::signed(Alice), 1),
-            pallet::Error::<Test, Instance1>::IssueRequestNotExpired
+            pallet::Error::<Test>::IssueRequestNotExpired
         );
 
         System::set_block_number(10020);
@@ -251,7 +251,7 @@ fn test_slash_collateral() {
         XGatewayBitcoin::lock_collateral(&Alice, 200).unwrap();
         assert_err!(
             XGatewayBitcoin::slash_vault(&Alice, &Bob, 300),
-            pallet::Error::<Test, Instance1>::InsufficientCollateral
+            pallet::Error::<Test>::InsufficientCollateral
         );
         assert_ok!(XGatewayBitcoin::slash_vault(&Alice, &Bob, 200));
         assert_eq!(<pallet::CurrencyOf<Test>>::free_balance(Alice), 9800);
@@ -275,7 +275,7 @@ fn test_redeem_request_err_with_insufficiant_assets_funds() {
                 1000,
                 "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna".as_bytes().to_vec()
             ),
-            pallet::Error::<Test, Instance1>::InsufficiantAssetsFunds
+            pallet::Error::<Test>::InsufficiantAssetsFunds
         );
     })
 }
@@ -299,7 +299,7 @@ fn test_redeem_request_ok() {
         let vault = XGatewayBitcoin::try_get_vault(&Solid).unwrap();
         assert_eq!(vault.to_be_redeemed_tokens, 1);
 
-        let redeem_request = pallet::RedeemRequests::<Test, Instance1>::get(&1).unwrap();
+        let redeem_request = pallet::RedeemRequests::<Test>::get(&1).unwrap();
         assert_eq!(redeem_request.amount, 1);
 
         let requester_locked_xbtc = xpallet_assets::Module::<Test>::asset_balance_of(
@@ -336,7 +336,7 @@ fn test_redeem_execute() {
         ));
 
         // Request is removed.
-        assert_eq!(pallet::RedeemRequests::<Test, Instance1>::get(&1), None);
+        assert_eq!(pallet::RedeemRequests::<Test>::get(&1), None);
 
         // Check requester assets after executing.
         let requester_locked_xbtc = xpallet_assets::Module::<Test>::asset_balance_of(
@@ -372,9 +372,9 @@ fn test_cannot_cancel_redeem_valid() {
         .unwrap();
         assert_err!(
             XGatewayBitcoin::cancel_redeem(Origin::signed(Alice), 1, false),
-            pallet::Error::<Test, Instance1>::RedeemRequestNotExpired
+            pallet::Error::<Test>::RedeemRequestNotExpired
         );
-        assert!(pallet::RedeemRequests::<Test, Instance1>::contains_key(&1));
+        assert!(pallet::RedeemRequests::<Test>::contains_key(&1));
     })
 }
 
