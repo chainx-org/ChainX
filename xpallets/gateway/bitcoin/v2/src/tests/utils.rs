@@ -41,18 +41,6 @@ pub(super) fn t_register_btc() -> DispatchResult {
             )
             .unwrap(),
             xpallet_assets::AssetRestrictions::empty(),
-        ),
-        (
-            xp_protocol::C_BTC,
-            xpallet_assets_registrar::AssetInfo::new::<Test>(
-                b"C-BTC".to_vec(),
-                b"C-BTC".to_vec(),
-                xpallet_assets_registrar::Chain::Bitcoin,
-                xp_protocol::BTC_DECIMALS,
-                b"Bridge ChainX's cross-chain Bitcoin".to_vec(),
-            )
-            .unwrap(),
-            xpallet_assets::AssetRestrictions::empty(),
         )
     ];
 
