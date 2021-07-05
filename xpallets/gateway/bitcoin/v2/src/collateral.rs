@@ -49,10 +49,6 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         xpallet_assets::Pallet::<T>::usable_balance(who, &T::TargetAssetId::get())
     }
 
-    pub(crate) fn token_asset_of(who: &T::AccountId) -> BalanceOf<T> {
-        xpallet_assets::Pallet::<T>::usable_balance(who, &T::TokenAssetId::get())
-    }
-
     pub(crate) fn lock_asset(who: &T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
         xpallet_assets::Pallet::<T>::move_balance(
             &T::TargetAssetId::get(),
@@ -79,14 +75,16 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         Ok(())
     }
 
+    /// Mint `amount` of asset to `who` by 'by'.
+    ///
+    /// WARN: It will decrease the `to_be_issued_tokens` value. 
     pub(crate) fn mint(
         who: &T::AccountId,
         by: &T::AccountId,
         amount: BalanceOf<T>,
     ) -> DispatchResult {
         xpallet_assets::Pallet::<T>::issue(&T::TargetAssetId::get(), who, amount)?;
-        Self::decrease_vault_to_be_issued_token(by, amount);
-        xpallet_assets::Pallet::<T>::issue(&T::TokenAssetId::get(), by, amount)?;
+        Self::process_vault_issue(by, amount);
         Ok(())
     }
 
@@ -100,7 +98,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
             who,
             amount,
         )?;
-        xpallet_assets::Pallet::<T>::destroy_usable(&T::TokenAssetId::get(), by, amount)?;
+        Self::process_vault_redeem(by, amount);
         Ok(())
     }
 }

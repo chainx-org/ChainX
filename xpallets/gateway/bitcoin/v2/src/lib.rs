@@ -99,11 +99,6 @@ pub mod pallet {
         /// `AssdtId` of that chain.
         #[pallet::constant]
         type TargetAssetId: Get<AssetId>;
-        /// Shadow asset for target asset.
-        ///
-        /// Shadow asset is a read-only asset. It only indicates how many issuance was approved by owner.
-        #[pallet::constant]
-        type TokenAssetId: Get<AssetId>;
         /// Lower bound of vault's collateral.
         #[pallet::constant]
         type DustCollateral: Get<BalanceOf<Self>>;
@@ -335,9 +330,9 @@ pub mod pallet {
             );
 
             // Ensure this vault can work.
-            Self::ensure_vault_exists(&vault_id)?;
+            let vault = Self::try_get_vault(&vault_id)?;
             ensure!(
-                amount <= Self::token_asset_of(&vault_id),
+                amount <= vault.issue_tokens,
                 Error::<T, I>::RedeemAmountTooLarge
             );
 
@@ -377,7 +372,6 @@ pub mod pallet {
                 Self::slash_vault(&request.vault, &request.requester, premium_fee)?;
             }
 
-            Self::decrease_vault_to_be_redeem_token(&request.vault, request.amount);
             Self::burn(&request.requester, &request.vault, request.amount)?;
 
             RedeemRequests::<T, I>::remove(&request_id);
@@ -696,7 +690,7 @@ pub mod pallet {
             let vault = Self::try_get_vault(vault_id)?;
             // check if vault is rich enough
             let collateral_ratio_after_requesting = Self::calculate_collateral_ratio(
-                Self::token_asset_of(vault_id) + vault.to_be_issued_tokens + btc_amount,
+                vault.issue_tokens + vault.to_be_issued_tokens + btc_amount,
                 Self::collateral_of(vault_id),
             )?;
 
@@ -744,8 +738,8 @@ pub mod pallet {
     impl<T: Config<I>, I: 'static> Pallet<T, I> {
         pub fn vault_collateral_ratio(vault_id: &T::AccountId) -> Result<u16, DispatchError> {
             let collateral = Self::collateral_of(&vault_id);
-            let token_asset = Self::token_asset_of(&vault_id);
-            Self::calculate_collateral_ratio(token_asset, collateral)
+            let token = Self::try_get_vault(&vault_id).map_or_else(|_| 0u32.into(), |vault| vault.issue_tokens);
+            Self::calculate_collateral_ratio(token, collateral)
         }
         pub fn calculate_collateral_ratio(
             issued_tokens: BalanceOf<T>,
@@ -858,6 +852,7 @@ pub mod pallet {
         }
     }
 
+    // Vault related stuff.
     impl<T: Config<I>, I: 'static> Pallet<T, I> {
         pub(crate) fn inner_register_vault(
             who: &T::AccountId,
@@ -868,6 +863,32 @@ pub mod pallet {
             OuterAddresses::<T, I>::insert(&address, who.clone());
             Vaults::<T, I>::insert(&who, Vault::new(address));
             Ok(())
+        }
+
+        #[inline]
+        pub(crate) fn process_vault_issue(
+                vault_id: &T::AccountId,
+                amount: BalanceOf<T>
+            ) {
+            Vaults::<T, I>::mutate(vault_id, |vault| {
+                if let Some(vault) = vault {
+                    vault.to_be_issued_tokens -= amount;
+                    vault.issue_tokens += amount;
+                }
+            }) 
+        }
+
+        #[inline]
+        pub(crate) fn process_vault_redeem(
+                vault_id: &T::AccountId,
+                amount: BalanceOf<T>
+            ) {
+            Vaults::<T, I>::mutate(vault_id, |vault| {
+                if let Some(vault) = vault {
+                    vault.to_be_redeemed_tokens -= amount;
+                    vault.issue_tokens -= amount;
+                }
+            }) 
         }
 
         #[inline]

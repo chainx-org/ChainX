@@ -92,7 +92,6 @@ parameter_types! {
 impl pallet::Config<Instance1> for Test {
     type Event = ();
     type TargetAssetId = BridgeTargetAssetId;
-    type TokenAssetId = BridgeTokenAssetId;
     type DustCollateral = DustCollateral;
     type SecureThreshold = SecureThreshold;
     type PremiumThreshold = PremiumThreshold;
