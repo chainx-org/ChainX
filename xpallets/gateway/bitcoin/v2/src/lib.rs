@@ -249,10 +249,9 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// Execute issue request in `IssueRequests`. It verifies `tx` provided and marks
-        /// `IssueRequest` as completed.
-        ///
-        /// The execute_issue can only called by signed origin.
+        /// Execute issue request in `IssueRequests` which would be removed if `tx` valid.
+        /// 
+        /// It verifies `tx` provided. The execute_issue can only called by signed origin.
         #[pallet::weight(0)]
         pub fn execute_issue(
             origin: OriginFor<T>,
@@ -280,6 +279,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        /// Cancel an out-dated request and slash the griefing fee to vault. 
         #[pallet::weight(0)]
         pub fn cancel_issue(
             origin: OriginFor<T>,
@@ -308,7 +308,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// User request redeem
+        /// Request to burn target asset in ChainX, e.g. XBTC, and get equivalent coins in outer chain, e.g. Bitcoin.
         #[pallet::weight(0)]
         pub fn request_redeem(
             origin: OriginFor<T>,
