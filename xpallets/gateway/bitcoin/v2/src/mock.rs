@@ -154,8 +154,7 @@ impl ExtBuilder {
                 oracle_accounts: Default::default(),
                 liquidator_id: 100,
                 issue_griefing_fee: 10,
-                redeem_fee: 0u32.into(),
-                marker: sp_std::marker::PhantomData::<_>,
+                ..Default::default()
             },
             &mut storage,
         );

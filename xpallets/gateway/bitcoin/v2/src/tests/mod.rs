@@ -224,8 +224,8 @@ fn test_cancel_issue_request() {
         assert_ok!(XGatewayBitcoin::cancel_issue(Origin::signed(Alice), 1));
 
         assert_eq!(<pallet::CurrencyOf<Test>>::reserved_balance(Solid), 20000);
-        assert_eq!(<pallet::CurrencyOf<Test>>::free_balance(Solid), 10100);
-        assert_eq!(<pallet::CurrencyOf<Test>>::free_balance(Alice), 9900);
+        assert_eq!(<pallet::CurrencyOf<Test>>::free_balance(Solid), 10150);
+        assert_eq!(<pallet::CurrencyOf<Test>>::free_balance(Alice), 9850);
     })
 }
 
