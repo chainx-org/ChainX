@@ -543,22 +543,12 @@ pub mod pallet {
         RedeemRequestExpired,
         /// Vault is under Liquidation
         VaultLiquidated,
-        /// Actioner is not the request's owner
-        InvalidRequester,
         /// Redeem amount is to low
         AmountBelowDustAmount,
         /// Redeem amount is not correct
         InsufficiantAssetsFunds,
-        /// Redeem in Processing
-        RedeemRequestProcessing,
-        /// Redeem is completed
-        RedeemRequestAlreadyCompleted,
-        /// Redeem is cancelled
-        RedeemRequestAlreadyCancelled,
         /// Bridge status is not correct
         BridgeStatusError,
-        /// Invalid btc address
-        InvalidBtcAddress,
         /// Vault issue token insufficient
         RedeemAmountTooLarge,
         /// Error propagated from xpallet_assets.
