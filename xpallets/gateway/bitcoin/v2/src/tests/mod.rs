@@ -196,10 +196,7 @@ fn test_issue_request() {
         assert_eq!(user_xbtc, 1);
 
         let vault = XGatewayBitcoin::try_get_vault(&issue_request.vault).unwrap();
-        assert_eq!(
-            vault.issue_tokens,
-            issue_request.amount
-        );
+        assert_eq!(vault.issue_tokens, issue_request.amount);
         assert_eq!(vault.to_be_issued_tokens, 0);
 
         assert_err!(

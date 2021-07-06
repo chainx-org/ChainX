@@ -250,7 +250,7 @@ pub mod pallet {
         }
 
         /// Execute issue request in `IssueRequests` which would be removed if `tx` valid.
-        /// 
+        ///
         /// It verifies `tx` provided. The execute_issue can only called by signed origin.
         #[pallet::weight(0)]
         pub fn execute_issue(
@@ -279,7 +279,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// Cancel an out-dated request and slash the griefing fee to vault. 
+        /// Cancel an out-dated request and slash the griefing fee to vault.
         #[pallet::weight(0)]
         pub fn cancel_issue(
             origin: OriginFor<T>,
@@ -728,7 +728,8 @@ pub mod pallet {
     impl<T: Config<I>, I: 'static> Pallet<T, I> {
         pub fn vault_collateral_ratio(vault_id: &T::AccountId) -> Result<u16, DispatchError> {
             let collateral = Self::collateral_of(&vault_id);
-            let token = Self::try_get_vault(&vault_id).map_or_else(|_| 0u32.into(), |vault| vault.issue_tokens);
+            let token = Self::try_get_vault(&vault_id)
+                .map_or_else(|_| 0u32.into(), |vault| vault.issue_tokens);
             Self::calculate_collateral_ratio(token, collateral)
         }
         pub fn calculate_collateral_ratio(
@@ -856,29 +857,23 @@ pub mod pallet {
         }
 
         #[inline]
-        pub(crate) fn process_vault_issue(
-                vault_id: &T::AccountId,
-                amount: BalanceOf<T>
-            ) {
+        pub(crate) fn process_vault_issue(vault_id: &T::AccountId, amount: BalanceOf<T>) {
             Vaults::<T, I>::mutate(vault_id, |vault| {
                 if let Some(vault) = vault {
                     vault.to_be_issued_tokens -= amount;
                     vault.issue_tokens += amount;
                 }
-            }) 
+            })
         }
 
         #[inline]
-        pub(crate) fn process_vault_redeem(
-                vault_id: &T::AccountId,
-                amount: BalanceOf<T>
-            ) {
+        pub(crate) fn process_vault_redeem(vault_id: &T::AccountId, amount: BalanceOf<T>) {
             Vaults::<T, I>::mutate(vault_id, |vault| {
                 if let Some(vault) = vault {
                     vault.to_be_redeemed_tokens -= amount;
                     vault.issue_tokens -= amount;
                 }
-            }) 
+            })
         }
 
         #[inline]

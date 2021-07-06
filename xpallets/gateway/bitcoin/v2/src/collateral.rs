@@ -86,7 +86,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
     /// Mint `amount` of asset to `who` by 'by'.
     ///
-    /// WARN: It will decrease the `to_be_issued_tokens`. 
+    /// WARN: It will decrease the `to_be_issued_tokens`.
     pub(crate) fn mint(
         who: &T::AccountId,
         by: &T::AccountId,
@@ -97,10 +97,9 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         Ok(())
     }
 
-
     /// Burn `amount` of asset from `who` by `by`.
-    /// 
-    /// WARN: It will decrease the `to_be_redeemed_tokens`. 
+    ///
+    /// WARN: It will decrease the `to_be_redeemed_tokens`.
     pub(crate) fn burn(
         who: &T::AccountId,
         by: &T::AccountId,
