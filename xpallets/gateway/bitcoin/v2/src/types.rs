@@ -117,8 +117,6 @@ pub struct RedeemRequest<AccountId, BlockNumber, Balance> {
     pub outer_address: AddrStr,
     /// Amount that user wants to redeem
     pub amount: Balance,
-    /// Redeem fee amount
-    pub redeem_fee: Balance,
     /// If redeem is reimbursed by redeemer
     pub reimburse: bool,
 }

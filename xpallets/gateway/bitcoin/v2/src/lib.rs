@@ -49,7 +49,9 @@ pub mod pallet {
         dispatch::{DispatchError, DispatchResult, DispatchResultWithPostInfo},
         ensure,
         storage::types::{StorageMap, StorageValue, ValueQuery},
-        traits::{BalanceStatus, Currency, Get, Hooks, IsType, ReservableCurrency},
+        traits::{
+            BalanceStatus, Currency, ExistenceRequirement, Get, Hooks, IsType, ReservableCurrency,
+        },
         Blake2_128Concat, Twox64Concat,
     };
     use frame_system::{
@@ -221,6 +223,10 @@ pub mod pallet {
 
         /// User request issue cross-chain asset.
         ///
+        /// Sender should lock part of pcx, aka `griefing_fee`, which would be slashed to vault in
+        /// case of malicious behavior and would be released while the request was executed.
+        /// Sender also should pay service charge whether the request was executed or cancelled.
+        /// All these are proportional to `amount`.
         /// `IssueRequest` couldn't be submitted while bridge during liquidating.
         #[pallet::weight(0)]
         pub fn request_issue(
@@ -238,8 +244,22 @@ pub mod pallet {
             );
 
             let griefing_collateral = Self::calculate_required_collateral(amount)?;
+            let service_charge = Self::calculate_service_charge(amount)?;
+
+            ensure!(
+                griefing_collateral + service_charge < CurrencyOf::<T>::free_balance(&requester),
+                Error::<T, I>::FreeBalanceTooLow
+            );
+
             // locking griefing_fee
             CurrencyOf::<T>::reserve(&requester, griefing_collateral)?;
+            // pay service charge to vault
+            CurrencyOf::<T>::transfer(
+                &requester,
+                &vault_id,
+                service_charge,
+                ExistenceRequirement::KeepAlive,
+            )?;
 
             let request_id =
                 Self::insert_new_issue_request(requester, &vault_id, amount, griefing_collateral)?;
@@ -336,11 +356,25 @@ pub mod pallet {
                 Error::<T, I>::RedeemAmountTooLarge
             );
 
+            let service_charge = Self::calculate_service_charge(amount)?;
+            ensure!(
+                service_charge < CurrencyOf::<T>::free_balance(&sender),
+                Error::<T, I>::FreeBalanceTooLow
+            );
+
             Self::verify_address(&outer_address)?;
             // Lock redeemer's xtbc
             Self::lock_asset(&sender, amount)?;
             // Increase vault's to_be_redeemed_tokens
             Self::increase_vault_to_be_redeem_token(&vault_id, amount);
+
+            // pay service charge to vault
+            CurrencyOf::<T>::transfer(
+                &sender,
+                &vault_id,
+                service_charge,
+                ExistenceRequirement::KeepAlive,
+            )?;
 
             let request_id =
                 Self::insert_new_redeem_request(sender, &vault_id, amount, outer_address)?;
@@ -509,8 +543,6 @@ pub mod pallet {
         NoIssuedTokens,
         /// The amount in request is less than lower bound.
         CollateralAmountTooSmall,
-        /// Collateral is less than lower bound after extrinsic.
-        InsufficientVaultCollateral,
         /// Requester has been vault.
         VaultAlreadyRegistered,
         /// Btc address in request was occupied by another vault.
@@ -521,20 +553,14 @@ pub mod pallet {
         VaultInactive,
         /// BtcAddress invalid
         InvalidAddress,
-        /// Collateral in request is less than griefing collateral
-        InsufficientGriefingCollateral,
         /// No such `IssueRequest`
         IssueRequestNotFound,
         /// `IssueRequest` cancelled when it's not expired
         IssueRequestNotExpired,
-        /// Value to be set is invalid
-        InvalidConfigValue,
         /// Tried to execute `IssueRequest` while  it's expired
         IssueRequestExpired,
         /// Vault colateral ratio was below than `SecureThreshold`
         InsecureVault,
-        /// `IssueRequest` or `RedeemRequest` has been executed or cancelled
-        RequestDealt,
         /// Redeem request id is not exsit
         RedeemRequestNotFound,
         /// Redeem request cancelled for forced redeem when it's not expired.
@@ -547,8 +573,8 @@ pub mod pallet {
         AmountBelowDustAmount,
         /// Redeem amount is not correct
         InsufficiantAssetsFunds,
-        /// Bridge status is not correct
-        BridgeStatusError,
+        /// Account balance were not enough to be transfered or reserved.
+        FreeBalanceTooLow,
         /// Vault issue token insufficient
         RedeemAmountTooLarge,
         /// Error propagated from xpallet_assets.
@@ -609,12 +635,6 @@ pub mod pallet {
     pub(crate) type IssueRequests<T: Config<I>, I: 'static = ()> =
         StorageMap<_, Twox64Concat, RequestId, IssueRequest<T>>;
 
-    /// Redeem fee when use request redeem
-    #[pallet::storage]
-    #[pallet::getter(fn redeem_fee)]
-    pub(crate) type RedeemFee<T: Config<I>, I: 'static = ()> =
-        StorageValue<_, BalanceOf<T>, ValueQuery>;
-
     /// Slashed when excuting redeem if vault's collateral is below than `PremiumThreshold`
     #[pallet::storage]
     #[pallet::getter(fn premium_fee)]
@@ -632,6 +652,12 @@ pub mod pallet {
     pub(crate) type RedeemRequests<T: Config<I>, I: 'static = ()> =
         StorageMap<_, Twox64Concat, RequestId, RedeemRequest<T>>;
 
+    /// Radio in percentage that service charge to the issue/redeem amount.
+    #[pallet::storage]
+    #[pallet::getter(fn service_charge_ratio)]
+    pub(crate) type ServiceChargeRatio<T: Config<I>, I: 'static = ()> =
+        StorageValue<_, Percent, ValueQuery>;
+
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config<I>, I: 'static = ()> {
         /// Trading pair of pcx/btc.
@@ -643,8 +669,8 @@ pub mod pallet {
         /// Fee that needs to be locked while user requests issuing xbtc, and will be released when
         /// the `IssueRequest` completed. It's proportional to `btc_amount` in `IssueRequest`.
         pub issue_griefing_fee: u8,
-        /// Fixed fee that user shall lock when requesting redeem.
-        pub redeem_fee: BalanceOf<T>,
+        /// Fee which is as the service charge while issue/redeem.
+        pub service_charge_ratio: u8,
         pub marker: PhantomData<I>,
     }
 
@@ -656,7 +682,7 @@ pub mod pallet {
                 oracle_accounts: Default::default(),
                 liquidator_id: Default::default(),
                 issue_griefing_fee: Default::default(),
-                redeem_fee: Default::default(),
+                service_charge_ratio: 5u8,
                 marker: PhantomData::<I>,
             }
         }
@@ -665,10 +691,10 @@ pub mod pallet {
     #[pallet::genesis_build]
     impl<T: Config<I>, I: 'static> GenesisBuild<T, I> for GenesisConfig<T, I> {
         fn build(&self) {
-            <ExchangeRate<T, I>>::put(self.exchange_rate.clone());
-            <OracleAccounts<T, I>>::put(self.oracle_accounts.clone());
-            <IssueGriefingFee<T, I>>::put(Percent::from_parts(self.issue_griefing_fee));
-            <RedeemFee<T, I>>::put(self.redeem_fee);
+            ExchangeRate::<T, I>::put(self.exchange_rate.clone());
+            OracleAccounts::<T, I>::put(self.oracle_accounts.clone());
+            IssueGriefingFee::<T, I>::put(Percent::from_parts(self.issue_griefing_fee));
+            ServiceChargeRatio::<T, I>::put(Percent::from_parts(self.service_charge_ratio));
         }
     }
 
@@ -778,6 +804,20 @@ pub mod pallet {
             let griefing_fee = percentage.mul_ceil(pcx_amount);
             Ok(griefing_fee)
         }
+
+        /// Calculate service charge would be paid to vault.
+        ///
+        /// `amount` is the amount of target asset, e.g. bitcoin or dogecoin,
+        /// and the result is in native asset, aka pcx.
+        pub(crate) fn calculate_service_charge(
+            amount: BalanceOf<T>,
+        ) -> Result<BalanceOf<T>, DispatchError> {
+            let pcx_amount = Self::convert_to_pcx(amount)?;
+            let percentage = Self::service_charge_ratio();
+            let service_charge = percentage.mul_ceil(pcx_amount);
+            Ok(service_charge)
+        }
+
         /// generate secure key from account id
         pub(crate) fn get_next_issue_id() -> RequestId {
             <IssueRequestCount<T, I>>::mutate(|n| {
@@ -965,7 +1005,6 @@ pub mod pallet {
                     requester,
                     outer_address,
                     amount,
-                    redeem_fee: RedeemFee::<T, I>::get(),
                     reimburse: false,
                 },
             );
