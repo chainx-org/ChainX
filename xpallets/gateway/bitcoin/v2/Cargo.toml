@@ -11,6 +11,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 bs58 = { version = "0.3", default-features = false, features = ["alloc"] }
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
 impl-trait-for-tuples = "0.2.0"
+hex = { version = "0.4", default-features = false }
 serde = { version = "1.0.101", optional = true, features = ["derive"] }
 sha2 = { version = "0.8.0", default-features = false }
 bitflags = { version = "1.2.1", default-features = false }
@@ -25,6 +26,7 @@ sp-std = { version = "3.0.0", default-features = false }
 sp-version = { version = "3.0.0", default-features = false }
 frame-support = { version = "3.0.0", default-features = false }
 frame-system = { version = "3.0.0", default-features = false }
+frame-benchmarking = { version = "3.0.0", default-features = false, optional = true }
 
 # ChainX pallet
 xpallet-assets = { path = "../../../assets", default-features = false }
@@ -38,12 +40,14 @@ light-bitcoin = { git = "https://github.com/chainx-org/light-bitcoin", branch = 
 
 [dev-dependencies]
 pallet-balances = "3.0.0"
+frame-benchmarking = "3.0.0"
 
 [features]
 default = ["std"]
 std = [
   "codec/std",
   "bs58/std",
+  "hex/std",
   "serde",
   "sha2/std",
   "sp-arithmetic/std",
@@ -63,3 +67,4 @@ std = [
   "chainx-primitives/std",
   "xp-protocol/std",
 ]
+runtime-benchmarks = ["frame-benchmarking"]
