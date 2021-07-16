@@ -446,8 +446,7 @@ fn build_genesis(
             oracle_accounts: vec![root_key.clone()],
             liquidator_id: Default::default(),
             issue_griefing_fee: 10,
-            redeem_fee: 0u32.into(),
-            marker: std::marker::PhantomData::<_>,
+            ..Default::default()
         },
 
         xpallet_gateway_bitcoin_v2_pallet_Instance2: dev::XGatewayBridgeDogeConfig {
@@ -458,8 +457,7 @@ fn build_genesis(
             oracle_accounts: vec![root_key.clone()],
             liquidator_id: Default::default(),
             issue_griefing_fee: 10,
-            redeem_fee: 0u32.into(),
-            marker: std::marker::PhantomData::<_>,
+            ..Default::default()
         },
     }
 }

@@ -69,7 +69,7 @@ pub use frame_support::{
     },
     StorageValue,
 };
-pub use pallet_timestamp::Call as TimestampCall;
+// pub use pallet_timestamp::Call as TimestampCall;
 
 pub use chainx_primitives::{
     AccountId, AccountIndex, AddrStr, Amount, AssetId, Balance, BlockNumber, ChainAddress, Hash,
@@ -1003,20 +1003,17 @@ parameter_types! {
 
 parameter_types! {
     //bitcoin
-    pub const BridgeBtcAssetId: u32 = xp_protocol::C_BTC;
-    pub const BridgeTokenBtcAssetId: u32 = xp_protocol::S_BTC;
+    pub const BridgeBtcAssetId: u32 = xp_protocol::X_BTC;
     pub const BtcMinimumRedeemValue: Balance = 10000;
 
     // dogecoin
-    pub const BridgeDogeAssetId: u32 = xp_protocol::C_DOGE;
-    pub const BridgeTokenDogeAssetId: u32 = xp_protocol::S_DOGE;
+    pub const BridgeDogeAssetId: u32 = xp_protocol::X_DOGE;
     pub const DogeMinimumRedeemValue: Balance = 100000000;
 }
 
 impl xpallet_gateway_bitcoin_v2::pallet::Config<Instance1> for Runtime {
     type Event = Event;
     type TargetAssetId = BridgeBtcAssetId;
-    type TokenAssetId = BridgeTokenBtcAssetId;
     type MinimumRedeemValue = BtcMinimumRedeemValue;
     type DustCollateral = DustCollateral;
     type SecureThreshold = SecureThreshold;
@@ -1030,7 +1027,6 @@ impl xpallet_gateway_bitcoin_v2::pallet::Config<Instance1> for Runtime {
 impl xpallet_gateway_bitcoin_v2::pallet::Config<Instance2> for Runtime {
     type Event = Event;
     type TargetAssetId = BridgeDogeAssetId;
-    type TokenAssetId = BridgeTokenDogeAssetId;
     type MinimumRedeemValue = DogeMinimumRedeemValue;
     type DustCollateral = DustCollateral;
     type SecureThreshold = SecureThreshold;

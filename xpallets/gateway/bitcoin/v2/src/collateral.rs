@@ -9,6 +9,9 @@ use frame_support::{
 
 use crate::pallet::{BalanceOf, Collaterals, Config, CurrencyOf, Error, Pallet};
 
+/// Collateral related stuff.
+///
+/// It wraps `Currency` operations to modify `Collaterals` storage.
 impl<T: Config<I>, I: 'static> Pallet<T, I> {
     /// Collateral of `vault`
     pub(crate) fn collateral_of(vault: &T::AccountId) -> BalanceOf<T> {
@@ -16,6 +19,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     }
 
     /// Lock `vault`'s native asset(aka pcx) as collateral.
+    ///
+    /// WARN: Only vault should use the function. Other locking operations should use `Currency::reserve` directly.
     pub(crate) fn lock_collateral(vault: &T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
         CurrencyOf::<T>::reserve(vault, amount)?;
         Collaterals::<T, I>::mutate(vault, |collateral| {
@@ -23,6 +28,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         });
         Ok(())
     }
+
     /// Slash `vault`'s collateral to `requester`.
     ///
     /// Only vault could be slashed.
@@ -49,12 +55,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     pub(crate) fn target_asset_of(who: &T::AccountId) -> BalanceOf<T> {
         xpallet_assets::Pallet::<T>::usable_balance(who, &T::TargetAssetId::get())
     }
-    
-    #[inline]
-    pub(crate) fn token_asset_of(who: &T::AccountId) -> BalanceOf<T> {
-        xpallet_assets::Pallet::<T>::usable_balance(who, &T::TokenAssetId::get())
-    }
 
+    #[inline]
     pub(crate) fn lock_asset(who: &T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
         xpallet_assets::Pallet::<T>::move_balance(
             &T::TargetAssetId::get(),
@@ -68,6 +70,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         Ok(())
     }
 
+    #[inline]
     pub(crate) fn release_asset(who: &T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
         xpallet_assets::Pallet::<T>::move_balance(
             &T::TargetAssetId::get(),
@@ -81,17 +84,22 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         Ok(())
     }
 
+    /// Mint `amount` of asset to `who` by 'by'.
+    ///
+    /// WARN: It will decrease the `to_be_issued_tokens`.
     pub(crate) fn mint(
         who: &T::AccountId,
         by: &T::AccountId,
         amount: BalanceOf<T>,
     ) -> DispatchResult {
         xpallet_assets::Pallet::<T>::issue(&T::TargetAssetId::get(), who, amount)?;
-        Self::decrease_vault_to_be_issued_token(by, amount);
-        xpallet_assets::Pallet::<T>::issue(&T::TokenAssetId::get(), by, amount)?;
+        Self::process_vault_issue(by, amount);
         Ok(())
     }
 
+    /// Burn `amount` of asset from `who` by `by`.
+    ///
+    /// WARN: It will decrease the `to_be_redeemed_tokens`.
     pub(crate) fn burn(
         who: &T::AccountId,
         by: &T::AccountId,
@@ -102,7 +110,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
             who,
             amount,
         )?;
-        xpallet_assets::Pallet::<T>::destroy_usable(&T::TokenAssetId::get(), by, amount)?;
+        Self::process_vault_redeem(by, amount);
         Ok(())
     }
 }

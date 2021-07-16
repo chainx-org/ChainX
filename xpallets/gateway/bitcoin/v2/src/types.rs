@@ -82,6 +82,8 @@ impl TradingPrice {
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct Vault<BlockNumber, Balance> {
+    /// Number of tokens issued
+    pub issue_tokens: Balance,
     /// Number of tokens pending issue
     pub to_be_issued_tokens: Balance,
     /// Number of tokens pending redeem
@@ -115,8 +117,6 @@ pub struct RedeemRequest<AccountId, BlockNumber, Balance> {
     pub outer_address: AddrStr,
     /// Amount that user wants to redeem
     pub amount: Balance,
-    /// Redeem fee amount
-    pub redeem_fee: Balance,
     /// If redeem is reimbursed by redeemer
     pub reimburse: bool,
 }

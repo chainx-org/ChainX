@@ -44,17 +44,9 @@ pub const X_BTC: AssetId = 1;
 pub const BTC_DECIMALS: Decimals = 8;
 /// Reserved since this symbol had been used in legacy ChainX 1.0.
 pub const L_BTC: AssetId = 0x90000000 | X_BTC;
-/// Collateral based bitcoin in ChainX
-pub const C_BTC: AssetId = 0xc0000000 | X_BTC;
-/// Shadow token for C_BTC
-pub const S_BTC: AssetId = 0xa0000000 | X_BTC;
 
 /// DOGE asset in ChainX backed by the Mainnet Dogecoin.
 pub const X_DOGE: AssetId = 3;
-/// Collateral based bitcoin in ChainX
-pub const C_DOGE: AssetId = 0xc0000000 | X_DOGE;
-/// Shadow token for C_BTC
-pub const S_DOGE: AssetId = 0xa0000000 | X_DOGE;
 
 /// ETH asset in ChainX backed by the Mainnet Ethereum.
 pub const X_ETH: AssetId = 60;
