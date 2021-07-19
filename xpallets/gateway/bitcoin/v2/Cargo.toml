@@ -41,6 +41,8 @@ light-bitcoin = { git = "https://github.com/chainx-org/light-bitcoin", branch = 
 [dev-dependencies]
 pallet-balances = "3.0.0"
 frame-benchmarking = "3.0.0"
+sp-keyring = "3.0.0"
+xp-assets-registrar = { path = "../../../../primitives/assets-registrar" }
 
 [features]
 default = ["std"]

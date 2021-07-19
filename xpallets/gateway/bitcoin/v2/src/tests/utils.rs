@@ -1,3 +1,5 @@
+use sp_runtime::AccountId32;
+
 use frame_support::{
     dispatch::{DispatchResult, DispatchResultWithPostInfo},
     traits::Hooks,
@@ -7,7 +9,7 @@ use frame_system::RawOrigin;
 use crate::mock::*;
 
 pub(super) fn t_register_vault(
-    id: u64,
+    id: AccountId32,
     collateral: u128,
     addr: &str,
 ) -> DispatchResultWithPostInfo {

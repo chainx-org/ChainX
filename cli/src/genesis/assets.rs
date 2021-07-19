@@ -54,46 +54,13 @@ pub(crate) fn xbtc() -> (AssetId, AssetInfo, AssetRestrictions) {
     )
 }
 
-pub(crate) fn sbtc() -> (AssetId, AssetInfo, AssetRestrictions) {
-    (
-        xp_protocol::S_BTC,
-        AssetInfo::new::<Runtime>(
-            b"S-BTC".to_vec(),
-            b"S-BTC".to_vec(),
-            Chain::Bitcoin,
-            xp_protocol::BTC_DECIMALS,
-            b"Shadow token of C-BTC".to_vec(),
-        )
-        .unwrap(),
-        AssetRestrictions::TRANSFER,
-    )
-}
-pub(crate) fn cbtc() -> (AssetId, AssetInfo, AssetRestrictions) {
-    (
-        xp_protocol::C_BTC,
-        AssetInfo::new::<Runtime>(
-            b"C-BTC".to_vec(),
-            b"C-BTC".to_vec(),
-            Chain::Bitcoin,
-            xp_protocol::BTC_DECIMALS,
-            b"Bridge ChainX's cross-chain Bitcoin".to_vec(),
-        )
-        .unwrap(),
-        AssetRestrictions::DESTROY_USABLE,
-    )
-}
-
 // asset_id, asset_info, asset_restrictions, is_online, has_mining_rights
 pub(crate) fn genesis_assets() -> Vec<(AssetId, AssetInfo, AssetRestrictions, bool, bool)> {
     let pcx = pcx();
     let btc = xbtc();
-    let sbtc = sbtc();
-    let cbtc = cbtc();
     let assets = vec![
         (pcx.0, pcx.1, pcx.2, true, false),
         (btc.0, btc.1, btc.2, true, true),
-        (sbtc.0, sbtc.1, sbtc.2, true, true),
-        (cbtc.0, cbtc.1, cbtc.2, true, true),
     ];
     assets
 }

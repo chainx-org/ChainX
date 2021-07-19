@@ -29,7 +29,7 @@ fn vault_alice<T: Config<I>, I: 'static>() -> VaultInfo<T> {
 
 fn register_alice<T: Config<I>, I: 'static>() -> VaultInfo<T> {
     let (caller, addr) = vault_alice::<T, I>();
-    Pallet::<T, I>::inner_register_vault(&caller, addr.clone(), 500000u32.into()).unwrap();
+    Pallet::<T, I>::inner_register_vault(&caller, addr.clone(), 50000u32.into()).unwrap();
     (caller, addr)
 }
 

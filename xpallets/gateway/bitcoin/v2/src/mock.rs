@@ -1,22 +1,36 @@
 use sp_core::H256;
+use sp_keyring::sr25519;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
+    AccountId32,
 };
+use xp_assets_registrar::Chain;
+use xpallet_assets_registrar::AssetInfo;
 
 use frame_support::{construct_runtime, parameter_types, sp_io, traits::GenesisBuild};
 
 use crate::pallet;
 
 /// The AccountId alias in this test module.
-pub(crate) type AccountId = u64;
+pub(crate) type AccountId = AccountId32;
 pub(crate) type BlockNumber = u64;
 pub(crate) type Amount = i128;
 pub(crate) type Balance = u128;
 
-// impl_outer_origin! {
-//     pub enum Origin for Test where system = frame_system {}
-// }
+pub(crate) fn alice() -> AccountId32 {
+    sr25519::Keyring::Alice.to_account_id()
+}
+pub(crate) fn bob() -> AccountId32 {
+    sr25519::Keyring::Bob.to_account_id()
+}
+pub(crate) fn charlie() -> AccountId32 {
+    sr25519::Keyring::Charlie.to_account_id()
+}
+
+pub(crate) fn dave() -> AccountId32 {
+    sr25519::Keyring::Dave.to_account_id()
+}
 
 impl frame_system::Config for Test {
     type BaseCallFilter = ();
@@ -150,16 +164,38 @@ impl ExtBuilder {
                     price: exchange_price,
                     decimal: exchange_decimal,
                 },
-                oracle_accounts: vec![0],
-                liquidator_id: 100,
+                oracle_accounts: vec![alice()],
+                liquidator_id: alice(),
                 issue_griefing_fee: 10,
                 ..Default::default()
             },
             &mut storage,
         );
 
+        let _ = xpallet_assets_registrar::GenesisConfig {
+            assets: vec![(
+                xp_protocol::X_BTC,
+                AssetInfo::new::<Test>(
+                    b"X-BTC".to_vec(),
+                    b"X-BTC".to_vec(),
+                    Chain::Bitcoin,
+                    8,
+                    b"ChainX's cross-chain Bitcoin".to_vec(),
+                )
+                .unwrap(),
+                true,
+                true,
+            )],
+        }
+        .assimilate_storage::<Test>(&mut storage);
+
         let _ = pallet_balances::GenesisConfig::<Test> {
-            balances: vec![(0, 100_000), (1, 10000), (2, 20000), (3, 30000)],
+            balances: vec![
+                (alice(), 100_000),
+                (bob(), 10000),
+                (charlie(), 20000),
+                (dave(), 30000),
+            ],
         }
         .assimilate_storage(&mut storage);
 
