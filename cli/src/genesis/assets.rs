@@ -55,32 +55,32 @@ pub(crate) fn xbtc() -> (AssetId, AssetInfo, AssetRestrictions) {
 }
 
 pub(crate) fn sbtc() -> (AssetId, AssetInfo, AssetRestrictions) {
-        (
-            xp_protocol::S_BTC,
-            AssetInfo::new::<Runtime>(
-                b"S-BTC".to_vec(),
-                b"S-BTC".to_vec(),
-                Chain::Bitcoin,
-                xp_protocol::BTC_DECIMALS,
-                b"Shadow token of C-BTC".to_vec(),
-            )
-            .unwrap(),
-            AssetRestrictions::TRANSFER,
+    (
+        xp_protocol::S_BTC,
+        AssetInfo::new::<Runtime>(
+            b"S-BTC".to_vec(),
+            b"S-BTC".to_vec(),
+            Chain::Bitcoin,
+            xp_protocol::BTC_DECIMALS,
+            b"Shadow token of C-BTC".to_vec(),
         )
+        .unwrap(),
+        AssetRestrictions::TRANSFER,
+    )
 }
 pub(crate) fn cbtc() -> (AssetId, AssetInfo, AssetRestrictions) {
-        (
-            xp_protocol::C_BTC,
-            AssetInfo::new::<Runtime>(
-                b"C-BTC".to_vec(),
-                b"C-BTC".to_vec(),
-                Chain::Bitcoin,
-                xp_protocol::BTC_DECIMALS,
-                b"Bridge ChainX's cross-chain Bitcoin".to_vec(),
-            )
-            .unwrap(),
-            AssetRestrictions::DESTROY_USABLE,
+    (
+        xp_protocol::C_BTC,
+        AssetInfo::new::<Runtime>(
+            b"C-BTC".to_vec(),
+            b"C-BTC".to_vec(),
+            Chain::Bitcoin,
+            xp_protocol::BTC_DECIMALS,
+            b"Bridge ChainX's cross-chain Bitcoin".to_vec(),
         )
+        .unwrap(),
+        AssetRestrictions::DESTROY_USABLE,
+    )
 }
 
 // asset_id, asset_info, asset_restrictions, is_online, has_mining_rights

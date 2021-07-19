@@ -27,13 +27,13 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+#[cfg(any(feature = "runtime-benchmarks", test))]
+mod benchmarking;
 mod collateral;
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
 mod tests;
-#[cfg(any(feature = "runtime-benchmarks", test))]
-mod benchmarking;
 
 pub mod types;
 pub mod weights;

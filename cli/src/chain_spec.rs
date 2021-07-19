@@ -388,7 +388,9 @@ fn build_genesis(
         },
         pallet_balances: dev::BalancesConfig { balances },
         pallet_indices: dev::IndicesConfig { indices: vec![] },
-        pallet_sudo: dev::SudoConfig { key: root_key.clone() },
+        pallet_sudo: dev::SudoConfig {
+            key: root_key.clone(),
+        },
         xpallet_system: dev::XSystemConfig {
             network_props: NetworkType::Testnet,
         },

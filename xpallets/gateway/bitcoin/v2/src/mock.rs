@@ -150,7 +150,7 @@ impl ExtBuilder {
                     price: exchange_price,
                     decimal: exchange_decimal,
                 },
-                oracle_accounts: vec![ 0 ],
+                oracle_accounts: vec![0],
                 liquidator_id: 100,
                 issue_griefing_fee: 10,
                 ..Default::default()

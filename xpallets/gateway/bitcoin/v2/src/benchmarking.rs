@@ -1,15 +1,15 @@
-use codec::{Encode, Decode};
-use sp_std::{vec::Vec, vec};
+use codec::{Decode, Encode};
+use sp_std::{vec, vec::Vec};
 
 use frame_benchmarking::benchmarks_instance_pallet;
-use frame_system::RawOrigin;
 use frame_support::traits::{fungible::Mutate, Currency};
+use frame_system::RawOrigin;
 use sp_runtime::AccountId32;
 
 use crate::pallet::*;
 use crate::types::TradingPrice;
 
-type VaultInfo<T:Config> = (T::AccountId, Vec<u8>);
+type VaultInfo<T: Config> = (T::AccountId, Vec<u8>);
 
 fn account<T: Config<I>, I: 'static>(pubkey: &str) -> T::AccountId {
     let pubkey = hex::decode(pubkey).unwrap();
@@ -23,7 +23,7 @@ fn vault_alice<T: Config<I>, I: 'static>() -> VaultInfo<T> {
     // sr25519 Alice
     (
         account::<T, I>("d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"),
-        "2MyLnphRhkZij648SVeQhZoR3ry1ZoHzasW".into()
+        "2MyLnphRhkZij648SVeQhZoR3ry1ZoHzasW".into(),
     )
 }
 
@@ -33,13 +33,13 @@ fn register_alice<T: Config<I>, I: 'static>() -> VaultInfo<T> {
     (caller, addr)
 }
 
-benchmarks_instance_pallet!{
+benchmarks_instance_pallet! {
     update_exchange_rate {
         let (caller, _) = vault_alice::<T, I>();
     }: _(RawOrigin::Signed(caller), TradingPrice {
             price: 1,
             decimal: 3,
-    }) 
+    })
     verify{}
 
     register_vault {
@@ -75,7 +75,7 @@ benchmarks_instance_pallet!{
         Pallet::<T, I>::mint(&caller, &caller, 100000u32.into()).unwrap();
     }: _(RawOrigin::Signed(caller), caller.clone(), 20000u32.into(), addr)
     verify {}
-} 
+}
 
 #[cfg(test)]
 mod tests {
