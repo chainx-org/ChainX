@@ -112,6 +112,7 @@ impl pallet::Config for Test {
     type RedeemRequestExpiredPeriod = RedeemRequestExpiredPeriod;
     type MinimumRedeemValue = MinimumRedeemValue;
     type ExchangeRateExpiredPeriod = ExchangeRateExpiredPeriod;
+    type WeightInfo = crate::weights::SubstrateWeight<Test>;
 }
 
 type Block = frame_system::mocking::MockBlock<Test>;

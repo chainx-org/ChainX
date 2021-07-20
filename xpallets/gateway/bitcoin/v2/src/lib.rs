@@ -66,6 +66,7 @@ pub mod pallet {
     use light_bitcoin::keys::MultiAddress;
 
     use crate::types::*;
+    use crate::weights::WeightInfo;
 
     pub(crate) type BalanceOf<T> = <<T as xpallet_assets::Config>::Currency as Currency<
         <T as frame_system::Config>::AccountId,
@@ -132,6 +133,7 @@ pub mod pallet {
         /// risk the bitcoin client to reject the payment
         #[pallet::constant]
         type MinimumRedeemValue: Get<BalanceOf<Self>>;
+        type WeightInfo: WeightInfo;
     }
 
     #[pallet::hooks]
@@ -162,7 +164,7 @@ pub mod pallet {
         ///
         /// *Relative Functions*:
         /// [`force_update_exchange_rate`](crate::Pallet::force_update_exchange_rate)
-        #[pallet::weight(0)]
+        #[pallet::weight(<T as Config<I>>::WeightInfo::update_exchange_rate())]
         pub(crate) fn update_exchange_rate(
             origin: OriginFor<T>,
             exchange_rate: TradingPrice,
@@ -182,7 +184,7 @@ pub mod pallet {
         /// The extrinsic's origin must be signed.
         /// *Relative Functions*:
         /// [`add_extra_collateral`](crate::Pallet::add_extra_collateral)
-        #[pallet::weight(0)]
+        #[pallet::weight(<T as Config<I>>::WeightInfo::register_vault())]
         pub(crate) fn register_vault(
             origin: OriginFor<T>,
             collateral: BalanceOf<T>,
@@ -209,7 +211,7 @@ pub mod pallet {
         }
 
         /// Add extra collateral for registered vault.
-        #[pallet::weight(0)]
+        #[pallet::weight(<T as Config<I>>::WeightInfo::add_extra_collateral())]
         pub(crate) fn add_extra_collateral(
             origin: OriginFor<T>,
             collateral: BalanceOf<T>,
@@ -231,7 +233,7 @@ pub mod pallet {
         /// Sender also should pay service charge whether the request was executed or cancelled.
         /// All these are proportional to `amount`.
         /// `IssueRequest` couldn't be submitted while bridge during liquidating.
-        #[pallet::weight(0)]
+        #[pallet::weight(<T as Config<I>>::WeightInfo::request_issue())]
         pub fn request_issue(
             origin: OriginFor<T>,
             vault_id: T::AccountId,
@@ -275,7 +277,7 @@ pub mod pallet {
         /// Execute issue request in `IssueRequests` which would be removed if `tx` valid.
         ///
         /// It verifies `tx` provided. The execute_issue can only called by signed origin.
-        #[pallet::weight(0)]
+        #[pallet::weight(<T as Config<I>>::WeightInfo::execute_issue())]
         pub fn execute_issue(
             origin: OriginFor<T>,
             request_id: RequestId,
@@ -303,7 +305,7 @@ pub mod pallet {
         }
 
         /// Cancel an out-dated request and slash the griefing fee to vault.
-        #[pallet::weight(0)]
+        #[pallet::weight(<T as Config<I>>::WeightInfo::cancel_issue())]
         pub fn cancel_issue(
             origin: OriginFor<T>,
             request_id: RequestId,
@@ -332,7 +334,7 @@ pub mod pallet {
         }
 
         /// Request to burn target asset in ChainX, e.g. XBTC, and get equivalent coins in outer chain, e.g. Bitcoin.
-        #[pallet::weight(0)]
+        #[pallet::weight(<T as Config<I>>::WeightInfo::request_redeem())]
         pub fn request_redeem(
             origin: OriginFor<T>,
             vault_id: T::AccountId,
@@ -385,7 +387,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(0)]
+        #[pallet::weight(<T as Config<I>>::WeightInfo::execute_redeem())]
         pub fn execute_redeem(
             origin: OriginFor<T>,
             request_id: RequestId,
@@ -421,7 +423,7 @@ pub mod pallet {
         ///
         /// Call the extrinsic while request ain't expired will cause `RedeemRequestNotExpired`
         /// error.
-        #[pallet::weight(0)]
+        #[pallet::weight(<T as Config<I>>::WeightInfo::cancel_redeem())]
         pub fn cancel_redeem(
             origin: OriginFor<T>,
             request_id: RequestId,
@@ -451,7 +453,7 @@ pub mod pallet {
 
         /// Similar to [`update_exchange_rate`](crate::pallet::Pallet::update_exchange_rate),
         /// except it only allows root.
-        #[pallet::weight(0)]
+        #[pallet::weight(<T as Config<I>>::WeightInfo::force_update_exchange_rate())]
         pub(crate) fn force_update_exchange_rate(
             origin: OriginFor<T>,
             exchange_rate: TradingPrice,
@@ -465,7 +467,7 @@ pub mod pallet {
         /// Force update oracles.
         ///
         /// DANGEROUS! The extrinsic will cover old oracles.
-        #[pallet::weight(0)]
+        #[pallet::weight(<T as Config<I>>::WeightInfo::force_update_oracles())]
         pub(crate) fn force_update_oracles(
             origin: OriginFor<T>,
             oracles: Vec<T::AccountId>,
@@ -477,7 +479,7 @@ pub mod pallet {
         }
 
         /// Update griefing fee for requesting issue
-        #[pallet::weight(0)]
+        #[pallet::weight(<T as Config<I>>::WeightInfo::update_issue_griefing_fee())]
         pub fn update_issue_griefing_fee(
             origin: OriginFor<T>,
             griefing_fee: Percent,

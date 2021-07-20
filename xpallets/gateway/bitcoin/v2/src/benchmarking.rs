@@ -4,6 +4,7 @@ use sp_std::{vec, vec::Vec};
 use frame_benchmarking::benchmarks_instance_pallet;
 use frame_support::traits::{fungible::Mutate, Currency};
 use frame_system::RawOrigin;
+use sp_arithmetic::Percent;
 use sp_runtime::AccountId32;
 
 use crate::pallet::*;
@@ -59,22 +60,62 @@ benchmarks_instance_pallet! {
 
     execute_issue {
         let (caller, addr) = register_alice::<T, I>();
-        let request_id = Pallet::<T, I>::insert_new_issue_request(caller.clone(), &caller, 1000u32.into(), 100u32.into()).unwrap();
+        Pallet::<T, I>::increase_vault_to_be_issued_token(&caller, 10u32.into());
+        let request_id = Pallet::<T, I>::insert_new_issue_request(caller.clone(), &caller, 10u32.into(), 1u32.into()).unwrap();
     }: _(RawOrigin::Signed(caller), request_id, vec![], vec![], vec![])
     verify {}
 
     cancel_issue {
         let (caller, addr) = register_alice::<T, I>();
-        let request_id = Pallet::<T, I>::insert_new_issue_request(caller.clone(), &caller, 1000u32.into(), 100u32.into()).unwrap();
+        Pallet::<T, I>::increase_vault_to_be_issued_token(&caller, 10u32.into());
+        let request_id = Pallet::<T, I>::insert_new_issue_request(caller.clone(), &caller, 10u32.into(), 1u32.into()).unwrap();
         frame_system::Pallet::<T>::set_block_number(80000u32.into());
     }: _(RawOrigin::Signed(caller), request_id)
     verify {}
 
     request_redeem {
         let (caller, addr) = register_alice::<T, I>();
+        Pallet::<T, I>::increase_vault_to_be_issued_token(&caller, 10u32.into());
         Pallet::<T, I>::mint(&caller, &caller, 10u32.into()).unwrap();
-    }: _(RawOrigin::Signed(caller), caller.clone(), 2u32.into(), addr)
+    }: _(RawOrigin::Signed(caller), caller.clone(), 10u32.into(), addr)
     verify {}
+
+    execute_redeem {
+        let (caller, addr) = register_alice::<T, I>();
+        Pallet::<T, I>::increase_vault_to_be_issued_token(&caller, 10u32.into());
+        Pallet::<T, I>::mint(&caller, &caller, 10u32.into()).unwrap();
+        Pallet::<T, I>::increase_vault_to_be_redeem_token(&caller, 10u32.into());
+        Pallet::<T, I>::lock_asset(&caller, 10u32.into()).unwrap();
+        let request_id = Pallet::<T, I>::insert_new_redeem_request(caller.clone(), &caller.clone(), 10u32.into(), addr).unwrap();
+    }: _(RawOrigin::Signed(caller), request_id, vec![], vec![], vec![])
+    verify {}
+
+    cancel_redeem {
+        let (caller, addr) = register_alice::<T, I>();
+        Pallet::<T, I>::increase_vault_to_be_issued_token(&caller, 10u32.into());
+        Pallet::<T, I>::mint(&caller, &caller, 10u32.into()).unwrap();
+        Pallet::<T, I>::increase_vault_to_be_redeem_token(&caller, 10u32.into());
+        Pallet::<T, I>::lock_asset(&caller, 10u32.into()).unwrap();
+        let request_id = Pallet::<T, I>::insert_new_redeem_request(caller.clone(), &caller.clone(), 10u32.into(), addr).unwrap();
+        frame_system::Pallet::<T>::set_block_number(80000u32.into());
+    }: _(RawOrigin::Signed(caller), request_id, false)
+    verify {}
+
+    force_update_exchange_rate {
+        let (caller, _) = vault_alice::<T, I>();
+    }: _(RawOrigin::Root, TradingPrice {
+            price: 1,
+            decimal: 3,
+    })
+    verify{}
+
+    force_update_oracles {
+    }: _(RawOrigin::Root, vec![])
+    verify{}
+
+    update_issue_griefing_fee {
+    }: _(RawOrigin::Root, Percent::from_parts(10u8))
+    verify{}
 }
 
 #[cfg(test)]
@@ -91,6 +132,11 @@ mod tests {
             assert_ok!(test_benchmark_execute_issue::<Test>());
             assert_ok!(test_benchmark_cancel_issue::<Test>());
             assert_ok!(test_benchmark_request_redeem::<Test>());
+            assert_ok!(test_benchmark_execute_redeem::<Test>());
+            assert_ok!(test_benchmark_cancel_redeem::<Test>());
+            assert_ok!(test_benchmark_force_update_exchange_rate::<Test>());
+            assert_ok!(test_benchmark_force_update_oracles::<Test>());
+            assert_ok!(test_benchmark_update_issue_griefing_fee::<Test>());
         })
     }
 }
