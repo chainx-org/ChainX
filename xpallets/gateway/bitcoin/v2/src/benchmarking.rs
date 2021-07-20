@@ -72,8 +72,8 @@ benchmarks_instance_pallet! {
 
     request_redeem {
         let (caller, addr) = register_alice::<T, I>();
-        Pallet::<T, I>::mint(&caller, &caller, 100000u32.into()).unwrap();
-    }: _(RawOrigin::Signed(caller), caller.clone(), 20000u32.into(), addr)
+        Pallet::<T, I>::mint(&caller, &caller, 10u32.into()).unwrap();
+    }: _(RawOrigin::Signed(caller), caller.clone(), 2u32.into(), addr)
     verify {}
 }
 
