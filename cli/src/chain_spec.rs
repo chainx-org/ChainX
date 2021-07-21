@@ -388,7 +388,9 @@ fn build_genesis(
         },
         pallet_balances: dev::BalancesConfig { balances },
         pallet_indices: dev::IndicesConfig { indices: vec![] },
-        pallet_sudo: dev::SudoConfig { key: root_key },
+        pallet_sudo: dev::SudoConfig {
+            key: root_key.clone(),
+        },
         xpallet_system: dev::XSystemConfig {
             network_props: NetworkType::Testnet,
         },
@@ -443,7 +445,7 @@ fn build_genesis(
                 price: 1,
                 decimal: 3,
             },
-            oracle_accounts: Default::default(),
+            oracle_accounts: vec![root_key.clone()],
             liquidator_id: Default::default(),
             issue_griefing_fee: 10,
             ..Default::default()
@@ -454,7 +456,7 @@ fn build_genesis(
                 price: 1,
                 decimal: 3,
             },
-            oracle_accounts: Default::default(),
+            oracle_accounts: vec![root_key.clone()],
             liquidator_id: Default::default(),
             issue_griefing_fee: 10,
             ..Default::default()

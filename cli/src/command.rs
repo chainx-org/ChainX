@@ -86,7 +86,7 @@ pub fn run() -> sc_cli::Result<()> {
 
     // Try to enable the log rotation function if not a dev chain.
     if !cli.run.base.shared_params.dev {
-        cli.try_init_logger()?;
+        // cli.try_init_logger()?;
     }
 
     match &cli.subcommand {

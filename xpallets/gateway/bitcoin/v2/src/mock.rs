@@ -1,23 +1,36 @@
-use frame_support::instances::Instance1;
 use sp_core::H256;
+use sp_keyring::sr25519;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
+    AccountId32,
 };
+use xp_assets_registrar::Chain;
+use xpallet_assets_registrar::AssetInfo;
 
 use frame_support::{construct_runtime, parameter_types, sp_io, traits::GenesisBuild};
 
 use crate::pallet;
 
 /// The AccountId alias in this test module.
-pub(crate) type AccountId = u64;
+pub(crate) type AccountId = AccountId32;
 pub(crate) type BlockNumber = u64;
 pub(crate) type Amount = i128;
 pub(crate) type Balance = u128;
 
-// impl_outer_origin! {
-//     pub enum Origin for Test where system = frame_system {}
-// }
+pub(crate) fn alice() -> AccountId32 {
+    sr25519::Keyring::Alice.to_account_id()
+}
+pub(crate) fn bob() -> AccountId32 {
+    sr25519::Keyring::Bob.to_account_id()
+}
+pub(crate) fn charlie() -> AccountId32 {
+    sr25519::Keyring::Charlie.to_account_id()
+}
+
+pub(crate) fn dave() -> AccountId32 {
+    sr25519::Keyring::Dave.to_account_id()
+}
 
 impl frame_system::Config for Test {
     type BaseCallFilter = ();
@@ -88,7 +101,7 @@ parameter_types! {
     pub const MinimumRedeemValue: Balance = 1;
 }
 
-impl pallet::Config<Instance1> for Test {
+impl pallet::Config for Test {
     type Event = ();
     type TargetAssetId = BridgeTargetAssetId;
     type DustCollateral = DustCollateral;
@@ -99,6 +112,7 @@ impl pallet::Config<Instance1> for Test {
     type RedeemRequestExpiredPeriod = RedeemRequestExpiredPeriod;
     type MinimumRedeemValue = MinimumRedeemValue;
     type ExchangeRateExpiredPeriod = ExchangeRateExpiredPeriod;
+    type WeightInfo = crate::weights::SubstrateWeight<Test>;
 }
 
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -113,7 +127,7 @@ construct_runtime! {
             System: frame_system::{Pallet, Call, Event<T>},
             Balances: pallet_balances::{Pallet, Call, Event<T>},
             XAssets: xpallet_assets::{Pallet,Call, Event<T>, Config<T>},
-            XGatewayBitcoin: pallet::<Instance1>::{Pallet, Call, Event<T>, Config<T>},
+            XGatewayBitcoin: pallet::{Pallet, Call, Event<T>, Config<T>},
         }
 }
 
@@ -145,22 +159,44 @@ impl ExtBuilder {
             .build_storage::<Test>()
             .unwrap();
 
-        let _ = GenesisBuild::<Test, Instance1>::assimilate_storage(
+        let _ = GenesisBuild::<Test>::assimilate_storage(
             &pallet::GenesisConfig {
                 exchange_rate: TradingPrice {
                     price: exchange_price,
                     decimal: exchange_decimal,
                 },
-                oracle_accounts: Default::default(),
-                liquidator_id: 100,
+                oracle_accounts: vec![alice()],
+                liquidator_id: alice(),
                 issue_griefing_fee: 10,
                 ..Default::default()
             },
             &mut storage,
         );
 
+        let _ = xpallet_assets_registrar::GenesisConfig {
+            assets: vec![(
+                xp_protocol::X_BTC,
+                AssetInfo::new::<Test>(
+                    b"X-BTC".to_vec(),
+                    b"X-BTC".to_vec(),
+                    Chain::Bitcoin,
+                    8,
+                    b"ChainX's cross-chain Bitcoin".to_vec(),
+                )
+                .unwrap(),
+                true,
+                true,
+            )],
+        }
+        .assimilate_storage::<Test>(&mut storage);
+
         let _ = pallet_balances::GenesisConfig::<Test> {
-            balances: vec![(0, 100_000), (1, 10000), (2, 20000), (3, 30000)],
+            balances: vec![
+                (alice(), 100_000),
+                (bob(), 10000),
+                (charlie(), 20000),
+                (dave(), 30000),
+            ],
         }
         .assimilate_storage(&mut storage);
 

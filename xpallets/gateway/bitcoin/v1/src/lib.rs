@@ -20,10 +20,7 @@ mod tests;
 use sp_runtime::SaturatedConversion;
 use sp_std::prelude::*;
 
-use frame_support::{
-    log::{debug, error, info},
-    traits::Get,
-};
+use frame_support::log::{debug, error, info};
 
 use orml_utilities::with_transaction_result;
 

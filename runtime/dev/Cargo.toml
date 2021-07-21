@@ -200,6 +200,7 @@ runtime-benchmarks = [
   "xpallet-assets-registrar/runtime-benchmarks",
   "xpallet-dex-spot/runtime-benchmarks",
   "xpallet-gateway-bitcoin/runtime-benchmarks",
+  "xpallet-gateway-bitcoin-v2/runtime-benchmarks",
   "xpallet-gateway-common/runtime-benchmarks",
   "xpallet-gateway-records/runtime-benchmarks",
   "xpallet-mining-asset/runtime-benchmarks",

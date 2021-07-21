@@ -1004,11 +1004,11 @@ parameter_types! {
 parameter_types! {
     //bitcoin
     pub const BridgeBtcAssetId: u32 = xp_protocol::X_BTC;
-    pub const BtcMinimumRedeemValue: Balance = 10000;
+    pub const BtcMinimumRedeemValue: Balance = 10;
 
     // dogecoin
     pub const BridgeDogeAssetId: u32 = xp_protocol::X_DOGE;
-    pub const DogeMinimumRedeemValue: Balance = 100000000;
+    pub const DogeMinimumRedeemValue: Balance = 10;
 }
 
 impl xpallet_gateway_bitcoin_v2::pallet::Config<Instance1> for Runtime {
@@ -1022,6 +1022,7 @@ impl xpallet_gateway_bitcoin_v2::pallet::Config<Instance1> for Runtime {
     type IssueRequestExpiredPeriod = IssueRequestExpiredPeriod;
     type RedeemRequestExpiredPeriod = RedeemRequestExpiredPeriod;
     type ExchangeRateExpiredPeriod = ExchangeRateExpiredPeriod;
+    type WeightInfo = xpallet_gateway_bitcoin_v2::weights::SubstrateWeight<Runtime>;
 }
 
 impl xpallet_gateway_bitcoin_v2::pallet::Config<Instance2> for Runtime {
@@ -1035,6 +1036,7 @@ impl xpallet_gateway_bitcoin_v2::pallet::Config<Instance2> for Runtime {
     type IssueRequestExpiredPeriod = IssueRequestExpiredPeriod;
     type RedeemRequestExpiredPeriod = RedeemRequestExpiredPeriod;
     type ExchangeRateExpiredPeriod = ExchangeRateExpiredPeriod;
+    type WeightInfo = xpallet_gateway_bitcoin_v2::weights::SubstrateWeight<Runtime>;
 }
 
 impl xpallet_dex_spot::Config for Runtime {
@@ -1549,6 +1551,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, xpallet_gateway_records, XGatewayRecords);
             add_benchmark!(params, batches, xpallet_gateway_common, XGatewayCommon);
             add_benchmark!(params, batches, xpallet_gateway_bitcoin, XGatewayBitcoin);
+            add_benchmark!(params, batches, xpallet_gateway_bitcoin_v2_pallet, XGatewayBridgeBtc);
             add_benchmark!(params, batches, xpallet_dex_spot, XSpot);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
