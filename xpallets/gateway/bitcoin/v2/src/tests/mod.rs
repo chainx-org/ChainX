@@ -171,8 +171,6 @@ fn test_issue_request() {
         let vault = XGatewayBitcoin::try_get_vault(&issue_request.vault).unwrap();
         assert_eq!(vault.to_be_issued_tokens, issue_request.amount);
 
-        t_register_btc().unwrap();
-
         // execute issue_request
         assert_ok!(XGatewayBitcoin::execute_issue(
             Origin::signed(alice()),
@@ -254,7 +252,6 @@ fn test_slash_collateral() {
 fn test_redeem_request_err_with_insufficiant_assets_funds() {
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
         t_register_vault(dave(), 30000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
-        t_register_btc().unwrap();
 
         XGatewayBitcoin::increase_vault_to_be_issued_token(&dave(), 1);
         XGatewayBitcoin::mint(&bob(), &dave(), 1).unwrap();
@@ -275,7 +272,6 @@ fn test_redeem_request_err_with_insufficiant_assets_funds() {
 fn test_redeem_request_ok() {
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
         t_register_vault(dave(), 30000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
-        t_register_btc().unwrap();
 
         XGatewayBitcoin::increase_vault_to_be_issued_token(&dave(), 1);
         XGatewayBitcoin::mint(&alice(), &dave(), 1).unwrap();
@@ -306,7 +302,6 @@ fn test_redeem_request_ok() {
 fn test_redeem_execute() {
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
         t_register_vault(dave(), 30000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
-        t_register_btc().unwrap();
 
         XGatewayBitcoin::increase_vault_to_be_issued_token(&dave(), 1);
         XGatewayBitcoin::mint(&alice(), &dave(), 1).unwrap();
@@ -351,7 +346,6 @@ fn test_redeem_execute() {
 fn test_cannot_cancel_redeem_valid() {
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
         t_register_vault(dave(), 30000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
-        t_register_btc().unwrap();
 
         XGatewayBitcoin::increase_vault_to_be_issued_token(&dave(), 1);
         XGatewayBitcoin::mint(&alice(), &dave(), 1).unwrap();
@@ -375,7 +369,6 @@ fn test_cannot_cancel_redeem_valid() {
 fn test_cancel_redeem_no_reimburse() {
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
         t_register_vault(dave(), 30000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
-        t_register_btc().unwrap();
         XGatewayBitcoin::increase_vault_to_be_issued_token(&dave(), 1);
         XGatewayBitcoin::mint(&alice(), &dave(), 1).unwrap();
 
@@ -405,7 +398,6 @@ fn test_cancel_redeem_no_reimburse() {
 fn test_cancel_redeem_reimburse() {
     ExtBuilder::build(BuildConfig::default()).execute_with(|| {
         t_register_vault(dave(), 30000, "16meyfSoQV6twkAAxPe51RtMVz7PGRmWna").unwrap();
-        t_register_btc().unwrap();
 
         XGatewayBitcoin::increase_vault_to_be_issued_token(&dave(), 1);
         XGatewayBitcoin::mint(&alice(), &dave(), 1).unwrap();
