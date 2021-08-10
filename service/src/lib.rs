@@ -236,14 +236,10 @@ where
 
     let role = config.role.clone();
     let force_authoring = config.force_authoring;
-    let backoff_authoring_blocks = {
-        let mut backoff = sc_consensus_slots::BackoffAuthoringOnFinalizedHeadLagging::default();
-        // the default max interval is 100 slots, but since we use small session duration
-        // (50 slots) we want to make sure we will never backoff authoring blocks for
-        // longer than one epoch duration.
-        backoff.max_interval = 10;
-        Some(backoff)
-    };
+    // we are not interested in using any backoff from block authoring in case finality is
+    // lagging, in particular because we use a small session duration (50 slots) and this
+    // could be problematic.
+    let backoff_authoring_blocks: Option<()> = None;
     let name = config.network.node_name.clone();
     let enable_grandpa = !config.disable_grandpa;
     let prometheus_registry = config.prometheus_registry().cloned();
