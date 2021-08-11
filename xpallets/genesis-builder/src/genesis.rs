@@ -1,7 +1,8 @@
-//! This script was used when ChainX was migrated from 1.0 to 2.0, and it
-//! is not reusable but can be seen as an exmple for other regenesis processing,
-//! particularly for the parts about which states we care about and how
-//! we initialize them on a brand new chain.
+//! This script was used when ChainX was migrated from 1.0 to 2.0.
+//!
+//! Although it is not reusable, it still can be seen as an example for other
+//! similar regenesis processing, particularly on the parts about which states
+//! we care about and how we initialize them on a brand new chain.
 
 use crate::GenesisConfig;
 
