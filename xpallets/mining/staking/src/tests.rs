@@ -843,3 +843,50 @@ fn referral_id_should_work() {
         ));
     });
 }
+
+#[test]
+fn migration_session_offset_should_work() {
+    ExtBuilder::default().build_and_execute(|| {
+        let who = 1;
+        let total_issue = <mock::Test as Trait>::Currency::total_issuance();
+        assert_eq!(total_issue, 1000);
+        assert_eq!(XStaking::this_session_reward(), INITIAL_REWARD as u128);
+
+        XStaking::mint(&who, (FIXED_TOTAL / 2 - 1000) as u128);
+        assert_eq!(
+            XStaking::this_session_reward(),
+            (INITIAL_REWARD / 2) as u128
+        );
+
+        XStaking::mint(&who, 1000 as u128);
+        assert_eq!(
+            XStaking::this_session_reward(),
+            (INITIAL_REWARD / 2) as u128
+        );
+
+        XStaking::mint(&who, 350_000_000_000_000 as u128);
+        assert_eq!(
+            XStaking::this_session_reward(),
+            (INITIAL_REWARD / 2) as u128
+        );
+
+        XStaking::mint(&who, (FIXED_TOTAL / 4 - 350_000_000_000_000 - 1000) as u128);
+        assert_eq!(
+            XStaking::this_session_reward(),
+            (INITIAL_REWARD / 4) as u128
+        );
+
+        XStaking::mint(&who, 175000000000000 as u128);
+        assert_eq!(
+            XStaking::this_session_reward(),
+            (INITIAL_REWARD / 4) as u128
+        );
+
+
+        XStaking::mint(&who, (FIXED_TOTAL / 8 - 175000000000000) as u128);
+        assert_eq!(
+            XStaking::this_session_reward(),
+            (INITIAL_REWARD / 8) as u128
+        );
+    });
+}

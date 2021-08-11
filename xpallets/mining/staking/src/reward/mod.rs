@@ -16,10 +16,10 @@ impl<T: Trait> Module<T> {
     /// (1/2)^(n+1) < (2100 - x) / 2100 <= (1/2)^n
     /// Returns the total reward for the session, assuming it ends with this block.
     pub(crate) fn this_session_reward() -> BalanceOf<T> {
-        let total_issuance = T::Currency::total_issuance().saturated_into::<u64>() as f64;
+        let total_issuance = T::Currency::total_issuance().saturated_into::<u64>() as f64; // x
         let fixed_total = FIXED_TOTAL as f64;
         let tt = (fixed_total / (fixed_total - total_issuance)) as f32;
-        let halving_epoch = tt.log2().ceil() as u32;
+        let halving_epoch = tt.log2().trunc() as u32; // n
 
         INITIAL_REWARD.saturated_into::<BalanceOf<T>>() / Self::pow2(halving_epoch)
     }
