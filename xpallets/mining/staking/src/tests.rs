@@ -588,6 +588,7 @@ fn staker_reward_should_work() {
         t_issue_pcx(t_1, 100);
         t_issue_pcx(t_2, 100);
         t_issue_pcx(t_3, 100);
+
         XStaking::mint(&888, (FIXED_TOTAL / 2) as u128);
 
         assert_eq!(
@@ -663,31 +664,31 @@ fn staker_reward_should_work() {
         // reward pot:
         // There might be a calculation loss using 90% directly, the actual
         // calculation is:
-        // validator 3: 3_168_000_000 * 30/130 = 731076923
-        //                    |_ validator 3: 731076923 / 10 = 73107692
-        //                    |_ validator 3's reward pot: 731076923 - 73107692
+        // validator 3: 1_980_000_000 * 30/130 = 456_923_076
+        //                    |_ validator 3: 456_923_076 / 10 = 45_692_307
+        //                    |_ validator 3's reward pot: 731_076_923 - 73_107_692
 
         t_start_session(2);
         // The order is [3, 4, 1, 2] when calculating.
-        assert_eq!(t_reward_pot_balance(3), 777_600_000 + 731076923 - 73107692);
+        assert_eq!(t_reward_pot_balance(3), 486_000_000 + 456_923_076 - 45_692_307);
         assert_eq!(
             t_reward_pot_balance(3),
-            777_600_000 + calc_reward_for_pot(30, 130, TOTAL_STAKING_REWARD)
+            486_000_000 + calc_reward_for_pot(30, 130, TOTAL_STAKING_REWARD)
         );
-        assert_eq!(t_reward_pot_balance(4), 1914092307);
-        assert_eq!(t_reward_pot_balance(1), 957046154);
-        assert_eq!(t_reward_pot_balance(2), 1395692309);
+        assert_eq!(t_reward_pot_balance(4), 1_196_307_693);
+        assert_eq!(t_reward_pot_balance(1), 598_153_847);
+        assert_eq!(t_reward_pot_balance(2), 872_307_693);
 
         // validator 1: vote weight = 10 + 20 * 1 = 30
         // t_1 vote weight: 10 * 1  = 10
         assert_ok!(XStaking::claim(Origin::signed(t_1), 1));
         // t_1 = reward_pot_balance * 10 / 30
-        assert_eq!(XStaking::free_balance(&t_1), 100 + 957046154 / 3);
+        assert_eq!(XStaking::free_balance(&t_1), 100 + 598_153_847 / 3);
 
         // validator 2: vote weight = 40 * 1 + 20 = 60
         // t_2 vote weight = 20 * 1 = 20
         assert_ok!(XStaking::claim(Origin::signed(t_2), 2));
-        assert_eq!(XStaking::free_balance(&t_2), 100 + 1395692309 * 20 / 60);
+        assert_eq!(XStaking::free_balance(&t_2), 100 + 872_307_693 * 20 / 60);
 
         assert_ok!(XStaking::set_minimum_validator_count(Origin::root(), 3));
         assert_ok!(XStaking::chill(Origin::signed(3)));
@@ -697,7 +698,7 @@ fn staker_reward_should_work() {
         // validator 3 is chilled now, not rewards then.
         assert_eq!(
             t_reward_pot_balance(3),
-            777_600_000 + calc_reward_for_pot(30, 130, TOTAL_STAKING_REWARD)
+            486_000_000 + calc_reward_for_pot(30, 130, TOTAL_STAKING_REWARD)
         );
     });
 }
