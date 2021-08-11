@@ -250,7 +250,8 @@ pub fn local_testnet_config() -> Result<DevChainSpec, String> {
 }
 
 pub fn mainnet_config() -> Result<ChainXChainSpec, String> {
-    ChainXChainSpec::from_json_bytes(&include_bytes!("./res/chainx.json")[..])
+    // ChainXChainSpec::from_json_bytes(&include_bytes!("./res/chainx.json")[..])
+    build_mainnet_config()
 }
 
 pub fn malan_config() -> Result<MalanChainSpec, String> {
@@ -435,7 +436,6 @@ macro_rules! bootnodes {
     }
 }
 
-#[allow(unused)]
 pub fn build_mainnet_config() -> Result<ChainXChainSpec, String> {
     let wasm_binary =
         chainx::WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
@@ -443,97 +443,77 @@ pub fn build_mainnet_config() -> Result<ChainXChainSpec, String> {
     let initial_authorities: Vec<AuthorityKeysTuple> = vec![
         (
             (
-                // 5DPgEmPRBhXj8fpsHm3aXrNtjXNVv7MHnUYQVLFhzMyzabaN
-                hex!["3ab47230dff92003f6f4f79cf7930cfe3f3fd77eedfea55acfde77223ac1a47a"].into(),
-                b"Validator1".to_vec(),
+                // 5QkGjd5rsczm4qVgVpzRSdBe2SrhLvKrPrYFeAAtw4qbdRPh
+                hex!["31000d19a3e9607d92b3697a661a6e7e9fbb65361846680d968cfc86c9561103"].into(),
+                b"Hotbit".to_vec(),
             ),
-            // 5EPgwcbLknydnWGmHem3rmwhdjk55e9HfoqjF5A5zRQDkWxj
-            hex!["66f30ce2de3f23c2383c0ecea1e2a2e0520c18931d3a9bca64be78e3f9f7b62f"]
+            hex!["8aca6544728dfcfabb2579527b8e24675450bfb52a8a53b6b24d27366faf0b16"]
                 .unchecked_into(),
-            // 5FTYv429Xnkmn7HR4FCWPxnTpvveqpqjVKng3H6ypaBpXeVN
-            hex!["96213e8f2f57edfec52b6ffc260d4e8257e8addabe7797fa197f0aa8f6b7e748"]
+            hex!["233869639205a2469ab45e7c8059206e1089d980d2309a6cd9ff581d7b4e4961"]
                 .unchecked_into(),
-            // 5G4KNiQahHTY1LSafhfZnwGLtAnB39TMuc9nhpWMerE98RYQ
-            hex!["b0a540b56805d5b14df2787360728d72197bec577601ad49e274d3914f8b407a"]
+            hex!["4801006d94d3612b582f132295c7864dcce0a5de267cce8dd0fd88524091e129"]
                 .unchecked_into(),
-            // 5HNR82T2juJY6hx48ExdwUBQcpHQvHc5QPCcEzusdHMtLfMZ
-            hex!["eaaf3faeb72a15004fb5f9c68de188310b8cf3fbbbd8e8eb4db8aa9e95c40966"]
+            hex!["f4f6124a5abf4fcd95ef5920585733f88b66754325fe4a4a88608b884dd0a178"]
                 .unchecked_into(),
         ),
         (
             (
-                // 5HmRZ2viuTVEcxD1DgF89DvnHptVsqYyN27DvPwiSMUoiFhB
-                hex!["fc3b583310fe9f091e35a8be64ac9508b9d3c088fdcef51b747113fa8fe87f44"].into(),
-                b"Validator2".to_vec(),
+                // 5StNFoeSmLXr7SfDuwJqHR5CyKV2o4BD2yU36GGay3GVFhtt
+                hex!["8fa51087d1a7327c90da45f8e369e31037606427f07ef77007a41036227a3a5b"].into(),
+                b"Web3".to_vec(),
             ),
-            // 5FLeZHeNy7UPyNusqLRT4EUqxBxUVEpSbma6u9By6DzC3o13
-            hex!["90dd84e695fd85888d9060ded9a79a7b6bca69206cf10d5366f10c12822c9424"]
+            hex!["464a78ec0b6e44452c18f1fd363d32cd5e591d18d0e0a2fbb6935b246f995409"]
                 .unchecked_into(),
-            // 5Hi3u6dHDtemnL18s6gr6CduTbXEFJg4Jx4LX5YWVc4HAwnC
-            hex!["f9a8b6d66d3efbd77b304feea7c142b801cd04422e250d548f063750c890ff1a"]
+            hex!["fb41135c2b072cb02ee8bb6bc7a1e0db101a8ff2a01b30ed8b2aa2785bd51d1e"]
                 .unchecked_into(),
-            // 5FbwQEszvNLmcJzbVaSGUccLpri3waR49xFD6Zt3fNd48wqF
-            hex!["9c86e6f5ac9ef21d27500d3bfdc9900c17911a4dba1a29ccd32268c208d6c24f"]
+            hex!["1e0fd63785309233efc25966a329315943d713ed490561002065b5f869bad315"]
                 .unchecked_into(),
-            // 5ENpkyLe4xNRz1siYybtQnhEfvgJc6zsb2Go5dZLHTSdGZNt
-            hex!["664a1e1eccab98fb1f7c1b20c16b1f010ed5a1ec13648b6c57f336ebb44d865a"]
+            hex!["9cccb586deffae2a9145f5fda338bc687f5e7aec9235ad099f00b901ab338366"]
                 .unchecked_into(),
         ),
         (
             (
-                // 5FEMghsWkqKi8wR7r95jPg6DnGErv9w7AfZF7nMkjUqHy421
-                hex!["8c114008f432dd0f10dc74a78d1f6cdef6778bb30c3d5abfcf60f5f1570a6b43"].into(),
-                b"Validator3".to_vec(),
+                // 5RaxFQc7E4ACr4FVoHj2SMA6MGMqT8Ck9mDV5byGZtPPUw8f
+                hex!["5620d851190bda61acb08f1a06defcdd5a3c7da3c33819643e7d6ee232ee78bf"].into(),
+                b"ChainY".to_vec(),
             ),
-            // 5Grs98EMvxsCrmKMKGCx3xemYcMhAPNF8aa6uRYttWVKJLBg
-            hex!["d4257968d6f6775c356c9bac1fcce8d420cd1e03e704dc5c4c5c33b0182c471a"]
+            hex!["1ac6ee27ae8f7a5fb2cd583a47db9ece87cd7fb293cfaeb89ad7d403eff15c31"]
                 .unchecked_into(),
-            // 5EaDXXayhSHc49gXk7i7frh8tFwmtWAL2Sb9zjtaGhBCbNib
-            hex!["6efa76335d099850aa2ef10a15f20e9d305f7eec9b0079f8196c7aa9deff07ed"]
+            hex!["5151c37e77ed9b89d50d33da305f9c7f11fce661d6e9e423805ce7b54be3344c"]
                 .unchecked_into(),
-            // 5GBQRvZ4FXZi1ttKCMHQN99X4qtegoQ3aRAyqjxyKuRZ8qnX
-            hex!["b60cfd05f854c298b4fdaac6d1b2d58e94f870ce0ce3f98d1863e56479d19776"]
+            hex!["ea3fd82e2ca5a5f62f3e427c4bd1014fd4fe417ff949ccf213f671d3ec43f825"]
                 .unchecked_into(),
-            // 5CB4Smxj5szwZGr1n1ebzEW4HHu8aPqndiZ2oAZGXdDnLFsK
-            hex!["04d8c72b0f7cfe7ce77da151a4b3f6d68295f4740cd4f0ce00d1d197d4758e42"]
+            hex!["06186f8d4d12563b7376083eceacd0308c881ca791fb72d2fa081bfd3c66dd34"]
                 .unchecked_into(),
         ),
         (
             (
-                // 5EhdQUJkAcaBMmDpAmc2vMhLoRTjUxHgbXmsun7CSawXu6To
-                hex!["74a18faa6693cf68b988c479799b9e5fff4c131beb055acdab30c11570df0978"].into(),
-                b"Validator4".to_vec(),
+                // 5RXaXGcz84KQ1XZeAMbjbexXRPNAaPdt3st5QDG3H6VegwD6
+                hex!["538df88774a48e4ec759cfb3d25f12e343d8048a4bfa92643070b73cbb4be843"].into(),
+                b"BiHODL".to_vec(),
             ),
-            // 5CJPSYjvaCi2M7izUXwg5pqkQqhaJiHgDX9gz1JoKQrY18jo
-            hex!["0a6f713ac4f6773b688be912174a67b6e708386dc2466391c5ba23037ce69951"]
+            hex!["840ce40e301797fedfe99183f66f20d40077fae376865c26d231883e793e564e"]
                 .unchecked_into(),
-            // 5EoaYFrxhUBpvUh1u4EqBRbXkAEZ7mnn45tqz93fvGz3mFxd
-            hex!["792b62f72b315be07d5ba5b1492ec2010b69612e03ea89635448eefa0aaff722"]
+            hex!["83b45e42e2fb2439c62e8d986f97f80fa98a7d0a0f7ed6296a858245306681d1"]
                 .unchecked_into(),
-            // 5Cr1Jnhp8p3BQfez9GxZkMaMemPb6PpaqbqkwWWdcwj7W3Qc
-            hex!["228cc94abf939b2e38dc932fb87e970fdcdb04b906e29ccf2669ef7cda56836a"]
+            hex!["706bd686bf48ebe137f0caddd0505ac07063815cfe29451c460991b2f7ae9520"]
                 .unchecked_into(),
-            // 5DNpp5jtdht5JBBUoUtFc46YrgBLeJwP5QyLtQ6fGyii4nkV
-            hex!["3a0e10920f8f5f1880d25a1b9d04ce936d64c4a84060428133347cc1c83e8a64"]
+            hex!["0e973e483a3a978f9c4e0c60f768fcc744639faa4104541a7bef159e7f728909"]
                 .unchecked_into(),
         ),
         (
             (
-                // 5EvXt55kDmAXbBPqrzvNZcbE6bvZ8eWBThxJptoDkwAAyEkw
-                hex!["7e7927d030d89585cd66f0d44313de41f4c697da387159786f8b3ed5cd081d4f"].into(),
-                b"Validator5".to_vec(),
+                // 5RAZf8UHcbS5RBRpP9zptQJm84tpfnxcJ64ctSyxNJeLLxtq
+                hex!["4386e83d66fbdf9ebe72af81d453f41fb8f877287f04823665fc81b58cab6e6b"].into(),
+                b"XPool".to_vec(),
             ),
-            // 5D83WrH4h4rPFxe4m4xGMuC8XuR9jqWHggHBriZQELJ3JneN
-            hex!["2ec8253a23695069619df42213106402cffb217bb02c653c11e3435eb047e60d"]
+            hex!["660098bd0806bb14799ce6dae47bcf8fe0d84b82dcb866191f3b3a591e01ff51"]
                 .unchecked_into(),
-            // 5GpHoku58fumTfn9pQZxKFxASvMw6JNTqmFDQw92g7LV1gwj
-            hex!["d22ec57d5cdb6f80f0df82590f9999b88e936e9f8c93d9c05cd87dba1b4567ae"]
+            hex!["08307f0c94748fde0eb634dca36a69e511eb5860bc6355b7ac4ee85c8c8d3ee8"]
                 .unchecked_into(),
-            // 5HCBmPYr7AsXDp4VLu7qh6HRExjy2Nx33YLHqLeQ6i7yFjHt
-            hex!["e2e1d5c8eb42aa6b37f71cbdc8e73b67b385e7841d98bbaef3492252a4f3e605"]
+            hex!["b84a635d7c6e3cb23eecccc4a0580214a5dc030ee27151e2bf16b911dbad685b"]
                 .unchecked_into(),
-            // 5HQYBwyf2787MCMhZNBEpswHJcJnXVVNxjrdTa6cVjUf29jy
-            hex!["ec4d8806b85969a29214c00ae70b5d239dc65daebf2ea4a43fd47a77e16d9c7c"]
+            hex!["ee88d728d4fbe4f4532fe87879d378968f9350207d4c31a5e45abcaff1efea15"]
                 .unchecked_into(),
         ),
     ];
