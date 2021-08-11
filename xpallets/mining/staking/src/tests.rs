@@ -483,21 +483,21 @@ fn staking_reward_should_work() {
         t_issue_pcx(t_2, 100);
         t_issue_pcx(t_3, 100);
 
+        XStaking::mint(&888, (FIXED_TOTAL / 2) as u128);
         // Total minted per session:
-        // 5_000_000_000
+        // 2_500_000_000
         // │
-        // ├──> vesting_account:  1_000_000_000
-        // ├──> treasury_reward:    480_000_000 12% <--------
-        // └──> mining_reward:    3_520_000_000 88%          |
+        // ├──> treasury_reward:    300_000_000 12% <--------
+        // └──> mining_reward:    2_200_000_000 88%          |
         //    │                                              |
-        //    ├──> Staking        3_168_000_000 90%          |
-        //    └──> Asset Mining     352_000_000 10% ---------
+        //    ├──> Staking        1_980_000_000 90%          |
+        //    └──> Asset Mining     220_000_000 10% ---------
         //
         // When you start session 1, actually there are 3 session rounds.
         // the session reward has been minted 3 times.
         t_start_session(1);
 
-        let sub_total = 4_000_000_000u128;
+        let sub_total = 2_500_000_000u128;
 
         let treasury_reward = sub_total * 12 / 100;
         let mining_reward = sub_total * 88 / 100;
@@ -551,11 +551,10 @@ fn staking_reward_should_work() {
         let endowed = 100 + 200 + 300 + 400;
         assert_eq!(
             Balances::total_issuance(),
-            5_000_000_000u128 + issued_manually + endowed
+            2_500_000_000u128 + issued_manually + endowed + (FIXED_TOTAL / 2) as u128
         );
 
         let mut all = Vec::new();
-        all.push(VESTING_ACCOUNT);
         all.push(TREASURY_ACCOUNT);
         all.extend_from_slice(&[t_1, t_2, t_3]);
         all.extend_from_slice(&validators);
@@ -563,12 +562,15 @@ fn staking_reward_should_work() {
 
         let total_issuance = || all.iter().map(|x| Balances::free_balance(x)).sum::<u128>();
 
-        assert_eq!(Balances::total_issuance(), total_issuance());
+        assert_eq!(
+            Balances::total_issuance(),
+            total_issuance() + (FIXED_TOTAL / 2) as u128
+        );
 
         t_start_session(2);
         assert_eq!(
             Balances::total_issuance(),
-            5_000_000_000u128 * 2 + issued_manually + endowed
+            2_500_000_000u128 * 2 + issued_manually + endowed + (FIXED_TOTAL / 2) as u128
         );
     });
 }
@@ -589,6 +591,8 @@ fn staker_reward_should_work() {
         t_issue_pcx(t_1, 100);
         t_issue_pcx(t_2, 100);
         t_issue_pcx(t_3, 100);
+
+        XStaking::mint(&888, (FIXED_TOTAL / 2) as u128);
 
         assert_eq!(
             <ValidatorLedgers<Test>>::get(1),
@@ -617,7 +621,7 @@ fn staker_reward_should_work() {
             }
         );
 
-        const TOTAL_STAKING_REWARD: Balance = 3_168_000_000;
+        const TOTAL_STAKING_REWARD: Balance = 1_980_000_000;
 
         let calc_reward_for_pot =
             |validator_votes: Balance, total_staked: Balance, total_reward: Balance| {
@@ -630,15 +634,15 @@ fn staker_reward_should_work() {
         // Block 1
         // total_staked = val(10+10) + val2(20) + val(30) + val(40) = 110
         // reward pot:
-        // 1: 3_168_000_000 * 20/110 * 90% = 51_840_000
-        // 2: 3_168_000_000 * 20/110 * 90% = 51_840_000
-        // 3: 3_168_000_000 * 30/110 * 90% = 777_600_000
-        // 4: 3_168_000_000 * 40/110 * 90% = 1_036_800_000
+        // 1: 1_980_000_000 * 20/110 * 90% = 324_000_000
+        // 2: 1_980_000_000 * 20/110 * 90% = 324_000_000
+        // 3: 1_980_000_000 * 30/110 * 90% = 486_000_000
+        // 4: 1_980_000_000 * 40/110 * 90% = 648_000_000
         t_start_session(1);
-        assert_eq!(t_reward_pot_balance(1), 518_400_000);
-        assert_eq!(t_reward_pot_balance(2), 518_400_000);
-        assert_eq!(t_reward_pot_balance(3), 777_600_000);
-        assert_eq!(t_reward_pot_balance(4), 1_036_800_000);
+        assert_eq!(t_reward_pot_balance(1), 324_000_000);
+        assert_eq!(t_reward_pot_balance(2), 324_000_000);
+        assert_eq!(t_reward_pot_balance(3), 486_000_000);
+        assert_eq!(t_reward_pot_balance(4), 648_000_000);
 
         assert_eq!(
             <ValidatorLedgers<Test>>::get(2),
@@ -663,31 +667,34 @@ fn staker_reward_should_work() {
         // reward pot:
         // There might be a calculation loss using 90% directly, the actual
         // calculation is:
-        // validator 3: 3_168_000_000 * 30/130 = 731076923
-        //                    |_ validator 3: 731076923 / 10 = 73107692
-        //                    |_ validator 3's reward pot: 731076923 - 73107692
+        // validator 3: 1_980_000_000 * 30/130 = 456_923_076
+        //                    |_ validator 3: 456_923_076 / 10 = 45_692_307
+        //                    |_ validator 3's reward pot: 731_076_923 - 73_107_692
 
         t_start_session(2);
         // The order is [3, 4, 1, 2] when calculating.
-        assert_eq!(t_reward_pot_balance(3), 777_600_000 + 731076923 - 73107692);
         assert_eq!(
             t_reward_pot_balance(3),
-            777_600_000 + calc_reward_for_pot(30, 130, TOTAL_STAKING_REWARD)
+            486_000_000 + 456_923_076 - 45_692_307
         );
-        assert_eq!(t_reward_pot_balance(4), 1914092307);
-        assert_eq!(t_reward_pot_balance(1), 957046154);
-        assert_eq!(t_reward_pot_balance(2), 1395692309);
+        assert_eq!(
+            t_reward_pot_balance(3),
+            486_000_000 + calc_reward_for_pot(30, 130, TOTAL_STAKING_REWARD)
+        );
+        assert_eq!(t_reward_pot_balance(4), 1_196_307_693);
+        assert_eq!(t_reward_pot_balance(1), 598_153_847);
+        assert_eq!(t_reward_pot_balance(2), 872_307_693);
 
         // validator 1: vote weight = 10 + 20 * 1 = 30
         // t_1 vote weight: 10 * 1  = 10
         assert_ok!(XStaking::claim(Origin::signed(t_1), 1));
         // t_1 = reward_pot_balance * 10 / 30
-        assert_eq!(XStaking::free_balance(&t_1), 100 + 957046154 / 3);
+        assert_eq!(XStaking::free_balance(&t_1), 100 + 598_153_847 / 3);
 
         // validator 2: vote weight = 40 * 1 + 20 = 60
         // t_2 vote weight = 20 * 1 = 20
         assert_ok!(XStaking::claim(Origin::signed(t_2), 2));
-        assert_eq!(XStaking::free_balance(&t_2), 100 + 1395692309 * 20 / 60);
+        assert_eq!(XStaking::free_balance(&t_2), 100 + 872_307_693 * 20 / 60);
 
         assert_ok!(XStaking::set_minimum_validator_count(Origin::root(), 3));
         assert_ok!(XStaking::chill(Origin::signed(3)));
@@ -697,7 +704,7 @@ fn staker_reward_should_work() {
         // validator 3 is chilled now, not rewards then.
         assert_eq!(
             t_reward_pot_balance(3),
-            777_600_000 + calc_reward_for_pot(30, 130, TOTAL_STAKING_REWARD)
+            486_000_000 + calc_reward_for_pot(30, 130, TOTAL_STAKING_REWARD)
         );
     });
 }
@@ -847,42 +854,45 @@ fn referral_id_should_work() {
 #[test]
 fn migration_session_offset_should_work() {
     ExtBuilder::default().build_and_execute(|| {
-        let test_cases = vec![
-            (MigrationSessionOffset::get(), INITIAL_REWARD),
-            (MigrationSessionOffset::get() + 1, INITIAL_REWARD / 2),
-            (
-                MigrationSessionOffset::get() + SESSIONS_PER_ROUND,
-                INITIAL_REWARD / 2,
-            ),
-            (
-                MigrationSessionOffset::get() + SESSIONS_PER_ROUND + 1,
-                INITIAL_REWARD / 4,
-            ),
-            (
-                MigrationSessionOffset::get() + SESSIONS_PER_ROUND * 2,
-                INITIAL_REWARD / 4,
-            ),
-            (
-                MigrationSessionOffset::get() + SESSIONS_PER_ROUND * 2 + 1,
-                INITIAL_REWARD / 8,
-            ),
-        ];
+        let who = 1;
+        let total_issue = <mock::Test as Trait>::Currency::total_issuance();
+        assert_eq!(total_issue, 1000);
+        assert_eq!(XStaking::this_session_reward(), INITIAL_REWARD as u128);
 
-        for (session_index, session_reward) in test_cases {
-            let session_reward = session_reward as Balance;
-            assert_eq!(XStaking::this_session_reward(session_index), session_reward);
+        XStaking::mint(&who, (FIXED_TOTAL / 2 - 1000) as u128);
+        assert_eq!(
+            XStaking::this_session_reward(),
+            (INITIAL_REWARD / 2) as u128
+        );
 
-            if session_reward == INITIAL_REWARD as Balance {
-                assert_eq!(
-                    XStaking::try_vesting(session_index, session_reward),
-                    session_reward * 4 / 5
-                );
-            } else {
-                assert_eq!(
-                    XStaking::try_vesting(session_index, session_reward),
-                    session_reward
-                );
-            }
-        }
+        XStaking::mint(&who, 1000 as u128);
+        assert_eq!(
+            XStaking::this_session_reward(),
+            (INITIAL_REWARD / 2) as u128
+        );
+
+        XStaking::mint(&who, 350_000_000_000_000 as u128);
+        assert_eq!(
+            XStaking::this_session_reward(),
+            (INITIAL_REWARD / 2) as u128
+        );
+
+        XStaking::mint(&who, (FIXED_TOTAL / 4 - 350_000_000_000_000 - 1000) as u128);
+        assert_eq!(
+            XStaking::this_session_reward(),
+            (INITIAL_REWARD / 4) as u128
+        );
+
+        XStaking::mint(&who, 175000000000000 as u128);
+        assert_eq!(
+            XStaking::this_session_reward(),
+            (INITIAL_REWARD / 4) as u128
+        );
+
+        XStaking::mint(&who, (FIXED_TOTAL / 8 - 175000000000000) as u128);
+        assert_eq!(
+            XStaking::this_session_reward(),
+            (INITIAL_REWARD / 8) as u128
+        );
     });
 }

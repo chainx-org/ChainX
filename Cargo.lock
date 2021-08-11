@@ -3873,6 +3873,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "micromath"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "39617bc909d64b068dcffd0e3e31679195b5576d0c83fadc52690268cc2b2b55"
+
+[[package]]
 name = "minicbor"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9606,6 +9612,7 @@ dependencies = [
  "frame-benchmarking 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-support",
  "frame-system",
+ "micromath",
  "pallet-balances",
  "pallet-session",
  "pallet-timestamp",

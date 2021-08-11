@@ -14,7 +14,6 @@ use xp_mining_staking::SessionIndex;
 
 pub const INIT_TIMESTAMP: u64 = 30_000;
 
-pub(crate) const VESTING_ACCOUNT: AccountId = 10_000;
 pub(crate) const TREASURY_ACCOUNT: AccountId = 100_000;
 
 /// The AccountId alias in this test module.
@@ -201,7 +200,6 @@ impl xp_mining_common::RewardPotAccountFor<AccountId, AccountId>
 
 parameter_types! {
     pub const SessionDuration: BlockNumber = 50;
-    pub const MigrationSessionOffset: u32 = 500;
     pub const MinimumReferralId: u32 = 2;
     pub const MaximumReferralId: u32 = 12;
 }
@@ -210,7 +208,6 @@ impl Trait for Test {
     type Currency = Balances;
     type Event = MetaEvent;
     type AssetMining = ();
-    type MigrationSessionOffset = MigrationSessionOffset;
     type SessionDuration = SessionDuration;
     type MinimumReferralId = MinimumReferralId;
     type MaximumReferralId = MaximumReferralId;
@@ -274,7 +271,6 @@ impl ExtBuilder {
             ],
             validator_count: 6,
             sessions_per_era: 3,
-            vesting_account: VESTING_ACCOUNT,
             glob_dist_ratio: (12, 88),
             mining_ratio: (10, 90),
             ..Default::default()
