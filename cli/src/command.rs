@@ -210,10 +210,6 @@ pub fn run() -> sc_cli::Result<()> {
             set_default_ss58_version(chain_spec);
 
             runner.run_node_until_exit(|config| async move {
-                let config =
-                    SubstrateCli::create_configuration(&cli, &cli, config.task_executor.clone())
-                        .map_err(|err| format!("chain argument error: {:?}", err))?;
-
                 match config.role {
                     Role::Light => service::build_light(config),
                     _ => service::build_full(config),
