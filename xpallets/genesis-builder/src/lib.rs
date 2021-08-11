@@ -16,8 +16,6 @@ use xpallet_assets::BalanceOf as AssetBalanceOf;
 #[cfg(feature = "std")]
 use xpallet_mining_staking::BalanceOf as StakingBalanceOf;
 
-// mod deprecated_builder;
-
 #[cfg(feature = "std")]
 mod regenesis;
 
