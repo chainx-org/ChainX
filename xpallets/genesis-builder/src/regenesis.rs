@@ -58,8 +58,6 @@ mod xstaking {
             nominators,
         } = params;
 
-        let genesis_validators = validators.iter().map(|v| v.who.clone()).collect::<Vec<_>>();
-
         // Firstly register the genesis validators.
         xpallet_mining_staking::Module::<T>::initialize_validators(validators)
             .expect("Failed to initialize genesis staking validators");
