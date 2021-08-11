@@ -80,10 +80,10 @@ pub trait Trait: frame_system::Trait {
     /// Interface for interacting with a session module.
     type SessionInterface: self::SessionInterface<Self::AccountId>;
 
-    /// The number of unfinished sessions in the first halving epoch.
+/*    /// The number of unfinished sessions in the first halving epoch.
     ///
     /// When the ChainX 2.0 migration happens, the first halving epoch is not over yet.
-    type MigrationSessionOffset: Get<SessionIndex>;
+    type MigrationSessionOffset: Get<SessionIndex>;*/
 
     /// The minimum byte length of validator referral id.
     type MinimumReferralId: Get<u32>;
@@ -134,8 +134,8 @@ decl_storage! {
         pub MaximumUnbondedChunkSize get(fn maximum_unbonded_chunk_size) config():
             u32 = DEFAULT_MAXIMUM_UNBONDED_CHUNK_SIZE;
 
-        /// The beneficiary account of vesting schedule.
-        pub VestingAccount get(fn vesting_account) config(): T::AccountId;
+      /*  /// The beneficiary account of vesting schedule.
+        pub VestingAccount get(fn vesting_account) config(): T::AccountId;*/
 
         /// The validator account behind the referral id.
         pub ValidatorFor: map hasher(twox_64_concat) ReferralId => Option<T::AccountId>;

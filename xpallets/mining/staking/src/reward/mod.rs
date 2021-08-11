@@ -2,7 +2,7 @@
 
 use super::*;
 use xp_logging::debug;
-use xp_mining_staking::SessionIndex;
+//use xp_mining_staking::SessionIndex;
 
 mod proposal09;
 
@@ -13,23 +13,25 @@ impl<T: Trait> Module<T> {
         (1_u32 << n).saturated_into()
     }
 
-    /// Returns true if the time for first halving cycle has arrived.
+    /*/// Returns true if the time for first halving cycle has arrived.
     #[inline]
     fn first_halving_epoch_arrived(current_index: SessionIndex) -> bool {
         current_index > T::MigrationSessionOffset::get()
-    }
+    }*/
 
     /// Returns the total reward for the session, assuming it ends with this block.
-    pub(crate) fn this_session_reward(current_index: SessionIndex) -> BalanceOf<T> {
+    pub(crate) fn this_session_reward(/*current_index: SessionIndex*/) -> BalanceOf<T> {
         /*let halving_epoch = if Self::first_halving_epoch_arrived(current_index) {
             (current_index - T::MigrationSessionOffset::get() - 1) / SESSIONS_PER_ROUND + 1
         } else {
             0
         };*/
-        // (1/2)^(n+1) < (2100 - x) / 2100 <= (1/2)^n
+        /*// (1/2)^(n+1) < (2100 - x) / 2100 <= (1/2)^n
         let total_issuance = T::Currency::total_issuance();  // x
         let halving_epoch = 0; // n
         let FIXED_TOTAL  ; //2100
+        */
+        let halving_epoch = 1;
 
 
         INITIAL_REWARD.saturated_into::<BalanceOf<T>>() / Self::pow2(halving_epoch)
@@ -67,7 +69,7 @@ impl<T: Trait> Module<T> {
         Self::apply_reward_validator(validator, reward);
     }
 
-    /// 20% reward of each session is for the vesting schedule in the first halving epoch.
+    /*/// 20% reward of each session is for the vesting schedule in the first halving epoch.
     pub(crate) fn try_vesting(
         current_index: SessionIndex,
         this_session_reward: BalanceOf<T>,
@@ -81,15 +83,16 @@ impl<T: Trait> Module<T> {
         } else {
             this_session_reward
         }
-    }
+        this_session_reward
+    }*/
 
     /// Distribute the session reward to all the receivers, returns the total reward for validators.
     pub(crate) fn distribute_session_reward(
-        session_index: SessionIndex,
+        /*session_index: SessionIndex,*/
     ) -> Vec<(T::AccountId, BalanceOf<T>)> {
-        let this_session_reward = Self::this_session_reward(session_index);
+        let session_reward = Self::this_session_reward(/*session_index*/);
 
-        let session_reward = Self::try_vesting(session_index, this_session_reward);
+     //   let session_reward = Self::try_vesting(session_index, this_session_reward);
 
         Self::distribute_session_reward_impl_09(session_reward)
     }

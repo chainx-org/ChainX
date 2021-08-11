@@ -844,6 +844,7 @@ fn referral_id_should_work() {
     });
 }
 
+/*
 #[test]
 fn migration_session_offset_should_work() {
     ExtBuilder::default().build_and_execute(|| {
@@ -885,4 +886,4 @@ fn migration_session_offset_should_work() {
             }
         }
     });
-}
+}*/
