@@ -562,7 +562,10 @@ fn staking_reward_should_work() {
 
         let total_issuance = || all.iter().map(|x| Balances::free_balance(x)).sum::<u128>();
 
-        assert_eq!(Balances::total_issuance(), total_issuance() + (FIXED_TOTAL / 2) as u128);
+        assert_eq!(
+            Balances::total_issuance(),
+            total_issuance() + (FIXED_TOTAL / 2) as u128
+        );
 
         t_start_session(2);
         assert_eq!(
@@ -670,7 +673,10 @@ fn staker_reward_should_work() {
 
         t_start_session(2);
         // The order is [3, 4, 1, 2] when calculating.
-        assert_eq!(t_reward_pot_balance(3), 486_000_000 + 456_923_076 - 45_692_307);
+        assert_eq!(
+            t_reward_pot_balance(3),
+            486_000_000 + 456_923_076 - 45_692_307
+        );
         assert_eq!(
             t_reward_pot_balance(3),
             486_000_000 + calc_reward_for_pot(30, 130, TOTAL_STAKING_REWARD)
@@ -882,7 +888,6 @@ fn migration_session_offset_should_work() {
             XStaking::this_session_reward(),
             (INITIAL_REWARD / 4) as u128
         );
-
 
         XStaking::mint(&who, (FIXED_TOTAL / 8 - 175000000000000) as u128);
         assert_eq!(
