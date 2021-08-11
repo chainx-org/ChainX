@@ -23,12 +23,12 @@ pub mod weights;
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
 mod benchmarking;
+#[cfg(feature = "std")]
+mod genesis;
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
 mod tests;
-#[cfg(feature = "std")]
-mod genesis;
 
 use sp_std::prelude::*;
 
