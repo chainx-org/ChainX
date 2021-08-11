@@ -20,7 +20,7 @@ pub struct NominatorInfo<AccountId, Balance> {
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct ValidatorInfo<AccountId, Balance> {
-    pub validator: AccountId,
+    pub who: AccountId,
     #[serde(with = "xp_rpc::serde_text")]
     pub referral_id: Vec<u8>,
     pub total_nomination: Balance,
