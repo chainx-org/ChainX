@@ -33,7 +33,7 @@ pub struct XStakingParams<AccountId, Balance> {
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
-pub struct FullParams<AccountId, Balance, AssetBalanceOf, StakingBalanceOf> {
+pub struct AllParams<AccountId, Balance, AssetBalanceOf, StakingBalanceOf> {
     pub balances: Vec<FreeBalanceInfo<AccountId, Balance>>,
     pub xassets: Vec<FreeBalanceInfo<AccountId, AssetBalanceOf>>,
     pub xstaking: XStakingParams<AccountId, StakingBalanceOf>,

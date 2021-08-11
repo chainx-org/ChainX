@@ -10,7 +10,7 @@ use sp_std::prelude::*;
 use frame_support::{decl_module, decl_storage};
 
 #[cfg(feature = "std")]
-use xp_genesis_builder::FullParams;
+use xp_genesis_builder::AllParams;
 #[cfg(feature = "std")]
 use xpallet_assets::BalanceOf as AssetBalanceOf;
 #[cfg(feature = "std")]
@@ -31,7 +31,7 @@ decl_module! {
 decl_storage! {
     trait Store for Module<T: Trait> as XGenesisBuilder {}
     add_extra_genesis {
-        config(params): FullParams<T::AccountId, T::Balance, AssetBalanceOf<T>, StakingBalanceOf<T>>;
+        config(params): AllParams<T::AccountId, T::Balance, AssetBalanceOf<T>, StakingBalanceOf<T>>;
         build(|config| {
             crate::regenesis::initialize(config);
         })
