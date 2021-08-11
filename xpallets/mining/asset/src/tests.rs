@@ -348,7 +348,6 @@ fn total_issuance_should_work() {
         let mut all = Vec::new();
         all.extend_from_slice(&validators);
         all.extend_from_slice(&validators_reward_pot);
-        all.push(VESTING_ACCOUNT);
         all.push(TREASURY_ACCOUNT);
         all.push(DummyAssetRewardPotAccountDeterminer::reward_pot_account_for(&X_BTC));
 
