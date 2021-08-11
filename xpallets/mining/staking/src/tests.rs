@@ -483,7 +483,7 @@ fn staking_reward_should_work() {
         t_issue_pcx(t_2, 100);
         t_issue_pcx(t_3, 100);
 
-        XStaking::mint(&888, (FIXED_TOTAL / 2 - 1000) as u128);
+        XStaking::mint(&888, (FIXED_TOTAL / 2) as u128);
         // Total minted per session:
         // 2_500_000_000
         // │
@@ -551,7 +551,7 @@ fn staking_reward_should_work() {
         let endowed = 100 + 200 + 300 + 400;
         assert_eq!(
             Balances::total_issuance(),
-            2_500_000_000u128 + issued_manually + endowed + (FIXED_TOTAL / 2 - 1000) as u128
+            2_500_000_000u128 + issued_manually + endowed + (FIXED_TOTAL / 2) as u128
         );
 
         let mut all = Vec::new();
@@ -562,12 +562,12 @@ fn staking_reward_should_work() {
 
         let total_issuance = || all.iter().map(|x| Balances::free_balance(x)).sum::<u128>();
 
-        assert_eq!(Balances::total_issuance(), total_issuance() + (FIXED_TOTAL / 2 - 1000) as u128);
+        assert_eq!(Balances::total_issuance(), total_issuance() + (FIXED_TOTAL / 2) as u128);
 
         t_start_session(2);
         assert_eq!(
             Balances::total_issuance(),
-            2_500_000_000u128 * 2 + issued_manually + endowed + (FIXED_TOTAL / 2 - 1000) as u128
+            2_500_000_000u128 * 2 + issued_manually + endowed + (FIXED_TOTAL / 2) as u128
         );
     });
 }
@@ -588,6 +588,7 @@ fn staker_reward_should_work() {
         t_issue_pcx(t_1, 100);
         t_issue_pcx(t_2, 100);
         t_issue_pcx(t_3, 100);
+        XStaking::mint(&888, (FIXED_TOTAL / 2) as u128);
 
         assert_eq!(
             <ValidatorLedgers<Test>>::get(1),
@@ -616,7 +617,7 @@ fn staker_reward_should_work() {
             }
         );
 
-        const TOTAL_STAKING_REWARD: Balance = 3_168_000_000;
+        const TOTAL_STAKING_REWARD: Balance = 1_980_000_000;
 
         let calc_reward_for_pot =
             |validator_votes: Balance, total_staked: Balance, total_reward: Balance| {
@@ -629,15 +630,15 @@ fn staker_reward_should_work() {
         // Block 1
         // total_staked = val(10+10) + val2(20) + val(30) + val(40) = 110
         // reward pot:
-        // 1: 3_168_000_000 * 20/110 * 90% = 51_840_000
-        // 2: 3_168_000_000 * 20/110 * 90% = 51_840_000
-        // 3: 3_168_000_000 * 30/110 * 90% = 777_600_000
-        // 4: 3_168_000_000 * 40/110 * 90% = 1_036_800_000
+        // 1: 1_980_000_000 * 20/110 * 90% = 324_000_000
+        // 2: 1_980_000_000 * 20/110 * 90% = 324_000_000
+        // 3: 1_980_000_000 * 30/110 * 90% = 486_000_000
+        // 4: 1_980_000_000 * 40/110 * 90% = 648_000_000
         t_start_session(1);
-        assert_eq!(t_reward_pot_balance(1), 518_400_000);
-        assert_eq!(t_reward_pot_balance(2), 518_400_000);
-        assert_eq!(t_reward_pot_balance(3), 777_600_000);
-        assert_eq!(t_reward_pot_balance(4), 1_036_800_000);
+        assert_eq!(t_reward_pot_balance(1), 324_000_000);
+        assert_eq!(t_reward_pot_balance(2), 324_000_000);
+        assert_eq!(t_reward_pot_balance(3), 486_000_000);
+        assert_eq!(t_reward_pot_balance(4), 648_000_000);
 
         assert_eq!(
             <ValidatorLedgers<Test>>::get(2),
