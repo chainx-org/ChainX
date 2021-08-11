@@ -4,15 +4,16 @@
 //! similar regenesis processing, particularly on the parts about which states
 //! we care about and how we initialize them on a brand new chain.
 
-use crate::GenesisConfig;
+use crate::deprecated_builder::GenesisConfig;
 
 mod balances {
-    use crate::Trait;
     use frame_support::{traits::StoredMap, StorageValue};
     use pallet_balances::AccountData;
     use xp_genesis_builder::{BalancesParams, FreeBalanceInfo, WellknownAccounts};
     use xp_protocol::X_BTC;
     use xpallet_support::traits::TreasuryAccount;
+
+    use crate::deprecated_builder::Trait;
 
     /// Returns the validator account by the given reward pot account.
     fn validator_for<'a, T: Trait, I: Iterator<Item = &'a (T::AccountId, T::AccountId)>>(
@@ -81,7 +82,7 @@ mod balances {
 }
 
 mod xassets {
-    use crate::{AssetBalanceOf, Trait};
+    use crate::{deprecated_builder::Trait, AssetBalanceOf};
     use xp_genesis_builder::FreeBalanceInfo;
     use xp_protocol::X_BTC;
 
@@ -93,7 +94,7 @@ mod xassets {
 }
 
 mod xstaking {
-    use crate::{StakingBalanceOf, Trait};
+    use crate::{deprecated_builder::Trait, StakingBalanceOf};
     use xp_genesis_builder::{Nomination, NominatorInfo, XStakingParams};
 
     pub fn initialize<T: Trait>(params: &XStakingParams<T::AccountId, StakingBalanceOf<T>>) {
@@ -144,7 +145,7 @@ mod xstaking {
 }
 
 mod xmining_asset {
-    use crate::Trait;
+    use crate::deprecated_builder::Trait;
     use xp_genesis_builder::{XBtcMiner, XMiningAssetParams};
     use xp_protocol::X_BTC;
 
@@ -173,7 +174,7 @@ mod xmining_asset {
     }
 }
 
-pub(crate) fn initialize<T: crate::Trait>(config: &GenesisConfig<T>) {
+pub(crate) fn initialize<T: crate::deprecated_builder::Trait>(config: &GenesisConfig<T>) {
     let now = std::time::Instant::now();
 
     balances::initialize::<T>(
