@@ -52,14 +52,17 @@ mod xstaking {
     use crate::StakingBalanceOf;
 
     // Simulate the bond operation.
-    pub fn initialize<T: Trait>(params: &XStakingParams<T::AccountId, StakingBalanceOf<T>>) {
+    pub fn initialize<T: Trait>(
+        params: &XStakingParams<T::AccountId, StakingBalanceOf<T>>,
+        initial_authorities: &[Vec<u8>],
+    ) {
         let XStakingParams {
             validators,
             nominators,
         } = params;
 
         // Firstly register the genesis validators.
-        xpallet_mining_staking::Module::<T>::initialize_validators(validators)
+        xpallet_mining_staking::Module::<T>::initialize_validators(validators, initial_authorities)
             .expect("Failed to initialize genesis staking validators");
 
         // Then mock the validator bond themselves and set the vote weights.
@@ -118,7 +121,7 @@ pub(crate) fn initialize<T: Trait>(config: &GenesisConfig<T>) {
 
     balances::initialize::<T>(&config.params.balances);
     xassets::initialize::<T>(&config.params.xassets);
-    xstaking::initialize::<T>(&config.params.xstaking);
+    xstaking::initialize::<T>(&config.params.xstaking, &config.initial_authorities);
     xmining_asset::initialize::<T>(&config.params.xassets);
 
     xp_logging::info!(

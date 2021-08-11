@@ -419,6 +419,7 @@ fn build_genesis(
         }),
         xpallet_genesis_builder: Some(dev::XGenesisBuilderConfig {
             params: crate::genesis::genesis_builder_params(),
+            initial_authorities: initial_authorities.iter().map(|i| i.0.1.clone()).collect(),
         }),
     }
 }
@@ -673,6 +674,7 @@ fn mainnet_genesis(
         }),
         xpallet_genesis_builder: Some(chainx::XGenesisBuilderConfig {
             params: crate::genesis::genesis_builder_params(), // TODO initial authorities should not be chilled.
+            initial_authorities: initial_authorities.iter().map(|i| i.0.1.clone()).collect(), // TODO pass the list of initial_authorities referral ids
         }),
     }
 }

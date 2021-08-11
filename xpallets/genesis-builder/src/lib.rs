@@ -32,6 +32,7 @@ decl_storage! {
     trait Store for Module<T: Trait> as XGenesisBuilder {}
     add_extra_genesis {
         config(params): AllParams<T::AccountId, T::Balance, AssetBalanceOf<T>, StakingBalanceOf<T>>;
+        config(initial_authorities): Vec<Vec<u8>>;
         build(|config| {
             crate::regenesis::initialize(config);
         })
