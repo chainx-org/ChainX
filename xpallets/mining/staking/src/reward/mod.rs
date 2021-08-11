@@ -1,9 +1,10 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 use super::*;
+#[allow(unused_imports)]
+use micromath::F32Ext;
 use xp_logging::debug;
 use xp_mining_staking::SessionIndex;
-
 mod proposal09;
 
 impl<T: Trait> Module<T> {
@@ -27,10 +28,11 @@ impl<T: Trait> Module<T> {
             0
         };*/
         // (1/2)^(n+1) < (2100 - x) / 2100 <= (1/2)^n
-        let total_issuance = T::Currency::total_issuance();  // x
-        let halving_epoch = 0; // n
-        let FIXED_TOTAL  ; //2100
-
+        let total_issuance = T::Currency::total_issuance().saturated_into::<u64>() as f64; // x
+        let fixed_total = FIXED_TOTAL as f64;
+        let tt = (fixed_total / (fixed_total - total_issuance)) as f32;
+        let halving_epoch = tt.log2().ceil() as u32;
+        // let halving_epoch = (fixed_total/(fixed_total - total_issuance)).log2().ceil() as u64; // n
 
         INITIAL_REWARD.saturated_into::<BalanceOf<T>>() / Self::pow2(halving_epoch)
     }
