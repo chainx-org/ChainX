@@ -139,7 +139,6 @@ pub fn development_config() -> Result<DevChainSpec, String> {
             wasm_binary,
             vec![authority_keys_from_seed("Alice")],
             get_account_id_from_seed::<sr25519::Public>("Alice"),
-            get_account_id_from_seed::<sr25519::Public>("vesting"),
             genesis_assets(),
             endowed_gen![
                 ("Alice", endowed_balance),
@@ -175,7 +174,6 @@ pub fn benchmarks_config() -> Result<DevChainSpec, String> {
             wasm_binary,
             vec![authority_keys_from_seed("Alice")],
             get_account_id_from_seed::<sr25519::Public>("Alice"),
-            get_account_id_from_seed::<sr25519::Public>("vesting"),
             genesis_assets(),
             endowed_gen![
                 ("Alice", endowed_balance),
@@ -213,7 +211,6 @@ pub fn local_testnet_config() -> Result<DevChainSpec, String> {
                 authority_keys_from_seed("Bob"),
             ],
             get_account_id_from_seed::<sr25519::Public>("Alice"),
-            get_account_id_from_seed::<sr25519::Public>("vesting"),
             genesis_assets(),
             endowed_gen![
                 ("Alice", endowed_balance),
@@ -272,7 +269,6 @@ fn build_genesis(
     wasm_binary: &[u8],
     initial_authorities: Vec<AuthorityKeysTuple>,
     root_key: AccountId,
-    vesting_account: AccountId,
     assets: Vec<AssetParams>,
     endowed: BTreeMap<AssetId, Vec<(AccountId, Balance)>>,
     bitcoin: BtcGenesisParams,
@@ -416,7 +412,6 @@ fn build_genesis(
             validators,
             validator_count: 50,
             sessions_per_era: 12,
-            vesting_account,
             glob_dist_ratio: (12, 88), // (Treasury, X-type Asset and Staking) = (12, 88)
             mining_ratio: (10, 90),    // (Asset Mining, Staking) = (10, 90)
             minimum_penalty: 2 * DOLLARS,

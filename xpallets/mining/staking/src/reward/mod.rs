@@ -4,7 +4,6 @@ use super::*;
 #[allow(unused_imports)]
 use micromath::F32Ext;
 use xp_logging::debug;
-//use xp_mining_staking::SessionIndex;
 mod proposal09;
 
 impl<T: Trait> Module<T> {
@@ -14,25 +13,13 @@ impl<T: Trait> Module<T> {
         (1_u32 << n).saturated_into()
     }
 
-    /*/// Returns true if the time for first halving cycle has arrived.
-    #[inline]
-    fn first_halving_epoch_arrived(current_index: SessionIndex) -> bool {
-        current_index > T::MigrationSessionOffset::get()
-    }*/
-
+    /// (1/2)^(n+1) < (2100 - x) / 2100 <= (1/2)^n
     /// Returns the total reward for the session, assuming it ends with this block.
-    pub(crate) fn this_session_reward(/*current_index: SessionIndex*/) -> BalanceOf<T> {
-        /*let halving_epoch = if Self::first_halving_epoch_arrived(current_index) {
-            (current_index - T::MigrationSessionOffset::get() - 1) / SESSIONS_PER_ROUND + 1
-        } else {
-            0
-        };*/
-        // (1/2)^(n+1) < (2100 - x) / 2100 <= (1/2)^n
-        let total_issuance = T::Currency::total_issuance().saturated_into::<u64>() as f64; // x
+    pub(crate) fn this_session_reward() -> BalanceOf<T> {
+        let total_issuance = T::Currency::total_issuance().saturated_into::<u64>() as f64;
         let fixed_total = FIXED_TOTAL as f64;
         let tt = (fixed_total / (fixed_total - total_issuance)) as f32;
         let halving_epoch = tt.log2().ceil() as u32;
-        // let halving_epoch = (fixed_total/(fixed_total - total_issuance)).log2().ceil() as u64; // n
 
         INITIAL_REWARD.saturated_into::<BalanceOf<T>>() / Self::pow2(halving_epoch)
     }
@@ -69,30 +56,9 @@ impl<T: Trait> Module<T> {
         Self::apply_reward_validator(validator, reward);
     }
 
-    /*/// 20% reward of each session is for the vesting schedule in the first halving epoch.
-    pub(crate) fn try_vesting(
-        current_index: SessionIndex,
-        this_session_reward: BalanceOf<T>,
-    ) -> BalanceOf<T> {
-        if !Self::first_halving_epoch_arrived(current_index) {
-            let to_vesting = this_session_reward / 5u32.saturated_into::<BalanceOf<T>>();
-            let vesting_account = Self::vesting_account();
-            Self::mint(&vesting_account, to_vesting);
-            debug!("💸 Mint vesting({:?}):{:?}", vesting_account, to_vesting);
-            this_session_reward - to_vesting
-        } else {
-            this_session_reward
-        }
-        this_session_reward
-    }*/
-
     /// Distribute the session reward to all the receivers, returns the total reward for validators.
-    pub(crate) fn distribute_session_reward(
-        /*session_index: SessionIndex,*/
-    ) -> Vec<(T::AccountId, BalanceOf<T>)> {
+    pub(crate) fn distribute_session_reward() -> Vec<(T::AccountId, BalanceOf<T>)> {
         let session_reward = Self::this_session_reward(/*session_index*/);
-
-     //   let session_reward = Self::try_vesting(session_index, this_session_reward);
 
         Self::distribute_session_reward_impl_09(session_reward)
     }

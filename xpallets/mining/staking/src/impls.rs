@@ -224,7 +224,7 @@ impl<T: Trait> Module<T> {
     /// Issue new session reward and try slashing the offenders at the same time.
     fn mint_and_slash(session_index: SessionIndex) {
         // Only the active validators can be rewarded.
-        let validator_rewards = Self::distribute_session_reward(/*session_index*/);
+        let validator_rewards = Self::distribute_session_reward();
 
         // Reset the session offenders.
         if let Some(offenders) = SessionOffenders::<T>::take() {
