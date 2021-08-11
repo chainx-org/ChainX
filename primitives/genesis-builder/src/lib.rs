@@ -8,4 +8,7 @@
 mod genesis_params;
 
 #[cfg(feature = "std")]
-pub use self::genesis_params::*;
+mod regenesis_params;
+
+#[cfg(feature = "std")]
+pub use self::regenesis_params::*;
