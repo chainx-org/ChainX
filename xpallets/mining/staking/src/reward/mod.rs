@@ -21,11 +21,16 @@ impl<T: Trait> Module<T> {
 
     /// Returns the total reward for the session, assuming it ends with this block.
     pub(crate) fn this_session_reward(current_index: SessionIndex) -> BalanceOf<T> {
-        let halving_epoch = if Self::first_halving_epoch_arrived(current_index) {
+        /*let halving_epoch = if Self::first_halving_epoch_arrived(current_index) {
             (current_index - T::MigrationSessionOffset::get() - 1) / SESSIONS_PER_ROUND + 1
         } else {
             0
-        };
+        };*/
+        // (1/2)^(n+1) < (2100 - x) / 2100 <= (1/2)^n
+        let total_issuance = T::Currency::total_issuance();  // x
+        let halving_epoch = 0; // n
+        let FIXED_TOTAL  ; //2100
+
 
         INITIAL_REWARD.saturated_into::<BalanceOf<T>>() / Self::pow2(halving_epoch)
     }
