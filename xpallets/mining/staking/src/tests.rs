@@ -484,7 +484,6 @@ fn staking_reward_should_work() {
         t_issue_pcx(t_3, 100);
 
         XStaking::mint(&888, (FIXED_TOTAL / 2 - 1000) as u128);
-        println!("--balance validator1 :{:?}", Balances::free_balance(1));
         // Total minted per session:
         // 2_500_000_000
         // │
@@ -497,7 +496,6 @@ fn staking_reward_should_work() {
         // When you start session 1, actually there are 3 session rounds.
         // the session reward has been minted 3 times.
         t_start_session(1);
-        println!("--balance validator1 :{:?}", Balances::free_balance(1));
 
         let sub_total = 2_500_000_000u128;
 
@@ -553,7 +551,7 @@ fn staking_reward_should_work() {
         let endowed = 100 + 200 + 300 + 400;
         assert_eq!(
             Balances::total_issuance(),
-            5_000_000_000u128 + issued_manually + endowed + (FIXED_TOTAL / 2 - 1000) as u128
+            2_500_000_000u128 + issued_manually + endowed + (FIXED_TOTAL / 2 - 1000) as u128
         );
 
         let mut all = Vec::new();
@@ -564,12 +562,12 @@ fn staking_reward_should_work() {
 
         let total_issuance = || all.iter().map(|x| Balances::free_balance(x)).sum::<u128>();
 
-        assert_eq!(Balances::total_issuance(), total_issuance());
+        assert_eq!(Balances::total_issuance(), total_issuance() + (FIXED_TOTAL / 2 - 1000) as u128);
 
         t_start_session(2);
         assert_eq!(
             Balances::total_issuance(),
-            5_000_000_000u128 * 2 + issued_manually + endowed
+            2_500_000_000u128 * 2 + issued_manually + endowed + (FIXED_TOTAL / 2 - 1000) as u128
         );
     });
 }
