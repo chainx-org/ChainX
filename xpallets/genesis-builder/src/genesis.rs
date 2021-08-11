@@ -35,7 +35,7 @@ mod balances {
 
         let WellknownAccounts {
             legacy_council,
-            legacy_team,
+            //legacy_team,
             legacy_pots,
             legacy_xbtc_pot,
         } = wellknown_accounts;
@@ -53,7 +53,7 @@ mod balances {
         let treasury_account =
             <T as xpallet_mining_staking::Trait>::TreasuryAccount::treasury_account();
 
-        let vesting_account = xpallet_mining_staking::Module::<T>::vesting_account();
+//        let vesting_account = xpallet_mining_staking::Module::<T>::vesting_account();
 
         let mut total_issuance = T::Balance::default();
 
@@ -61,10 +61,10 @@ mod balances {
             if *who == *legacy_council {
                 let treasury_free = *free - root_endowed;
                 set_free_balance(&treasury_account, &treasury_free);
-            } else if *who == *legacy_team {
+            }/* else if *who == *legacy_team {
                 let vesting_free = *free - initial_authorities_endowed;
                 set_free_balance(&vesting_account, &vesting_free);
-            } else if *who == *legacy_xbtc_pot {
+            }*/ else if *who == *legacy_xbtc_pot {
                 let new_xbtc_pot = xpallet_mining_asset::Module::<T>::reward_pot_for(&X_BTC);
                 set_free_balance(&new_xbtc_pot, free);
             } else if let Some(validator) = validator_for::<T, _>(who, legacy_pots.iter()) {
