@@ -483,21 +483,23 @@ fn staking_reward_should_work() {
         t_issue_pcx(t_2, 100);
         t_issue_pcx(t_3, 100);
 
+        XStaking::mint(&888, (FIXED_TOTAL / 2 - 1000) as u128);
+        println!("--balance validator1 :{:?}", Balances::free_balance(1));
         // Total minted per session:
-        // 5_000_000_000
+        // 2_500_000_000
         // │
-        // ├──> vesting_account:  1_000_000_000
-        // ├──> treasury_reward:    480_000_000 12% <--------
-        // └──> mining_reward:    3_520_000_000 88%          |
+        // ├──> treasury_reward:    300_000_000 12% <--------
+        // └──> mining_reward:    2_200_000_000 88%          |
         //    │                                              |
-        //    ├──> Staking        3_168_000_000 90%          |
-        //    └──> Asset Mining     352_000_000 10% ---------
+        //    ├──> Staking        1_980_000_000 90%          |
+        //    └──> Asset Mining     220_000_000 10% ---------
         //
         // When you start session 1, actually there are 3 session rounds.
         // the session reward has been minted 3 times.
         t_start_session(1);
+        println!("--balance validator1 :{:?}", Balances::free_balance(1));
 
-        let sub_total = 4_000_000_000u128;
+        let sub_total = 2_500_000_000u128;
 
         let treasury_reward = sub_total * 12 / 100;
         let mining_reward = sub_total * 88 / 100;
@@ -551,11 +553,10 @@ fn staking_reward_should_work() {
         let endowed = 100 + 200 + 300 + 400;
         assert_eq!(
             Balances::total_issuance(),
-            5_000_000_000u128 + issued_manually + endowed
+            5_000_000_000u128 + issued_manually + endowed + (FIXED_TOTAL / 2 - 1000) as u128
         );
 
         let mut all = Vec::new();
-        all.push(VESTING_ACCOUNT);
         all.push(TREASURY_ACCOUNT);
         all.extend_from_slice(&[t_1, t_2, t_3]);
         all.extend_from_slice(&validators);
