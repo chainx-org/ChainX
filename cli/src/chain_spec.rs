@@ -426,8 +426,6 @@ fn build_genesis(
         }),
         xpallet_genesis_builder: Some(dev::XGenesisBuilderConfig {
             params: crate::genesis::genesis_builder_params(),
-            initial_authorities_endowed,
-            root_endowed: 0,
         }),
     }
 }
