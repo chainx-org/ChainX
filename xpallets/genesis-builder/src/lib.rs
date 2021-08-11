@@ -10,6 +10,6 @@ use xpallet_assets::BalanceOf as AssetBalanceOf;
 #[cfg(feature = "std")]
 use xpallet_mining_staking::BalanceOf as StakingBalanceOf;
 
-mod deprecated_genesis;
+mod deprecated_builder;
 
-pub use self::deprecated_genesis::*;
+pub use self::deprecated_builder::*;
