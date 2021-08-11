@@ -9,11 +9,8 @@ pub const STAKING_ID: LockIdentifier = *b"staking ";
 /// ChainX uses a Bitcoin like issuance model, the initial reward is 50 PCX.
 pub const INITIAL_REWARD: u64 = 5_000_000_000;
 
-/// Every 210_000 sessions, the session reward is cut in half.
-///
-/// ChainX follows the issuance rule of Bitcoin. The `Session` in ChainX
-/// is equivalent to `Block` in Bitcoin with regard to minting new coins.
-pub const SESSIONS_PER_ROUND: u32 = 210_000;
+/// ChainX uses a Bitcoin like issuance model, issuing a fixed total of 21 million.
+pub const FIXED_TOTAL: u64 = 2_100_000_000_000_000;
 
 /// The maximum number of Staking validators.
 ///

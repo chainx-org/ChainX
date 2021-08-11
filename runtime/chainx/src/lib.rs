@@ -965,7 +965,6 @@ parameter_types! {
 impl xpallet_mining_staking::Trait for Runtime {
     type Event = Event;
     type Currency = Balances;
-    type MigrationSessionOffset = MigrationSessionOffset;
     type SessionDuration = SessionDuration;
     type MinimumReferralId = MinimumReferralId;
     type MaximumReferralId = MaximumReferralId;
