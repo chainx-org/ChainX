@@ -540,7 +540,7 @@ pub fn build_mainnet_config() -> Result<ChainXChainSpec, String> {
             ])
             .expect("ChainX telemetry url is valid; qed"),
         ),
-        Some("pcx1"),
+        Some("pcx1"), // change this for the test purpose
         Some(as_properties(NetworkType::Mainnet)),
         Default::default(),
     ))
@@ -570,14 +570,13 @@ fn mainnet_genesis(
     use chainx_runtime::constants::time::DAYS;
 
     let (assets, assets_restrictions) = init_assets(assets);
-    // TODO: update the tech commitees
     let tech_comm_members: Vec<AccountId> = vec![
         // 5C7VzhPqJsLXcyJmX71ZEt7GdkAMTxHNPwh6BSb8thgBbQU1
         hex!["0221ce7c4a0b771faaf0bbae23c3a1965348cb5257611313a73c3d4a53599509"].into(),
         // 5D7F1AJoDwuCvZZKEggeGk2brxYty9mkamUcFHyshYBnbWs3
         hex!["2e2b928d39b7a9c8688509927e17031001fab604557db093ead5069474e0584e"].into(),
-        // 5HG5CswZ6X39BYqt8Dc8e4Cn2HieGnnUiG39ddGn2oq5G36W
-        hex!["e5d8bb656b124beb40990ef9346c441f888981ec7e0d4c55c9c72c176aec5290"].into(),
+        // 5T1jHMHspov8UgD9ygXc7rL5oNZJdDB7WfRtAduDt4AXPUSq
+        hex!["9542907d40eaab54d3a35a08be01ff82abe298ce210a7a3de3dd2cd0d6b0e9d3"].into(),
     ];
 
     let btc_genesis_trustees = trustees
@@ -657,7 +656,7 @@ fn mainnet_genesis(
             verifier: BtcTxVerifier::Recover,
         }),
         xpallet_mining_staking: Some(chainx::XStakingConfig {
-            validator_count: 40, // TODO: figure it out
+            validator_count: 40, // TODO: final decision?
             sessions_per_era: 12,
             glob_dist_ratio: (12, 88), // (Treasury, X-type Asset and Staking) = (12, 88)
             mining_ratio: (10, 90),    // (Asset Mining, Staking) = (10, 90)
@@ -673,8 +672,8 @@ fn mainnet_genesis(
             trading_pairs: vec![(PCX, X_BTC, 9, 2, 100000, true)],
         }),
         xpallet_genesis_builder: Some(chainx::XGenesisBuilderConfig {
-            params: crate::genesis::genesis_builder_params(), // TODO initial authorities should not be chilled.
-            initial_authorities: initial_authorities.iter().map(|i| i.0.1.clone()).collect(), // TODO pass the list of initial_authorities referral ids
+            params: crate::genesis::genesis_builder_params(),
+            initial_authorities: initial_authorities.iter().map(|i| i.0.1.clone()).collect(),
         }),
     }
 }
