@@ -96,6 +96,6 @@ pub fn preprocess_cli_args(cli_args: Vec<String>) -> Vec<String> {
     let path: Option<&Path> = config_path.as_ref().map(Path::new);
     match extend_cli_args(cli_args, path) {
         Ok(args) => args,
-        Err(e) => panic!(e.to_string()),
+        Err(e) => panic!("{}", e.to_string()),
     }
 }

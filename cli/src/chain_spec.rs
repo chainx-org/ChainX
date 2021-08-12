@@ -419,7 +419,10 @@ fn build_genesis(
         }),
         xpallet_genesis_builder: Some(dev::XGenesisBuilderConfig {
             params: crate::genesis::genesis_builder_params(),
-            initial_authorities: initial_authorities.iter().map(|i| i.0 .1.clone()).collect(),
+            initial_authorities: initial_authorities
+                .iter()
+                .map(|i| (i.0).1.clone())
+                .collect(),
         }),
     }
 }
@@ -655,7 +658,7 @@ fn mainnet_genesis(
             verifier: BtcTxVerifier::Recover,
         }),
         xpallet_mining_staking: Some(chainx::XStakingConfig {
-            validator_count: 40, // TODO: final decision?
+            validator_count: 40,
             sessions_per_era: 12,
             glob_dist_ratio: (12, 88), // (Treasury, X-type Asset and Staking) = (12, 88)
             mining_ratio: (10, 90),    // (Asset Mining, Staking) = (10, 90)
@@ -672,7 +675,10 @@ fn mainnet_genesis(
         }),
         xpallet_genesis_builder: Some(chainx::XGenesisBuilderConfig {
             params: crate::genesis::genesis_builder_params(),
-            initial_authorities: initial_authorities.iter().map(|i| i.0 .1.clone()).collect(),
+            initial_authorities: initial_authorities
+                .iter()
+                .map(|i| (i.0).1.clone())
+                .collect(),
         }),
     }
 }
