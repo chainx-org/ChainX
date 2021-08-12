@@ -31,7 +31,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v3
         with:
-          images: canyonlabs/canyon
+          images: chainxorg/chainx
 
       - name: Login to DockerHub
         if: github.event_name != 'pull_request'
