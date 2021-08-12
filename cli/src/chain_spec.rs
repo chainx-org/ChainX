@@ -524,17 +524,22 @@ pub fn build_mainnet_config() -> Result<ChainXChainSpec, String> {
             crate::genesis::bitcoin::mainnet_trustees(),
         )
     };
+
+    // TODO: make sure the bootnodes
+    // let bootnodes = bootnodes![
+            // "/dns/p2p.1.chainx.org/tcp/20222/p2p/12D3KooWMMGD6eyLDgoTPnmGrawn9gkjtsZGLACJXqVCUbe6R6bD",
+            // "/dns/p2p.2.chainx.org/tcp/20222/p2p/12D3KooWC1tFLBFVw47S2nfD7Nzhg5hBMUvsnz4nqpr82zfTYWaH",
+            // "/dns/p2p.3.chainx.org/tcp/20222/p2p/12D3KooWPthFY8xDDyM5X9PWZwNfioqP5EShiTKyVv5899H22WBT",
+    // ];
+
+    let bootnodes = Default::default();
+
     Ok(ChainXChainSpec::from_genesis(
         "ChainX",
         "chainx",
         ChainType::Live,
         constructor,
-        // TODO: make sure the bootnodes
-        bootnodes![
-            "/dns/p2p.1.chainx.org/tcp/20222/p2p/12D3KooWMMGD6eyLDgoTPnmGrawn9gkjtsZGLACJXqVCUbe6R6bD",
-            "/dns/p2p.2.chainx.org/tcp/20222/p2p/12D3KooWC1tFLBFVw47S2nfD7Nzhg5hBMUvsnz4nqpr82zfTYWaH",
-            "/dns/p2p.3.chainx.org/tcp/20222/p2p/12D3KooWPthFY8xDDyM5X9PWZwNfioqP5EShiTKyVv5899H22WBT",
-        ],
+        bootnodes,
         Some(
             TelemetryEndpoints::new(vec![
                 (CHAINX_TELEMETRY_URL.to_string(), 0),
@@ -542,7 +547,7 @@ pub fn build_mainnet_config() -> Result<ChainXChainSpec, String> {
             ])
             .expect("ChainX telemetry url is valid; qed"),
         ),
-        Some("pcx1"), // change this for the test purpose
+        Some("pcx1"),
         Some(as_properties(NetworkType::Mainnet)),
         Default::default(),
     ))
