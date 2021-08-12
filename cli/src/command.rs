@@ -3,7 +3,8 @@
 use std::net::SocketAddr;
 
 use sc_cli::{
-    ChainSpec, CliConfiguration, DefaultConfigurationValues, Role, RuntimeVersion, SubstrateCli,
+    ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
+    NetworkParams, OffchainWorkerParams, Role, RuntimeVersion, SharedParams, SubstrateCli,
 };
 use sc_service::{
     config::{PrometheusConfig, TelemetryEndpoints},
@@ -37,23 +38,23 @@ impl<DCV> CliConfiguration<DCV> for Cli
 where
     DCV: DefaultConfigurationValues,
 {
-    fn shared_params(&self) -> &sc_cli::SharedParams {
+    fn shared_params(&self) -> &SharedParams {
         self.run.base.shared_params()
     }
 
-    fn import_params(&self) -> Option<&sc_cli::ImportParams> {
+    fn import_params(&self) -> Option<&ImportParams> {
         self.run.base.import_params()
     }
 
-    fn keystore_params(&self) -> Option<&sc_cli::KeystoreParams> {
+    fn keystore_params(&self) -> Option<&KeystoreParams> {
         self.run.base.keystore_params()
     }
 
-    fn network_params(&self) -> Option<&sc_cli::NetworkParams> {
+    fn network_params(&self) -> Option<&NetworkParams> {
         self.run.base.network_params()
     }
 
-    fn offchain_worker_params(&self) -> Option<&sc_cli::OffchainWorkerParams> {
+    fn offchain_worker_params(&self) -> Option<&OffchainWorkerParams> {
         self.run.base.offchain_worker_params()
     }
 
@@ -61,7 +62,7 @@ where
         self.run.base.base_path()
     }
 
-    fn role(&self, is_dev: bool) -> sc_cli::Result<sc_cli::Role> {
+    fn role(&self, is_dev: bool) -> sc_cli::Result<Role> {
         self.run.base.role(is_dev)
     }
 
@@ -106,7 +107,7 @@ where
 
     fn telemetry_endpoints(
         &self,
-        chain_spec: &Box<dyn sc_cli::ChainSpec>,
+        chain_spec: &Box<dyn ChainSpec>,
     ) -> sc_cli::Result<Option<TelemetryEndpoints>> {
         self.run.base.telemetry_endpoints(chain_spec)
     }
@@ -157,7 +158,7 @@ impl SubstrateCli for Cli {
         2019
     }
 
-    fn load_spec(&self, id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
+    fn load_spec(&self, id: &str) -> Result<Box<dyn ChainSpec>, String> {
         // this id is from `--chain=<id>`
         load_spec(id)
     }
@@ -167,7 +168,7 @@ impl SubstrateCli for Cli {
     }
 }
 
-fn load_spec(id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
+fn load_spec(id: &str) -> Result<Box<dyn ChainSpec>, String> {
     Ok(match id {
         "" | "mainnet" => Box::new(chain_spec::mainnet_config()?),
         "dev" => Box::new(chain_spec::development_config()?),
@@ -344,7 +345,7 @@ pub fn run() -> sc_cli::Result<()> {
     }
 }
 
-fn set_default_ss58_version(spec: &Box<dyn sc_service::ChainSpec>) {
+fn set_default_ss58_version(spec: &Box<dyn ChainSpec>) {
     use sp_core::crypto::Ss58AddressFormat;
     // this `id()` is from `ChainSpec::from_genesis()` second parameter
     // todo may use a better way
