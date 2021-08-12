@@ -20,6 +20,16 @@ fn t_bond(who: AccountId, target: AccountId, value: Balance) -> DispatchResult {
     XStaking::bond(Origin::signed(who), target, value)
 }
 
+fn t_register(who: AccountId, initial_bond: Balance) -> DispatchResult {
+    let mut referral_id = who.to_string().as_bytes().to_vec();
+
+    if referral_id.len() < 2 {
+        referral_id.extend_from_slice(&[1, 1, 1, who as u8]);
+    }
+
+    XStaking::register(Origin::signed(who), referral_id, initial_bond)
+}
+
 fn t_issue_pcx(who: AccountId, value: Balance) {
     let _ = Balances::deposit_creating(&who, value);
 }
@@ -275,10 +285,13 @@ fn sum_of_miner_weights_and_asset_total_weights_should_equal() {
 }
 
 #[test]
-#[ignore]
-// TODO: fix and re-enable the test
 fn claim_restriction_should_work() {
     ExtBuilder::default().build_and_execute(|| {
+        assert_ok!(t_register(1, 10));
+        assert_ok!(t_register(2, 20));
+        assert_ok!(t_register(3, 30));
+        assert_ok!(t_register(4, 50));
+
         assert_ok!(t_register_xbtc());
         let t_1 = 777;
         assert_ok!(t_issue_xbtc(t_1, 100));
@@ -324,8 +337,8 @@ fn claim_restriction_should_work() {
         t_issue_pcx(1, 1_000_000_000_000u128);
         t_issue_pcx(t_1, 1_000_000_000_000u128);
         assert_ok!(t_bond(1, 1, 100_000_000_000));
-        // total dividend: 704000000
-        let total_mining_dividend = 704000000;
+        // total dividend: 880_000_000 = 5_000_000_000 * 0.88 * 0.1
+        let total_mining_dividend = 880_000_000;
         // the claimer needs 10x dividend of Staking locked.
         assert_ok!(t_bond(t_1, 1, total_mining_dividend * 10 - 1));
         assert_err!(
@@ -339,10 +352,13 @@ fn claim_restriction_should_work() {
 }
 
 #[test]
-#[ignore]
-// TODO: fix the test
 fn total_issuance_should_work() {
     ExtBuilder::default().build_and_execute(|| {
+        assert_ok!(t_register(1, 10));
+        assert_ok!(t_register(2, 20));
+        assert_ok!(t_register(3, 30));
+        assert_ok!(t_register(4, 50));
+
         let validators = vec![1, 2, 3, 4];
         let validators_reward_pot = validators
             .iter()
@@ -374,10 +390,13 @@ fn t_set_xbtc_asset_power(new: FixedAssetPower) {
 }
 
 #[test]
-#[ignore]
-// TODO: fix and re-enable the test
 fn asset_mining_reward_should_work() {
     ExtBuilder::default().build_and_execute(|| {
+        assert_ok!(t_register(1, 10));
+        assert_ok!(t_register(2, 20));
+        assert_ok!(t_register(3, 30));
+        assert_ok!(t_register(4, 40));
+
         assert_ok!(t_register_xbtc());
 
         let t_1 = 666_666;
@@ -394,26 +413,25 @@ fn asset_mining_reward_should_work() {
         // Total minted per session:
         // 5_000_000_000
         // │
-        // ├──> vesting_account:  1_000_000_000
-        // ├──> treasury_reward:    480_000_000 12% <--------
-        // └──> mining_reward:    3_520_000_000 88%          |
+        // ├──> treasury_reward:    600_000_000 12% <--------
+        // └──> mining_reward:    4_400_000_000 88%          |
         //    │                                              |
-        //    ├──> Staking        3_168_000_000 90%          |
-        //    └──> Asset Mining     352_000_000 10% ---------
+        //    ├──> Staking        3_960_000_000 90%          |
+        //    └──> Asset Mining     440_000_000 10% ---------
         //
         // When you start session 1, actually there are 3 session rounds.
         // the session reward has been minted 3 times.
         t_start_session(1);
 
-        let sub_total = 4_000_000_000u128;
+        let sub_total = 5_000_000_000u128;
 
         let treasury_reward = sub_total * 12 / 100;
         let mining_reward = sub_total * 88 / 100;
 
         let asset_mining_reward = mining_reward * 10 / 100;
 
-        //    ├──> Staking        3_168_000_000 90% 900
-        //    └──> Asset Mining     352_000_000 10% 100
+        //    ├──> Staking        3_960_000_000 90% 900
+        //    └──> Asset Mining     440_000_000 10% 100
 
         assert_eq!(Balances::free_balance(&TREASURY_ACCOUNT), treasury_reward);
         assert_xbtc_reward_pot_balance(asset_mining_reward);
