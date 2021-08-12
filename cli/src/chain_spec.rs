@@ -247,8 +247,8 @@ pub fn local_testnet_config() -> Result<DevChainSpec, String> {
 }
 
 pub fn mainnet_config() -> Result<ChainXChainSpec, String> {
-    // ChainXChainSpec::from_json_bytes(&include_bytes!("./res/chainx.json")[..])
-    build_mainnet_config()
+    ChainXChainSpec::from_json_bytes(&include_bytes!("./res/chainx_regenesis.json")[..])
+    // build_mainnet_config()
 }
 
 pub fn malan_config() -> Result<MalanChainSpec, String> {
