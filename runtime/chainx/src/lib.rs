@@ -1065,7 +1065,7 @@ construct_runtime!(
         // we put it at the end for keeping the extrinsic ordering.
         XTransactionFee: xpallet_transaction_fee::{Module, Event<T>} = 35,
 
-        Proxy: pallet_proxy::{Module, Call, Storage, Event<T>} = 37,
+        Proxy: pallet_proxy::{Module, Call, Storage, Event<T>} = 36,
     }
 );
 
