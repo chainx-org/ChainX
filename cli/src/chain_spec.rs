@@ -434,7 +434,7 @@ macro_rules! bootnodes {
 
 pub fn build_mainnet_config() -> Result<ChainXChainSpec, String> {
     let wasm_binary =
-        chainx::WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
+        chainx::WASM_BINARY.ok_or("ChainX wasm binary not available".to_string())?;
 
     let initial_authorities: Vec<AuthorityKeysTuple> = vec![
         (
@@ -518,7 +518,7 @@ pub fn build_mainnet_config() -> Result<ChainXChainSpec, String> {
             &wasm_binary[..],
             initial_authorities.clone(),
             genesis_assets(),
-            btc_genesis_params(include_str!("res/btc_genesis_params_mainnet.json")), //TODO: update mainnet btc genesis
+            btc_genesis_params(include_str!("res/btc_genesis_params_mainnet.json")),
             crate::genesis::bitcoin::mainnet_trustees(),
         )
     };

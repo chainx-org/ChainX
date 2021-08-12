@@ -138,7 +138,6 @@ pub fn benchmarks_trustees() -> Vec<(Chain, TrusteeInfoConfig, Vec<BtcTrusteePar
     vec![(Chain::Bitcoin, btc_config, btc_trustees)]
 }
 
-// TODO: make sure the btc genesis is correct
 pub fn mainnet_trustees() -> Vec<(Chain, TrusteeInfoConfig, Vec<BtcTrusteeParams>)> {
     let btc_config = TrusteeInfoConfig {
         min_trustee_count: 3,
