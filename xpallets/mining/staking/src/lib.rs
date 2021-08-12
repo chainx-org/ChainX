@@ -220,6 +220,8 @@ decl_storage! {
                 self_bonded: config.candidate_requirement.0,
                 total: config.candidate_requirement.1,
             });
+
+            /*
             Immortals::<T>::put(
                 config
                     .validators
@@ -239,6 +241,7 @@ decl_storage! {
                 Module::<T>::apply_bond(validator, validator, *balance)
                     .expect("Bonding to validator itself can not fail; qed");
             }
+            */
         });
     }
 }

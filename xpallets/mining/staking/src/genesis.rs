@@ -6,6 +6,7 @@ impl<T: Trait> Module<T> {
     /// Set the weight to 0.
     pub fn initialize_validators(
         validators: &[xp_genesis_builder::ValidatorInfo<T::AccountId, BalanceOf<T>>],
+        initialize_validators: &[Vec<u8>],
     ) -> DispatchResult {
         for xp_genesis_builder::ValidatorInfo {
             who,
@@ -16,7 +17,9 @@ impl<T: Trait> Module<T> {
             Self::check_referral_id(referral_id)?;
             Self::apply_register(who, referral_id.to_vec());
             // These validators will be chilled on the network startup.
-            Self::apply_force_chilled(who);
+            if !initialize_validators.contains(referral_id) {
+                Self::apply_force_chilled(who);
+            }
 
             ValidatorLedgers::<T>::mutate(who, |validator| {
                 validator.total_nomination = *total_nomination;

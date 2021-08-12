@@ -2,6 +2,7 @@
 
 use std::convert::TryFrom;
 
+use hex_literal::hex;
 use serde::Deserialize;
 
 use sp_core::sr25519;
@@ -131,6 +132,60 @@ pub fn benchmarks_trustees() -> Vec<(Chain, TrusteeInfoConfig, Vec<BtcTrusteePar
             "Charlie",
             "03a36339f413da869df12b1ab0def91749413a0dee87f0bfa85ba7196e6cdad102",
             "0263d46c760d3e04883d4b433c9ce2bc32130acd9faad0192a2b375dbba9f865c3",
+        ),
+    ];
+
+    vec![(Chain::Bitcoin, btc_config, btc_trustees)]
+}
+
+pub fn mainnet_trustees() -> Vec<(Chain, TrusteeInfoConfig, Vec<BtcTrusteeParams>)> {
+    let btc_config = TrusteeInfoConfig {
+        min_trustee_count: 3,
+        max_trustee_count: 15,
+    };
+
+    let btc_trustees = vec![
+        (
+            // 1. 5SY3yajabLKYcuxPjXwLMc7p6WDC4Tv1H3sVMx6Hmjtxycji
+            hex!["80269f1c8712f25eb590fc849b89c79cc9b2309b2b2696e96d5610a08581b8aa"].into(),
+            b"MathWallet".to_vec(),
+            btc_trustee_key!("02e2b2720a9e54617ba87fca287c3d7f9124154d30fa8dc9cd260b6b254e1d7aea"),
+            btc_trustee_key!("03615bee4a2f2e80605be8730dc9630b002ad83b068a902df03b155797357030f7"),
+        ),
+        (
+            // 2. 5V7ygyZ53psrNSFgT3n7Xnxd6r7eC6bga3eA4W8KYEs75ZeC
+            hex!["f27f00cdfefa8c98d0f3fbf8835fbf7f269a74963d87a56942323537f533715e"].into(),
+            b"GfNetwork".to_vec(),
+            btc_trustee_key!("0219fc860933a1362bc5e0a0bbe1b33a47aedf904765f4a85cd166ba1d767927ee"),
+            btc_trustee_key!("037f8d0b44a282a89352b238b2d09f996df290aa65e0a95e6c99a445072ce390ce"),
+        ),
+        (
+            // 3. 5ReDj2o2xRQowpcrRdrCq3hR4cj1dJgj239dGMHnB9QzAnPa
+            hex!["589eadd1fec281804b6f080d89b4262114e1e7485962a27259865901b615b895"].into(),
+            b"CybexDex".to_vec(),
+            btc_trustee_key!("02b921cb319a14c6887b12cee457453f720e88808a735a578d6c57aba0c74e5af3"),
+            btc_trustee_key!("0281687791324c3d99d9bd39370baf4c138b1e1670a9939a406e3ac22577e39c00"),
+        ),
+        (
+            // 4. 5RjfjwXjzJtVd6EiTCG3RsJmUM9h4FgocswJyAaLvuBicwE4
+            hex!["5cc67b8a790f517a0fd02683be59e8e461cc6e72749d26f46a65fce24d18e1a4"].into(),
+            b"PolkaX".to_vec(),
+            btc_trustee_key!("02df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6"),
+            btc_trustee_key!("0386b58f51da9b37e59c40262153173bdb59d7e4e45b73994b99eec4d964ee7e88"),
+        ),
+        (
+            // 5. 5QpTfTDYSLWkuVEvRqEcugQtFZnhE3qyJLCzwGQgdzNRpiSQ
+            hex!["3431d1ef4f8b1b75136ce26ea9e6e0379c68d77abfa37cc5303bcb0d5ffe0c64"].into(),
+            b"Wetez".to_vec(),
+            btc_trustee_key!("0346aa7ade0b567b34182cacf9444deb44ee829e14705dc87175107dd09d5dbf40"),
+            btc_trustee_key!("0299b5c30667f2e80ddccbac8d112e52387fa1056ef2510c0b7a627215eb0a4550"),
+        ),
+        (
+            // 6. 5Pjajd12o9hVixBPRPHZEdjsrct3NZp9Ge7QP4PiSivQrBZa
+            hex!["043d2a66efc5646eaea2e3b0235b8d577538aa001148b16988997fe02916f06a"].into(),
+            b"buildlinks".to_vec(),
+            btc_trustee_key!("034d3e7f87e69c6c71df6052b44f9ed99a3d811613140ebf09f8fdaf904a2e1de8"),
+            btc_trustee_key!("02c179b0e69b342bf295200fa072bd2a4e956a2b74d7319c256946bc349c67d209"),
         ),
     ];
 
