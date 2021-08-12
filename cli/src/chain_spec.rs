@@ -419,7 +419,7 @@ fn build_genesis(
         }),
         xpallet_genesis_builder: Some(dev::XGenesisBuilderConfig {
             params: crate::genesis::genesis_builder_params(),
-            initial_authorities: initial_authorities.iter().map(|i| i.0.1.clone()).collect(),
+            initial_authorities: initial_authorities.iter().map(|i| i.0 .1.clone()).collect(),
         }),
     }
 }
@@ -433,8 +433,7 @@ macro_rules! bootnodes {
 }
 
 pub fn build_mainnet_config() -> Result<ChainXChainSpec, String> {
-    let wasm_binary =
-        chainx::WASM_BINARY.ok_or("ChainX wasm binary not available".to_string())?;
+    let wasm_binary = chainx::WASM_BINARY.ok_or("ChainX wasm binary not available".to_string())?;
 
     let initial_authorities: Vec<AuthorityKeysTuple> = vec![
         (
@@ -673,7 +672,7 @@ fn mainnet_genesis(
         }),
         xpallet_genesis_builder: Some(chainx::XGenesisBuilderConfig {
             params: crate::genesis::genesis_builder_params(),
-            initial_authorities: initial_authorities.iter().map(|i| i.0.1.clone()).collect(),
+            initial_authorities: initial_authorities.iter().map(|i| i.0 .1.clone()).collect(),
         }),
     }
 }
