@@ -8,16 +8,6 @@ fn t_issue_pcx(to: AccountId, value: Balance) {
     XStaking::mint(&to, value);
 }
 
-fn t_register(who: AccountId, initial_bond: Balance) -> DispatchResult {
-    let mut referral_id = who.to_string().as_bytes().to_vec();
-
-    if referral_id.len() < 2 {
-        referral_id.extend_from_slice(&[0, 0, 0, who as u8]);
-    }
-
-    XStaking::register(Origin::signed(who), referral_id, initial_bond)
-}
-
 fn t_bond(who: AccountId, target: AccountId, value: Balance) -> DispatchResult {
     XStaking::bond(Origin::signed(who), target, value)
 }
@@ -85,10 +75,6 @@ fn assert_bonded_withdrawal_locks(who: AccountId, value: Balance) {
 #[test]
 fn cannot_force_chill_should_work() {
     ExtBuilder::default().build_and_execute(|| {
-        assert_ok!(t_register(1, 10));
-        assert_ok!(t_register(2, 10));
-        assert_ok!(t_register(3, 10));
-        assert_ok!(t_register(4, 10));
         t_make_a_validator_candidate(123, 100);
         assert_eq!(XStaking::can_force_chilled(), true);
         assert_ok!(XStaking::chill(Origin::signed(123)));
@@ -107,20 +93,18 @@ fn cannot_force_chill_should_work() {
 #[test]
 fn bond_should_work() {
     ExtBuilder::default().build_and_execute(|| {
-        assert_ok!(t_register(2, 20));
         assert_eq!(
             <ValidatorLedgers<Test>>::get(2),
             ValidatorLedger {
                 total_nomination: 20,
                 last_total_vote_weight: 0,
-                last_total_vote_weight_update: 1,
+                last_total_vote_weight_update: 0,
             }
         );
         assert_eq!(System::block_number(), 1);
 
         t_system_block_number_inc(1);
 
-        assert_ok!(t_register(1, 10));
         let before_bond = Balances::usable_balance(&1);
         // old_lock 10
         let old_lock = *<Locks<Test>>::get(1).get(&LockedType::Bonded).unwrap();
@@ -152,7 +136,7 @@ fn bond_should_work() {
             <ValidatorLedgers<Test>>::get(2),
             ValidatorLedger {
                 total_nomination: 30,
-                last_total_vote_weight: 20,
+                last_total_vote_weight: 40,
                 last_total_vote_weight_update: 2,
             }
         );
@@ -168,8 +152,6 @@ fn bond_should_work() {
 
         // { bonded: 12, unbonded_withdrawal: 8 }
         assert_ok!(t_unbond(1, 2, 8));
-
-        assert_ok!(t_register(3, 30));
 
         // { bonded: 13, unbonded_withdrawal: 8 }
         assert_ok!(t_bond(1, 3, 1));
@@ -191,8 +173,6 @@ fn bond_should_work() {
 #[test]
 fn total_staking_locked_no_more_than_free_balance_should_work() {
     ExtBuilder::default().build_and_execute(|| {
-        assert_ok!(t_register(1, 10));
-        assert_ok!(t_register(2, 20));
         assert_ok!(t_bond(1, 2, 80));
         assert_eq!(
             Locks::<Test>::get(&1),
@@ -253,10 +233,8 @@ fn total_staking_locked_no_more_than_free_balance_should_work() {
 #[test]
 fn unbond_should_work() {
     ExtBuilder::default().build_and_execute(|| {
-        assert_ok!(t_register(2, 20));
         assert_err!(t_unbond(1, 2, 50), Error::<Test>::InvalidUnbondBalance);
 
-        assert_ok!(t_register(1, 10));
         assert_bonded_locks(1, 10);
         t_system_block_number_inc(1);
 
@@ -273,7 +251,7 @@ fn unbond_should_work() {
             <ValidatorLedgers<Test>>::get(2),
             ValidatorLedger {
                 total_nomination: 25,
-                last_total_vote_weight: 30 + 20 * 1,
+                last_total_vote_weight: 30 + 20 * 2,
                 last_total_vote_weight_update: 3,
             }
         );
@@ -296,8 +274,6 @@ fn unbond_should_work() {
 #[test]
 fn rebond_should_work() {
     ExtBuilder::default().build_and_execute(|| {
-        assert_ok!(t_register(2, 20));
-        assert_ok!(t_register(3, 30));
         assert_err!(
             XStaking::unbond(Origin::signed(1), 2, 50),
             Error::<Test>::InvalidUnbondBalance
@@ -316,7 +292,7 @@ fn rebond_should_work() {
             <ValidatorLedgers<Test>>::get(2),
             ValidatorLedger {
                 total_nomination: 25,
-                last_total_vote_weight: 10 + 40,
+                last_total_vote_weight: 10 + 60,
                 last_total_vote_weight_update: 3,
             }
         );
@@ -325,7 +301,7 @@ fn rebond_should_work() {
             <ValidatorLedgers<Test>>::get(3),
             ValidatorLedger {
                 total_nomination: 30 + 5,
-                last_total_vote_weight: 30 * 2,
+                last_total_vote_weight: 30 * 3,
                 last_total_vote_weight_update: 3,
             }
         );
@@ -370,8 +346,6 @@ fn rebond_should_work() {
 #[test]
 fn withdraw_unbond_should_work() {
     ExtBuilder::default().build_and_execute(|| {
-        assert_ok!(t_register(1, 10));
-        assert_ok!(t_register(2, 20));
         t_system_block_number_inc(1);
 
         let before_bond = Balances::usable_balance(&1);
@@ -428,10 +402,6 @@ fn withdraw_unbond_should_work() {
 #[test]
 fn regular_staking_should_work() {
     ExtBuilder::default().build_and_execute(|| {
-        assert_ok!(t_register(1, 10));
-        assert_ok!(t_register(2, 20));
-        assert_ok!(t_register(3, 30));
-        assert_ok!(t_register(4, 40));
         // Block 1
         t_start_session(1);
         assert_eq!(XStaking::current_era(), Some(0));
@@ -494,11 +464,6 @@ fn regular_staking_should_work() {
 #[test]
 fn staking_reward_should_work() {
     ExtBuilder::default().build_and_execute(|| {
-        assert_ok!(t_register(1, 10));
-        assert_ok!(t_register(2, 20));
-        assert_ok!(t_register(3, 30));
-        assert_ok!(t_register(4, 40));
-
         let t_1 = 67;
         let t_2 = 68;
         let t_3 = 69;
@@ -608,11 +573,6 @@ fn t_reward_pot_balance(validator: AccountId) -> Balance {
 #[test]
 fn staker_reward_should_work() {
     ExtBuilder::default().build_and_execute(|| {
-        assert_ok!(t_register(1, 10));
-        assert_ok!(t_register(2, 20));
-        assert_ok!(t_register(3, 30));
-        assert_ok!(t_register(4, 40));
-
         let t_1 = 1111;
         let t_2 = 2222;
         let t_3 = 3333;
@@ -628,7 +588,7 @@ fn staker_reward_should_work() {
             ValidatorLedger {
                 total_nomination: 10,
                 last_total_vote_weight: 0,
-                last_total_vote_weight_update: 1,
+                last_total_vote_weight_update: 0,
             }
         );
         assert_ok!(t_bond(t_1, 1, 10));
@@ -645,7 +605,7 @@ fn staker_reward_should_work() {
             <ValidatorLedgers<Test>>::get(1),
             ValidatorLedger {
                 total_nomination: 20,
-                last_total_vote_weight: 0,
+                last_total_vote_weight: 10,
                 last_total_vote_weight_update: 1,
             }
         );
@@ -678,7 +638,7 @@ fn staker_reward_should_work() {
             ValidatorLedger {
                 total_nomination: 20,
                 last_total_vote_weight: 0,
-                last_total_vote_weight_update: 1,
+                last_total_vote_weight_update: 0,
             }
         );
         assert_ok!(t_bond(t_2, 2, 20));
@@ -686,7 +646,7 @@ fn staker_reward_should_work() {
             <ValidatorLedgers<Test>>::get(2),
             ValidatorLedger {
                 total_nomination: 20 + 20,
-                last_total_vote_weight: 0,
+                last_total_vote_weight: 20,
                 last_total_vote_weight_update: 1,
             }
         );
@@ -714,16 +674,16 @@ fn staker_reward_should_work() {
         assert_eq!(t_reward_pot_balance(1), 598_153_847);
         assert_eq!(t_reward_pot_balance(2), 872_307_693);
 
-        // validator 1: vote weight = 10 + 10 = 20
+        // validator 1: vote weight = 10 + 10 * 2 = 30
         // t_1 vote weight: 10 * 1  = 10
         assert_ok!(XStaking::claim(Origin::signed(t_1), 1));
         // t_1 = reward_pot_balance * 10 / 30
-        assert_eq!(XStaking::free_balance(&t_1), 100 + 598_153_847 / 2);
+        assert_eq!(XStaking::free_balance(&t_1), 100 + 598_153_847 / 3);
 
-        // validator 2: vote weight = 20 + 20 = 40
+        // validator 2: vote weight = 20 + 20 * 2 = 60
         // t_2 vote weight = 20 * 1 = 20
         assert_ok!(XStaking::claim(Origin::signed(t_2), 2));
-        assert_eq!(XStaking::free_balance(&t_2), 100 + 872_307_693 * 20 / 40);
+        assert_eq!(XStaking::free_balance(&t_2), 100 + 872_307_693 * 20 / 60);
 
         assert_ok!(XStaking::set_minimum_validator_count(Origin::root(), 3));
         assert_ok!(XStaking::chill(Origin::signed(3)));

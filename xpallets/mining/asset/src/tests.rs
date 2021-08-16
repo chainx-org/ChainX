@@ -20,16 +20,6 @@ fn t_bond(who: AccountId, target: AccountId, value: Balance) -> DispatchResult {
     XStaking::bond(Origin::signed(who), target, value)
 }
 
-fn t_register(who: AccountId, initial_bond: Balance) -> DispatchResult {
-    let mut referral_id = who.to_string().as_bytes().to_vec();
-
-    if referral_id.len() < 2 {
-        referral_id.extend_from_slice(&[1, 1, 1, who as u8]);
-    }
-
-    XStaking::register(Origin::signed(who), referral_id, initial_bond)
-}
-
 fn t_issue_pcx(who: AccountId, value: Balance) {
     let _ = Balances::deposit_creating(&who, value);
 }
@@ -287,11 +277,6 @@ fn sum_of_miner_weights_and_asset_total_weights_should_equal() {
 #[test]
 fn claim_restriction_should_work() {
     ExtBuilder::default().build_and_execute(|| {
-        assert_ok!(t_register(1, 10));
-        assert_ok!(t_register(2, 20));
-        assert_ok!(t_register(3, 30));
-        assert_ok!(t_register(4, 50));
-
         assert_ok!(t_register_xbtc());
         let t_1 = 777;
         assert_ok!(t_issue_xbtc(t_1, 100));
@@ -354,11 +339,6 @@ fn claim_restriction_should_work() {
 #[test]
 fn total_issuance_should_work() {
     ExtBuilder::default().build_and_execute(|| {
-        assert_ok!(t_register(1, 10));
-        assert_ok!(t_register(2, 20));
-        assert_ok!(t_register(3, 30));
-        assert_ok!(t_register(4, 50));
-
         let validators = vec![1, 2, 3, 4];
         let validators_reward_pot = validators
             .iter()
@@ -392,11 +372,6 @@ fn t_set_xbtc_asset_power(new: FixedAssetPower) {
 #[test]
 fn asset_mining_reward_should_work() {
     ExtBuilder::default().build_and_execute(|| {
-        assert_ok!(t_register(1, 10));
-        assert_ok!(t_register(2, 20));
-        assert_ok!(t_register(3, 30));
-        assert_ok!(t_register(4, 40));
-
         assert_ok!(t_register_xbtc());
 
         let t_1 = 666_666;
