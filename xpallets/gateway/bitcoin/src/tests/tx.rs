@@ -27,10 +27,13 @@ use crate::{
     Trait, WithdrawalProposal,
 };
 
-const DEPOSIT_HOT_ADDR: &str = "3LFSUKkP26hun42J1Dy6RATsbgmBJb27NF";
+const DEPOSIT_HOT_ADDR: &str = "tb1p22yc5qaf7p9ms0u2frae2vyfmcgwdmnsvk9st923a0muqz9stdaqn3h0p6";
 const DEPOSIT_COLD_ADDR: &str = "3FLBhPfEqmw4Wn5EQMeUzPLrQtJMprgwnw";
 
 lazy_static::lazy_static! {
+    static ref deposit_taproot1: Transaction = "0200000000010118b739fa26ff47c70bf2b559824569cd8e0e61d5199833ae216917d1ab5a704f0000000000feffffff02d751baf55a0600001600144f99260782d93cdfff2dc4c108161d444dd47288809698000000000022512052898a03a9f04bb83f8a48fb953089de10e6ee70658b059551ebf7c008b05b7a0247304402200178765ae00dbd169cdad7d2f3ce8262a7339ea789dd0de4a415348f1c8e27cc02207ea4b63334d378679d34453d4ef7a553db251732bb288801d176eb2026c372aa012103c8fa28c586bf6d15c5145ed5fccec1d4f2c4f48dc2f085ad1b0605c49eb84971a8ef0000".parse().unwrap();
+    static ref withdraw_taproot1: Transaction = "02000000000101500d3cc6d97803da4af24f3103445cb47aed216695a5467928b49fba5141025d0100000000feffffff02b8820100000000002251204a4f4c9c08dd137c6b43567f23b7d980be52e58d15c53e873ee43a4a99362be3001397000000000022512023e3d60a762fe1e145b1b0b94e493474722b9ddeb5c29960a9670a4e49099f260140a91efca1adb18ff64661028cfe97487bc8eb610fbe44aafdc7072de0bfe960a6524bb50e444c4a3bbc7055d70b9ec8c382aa8c0b08c0558641e725c12c80538fa9ef0000".parse().unwrap();
+
     // https://blockchain.info/rawtx/ca3c38fddbc57dc624a2d747f7124e18867b2cde997c7536173e9ab7c84f546d?format=hex
     // 3 outputs:
     // --> X-BTC hot trustee address (deposit value)
@@ -117,102 +120,114 @@ fn mock_detect_transaction_type<T: Trait>(
 fn test_detect_tx_type() {
     set_default_ss58_version(Ss58AddressFormat::ChainXAccount);
 
-    match mock_detect_transaction_type::<Test>(&deposit1, None) {
-        BtcTxMetaType::Deposit(_) => {}
-        _ => unreachable!("wrong type"),
-    }
-    match mock_detect_transaction_type::<Test>(&deposit2, None) {
+    match mock_detect_transaction_type::<Test>(&deposit_taproot1, None) {
         BtcTxMetaType::Deposit(info) => {
-            assert!(info.input_addr.is_none() && info.op_return.is_some())
+           assert!(info.input_addr.is_none() && info.op_return.is_none())
         }
         _ => unreachable!("wrong type"),
     }
 
-    match mock_detect_transaction_type::<Test>(&deposit3_0, None) {
-        BtcTxMetaType::Deposit(_) => {}
-        _ => unreachable!("wrong type"),
-    }
-    // tx without opreturn, no input addr would parse nothing
-    match mock_detect_transaction_type::<Test>(&deposit3_1, None) {
-        BtcTxMetaType::Deposit(info) => {
-            assert!(info.input_addr.is_none() && info.op_return.is_none())
-        }
-        _ => unreachable!("wrong type"),
-    }
-    // then provide prev tx
-    match mock_detect_transaction_type::<Test>(&deposit3_1, Some(&deposit3_1_prev)) {
-        BtcTxMetaType::Deposit(info) => {
-            assert!(info.input_addr.is_some() && info.op_return.is_none())
-        }
-        _ => unreachable!("wrong type"),
-    }
-
-    // tx without opreturn, no input addr would parse nothing
-    match mock_detect_transaction_type::<Test>(&deposit4_0, None) {
-        BtcTxMetaType::Deposit(info) => {
-            assert!(info.input_addr.is_none() && info.op_return.is_none())
-        }
-        _ => unreachable!("wrong type"),
-    }
-    // then provide prev tx
-    match mock_detect_transaction_type::<Test>(&deposit4_0, Some(&deposit4_0_prev)) {
-        BtcTxMetaType::Deposit(info) => {
-            assert!(info.input_addr.is_some() && info.op_return.is_none())
-        }
-        _ => unreachable!("wrong type"),
-    }
-    match mock_detect_transaction_type::<Test>(&deposit4_1, None) {
-        BtcTxMetaType::Deposit(info) => {
-            assert!(info.input_addr.is_none() && info.op_return.is_some())
-        }
-        _ => unreachable!("wrong type"),
-    }
-
-    // hot_to_cold
-    // if not pass a prev, would judge to a deposit, but this deposit could not be handled due to
-    // opreturn and input_addr are all none, or if all send to cold, it would be Irrelevance
-    match mock_detect_transaction_type::<Test>(&hot_to_cold, None) {
-        BtcTxMetaType::Deposit(info) => {
-            assert!(info.input_addr.is_none() && info.op_return.is_none())
-        }
-        _ => unreachable!("wrong type"),
-    }
-    // then if provide prev, it would be judge to a HotAndCold
-    match mock_detect_transaction_type::<Test>(&hot_to_cold, Some(&hot_to_cold_prev)) {
-        BtcTxMetaType::HotAndCold => {}
-        _ => unreachable!("wrong type"),
-    }
-
-    // cold_to_hot
-    // if not pass a prev, would judge to a deposit, but this deposit could not be handled due to
-    // opreturn and input_addr are all none
-    match mock_detect_transaction_type::<Test>(&cold_to_hot, None) {
-        BtcTxMetaType::Deposit(info) => {
-            assert!(info.input_addr.is_none() && info.op_return.is_none())
-        }
-        _ => unreachable!("wrong type"),
-    }
-    // then if provide prev, it would be judge to a HotAndCold
-    match mock_detect_transaction_type::<Test>(&cold_to_hot, Some(&cold_to_hot_prev)) {
-        BtcTxMetaType::HotAndCold => {}
-        _ => unreachable!("wrong type"),
-    }
-
-    // withdraw
-    // if not pass a prev, would judge to a deposit due to withdraw change.
-    // if no change, would be Irrelevance
-    // but this deposit could not be handled due to opreturn and input_addr are all none
-    match mock_detect_transaction_type::<Test>(&withdraw, None) {
-        BtcTxMetaType::Deposit(info) => {
-            assert!(info.input_addr.is_none() && info.op_return.is_none())
-        }
-        _ => unreachable!("wrong type"),
-    }
-    // then if provide prev, it would be judge to a HotAndCold
-    match mock_detect_transaction_type::<Test>(&withdraw, Some(&withdraw_prev)) {
+    match mock_detect_transaction_type::<Test>(&withdraw_taproot1, Some(&deposit_taproot1)) {
         BtcTxMetaType::Withdrawal => {}
         _ => unreachable!("wrong type"),
     }
+
+    // match mock_detect_transaction_type::<Test>(&deposit1, None) {
+    //     BtcTxMetaType::Deposit(_) => {}
+    //     _ => unreachable!("wrong type"),
+    // }
+    // match mock_detect_transaction_type::<Test>(&deposit2, None) {
+    //     BtcTxMetaType::Deposit(info) => {
+    //         assert!(info.input_addr.is_none() && info.op_return.is_some())
+    //     }
+    //     _ => unreachable!("wrong type"),
+    // }
+    //
+    // match mock_detect_transaction_type::<Test>(&deposit3_0, None) {
+    //     BtcTxMetaType::Deposit(_) => {}
+    //     _ => unreachable!("wrong type"),
+    // }
+    // // tx without opreturn, no input addr would parse nothing
+    // match mock_detect_transaction_type::<Test>(&deposit3_1, None) {
+    //     BtcTxMetaType::Deposit(info) => {
+    //         assert!(info.input_addr.is_none() && info.op_return.is_none())
+    //     }
+    //     _ => unreachable!("wrong type"),
+    // }
+    // // then provide prev tx
+    // match mock_detect_transaction_type::<Test>(&deposit3_1, Some(&deposit3_1_prev)) {
+    //     BtcTxMetaType::Deposit(info) => {
+    //         assert!(info.input_addr.is_some() && info.op_return.is_none())
+    //     }
+    //     _ => unreachable!("wrong type"),
+    // }
+    //
+    // // tx without opreturn, no input addr would parse nothing
+    // match mock_detect_transaction_type::<Test>(&deposit4_0, None) {
+    //     BtcTxMetaType::Deposit(info) => {
+    //         assert!(info.input_addr.is_none() && info.op_return.is_none())
+    //     }
+    //     _ => unreachable!("wrong type"),
+    // }
+    // // then provide prev tx
+    // match mock_detect_transaction_type::<Test>(&deposit4_0, Some(&deposit4_0_prev)) {
+    //     BtcTxMetaType::Deposit(info) => {
+    //         assert!(info.input_addr.is_some() && info.op_return.is_none())
+    //     }
+    //     _ => unreachable!("wrong type"),
+    // }
+    // match mock_detect_transaction_type::<Test>(&deposit4_1, None) {
+    //     BtcTxMetaType::Deposit(info) => {
+    //         assert!(info.input_addr.is_none() && info.op_return.is_some())
+    //     }
+    //     _ => unreachable!("wrong type"),
+    // }
+    //
+    // // hot_to_cold
+    // // if not pass a prev, would judge to a deposit, but this deposit could not be handled due to
+    // // opreturn and input_addr are all none, or if all send to cold, it would be Irrelevance
+    // match mock_detect_transaction_type::<Test>(&hot_to_cold, None) {
+    //     BtcTxMetaType::Deposit(info) => {
+    //         assert!(info.input_addr.is_none() && info.op_return.is_none())
+    //     }
+    //     _ => unreachable!("wrong type"),
+    // }
+    // // then if provide prev, it would be judge to a HotAndCold
+    // match mock_detect_transaction_type::<Test>(&hot_to_cold, Some(&hot_to_cold_prev)) {
+    //     BtcTxMetaType::HotAndCold => {}
+    //     _ => unreachable!("wrong type"),
+    // }
+    //
+    // // cold_to_hot
+    // // if not pass a prev, would judge to a deposit, but this deposit could not be handled due to
+    // // opreturn and input_addr are all none
+    // match mock_detect_transaction_type::<Test>(&cold_to_hot, None) {
+    //     BtcTxMetaType::Deposit(info) => {
+    //         assert!(info.input_addr.is_none() && info.op_return.is_none())
+    //     }
+    //     _ => unreachable!("wrong type"),
+    // }
+    // // then if provide prev, it would be judge to a HotAndCold
+    // match mock_detect_transaction_type::<Test>(&cold_to_hot, Some(&cold_to_hot_prev)) {
+    //     BtcTxMetaType::HotAndCold => {}
+    //     _ => unreachable!("wrong type"),
+    // }
+    //
+    // // withdraw
+    // // if not pass a prev, would judge to a deposit due to withdraw change.
+    // // if no change, would be Irrelevance
+    // // but this deposit could not be handled due to opreturn and input_addr are all none
+    // match mock_detect_transaction_type::<Test>(&withdraw, None) {
+    //     BtcTxMetaType::Deposit(info) => {
+    //         assert!(info.input_addr.is_none() && info.op_return.is_none())
+    //     }
+    //     _ => unreachable!("wrong type"),
+    // }
+    // // then if provide prev, it would be judge to a HotAndCold
+    // match mock_detect_transaction_type::<Test>(&withdraw, Some(&withdraw_prev)) {
+    //     BtcTxMetaType::Withdrawal => {}
+    //     _ => unreachable!("wrong type"),
+    // }
 }
 
 fn mock_process_tx<T: Trait>(tx: Transaction, prev_tx: Option<Transaction>) -> BtcTxState {
@@ -261,7 +276,7 @@ fn test_process_tx() {
             XGatewayBitcoin::pending_deposits(&deposit3_addr.to_vec()),
             vec![BtcDepositCache {
                 txid: deposit3_1.hash(),
-                balance: 190850000
+                balance: 190850000,
             }]
         );
 
@@ -274,7 +289,7 @@ fn test_process_tx() {
             XGatewayBitcoin::pending_deposits(&deposit4_addr.to_vec()),
             vec![BtcDepositCache {
                 txid: deposit4_0.hash(),
-                balance: 100000000
+                balance: 100000000,
             }]
         );
         // use a tx with opreturn to release deposit cache, must have prev
@@ -328,7 +343,7 @@ fn test_push_tx_call() {
     let headers = generate_blocks_576576_578692();
     let block_hash = headers[&577667].hash();
 
-    let raw_proof= hex::decode("7a0a00000df93909095e26bc2226c7a308a197623e1338d97205dab31e8bb1938fdd1ffb750120040316fc943d5a2d2a2034a0fe563e0e32298a13a826bfdf9c70779586dba5271dce89f50cee96759a25b44b975c073f3ba6a12a92209494709907cb15922eac15e16ae180f9e63d96e25e1c8056b34f194a8a0d2f14bd935e9c2abc79dd8d0c425975eac4696b4d5bca42d09ecb27b7397e1061d138b69c9283fb47337aa61179b15b17ee942e635d5c9479b337ba1877054708336fca85d3e64fb4519ce5319ea3940b45a0a2be630ffc8091c23199e3468ec08e6e49aa7d2097614c22441325ac3c2ea1846dfe0ae3ef40972efee231058c2be07adb015a041a16a9f1dc9e699c56bbfb3e7dc751ea295188f5af86348789547c58981341ddb1eae528a1566ea4b17b099bb29d27728ccf398669eabd82ee4910eaccba7e5e40be6351d734b422020e5c57910de3a94f1eced6b1151333c425048a93f49c9e7110a77201b34ad3a09a12f3bdb8f1fce78c21ec868a32e36eef263077f047eaaa7c5842feee2b12a1651f1deaf50afcddbca8e2bfb36d707133dfa27235e72cc169fc0704d7ad0a00").unwrap();
+    let raw_proof = hex::decode("7a0a00000df93909095e26bc2226c7a308a197623e1338d97205dab31e8bb1938fdd1ffb750120040316fc943d5a2d2a2034a0fe563e0e32298a13a826bfdf9c70779586dba5271dce89f50cee96759a25b44b975c073f3ba6a12a92209494709907cb15922eac15e16ae180f9e63d96e25e1c8056b34f194a8a0d2f14bd935e9c2abc79dd8d0c425975eac4696b4d5bca42d09ecb27b7397e1061d138b69c9283fb47337aa61179b15b17ee942e635d5c9479b337ba1877054708336fca85d3e64fb4519ce5319ea3940b45a0a2be630ffc8091c23199e3468ec08e6e49aa7d2097614c22441325ac3c2ea1846dfe0ae3ef40972efee231058c2be07adb015a041a16a9f1dc9e699c56bbfb3e7dc751ea295188f5af86348789547c58981341ddb1eae528a1566ea4b17b099bb29d27728ccf398669eabd82ee4910eaccba7e5e40be6351d734b422020e5c57910de3a94f1eced6b1151333c425048a93f49c9e7110a77201b34ad3a09a12f3bdb8f1fce78c21ec868a32e36eef263077f047eaaa7c5842feee2b12a1651f1deaf50afcddbca8e2bfb36d707133dfa27235e72cc169fc0704d7ad0a00").unwrap();
     let proof: PartialMerkleTree = serialization::deserialize(Reader::new(&raw_proof)).unwrap();
 
     ExtBuilder::default().build_and_execute(|| {

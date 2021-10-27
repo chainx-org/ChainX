@@ -11,7 +11,7 @@ use sp_std::{convert::TryFrom, prelude::*};
 use light_bitcoin::{
     chain::Transaction,
     crypto::dhash160,
-    keys::{Address, Public, Type},
+    keys::{Address, AddressTypes, Public, Type},
     primitives::Bytes,
     script::{Builder, Opcode, Script},
 };
@@ -484,7 +484,7 @@ pub(crate) fn create_multi_address<T: Trait>(
     let addr = Address {
         kind: Type::P2SH,
         network: Module::<T>::network_id(),
-        hash: dhash160(&redeem_script),
+        hash: AddressTypes::Legacy(dhash160(&redeem_script)),
     };
     let script_bytes: Bytes = redeem_script.into();
     Some(BtcTrusteeAddrInfo {

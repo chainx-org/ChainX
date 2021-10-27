@@ -6,7 +6,7 @@ use xp_logging::{error, warn};
 
 use light_bitcoin::{
     chain::{Transaction, TransactionOutput},
-    keys::{Address, Network},
+    keys::{Address, AddressTypes, Network},
     script::{Opcode, Script, ScriptType},
 };
 
@@ -28,31 +28,35 @@ pub fn extract_output_addr(output: &TransactionOutput, network: Network) -> Opti
 
     // only support `p2pk`, `p2pkh` and `p2sh` script
     let script_type = script.script_type();
-    match script_type {
-        ScriptType::PubKey | ScriptType::PubKeyHash | ScriptType::ScriptHash => {
-            let script_addresses = script
-                .extract_destinations()
-                .map_err(|err| {
-                    error!(
+    let script_addresses = script
+        .extract_destinations()
+        .map_err(|err| {
+            error!(
                         "[extract_output_addr] Can't extract destinations of btc script err:{}, type:{:?}, script:{}",
                         err, script_type, script
                     );
-                }).unwrap_or_default();
+        }).unwrap_or_default();
+    if script_addresses.len() != 1 {
+        warn!(
+            "[extract_output_addr] Can't extract address of btc script, type:{:?}, address:{:?}, script:{}",
+            script_addresses, script_type, script
+        );
+        return None;
+    }
+    let address = &script_addresses[0];
+    match script_type {
+        ScriptType::PubKey
+        | ScriptType::PubKeyHash
+        | ScriptType::ScriptHash
+        | ScriptType::WitnessV0Keyhash
+        | ScriptType::WitnessV0Scripthash
+        | ScriptType::WitnessV1Taproot => {
             // find address in this transaction
-            if script_addresses.len() == 1 {
-                let address = &script_addresses[0];
-                Some(Address {
-                    network,
-                    kind: address.kind,
-                    hash: address.hash,
-                })
-            } else {
-                warn!(
-                    "[extract_output_addr] Can't extract address of btc script, type:{:?}, address:{:?}, script:{}",
-                    script_addresses, script_type, script
-                );
-                None
-            }
+            Some(Address {
+                network,
+                kind: address.kind,
+                hash: address.hash,
+            })
         }
         _ => None,
     }

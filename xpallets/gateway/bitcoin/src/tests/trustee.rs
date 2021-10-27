@@ -7,7 +7,7 @@ use hex_literal::hex;
 use light_bitcoin::{
     chain::Transaction,
     crypto::dhash160,
-    keys::{Address, Network, Public, Type},
+    keys::{Address, AddressTypes, Network, Public, Type},
     script::{Builder, Opcode},
     serialization::{self, Reader},
 };
@@ -67,7 +67,7 @@ pub fn test_multi_address() {
     let multisig_address = Address {
         kind: Type::P2SH,
         network: Network::Testnet,
-        hash: dhash160(&script),
+        hash: AddressTypes::Legacy(dhash160(&script)),
     };
     assert_eq!(
         "2MtAUgQmdobnz2mu8zRXGSTwUv9csWcNwLU",
@@ -110,11 +110,16 @@ fn test_create_multi_address() {
             176, 239, 250, 62, 135,
         ];
         let addr: Address = String::from_utf8_lossy(&hot_info.addr).parse().unwrap();
-        let pk = addr.hash.as_bytes();
+        let pk = match addr.hash{
+            AddressTypes::Legacy(h) => h.as_bytes().to_vec(),
+            AddressTypes::WitnessV0ScriptHash(_) => todo!(),
+            AddressTypes::WitnessV0KeyHash(_) => todo!(),
+            AddressTypes::WitnessV1Taproot(_) => todo!(),
+        };
         let mut pubkeys = Vec::new();
         pubkeys.push(Opcode::OP_HASH160 as u8);
         pubkeys.push(Opcode::OP_PUSHBYTES_20 as u8);
-        pubkeys.extend_from_slice(pk);
+        pubkeys.extend_from_slice(&pk);
         pubkeys.push(Opcode::OP_EQUAL as u8);
         assert_eq!(pubkeys, pks);
     });

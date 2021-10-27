@@ -21,7 +21,7 @@ frame-system = { version = "2.0.0", default-features = false }
 
 # ChainX primitives
 chainx-primitives = { path = "../../../primitives", default-features = false }
-xp-logging =  { path = "../../../primitives/logging", default-features = false }
+xp-logging = { path = "../../../primitives/logging", default-features = false }
 xp-protocol = { path = "../../../primitives/protocol", default-features = false }
 xp-rpc = { path = "../../../primitives/rpc", optional = true }
 xp-runtime = { path = "../../../primitives/runtime", default-features = false }
@@ -33,7 +33,8 @@ xpallet-gateway-records = { path = "../records", default-features = false }
 xpallet-support = { path = "../../support", default-features = false }
 
 # light-bitcoin
-light-bitcoin = { git = "https://github.com/chainx-org/light-bitcoin", branch = "master", default-features = false }
+#light-bitcoin = { git = "https://github.com/chainx-org/light-bitcoin", branch = "support-schnorr-test", default-features = false }
+light-bitcoin = { path = "../../../../light-bitcoin", default-features = false }
 
 [dev-dependencies]
 lazy_static = "1.4"
@@ -41,7 +42,7 @@ serde_json = "1.0"
 sp-io = "2.0.0"
 frame-benchmarking = "2.0.0"
 pallet-balances = "2.0.0"
-xp-gateway-bitcoin =  { path = "../../../primitives/gateway/bitcoin" }
+xp-gateway-bitcoin = { path = "../../../primitives/gateway/bitcoin" }
 xpallet-gateway-bitcoin = { path = "../bitcoin" }
 
 [features]
