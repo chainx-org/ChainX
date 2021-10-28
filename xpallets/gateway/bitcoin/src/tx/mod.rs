@@ -9,7 +9,7 @@ use sp_std::prelude::*;
 
 use light_bitcoin::{
     chain::Transaction,
-    keys::{Address, DisplayLayout, Network},
+    keys::{Address, Network},
     primitives::{hash_rev, H256},
 };
 
@@ -118,7 +118,7 @@ fn deposit<T: Trait>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) -> 
             info!(
                 "[deposit] Deposit tx ({:?}) into pending, addr:{:?}, balance:{}",
                 hash_rev(txid),
-                try_str(addr2vecu8(&input_addr)),
+                try_str(input_addr.to_string().into_bytes()),
                 deposit_info.deposit_value
             );
             BtcTxResult::Success
@@ -283,9 +283,4 @@ pub fn ensure_identical<T: Trait>(tx1: &Transaction, tx2: &Transaction) -> Dispa
         "The transaction text does not match the original text to be signed",
     );
     Err(Error::<T>::MismatchedTx.into())
-}
-
-#[inline]
-pub fn addr2vecu8(addr: &Address) -> Vec<u8> {
-    bs58::encode(&*addr.layout()).into_vec()
 }
