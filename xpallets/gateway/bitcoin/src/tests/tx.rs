@@ -12,7 +12,7 @@ use light_bitcoin::{
     serialization::{self, Reader},
 };
 
-use xp_gateway_bitcoin::{AccountExtractor, BtcTxMetaType, BtcTxTypeDetector};
+use xp_gateway_bitcoin::{AccountExtractor, BtcTxMetaType, BtcTxType, BtcTxTypeDetector};
 
 use crate::mock::{
     generate_blocks_576576_578692, AccountId, ExtBuilder, Test, XAssets, XGatewayBitcoin,
@@ -22,7 +22,7 @@ use crate::{
     tx::process_tx,
     types::{
         BtcDepositCache, BtcRelayedTxInfo, BtcTxResult, BtcTxState, BtcWithdrawalProposal,
-        VoteResult,
+        VoteResult
     },
     Trait, WithdrawalProposal,
 };
@@ -37,6 +37,8 @@ lazy_static::lazy_static! {
     // Manually created test data
     // https://github.com/chainx-org/threshold_signature/issues/3#issuecomment-950774633
     // deposit without op return, output addr is DEPOSIT_HOT_ADDR. Withdraw is an example of spending from the script path.
+    // todo! input and output value not match
+    static ref deposit_taproot1_input_account: Vec<u8> = b"bc1pexff2s7l58sthpyfrtx500ax234stcnt0gz2lr4kwe0ue95a2e0s5wxhqg".to_vec();
     static ref deposit_taproot1_prev: Transaction = "020000000001013dcdd5d375e57a14e806afc807da9bcc3c07e014ec7c1001b25b566b986d889f0000000000ffffffff0100e1f50500000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f02473044022037436913412c4051b7789f95270c4cbdaa4c86ed5f93e017502e639f10a751f2022043c6943288f9a151ef606909b8d5eb93dacfd5d33b9338504c9228b513703054012102d6d13f310eb3c00a8df8969093b2497785cdb9df95f1ff84ae4910588683b25800000000".parse().unwrap();
     static ref deposit_taproot1: Transaction = "020000000001015149416d46838b54156afb5a88e5a88b953eab62d63fe91e6308718c7907a04f000000000000000000018096980000000000225120dc82a9c33d787242d80fb4535bcc8d90bb13843fea52c9e78bb43c541dd607b90140eef6f2bc5c042e5d83debb2584b6255f689a92763bd4a531546c5e024b258e5435d09a44874c309d7a7614bfe3bab614ec84c30376ef0abf6f3f4e0a7bc25be700000000".parse().unwrap();
     static ref withdraw_taproot1_prev: Transaction = "020000000001015149416d46838b54156afb5a88e5a88b953eab62d63fe91e6308718c7907a04f000000000000000000018096980000000000225120dc82a9c33d787242d80fb4535bcc8d90bb13843fea52c9e78bb43c541dd607b90140eef6f2bc5c042e5d83debb2584b6255f689a92763bd4a531546c5e024b258e5435d09a44874c309d7a7614bfe3bab614ec84c30376ef0abf6f3f4e0a7bc25be700000000".parse().unwrap();
@@ -301,12 +303,54 @@ fn test_process_tx() {
         // without op return and with input address
         let r = mock_process_tx::<Test>(deposit_taproot1.clone(), Some(deposit_taproot1_prev.clone()));
         assert_eq!(r.result, BtcTxResult::Success);
+        assert_eq!(
+            XGatewayBitcoin::pending_deposits(&deposit_taproot1_input_account.to_vec()),
+            vec![BtcDepositCache {
+                txid: deposit_taproot1.hash(),
+                balance: 10000000,
+            }]
+        );
+
+        // withdraw
+        WithdrawalProposal::<Test>::put(BtcWithdrawalProposal {
+            sig_state: VoteResult::Unfinish,
+            withdrawal_id_list: vec![],
+            tx: withdraw_taproot1.clone(),
+            trustee_list: vec![],
+        });
+
+        let r = mock_process_tx::<Test>(withdraw_taproot1.clone(), None);
+        assert_eq!(r.result, BtcTxResult::Failure);
+        let r = mock_process_tx::<Test>(withdraw_taproot1.clone(), Some(withdraw_taproot1_prev.clone()));
+        assert_eq!(r.result, BtcTxResult::Success);
 
         // with op return and without input address
         let r = mock_process_tx::<Test>(deposit_taproot2.clone(), None);
         assert_eq!(r.result, BtcTxResult::Success);
+        assert_eq!(XAssets::usable_balance(&op_account, &X_BTC), 10000000);
+        assert_eq!(XGatewayCommon::bound_addrs(&op_account), Default::default());
         // with op return and input address
         let r = mock_process_tx::<Test>(deposit_taproot2.clone(), Some(deposit_taproot2_prev.clone()));
+        assert_eq!(r.result, BtcTxResult::Success);
+
+        // withdraw
+        WithdrawalProposal::<Test>::put(BtcWithdrawalProposal {
+            sig_state: VoteResult::Unfinish,
+            withdrawal_id_list: vec![],
+            tx: withdraw_taproot2.clone(),
+            trustee_list: vec![],
+        });
+
+        let r = mock_process_tx::<Test>(withdraw_taproot2.clone(), None);
+        assert_eq!(r.result, BtcTxResult::Failure);
+        let r = mock_process_tx::<Test>(withdraw_taproot2.clone(), Some(withdraw_taproot2_prev.clone()));
+        assert_eq!(r.result, BtcTxResult::Success);
+
+        // hot and cold
+        let r = mock_process_tx::<Test>(hot_to_cold.clone(), None);
+        assert_eq!(r.result, BtcTxResult::Failure);
+        let r = mock_process_tx::<Test>(hot_to_cold.clone(), Some(hot_to_cold_prev.clone()));
+        assert_eq!(r.tx_type, BtcTxType::HotAndCold);
         assert_eq!(r.result, BtcTxResult::Success);
 
         // let r = mock_process_tx::<Test>(deposit1.clone(), None);
