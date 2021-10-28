@@ -6,7 +6,7 @@ use xp_logging::{error, warn};
 
 use light_bitcoin::{
     chain::{Transaction, TransactionOutput},
-    keys::{Address, AddressTypes, Network},
+    keys::{Address, Network},
     script::{Opcode, Script, ScriptType},
 };
 

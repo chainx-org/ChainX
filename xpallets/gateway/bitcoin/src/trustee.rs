@@ -27,7 +27,7 @@ use xpallet_gateway_common::{
 };
 
 use crate::{
-    tx::{addr2vecu8, ensure_identical, validator::parse_and_check_signed_tx},
+    tx::{ensure_identical, validator::parse_and_check_signed_tx},
     types::{BtcWithdrawalProposal, VoteResult},
     Error, Event, Module, Trait, WithdrawalProposal,
 };
@@ -488,7 +488,7 @@ pub(crate) fn create_multi_address<T: Trait>(
     };
     let script_bytes: Bytes = redeem_script.into();
     Some(BtcTrusteeAddrInfo {
-        addr: addr2vecu8(&addr),
+        addr: addr.to_string().into_bytes(),
         redeem_script: script_bytes.into(),
     })
 }
