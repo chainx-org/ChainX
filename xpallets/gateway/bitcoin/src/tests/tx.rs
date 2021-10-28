@@ -44,10 +44,11 @@ lazy_static::lazy_static! {
 
     // https://github.com/chainx-org/threshold_signature/issues/3#issuecomment-952649555
     // deposit with op return, output addr is DEPOSIT_HOT_ADDR. Withdraw is an example of spending from the script path.
-    static ref deposit_taproot2_prev: Transaction = "020000000001011d8551030943890d856a6de389145dddfc322a591f1dec9ddb4fe0154ad27b450000000000ffffffff0100e1f50500000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f0247304402207ed1b3f0b492870ca9c488f25c0bb547352d5e1e36a3967668dd9152beae3ed3022058f815b72df4cdf5807f277b3dc175f89b3a6051c6e1ed6da04d34ff5063ed6b012102169c5dc6bcf9bce16ad63910b60c3c801fb1b9ad7bf4ff6eb07c465d5fc5d72800000000".parse().unwrap();
-    static ref deposit_taproot2: Transaction = "02000000000101ed40264a26ffd93fb1a2916e02f9dcc5db66b03cd035bf39efdbd1eee0e660cf000000000000000000028096980000000000225120dc82a9c33d787242d80fb4535bcc8d90bb13843fea52c9e78bb43c541dd607b90000000000000000326a3035515a5947565655507370376362714755634873524a555a726e6d547545796836534c48366a6470667346786770524b01401ff61c120492a84e02a98b5826272754456aadb0d8dd3b26aa97f8037942d53e9bb3e0e2b7eeaf24b4a56e2a0f0553cb59fb34284a2e2160df381a0339b52a9700000000".parse().unwrap();
-    static ref withdraw_taproot2_prev: Transaction = "02000000000101ed40264a26ffd93fb1a2916e02f9dcc5db66b03cd035bf39efdbd1eee0e660cf000000000000000000028096980000000000225120dc82a9c33d787242d80fb4535bcc8d90bb13843fea52c9e78bb43c541dd607b90000000000000000326a3035515a5947565655507370376362714755634873524a555a726e6d547545796836534c48366a6470667346786770524b01401ff61c120492a84e02a98b5826272754456aadb0d8dd3b26aa97f8037942d53e9bb3e0e2b7eeaf24b4a56e2a0f0553cb59fb34284a2e2160df381a0339b52a9700000000".parse().unwrap();
-    static ref withdraw_taproot2: Transaction = "02000000000101078a229fb5502b99e9854f82d819dcaee25ca7fd86f5320ca855e33f41586a8300000000000000000001404b4c0000000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f034010d757fd2ab8b2c026a9078ae3a1f4876704c27a2fc67b9be9d709904fd4f3d3d5946dfe7f4ebf38454cfcb448edaddca553bd37b2f46b3c931161945b797173222083f579dd2380bd31355d066086e1b4d46b518987c1f8a64d4c0101560280eae2ac61c1032513ab37143495fcf3bc088de5cdecb94f1c3d7c313075f14a9e35230bb824142b1d0be52980a4791a097a4b7a7df52a97dfe0b1b5023b97c0937a9ab884db9c0bc456a7da1e3879b4e78139e31603c6b6305dc8248e2ede5b4a5b5d45e3dd00000000".parse().unwrap();
+    static ref op_account: AccountId = "5Qjpo7rQnwQetysagGzc4Rj7oswXSLmMqAuC2AbU6LFFFGj8".parse().unwrap();
+    static ref deposit_taproot2_prev: Transaction = "02000000000101de3a732ef011a4d498acf34364f5fd7aa6b8732c7e18836f71ac9ded1edbf8650000000000ffffffff0100e1f50500000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f024630430220573525b4556a87212a3eddf946a38a56f7876f8ac82ddba59cd1fbedbb80aecf021f22f4dc4eda8cc15bff6d6eed62d9d602a83059a9fb78124a05c01bb832210f012103fa9537937a8bbc90a7f8022f8e5c1c98edbf6e837df54535e361292421e3f8ae00000000".parse().unwrap();
+    static ref deposit_taproot2: Transaction = "0200000000010111606867e11696114c4f0317d80aeeb1f0c60aadf8c35f412311f46f1b7cc460000000000000000000028096980000000000225120dc82a9c33d787242d80fb4535bcc8d90bb13843fea52c9e78bb43c541dd607b90000000000000000326a3035516a706f3772516e7751657479736167477a6334526a376f737758534c6d4d7141754332416255364c464646476a380140515bfb56a4a0cd7cb7b12ce07a9db6b58eb431bb87eb51df32c2def62aee4452a421d73f0206ef7364339bf59cecc4b9f05050794de6f306ce02393385266ae700000000".parse().unwrap();
+    static ref withdraw_taproot2_prev: Transaction = "0200000000010111606867e11696114c4f0317d80aeeb1f0c60aadf8c35f412311f46f1b7cc460000000000000000000028096980000000000225120dc82a9c33d787242d80fb4535bcc8d90bb13843fea52c9e78bb43c541dd607b90000000000000000326a3035516a706f3772516e7751657479736167477a6334526a376f737758534c6d4d7141754332416255364c464646476a380140515bfb56a4a0cd7cb7b12ce07a9db6b58eb431bb87eb51df32c2def62aee4452a421d73f0206ef7364339bf59cecc4b9f05050794de6f306ce02393385266ae700000000".parse().unwrap();
+    static ref withdraw_taproot2: Transaction = "020000000001017d0904fd4c844dd6f09fe2573510bf4043aeb6c307f08dc379b2289092255bfa00000000000000000001404b4c0000000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f03403f3ac3d2dd8e19fb9f2de42d2dd056f53db42f30f079add0e8547cd2481c9079e7c57a528cb9ceed687686b3fa3f4ca28cb5ebbbfbf68e895e4edb0d599736c0222083f579dd2380bd31355d066086e1b4d46b518987c1f8a64d4c0101560280eae2ac61c1032513ab37143495fcf3bc088de5cdecb94f1c3d7c313075f14a9e35230bb824142b1d0be52980a4791a097a4b7a7df52a97dfe0b1b5023b97c0937a9ab884db9c0bc456a7da1e3879b4e78139e31603c6b6305dc8248e2ede5b4a5b5d45e3dd00000000".parse().unwrap();
 
     // https://github.com/chainx-org/threshold_signature/issues/3#issuecomment-953662987
     // deposit with op return, output addr is DEPOSIT_HOT_ADDR. Withdraw is an example of spending from the key path.
@@ -134,7 +135,6 @@ fn mock_detect_transaction_type<T: Trait>(
 #[test]
 fn test_detect_tx_type() {
     set_default_ss58_version(Ss58AddressFormat::ChainXAccount);
-
     match mock_detect_transaction_type::<Test>(&deposit_taproot1, None) {
         BtcTxMetaType::Deposit(info) => {
             assert!(info.input_addr.is_none() && info.op_return.is_none())
@@ -144,6 +144,13 @@ fn test_detect_tx_type() {
     match mock_detect_transaction_type::<Test>(&deposit_taproot2, None) {
         BtcTxMetaType::Deposit(info) => {
             assert!(info.input_addr.is_none() && info.op_return.is_some())
+        }
+        _ => unreachable!("wrong type"),
+    }
+
+    match mock_detect_transaction_type::<Test>(&deposit_taproot3, None) {
+        BtcTxMetaType::Deposit(info) => {
+            assert!(info.input_addr.is_none() && info.op_return.is_none())
         }
         _ => unreachable!("wrong type"),
     }
@@ -158,6 +165,13 @@ fn test_detect_tx_type() {
     match mock_detect_transaction_type::<Test>(&deposit_taproot2, Some(&deposit_taproot2_prev)) {
         BtcTxMetaType::Deposit(info) => {
             assert!(info.input_addr.is_some() && info.op_return.is_some())
+        }
+        _ => unreachable!("wrong type"),
+    }
+
+    match mock_detect_transaction_type::<Test>(&deposit_taproot3, Some(&deposit_taproot3_prev)) {
+        BtcTxMetaType::Deposit(info) => {
+            assert!(info.input_addr.is_some() && info.op_return.is_none())
         }
         _ => unreachable!("wrong type"),
     }
@@ -281,67 +295,81 @@ fn mock_process_tx<T: Trait>(tx: Transaction, prev_tx: Option<Transaction>) -> B
 fn test_process_tx() {
     set_default_ss58_version(Ss58AddressFormat::ChainXAccount);
     ExtBuilder::default().build_and_execute(|| {
-        let r = mock_process_tx::<Test>(deposit1.clone(), None);
-        assert_eq!(r.result, BtcTxResult::Success);
-        let r = mock_process_tx::<Test>(deposit2.clone(), None);
-        assert_eq!(r.result, BtcTxResult::Success);
-
-        // 3
-        // with opreturn, and log input_addr => accountid map
-        let r = mock_process_tx::<Test>(deposit3_0.clone(), None);
-        assert_eq!(r.result, BtcTxResult::Success);
-        assert_eq!(XAssets::usable_balance(&account3, &X_BTC), 100000000);
-        // due to no deposit, would not record input_addr
-        assert_eq!(XGatewayCommon::bound_addrs(&account3), Default::default());
-
-        // no prev, would judge a failed deposit
-        let r = mock_process_tx::<Test>(deposit3_1.clone(), None);
+        // without op return and input address
+        let r = mock_process_tx::<Test>(deposit_taproot1.clone(), None);
         assert_eq!(r.result, BtcTxResult::Failure);
-        // with prev, would deposit use the input_addr, but due to no relationship of addr
-        // and accountid before, thus this become a cache deposit
-        let r = mock_process_tx::<Test>(deposit3_1.clone(), Some(deposit3_1_prev.clone()));
+        // without op return and with input address
+        let r = mock_process_tx::<Test>(deposit_taproot1.clone(), Some(deposit_taproot1_prev.clone()));
         assert_eq!(r.result, BtcTxResult::Success);
-        assert_eq!(
-            XGatewayBitcoin::pending_deposits(&deposit3_addr.to_vec()),
-            vec![BtcDepositCache {
-                txid: deposit3_1.hash(),
-                balance: 190850000,
-            }]
-        );
 
-        // 4
-        let r = mock_process_tx::<Test>(deposit4_0.clone(), None);
-        assert_eq!(r.result, BtcTxResult::Failure);
-        let r = mock_process_tx::<Test>(deposit4_0.clone(), Some(deposit4_0_prev.clone()));
+        // with op return and without input address
+        let r = mock_process_tx::<Test>(deposit_taproot2.clone(), None);
         assert_eq!(r.result, BtcTxResult::Success);
-        assert_eq!(
-            XGatewayBitcoin::pending_deposits(&deposit4_addr.to_vec()),
-            vec![BtcDepositCache {
-                txid: deposit4_0.hash(),
-                balance: 100000000,
-            }]
-        );
-        // use a tx with opreturn to release deposit cache, must have prev
-        // (if not have prev, just deposit this tx success, but not release deposit cache. Deposit
-        // cache need a more opreturn tx with prev to release)
-        let r = mock_process_tx::<Test>(deposit4_1.clone(), Some(deposit4_1_prev.clone()));
+        // with op return and input address
+        let r = mock_process_tx::<Test>(deposit_taproot2.clone(), Some(deposit_taproot2_prev.clone()));
         assert_eq!(r.result, BtcTxResult::Success);
-        // release the cache
-        assert_eq!(
-            XGatewayBitcoin::pending_deposits(&deposit4_addr.to_vec()),
-            vec![]
-        );
-        // deposit cache and current deposit
-        assert_eq!(
-            XAssets::usable_balance(&account4, &X_BTC),
-            100000000 + 387439
-        );
 
-        // hot and cold
-        let r = mock_process_tx::<Test>(hot_to_cold.clone(), None);
-        assert_eq!(r.result, BtcTxResult::Failure);
-        let r = mock_process_tx::<Test>(hot_to_cold.clone(), Some(hot_to_cold_prev.clone()));
-        assert_eq!(r.result, BtcTxResult::Success);
+        // let r = mock_process_tx::<Test>(deposit1.clone(), None);
+        // assert_eq!(r.result, BtcTxResult::Success);
+        // let r = mock_process_tx::<Test>(deposit2.clone(), None);
+        // assert_eq!(r.result, BtcTxResult::Success);
+        //
+        // // 3
+        // // with opreturn, and log input_addr => accountid map
+        // let r = mock_process_tx::<Test>(deposit3_0.clone(), None);
+        // assert_eq!(r.result, BtcTxResult::Success);
+        // assert_eq!(XAssets::usable_balance(&account3, &X_BTC), 100000000);
+        // // due to no deposit, would not record input_addr
+        // assert_eq!(XGatewayCommon::bound_addrs(&account3), Default::default());
+        //
+        // // no prev, would judge a failed deposit
+        // let r = mock_process_tx::<Test>(deposit3_1.clone(), None);
+        // assert_eq!(r.result, BtcTxResult::Failure);
+        // // with prev, would deposit use the input_addr, but due to no relationship of addr
+        // // and accountid before, thus this become a cache deposit
+        // let r = mock_process_tx::<Test>(deposit3_1.clone(), Some(deposit3_1_prev.clone()));
+        // assert_eq!(r.result, BtcTxResult::Success);
+        // assert_eq!(
+        //     XGatewayBitcoin::pending_deposits(&deposit3_addr.to_vec()),
+        //     vec![BtcDepositCache {
+        //         txid: deposit3_1.hash(),
+        //         balance: 190850000,
+        //     }]
+        // );
+        //
+        // // 4
+        // let r = mock_process_tx::<Test>(deposit4_0.clone(), None);
+        // assert_eq!(r.result, BtcTxResult::Failure);
+        // let r = mock_process_tx::<Test>(deposit4_0.clone(), Some(deposit4_0_prev.clone()));
+        // assert_eq!(r.result, BtcTxResult::Success);
+        // assert_eq!(
+        //     XGatewayBitcoin::pending_deposits(&deposit4_addr.to_vec()),
+        //     vec![BtcDepositCache {
+        //         txid: deposit4_0.hash(),
+        //         balance: 100000000,
+        //     }]
+        // );
+        // // use a tx with opreturn to release deposit cache, must have prev
+        // // (if not have prev, just deposit this tx success, but not release deposit cache. Deposit
+        // // cache need a more opreturn tx with prev to release)
+        // let r = mock_process_tx::<Test>(deposit4_1.clone(), Some(deposit4_1_prev.clone()));
+        // assert_eq!(r.result, BtcTxResult::Success);
+        // // release the cache
+        // assert_eq!(
+        //     XGatewayBitcoin::pending_deposits(&deposit4_addr.to_vec()),
+        //     vec![]
+        // );
+        // // deposit cache and current deposit
+        // assert_eq!(
+        //     XAssets::usable_balance(&account4, &X_BTC),
+        //     100000000 + 387439
+        // );
+        //
+        // // hot and cold
+        // let r = mock_process_tx::<Test>(hot_to_cold.clone(), None);
+        // assert_eq!(r.result, BtcTxResult::Failure);
+        // let r = mock_process_tx::<Test>(hot_to_cold.clone(), Some(hot_to_cold_prev.clone()));
+        // assert_eq!(r.result, BtcTxResult::Success);
 
         // let r = mock_process_tx::<Test>(cold_to_hot.clone(), None);
         // assert_eq!(r.result, BtcTxResult::Failure);

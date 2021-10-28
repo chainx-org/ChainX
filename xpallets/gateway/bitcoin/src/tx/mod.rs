@@ -60,7 +60,7 @@ pub fn process_tx<T: Trait>(
 fn deposit<T: Trait>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) -> BtcTxResult {
     let account_info = match (deposit_info.op_return, deposit_info.input_addr) {
         (Some((account, referral)), Some(input_addr)) => {
-            let input_addr = addr2vecu8(&input_addr);
+            let input_addr = input_addr.to_string().into_bytes();
             // remove old unbinding deposit info
             remove_pending_deposit::<T>(&input_addr, &account);
             // update or override binding info
@@ -78,7 +78,7 @@ fn deposit<T: Trait>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) -> 
         }
         (None, Some(input_addr)) => {
             // no opreturn but have input addr, use input addr to get accountid
-            let addr_bytes = addr2vecu8(&input_addr);
+            let addr_bytes = input_addr.to_string().into_bytes();
             match T::AddressBinding::address(Module::<T>::chain(), addr_bytes) {
                 Some(account) => AccountInfo::Account((account, None)),
                 None => AccountInfo::Address(input_addr),
@@ -166,7 +166,7 @@ pub fn remove_pending_deposit<T: Trait>(input_address: &BtcAddress, who: &T::Acc
 }
 
 fn insert_pending_deposit<T: Trait>(input_address: &Address, txid: H256, balance: u64) {
-    let addr_bytes = addr2vecu8(input_address);
+    let addr_bytes = input_address.to_string().into_bytes();
 
     let cache = BtcDepositCache { txid, balance };
 
