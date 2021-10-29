@@ -110,7 +110,7 @@ fn test_create_multi_address() {
             176, 239, 250, 62, 135,
         ];
         let addr: Address = String::from_utf8_lossy(&hot_info.addr).parse().unwrap();
-        let pk = match addr.hash{
+        let pk = match addr.hash {
             AddressTypes::Legacy(h) => h.as_bytes().to_vec(),
             AddressTypes::WitnessV0ScriptHash(_) => todo!(),
             AddressTypes::WitnessV0KeyHash(_) => todo!(),
