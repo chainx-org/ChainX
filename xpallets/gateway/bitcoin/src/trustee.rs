@@ -1,5 +1,8 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
+extern crate alloc;
+use alloc::string::ToString;
+
 use frame_support::{
     debug::native,
     dispatch::{DispatchError, DispatchResult},

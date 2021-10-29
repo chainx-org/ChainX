@@ -1,4 +1,6 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+extern crate alloc;
+use alloc::string::ToString;
 
 mod secp256k1_verifier;
 pub mod validator;

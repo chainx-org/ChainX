@@ -39,8 +39,8 @@ xpallet-gateway-records = { path = "../records", default-features = false }
 xpallet-support = { path = "../../support", default-features = false }
 
 # light-bitcoin
-#light-bitcoin = { git = "https://github.com/chainx-org/light-bitcoin", branch = "support-schnorr-test", default-features = false }
-light-bitcoin = { path = "../../../../light-bitcoin", default-features = false }
+light-bitcoin = { git = "https://github.com/chainx-org/light-bitcoin", branch = "support-schnorr-test", default-features = false }
+# light-bitcoin = { path = "../../../../light-bitcoin", default-features = false }
 
 [dev-dependencies]
 hex = "0.4"
