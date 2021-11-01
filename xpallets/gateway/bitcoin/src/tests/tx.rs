@@ -26,6 +26,7 @@ use crate::{
     },
     Trait, WithdrawalProposal,
 };
+use crate::tx::validator::check_taproot_tx;
 
 // Tyoe is p2tr. Address farmat is Mainnet. Generate by:
 // https://github.com/chainx-org/threshold_signature/issues/3#issuecomment-950774633
@@ -37,7 +38,6 @@ lazy_static::lazy_static! {
     // Manually created test data
     // https://github.com/chainx-org/threshold_signature/issues/3#issuecomment-950774633
     // deposit without op return, output addr is DEPOSIT_HOT_ADDR. Withdraw is an example of spending from the script path.
-    // todo! input and output value not match
     static ref deposit_taproot1_input_account: Vec<u8> = b"bc1pexff2s7l58sthpyfrtx500ax234stcnt0gz2lr4kwe0ue95a2e0s5wxhqg".to_vec();
     static ref deposit_taproot1_prev: Transaction = "02000000000101b09a3de57c2abd16265b908324cc6d58fb9647c884dfbf408abe97b6e4cebed70000000000ffffffff0100e1f50500000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f024730440220025472b3856c2d18972bad1abe5694e1cad78d78c4c5aa4b949f70fa3fae7dff022070bc711e477b66529f674712d5e51e48d6342c2d487a62c7ed508a9de4bdd7030121036003a62fe33a962084b7c41f44ed45a2a738f8ed7ab05e1a021f2097d8c17cf800000000".parse().unwrap();
     static ref deposit_taproot1: Transaction = "02000000000101346ac7c1c80bef298009828daf21617b445c7c4f2d4988415e47e8829fc91e2a000000000000000000028096980000000000225120dc82a9c33d787242d80fb4535bcc8d90bb13843fea52c9e78bb43c541dd607b900b4c40400000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f014030a9cde28b2689435b171b150ce93121288d6fc587a86bbc5cfecd0a2c5eb55ad207807f955b14916f96fc202b356629cf87cc228a77899993da2708e55ebc4c00000000".parse().unwrap();

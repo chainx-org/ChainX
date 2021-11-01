@@ -34,6 +34,8 @@ use crate::{
     types::{BtcWithdrawalProposal, VoteResult},
     Error, Event, Module, Trait, WithdrawalProposal,
 };
+use crate::tx::validator::parse_check_taproot_tx;
+use light_bitcoin::chain::TransactionOutput;
 
 pub fn current_trustee_session<T: Trait>(
 ) -> Result<TrusteeSessionInfo<T::AccountId, BtcTrusteeAddrInfo>, DispatchError> {
@@ -304,6 +306,60 @@ impl<T: Trait> Module<T> {
                 panic!("insert_trustee_vote_state should not be error")
             }
         }
+
+        WithdrawalProposal::<T>::put(proposal);
+
+        Ok(())
+    }
+
+    pub fn apply_create_taproot_withdraw(
+        who: T::AccountId,
+        tx: Transaction,
+        withdrawal_id_list: Vec<u32>,
+        spent_outputs: Vec<TransactionOutput>
+    ) -> DispatchResult {
+        let withdraw_amount = Self::max_withdrawal_count();
+        if withdrawal_id_list.len() > withdraw_amount as usize {
+            error!(
+                "[apply_create_withdraw] Current list (len:{}) exceeding the max withdrawal amount {}",
+                withdrawal_id_list.len(), withdraw_amount
+            );
+            return Err(Error::<T>::WroungWithdrawalCount.into());
+        }
+        // remove duplicate
+        let mut withdrawal_id_list = withdrawal_id_list;
+        withdrawal_id_list.sort();
+        withdrawal_id_list.dedup();
+
+        check_withdraw_tx::<T>(&tx, &withdrawal_id_list)?;
+        info!(
+            "[apply_create_withdraw] Create new withdraw, id_list:{:?}",
+            withdrawal_id_list
+        );
+
+        // check sig
+        if !parse_check_taproot_tx::<T>(&tx, &spent_outputs){
+            return Err(Error::<T>::InvalidSignCount.into());
+        };
+
+        xpallet_gateway_records::Module::<T>::process_withdrawals(
+            &withdrawal_id_list,
+            Chain::Bitcoin,
+        )?;
+
+        let mut proposal = BtcWithdrawalProposal::new(
+            VoteResult::Finish,
+            withdrawal_id_list.clone(),
+            tx,
+            Vec::new(),
+        );
+
+        info!("[apply_create_withdraw] Pass the legality check of withdrawal");
+
+        Self::deposit_event(Event::<T>::WithdrawalProposalCreated(
+            who.clone(),
+            withdrawal_id_list,
+        ));
 
         WithdrawalProposal::<T>::put(proposal);
 

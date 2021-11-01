@@ -63,6 +63,8 @@ use self::{
         BtcTxResult, BtcTxState,
     },
 };
+use codec::alloc::str::FromStr;
+use light_bitcoin::chain::TransactionOutput;
 
 // syntactic sugar for native log.
 #[macro_export]
@@ -320,6 +322,21 @@ decl_module! {
             Ok(())
         }
 
+        /// Trustee create a proposal for a withdrawal list. `tx` is the proposal withdrawal transaction.
+        #[weight = <T as Trait>::WeightInfo::create_withdraw_tx()]
+        pub fn create_taproot_withdraw_tx(origin, withdrawal_id_list: Vec<u32>, tx: Vec<u8>, spent_outputs: Vec<u8>) -> DispatchResult {
+            let from = ensure_signed(origin)?;
+            // committer must be in the trustee list
+            Self::ensure_trustee(&from)?;
+
+            let tx = Self::deserialize_tx(tx.as_slice())?;
+            let spent_outputs = Self::deserialize_spent_outputs(spent_outputs.as_slice())?;
+            native!(debug, "[create_withdraw_tx] from:{:?}, withdrawal list:{:?}, tx:{:?}, spent_outputs: {:?}", from, withdrawal_id_list, tx, spent_outputs);
+
+            Self::apply_create_taproot_withdraw(from, tx, withdrawal_id_list, spent_outputs)?;
+            Ok(())
+        }
+
         /// Trustees sign a withdrawal proposal. If `tx` is None, means this trustee vote to reject
         /// this proposal. If `tx` is Some(), the inner part must be a valid transaction with this
         /// trustee signature.
@@ -462,6 +479,15 @@ impl<T: Trait> ChainT<BalanceOf<T>> for Module<T> {
 
 impl<T: Trait> Module<T> {
     pub fn verify_btc_address(data: &[u8]) -> Result<Address, DispatchError> {
+        let result = verify_bs58_address(data);
+        if result.is_ok(){
+            return result;
+        }
+        verify_bech32_address(data)
+
+    }
+
+    pub fn verify_bs58_address(data: &[u8]) -> Result<Address, DispatchError> {
         let r = bs58::decode(data)
             .into_vec()
             .map_err(|_| Error::<T>::InvalidBase58)?;
@@ -469,9 +495,19 @@ impl<T: Trait> Module<T> {
         Ok(addr)
     }
 
+    pub fn verify_bech32_address(data: &[u8]) -> Result<Address, DispatchError> {
+        let addr = data.to_str().map_err(|_| Error::<T>::InvalidAddr)?;
+        Address::from_str(addr).map_err(|_| Error::<T>::InvalidAddr.into())
+    }
+
     /// Helper function for deserializing the slice of raw tx.
     #[inline]
     fn deserialize_tx(input: &[u8]) -> Result<Transaction, Error<T>> {
+        deserialize(Reader::new(input)).map_err(|_| Error::<T>::DeserializeErr)
+    }
+
+    #[inline]
+    fn deserialize_spent_outputs(input: &[u8]) -> Result<Vec<TransactionOutput>, Error<T>> {
         deserialize(Reader::new(input)).map_err(|_| Error::<T>::DeserializeErr)
     }
 
@@ -574,7 +610,7 @@ impl<T: Trait> Module<T> {
         let height = header_info.height;
         if height > confirmed.height {
             error!(
-                "[apply_push_transaction] Receive an unconfirmed tx (height:{}, hash:{:?}), confirmed index (height:{}, hash:{:?})", 
+                "[apply_push_transaction] Receive an unconfirmed tx (height:{}, hash:{:?}), confirmed index (height:{}, hash:{:?})",
                 height, tx_hash, confirmed.height, confirmed.hash
             );
             return Err(Error::<T>::UnconfirmedTx.into());
@@ -585,7 +621,7 @@ impl<T: Trait> Module<T> {
             Some(state) => {
                 if state.result == BtcTxResult::Success {
                     error!(
-                        "[apply_push_transaction] Reject processed tx (hash:{:?}, type:{:?}, result:{:?})", 
+                        "[apply_push_transaction] Reject processed tx (hash:{:?}, type:{:?}, result:{:?})",
                         tx_hash, state.tx_type, state.result
                     );
                     return Err(Error::<T>::ReplayedTx.into());
