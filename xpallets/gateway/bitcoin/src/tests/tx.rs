@@ -26,7 +26,6 @@ use crate::{
     },
     Trait, WithdrawalProposal,
 };
-use crate::tx::validator::check_taproot_tx;
 
 // Tyoe is p2tr. Address farmat is Mainnet. Generate by:
 // https://github.com/chainx-org/threshold_signature/issues/3#issuecomment-950774633

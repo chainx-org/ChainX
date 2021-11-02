@@ -6,13 +6,20 @@ use frame_support::{
 };
 use sp_std::prelude::Vec;
 
-use light_bitcoin::{chain::{Transaction, TransactionOutput}, keys::{verify_schnorr, AddressTypes, SchnorrSignature, XOnly}, primitives::{Bytes, H256}, script::{check_taproot_tx, Script, ScriptExecutionData, SignatureVersion}};
+use light_bitcoin::{
+    chain::{Transaction, TransactionOutput},
+    keys::{AddressTypes, XOnly},
+    primitives::H256,
+    script::{check_taproot_tx, Script},
+};
 
 use xp_logging::{debug, error};
 
-use crate::{trustee::{get_hot_trustee_address, get_hot_trustee_redeem_script}, types::BtcRelayedTx, Error, Trait};
-use light_bitcoin::script::TransactionInputSigner;
-use sp_std::convert::TryFrom;
+use crate::{
+    trustee::{get_hot_trustee_address, get_hot_trustee_redeem_script},
+    types::BtcRelayedTx,
+    Error, Trait,
+};
 
 pub fn validate_transaction<T: Trait>(
     tx: &BtcRelayedTx,
@@ -67,15 +74,25 @@ pub fn parse_and_check_signed_tx<T: Trait>(tx: &Transaction) -> Result<u32, Disp
 }
 
 /// Check Taproot tx
-pub fn parse_check_taproot_tx<T: Trait>(tx: &Transaction, spent_outputs: &Vec<TransactionOutput>) -> bool {
-    let hot_addr = get_hot_trustee_address::<T>()?;
-    let mut script_pubkeys = spent_outputs.iter().map(|d| d.script_pubkey.clone()).collect::<Vec<_>>();
+pub fn parse_check_taproot_tx<T: Trait>(
+    tx: &Transaction,
+    spent_outputs: &Vec<TransactionOutput>,
+) -> bool {
+    let hot_addr = if let Ok(addr) = get_hot_trustee_address::<T>() {
+        addr
+    } else {
+        return false;
+    };
+    let mut script_pubkeys = spent_outputs
+        .iter()
+        .map(|d| d.script_pubkey.clone())
+        .collect::<Vec<_>>();
     script_pubkeys.dedup();
     if script_pubkeys.len() != 1 {
         return false;
     }
     let mut keys = [0u8; 32];
-    keys.copy_from_slice(&script_pubkey);
+    keys.copy_from_slice(&script_pubkeys[0][..]);
     let tweak_pubkey = XOnly(keys);
     if AddressTypes::WitnessV1Taproot(tweak_pubkey) != hot_addr.hash {
         return false;

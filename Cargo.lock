@@ -3488,7 +3488,6 @@ dependencies = [
 [[package]]
 name = "light-bitcoin"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=support-schnorr-test#f787363f88d92a6512ca004d826672dd8921cdf6"
 dependencies = [
  "light-bitcoin-chain",
  "light-bitcoin-crypto",
@@ -3502,7 +3501,6 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-chain"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=support-schnorr-test#f787363f88d92a6512ca004d826672dd8921cdf6"
 dependencies = [
  "hex",
  "light-bitcoin-crypto",
@@ -3515,7 +3513,6 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-crypto"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=support-schnorr-test#f787363f88d92a6512ca004d826672dd8921cdf6"
 dependencies = [
  "digest 0.9.0",
  "light-bitcoin-primitives",
@@ -3528,7 +3525,6 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-keys"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=support-schnorr-test#f787363f88d92a6512ca004d826672dd8921cdf6"
 dependencies = [
  "bitcoin-bech32",
  "bs58 0.4.0",
@@ -3546,7 +3542,6 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-merkle"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=support-schnorr-test#f787363f88d92a6512ca004d826672dd8921cdf6"
 dependencies = [
  "light-bitcoin-chain",
  "light-bitcoin-primitives",
@@ -3557,7 +3552,6 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-primitives"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=support-schnorr-test#f787363f88d92a6512ca004d826672dd8921cdf6"
 dependencies = [
  "byteorder",
  "fixed-hash 0.7.0",
@@ -3571,7 +3565,6 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-script"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=support-schnorr-test#f787363f88d92a6512ca004d826672dd8921cdf6"
 dependencies = [
  "hex",
  "libsecp256k1",
@@ -3586,7 +3579,6 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-serialization"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=support-schnorr-test#f787363f88d92a6512ca004d826672dd8921cdf6"
 dependencies = [
  "light-bitcoin-primitives",
  "light-bitcoin-serialization-derive",
@@ -3595,7 +3587,6 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-serialization-derive"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=support-schnorr-test#f787363f88d92a6512ca004d826672dd8921cdf6"
 dependencies = [
  "proc-macro2",
  "quote",

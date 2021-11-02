@@ -38,7 +38,7 @@ pub use light_bitcoin::{
     primitives::{hash_rev, Compact, H256, H264},
 };
 use light_bitcoin::{
-    chain::Transaction,
+    chain::{Transaction, TransactionOutputArray},
     keys::{Address, DisplayLayout},
     serialization::{deserialize, Reader},
 };
@@ -63,8 +63,8 @@ use self::{
         BtcTxResult, BtcTxState,
     },
 };
-use codec::alloc::str::FromStr;
-use light_bitcoin::chain::TransactionOutput;
+
+use sp_core::sp_std::str::FromStr;
 
 // syntactic sugar for native log.
 #[macro_export]
@@ -330,7 +330,7 @@ decl_module! {
             Self::ensure_trustee(&from)?;
 
             let tx = Self::deserialize_tx(tx.as_slice())?;
-            let spent_outputs = Self::deserialize_spent_outputs(spent_outputs.as_slice())?;
+            let spent_outputs = Self::deserialize_spent_outputs(spent_outputs.as_slice())?.outputs;
             native!(debug, "[create_withdraw_tx] from:{:?}, withdrawal list:{:?}, tx:{:?}, spent_outputs: {:?}", from, withdrawal_id_list, tx, spent_outputs);
 
             Self::apply_create_taproot_withdraw(from, tx, withdrawal_id_list, spent_outputs)?;
@@ -479,12 +479,11 @@ impl<T: Trait> ChainT<BalanceOf<T>> for Module<T> {
 
 impl<T: Trait> Module<T> {
     pub fn verify_btc_address(data: &[u8]) -> Result<Address, DispatchError> {
-        let result = verify_bs58_address(data);
-        if result.is_ok(){
+        let result = Self::verify_bs58_address(data);
+        if result.is_ok() {
             return result;
         }
-        verify_bech32_address(data)
-
+        Self::verify_bech32_address(data)
     }
 
     pub fn verify_bs58_address(data: &[u8]) -> Result<Address, DispatchError> {
@@ -496,7 +495,7 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn verify_bech32_address(data: &[u8]) -> Result<Address, DispatchError> {
-        let addr = data.to_str().map_err(|_| Error::<T>::InvalidAddr)?;
+        let addr = core::str::from_utf8(&data).map_err(|_| Error::<T>::InvalidAddr)?;
         Address::from_str(addr).map_err(|_| Error::<T>::InvalidAddr.into())
     }
 
@@ -507,7 +506,7 @@ impl<T: Trait> Module<T> {
     }
 
     #[inline]
-    fn deserialize_spent_outputs(input: &[u8]) -> Result<Vec<TransactionOutput>, Error<T>> {
+    fn deserialize_spent_outputs(input: &[u8]) -> Result<TransactionOutputArray, Error<T>> {
         deserialize(Reader::new(input)).map_err(|_| Error::<T>::DeserializeErr)
     }
 

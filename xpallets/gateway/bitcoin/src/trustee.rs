@@ -29,12 +29,12 @@ use xpallet_gateway_common::{
     utils::two_thirds_unsafe,
 };
 
+use crate::tx::validator::parse_check_taproot_tx;
 use crate::{
     tx::{ensure_identical, validator::parse_and_check_signed_tx},
     types::{BtcWithdrawalProposal, VoteResult},
     Error, Event, Module, Trait, WithdrawalProposal,
 };
-use crate::tx::validator::parse_check_taproot_tx;
 use light_bitcoin::chain::TransactionOutput;
 
 pub fn current_trustee_session<T: Trait>(
@@ -316,7 +316,7 @@ impl<T: Trait> Module<T> {
         who: T::AccountId,
         tx: Transaction,
         withdrawal_id_list: Vec<u32>,
-        spent_outputs: Vec<TransactionOutput>
+        spent_outputs: Vec<TransactionOutput>,
     ) -> DispatchResult {
         let withdraw_amount = Self::max_withdrawal_count();
         if withdrawal_id_list.len() > withdraw_amount as usize {
@@ -338,7 +338,7 @@ impl<T: Trait> Module<T> {
         );
 
         // check sig
-        if !parse_check_taproot_tx::<T>(&tx, &spent_outputs){
+        if !parse_check_taproot_tx::<T>(&tx, &spent_outputs) {
             return Err(Error::<T>::InvalidSignCount.into());
         };
 
@@ -347,7 +347,7 @@ impl<T: Trait> Module<T> {
             Chain::Bitcoin,
         )?;
 
-        let mut proposal = BtcWithdrawalProposal::new(
+        let proposal = BtcWithdrawalProposal::new(
             VoteResult::Finish,
             withdrawal_id_list.clone(),
             tx,
