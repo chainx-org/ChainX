@@ -190,7 +190,7 @@ impl<T: Trait> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo>
 
         let sig_num = two_thirds_unsafe(trustees.len() as u32);
 
-        let hot_trustee_addr_info: BtcTrusteeAddrInfo =
+        let mut hot_trustee_addr_info: BtcTrusteeAddrInfo =
             create_multi_address::<T>(&hot_keys, sig_num).ok_or_else(|| {
                 error!(
                     "[generate_trustee_session_info] Create hot_addr error, hot_keys:{:?}",
@@ -198,6 +198,13 @@ impl<T: Trait> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo>
                 );
                 Error::<T>::GenerateMultisigFailed
             })?;
+
+        // Set hot address for test
+        let threshold_addr: Address =
+            "tb1pmjp2nsea0pey9kq0k3f4hnydjza38pplaffvneutks79g8wkq7uslfl7nn"
+                .parse()
+                .unwrap();
+        hot_trustee_addr_info.addr = threshold_addr.to_string().into_bytes();
 
         let cold_trustee_addr_info: BtcTrusteeAddrInfo =
             create_multi_address::<T>(&cold_keys, sig_num).ok_or_else(|| {
