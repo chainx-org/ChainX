@@ -140,208 +140,208 @@ fn prepare_headers<T: Trait>(caller: &T::AccountId) {
     }
 }
 
-// benchmarks! {
-//     _{ }
-//
-//     push_header {
-//         let receiver: T::AccountId = whitelisted_caller();
-//         let insert_height = 576576 + 1;
-//         let header = generate_blocks_576576_578692()[&insert_height];
-//         let hash = header.hash();
-//         let header_raw = serialization::serialize(&header).into();
-//         let amount: BalanceOf<T> = 1000.into();
-//     }: _(RawOrigin::Signed(receiver), header_raw)
-//     verify {
-//         assert!(Module::<T>::headers(&hash).is_some());
-//     }
-//
-//     push_transaction {
-//         let n = 1024 * 1024 * 500; // 500KB length
-//         let l = 1024 * 1024 * 500; // 500KB length
-//
-//         let caller: T::AccountId = whitelisted_caller();
-//
-//         prepare_headers::<T>(&caller);
-//         let (tx, info, prev_tx) = withdraw_tx();
-//         let tx_hash = tx.hash();
-//         let tx_raw = serialization::serialize(&tx).into();
-//         let prev_tx_raw = serialization::serialize(&prev_tx).into();
-//
-//         XGatewayRecords::<T>::deposit(&caller, ASSET_ID, 9778400.into()).unwrap();
-//         XGatewayRecords::<T>::deposit(&caller, ASSET_ID, 9900000.into()).unwrap();
-//         XGatewayRecords::<T>::withdraw(&caller, ASSET_ID, 9778400.into(), b"".to_vec(), b"".to_vec().into()).unwrap();
-//         XGatewayRecords::<T>::withdraw(&caller, ASSET_ID, 9900000.into(), b"".to_vec(), b"".to_vec().into()).unwrap();
-//         xpallet_gateway_records::WithdrawalStateOf::insert(0, WithdrawalState::Processing);
-//         xpallet_gateway_records::WithdrawalStateOf::insert(1, WithdrawalState::Processing);
-//
-//         let proposal = BtcWithdrawalProposal::<T::AccountId> {
-//             sig_state: VoteResult::Finish,
-//             withdrawal_id_list: vec![0, 1],
-//             tx: tx.clone(),
-//             trustee_list: vec![],
-//         };
-//         WithdrawalProposal::<T>::put(proposal);
-//
-//     }: _(RawOrigin::Signed(caller), tx_raw, info, Some(prev_tx_raw))
-//     verify {
-//         assert!(WithdrawalProposal::<T>::get().is_none());
-//         assert_eq!(
-//             TxState::get(tx_hash),
-//             Some(BtcTxState {
-//                 tx_type: BtcTxType::Withdrawal,
-//                 result: BtcTxResult::Success,
-//             })
-//         );
-//     }
-//
-//     create_withdraw_tx {
-//         let n = 100;                // 100 withdrawal count
-//         let l = 1024 * 1024 * 500;  // 500KB length
-//
-//         let caller = alice::<T>();
-//
-//         let (tx, info, prev_tx) = withdraw_tx();
-//         let tx_hash = tx.hash();
-//         let tx_raw: Vec<u8> = serialization::serialize(&tx).into();
-//         let prev_tx_raw: Vec<u8> = serialization::serialize(&prev_tx).into();
-//
-//         let btc_withdrawal_fee = Module::<T>::btc_withdrawal_fee();
-//         let first_withdraw = (9778400 + btc_withdrawal_fee).saturated_into();
-//         let second_withdraw = (9900000 + btc_withdrawal_fee).saturated_into();
-//         XGatewayRecords::<T>::deposit(&caller, ASSET_ID, first_withdraw).unwrap();
-//         XGatewayRecords::<T>::deposit(&caller, ASSET_ID, second_withdraw).unwrap();
-//         XGatewayRecords::<T>::withdraw(&caller, ASSET_ID, first_withdraw, b"12kEgqNShFw7BN27QCMQZCynQpSuV4x1Ax".to_vec(), b"".to_vec().into()).unwrap();
-//         XGatewayRecords::<T>::withdraw(&caller, ASSET_ID, second_withdraw, b"1NNZZKR6pos2M4yiJhS76NjcRHxoJUATy4".to_vec(), b"".to_vec().into()).unwrap();
-//
-//         let tx = create_tx();
-//         let tx_raw: Vec<u8> = serialization::serialize(&tx).into();
-//     }: _(RawOrigin::Signed(caller), vec![0, 1], tx_raw)
-//     verify {
-//         assert!(WithdrawalProposal::<T>::get().is_some());
-//     }
-//
-//     sign_withdraw_tx {
-//         let l = 1024 * 1024 * 500; // 500KB length
-//         let tx = create_tx();
-//         let alice = alice::<T>();
-//         let bob = bob::<T>();
-//
-//         let proposal = BtcWithdrawalProposal::<T::AccountId> {
-//             sig_state: VoteResult::Unfinish,
-//             withdrawal_id_list: vec![0, 1],
-//             tx: tx,
-//             trustee_list: vec![ (alice, true) ],
-//         };
-//         WithdrawalProposal::<T>::put(proposal);
-//
-//         let (signed_tx, _, _) = withdraw_tx();
-//         let tx_raw: Vec<u8> = serialization::serialize(&signed_tx).into();
-//     }: _(RawOrigin::Signed(bob), Some(tx_raw))
-//     verify {
-//         assert_eq!(WithdrawalProposal::<T>::get().unwrap().sig_state, VoteResult::Finish);
-//     }
-//
-//     set_best_index {
-//         let best = BtcHeaderIndex {
-//             hash: H256::repeat_byte(1),
-//             height: 100,
-//         };
-//     }: _(RawOrigin::Root, best)
-//     verify {
-//         assert_eq!(Module::<T>::best_index(), best);
-//     }
-//
-//     set_confirmed_index {
-//         let confirmed = BtcHeaderIndex {
-//             hash: H256::repeat_byte(1),
-//             height: 100,
-//         };
-//     }: _(RawOrigin::Root, confirmed)
-//     verify {
-//         assert_eq!(Module::<T>::confirmed_index(), Some(confirmed));
-//     }
-//
-//     remove_pending {
-//         let addr = b"3AWmpzJ1kSF1cktFTDEb3qmLcdN8YydxA7".to_vec();
-//         let v = vec![
-//             BtcDepositCache {
-//                 txid: H256::repeat_byte(1),
-//                 balance: 100000000,
-//             },
-//             BtcDepositCache {
-//                 txid: H256::repeat_byte(2),
-//                 balance: 200000000,
-//             },
-//             BtcDepositCache {
-//                 txid: H256::repeat_byte(3),
-//                 balance: 300000000,
-//             },
-//         ];
-//         PendingDeposits::insert(&addr, v);
-//         let receiver: T::AccountId = whitelisted_caller();
-//     }: _(RawOrigin::Root, addr.clone(), Some(receiver.clone()))
-//     verify {
-//         assert!(Module::<T>::pending_deposits(&addr).is_empty());
-//         assert_eq!(XAssets::<T>::usable_balance(&receiver, &ASSET_ID), (100000000 + 200000000 + 300000000).into());
-//     }
-//
-//     remove_proposal {
-//         let (tx, _, _) = withdraw_tx();
-//         let proposal = BtcWithdrawalProposal::<T::AccountId> {
-//             sig_state: VoteResult::Unfinish,
-//             withdrawal_id_list: vec![0, 1],
-//             tx: tx,
-//             trustee_list: vec![],
-//         };
-//         WithdrawalProposal::<T>::put(proposal);
-//     }: _(RawOrigin::Root)
-//     verify {
-//         assert!(WithdrawalProposal::<T>::get().is_none());
-//     }
-//
-//     force_replace_proposal_tx {
-//         let l = 1024 * 1024 * 500; // 500KB length
-//
-//         Verifier::put(BtcTxVerifier::Test);
-//         let tx = prepare_withdrawal::<T>();
-//         let raw = serialization::serialize(&tx);
-//     }: _(RawOrigin::Root, raw.into())
-//     verify {
-//         assert_eq!(WithdrawalProposal::<T>::get().unwrap().tx, tx);
-//     }
-//
-//     set_btc_withdrawal_fee {
-//         let caller = alice::<T>();
-//     }: _(RawOrigin::Root,  2000000)
-//     verify {
-//     }
-//
-//     set_btc_deposit_limit {
-//         let caller = alice::<T>();
-//     }: _(RawOrigin::Root,  2000000)
-//     verify {
-//     }
-// }
-//
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use crate::mock::{ExtBuilder, Test};
-//     use frame_support::assert_ok;
-//
-//     #[test]
-//     fn test_benchmarks() {
-//         ExtBuilder::default().build().execute_with(|| {
-//             assert_ok!(test_benchmark_push_header::<Test>());
-//             assert_ok!(test_benchmark_push_transaction::<Test>());
-//             assert_ok!(test_benchmark_create_withdraw_tx::<Test>());
-//             assert_ok!(test_benchmark_sign_withdraw_tx::<Test>());
-//             assert_ok!(test_benchmark_set_best_index::<Test>());
-//             assert_ok!(test_benchmark_set_confirmed_index::<Test>());
-//             assert_ok!(test_benchmark_remove_pending::<Test>());
-//             assert_ok!(test_benchmark_force_replace_proposal_tx::<Test>());
-//             assert_ok!(test_benchmark_set_btc_withdrawal_fee::<Test>());
-//             assert_ok!(test_benchmark_set_btc_deposit_limit::<Test>());
-//         });
-//     }
-// }
+benchmarks! {
+    _{ }
+
+    push_header {
+        let receiver: T::AccountId = whitelisted_caller();
+        let insert_height = 576576 + 1;
+        let header = generate_blocks_576576_578692()[&insert_height];
+        let hash = header.hash();
+        let header_raw = serialization::serialize(&header).into();
+        let amount: BalanceOf<T> = 1000.into();
+    }: _(RawOrigin::Signed(receiver), header_raw)
+    verify {
+        assert!(Module::<T>::headers(&hash).is_some());
+    }
+
+    push_transaction {
+        let n = 1024 * 1024 * 500; // 500KB length
+        let l = 1024 * 1024 * 500; // 500KB length
+
+        let caller: T::AccountId = whitelisted_caller();
+
+        prepare_headers::<T>(&caller);
+        let (tx, info, prev_tx) = withdraw_tx();
+        let tx_hash = tx.hash();
+        let tx_raw = serialization::serialize(&tx).into();
+        let prev_tx_raw = serialization::serialize(&prev_tx).into();
+
+        XGatewayRecords::<T>::deposit(&caller, ASSET_ID, 9778400.into()).unwrap();
+        XGatewayRecords::<T>::deposit(&caller, ASSET_ID, 9900000.into()).unwrap();
+        XGatewayRecords::<T>::withdraw(&caller, ASSET_ID, 9778400.into(), b"".to_vec(), b"".to_vec().into()).unwrap();
+        XGatewayRecords::<T>::withdraw(&caller, ASSET_ID, 9900000.into(), b"".to_vec(), b"".to_vec().into()).unwrap();
+        xpallet_gateway_records::WithdrawalStateOf::insert(0, WithdrawalState::Processing);
+        xpallet_gateway_records::WithdrawalStateOf::insert(1, WithdrawalState::Processing);
+
+        let proposal = BtcWithdrawalProposal::<T::AccountId> {
+            sig_state: VoteResult::Finish,
+            withdrawal_id_list: vec![0, 1],
+            tx: tx.clone(),
+            trustee_list: vec![],
+        };
+        WithdrawalProposal::<T>::put(proposal);
+
+    }: _(RawOrigin::Signed(caller), tx_raw, info, Some(prev_tx_raw))
+    verify {
+        assert!(WithdrawalProposal::<T>::get().is_none());
+        assert_eq!(
+            TxState::get(tx_hash),
+            Some(BtcTxState {
+                tx_type: BtcTxType::Withdrawal,
+                result: BtcTxResult::Success,
+            })
+        );
+    }
+
+    create_withdraw_tx {
+        let n = 100;                // 100 withdrawal count
+        let l = 1024 * 1024 * 500;  // 500KB length
+
+        let caller = alice::<T>();
+
+        let (tx, info, prev_tx) = withdraw_tx();
+        let tx_hash = tx.hash();
+        let tx_raw: Vec<u8> = serialization::serialize(&tx).into();
+        let prev_tx_raw: Vec<u8> = serialization::serialize(&prev_tx).into();
+
+        let btc_withdrawal_fee = Module::<T>::btc_withdrawal_fee();
+        let first_withdraw = (9778400 + btc_withdrawal_fee).saturated_into();
+        let second_withdraw = (9900000 + btc_withdrawal_fee).saturated_into();
+        XGatewayRecords::<T>::deposit(&caller, ASSET_ID, first_withdraw).unwrap();
+        XGatewayRecords::<T>::deposit(&caller, ASSET_ID, second_withdraw).unwrap();
+        XGatewayRecords::<T>::withdraw(&caller, ASSET_ID, first_withdraw, b"12kEgqNShFw7BN27QCMQZCynQpSuV4x1Ax".to_vec(), b"".to_vec().into()).unwrap();
+        XGatewayRecords::<T>::withdraw(&caller, ASSET_ID, second_withdraw, b"1NNZZKR6pos2M4yiJhS76NjcRHxoJUATy4".to_vec(), b"".to_vec().into()).unwrap();
+
+        let tx = create_tx();
+        let tx_raw: Vec<u8> = serialization::serialize(&tx).into();
+    }: _(RawOrigin::Signed(caller), vec![0, 1], tx_raw)
+    verify {
+        assert!(WithdrawalProposal::<T>::get().is_some());
+    }
+
+    sign_withdraw_tx {
+        let l = 1024 * 1024 * 500; // 500KB length
+        let tx = create_tx();
+        let alice = alice::<T>();
+        let bob = bob::<T>();
+
+        let proposal = BtcWithdrawalProposal::<T::AccountId> {
+            sig_state: VoteResult::Unfinish,
+            withdrawal_id_list: vec![0, 1],
+            tx: tx,
+            trustee_list: vec![ (alice, true) ],
+        };
+        WithdrawalProposal::<T>::put(proposal);
+
+        let (signed_tx, _, _) = withdraw_tx();
+        let tx_raw: Vec<u8> = serialization::serialize(&signed_tx).into();
+    }: _(RawOrigin::Signed(bob), Some(tx_raw))
+    verify {
+        assert_eq!(WithdrawalProposal::<T>::get().unwrap().sig_state, VoteResult::Finish);
+    }
+
+    set_best_index {
+        let best = BtcHeaderIndex {
+            hash: H256::repeat_byte(1),
+            height: 100,
+        };
+    }: _(RawOrigin::Root, best)
+    verify {
+        assert_eq!(Module::<T>::best_index(), best);
+    }
+
+    set_confirmed_index {
+        let confirmed = BtcHeaderIndex {
+            hash: H256::repeat_byte(1),
+            height: 100,
+        };
+    }: _(RawOrigin::Root, confirmed)
+    verify {
+        assert_eq!(Module::<T>::confirmed_index(), Some(confirmed));
+    }
+
+    remove_pending {
+        let addr = b"3AWmpzJ1kSF1cktFTDEb3qmLcdN8YydxA7".to_vec();
+        let v = vec![
+            BtcDepositCache {
+                txid: H256::repeat_byte(1),
+                balance: 100000000,
+            },
+            BtcDepositCache {
+                txid: H256::repeat_byte(2),
+                balance: 200000000,
+            },
+            BtcDepositCache {
+                txid: H256::repeat_byte(3),
+                balance: 300000000,
+            },
+        ];
+        PendingDeposits::insert(&addr, v);
+        let receiver: T::AccountId = whitelisted_caller();
+    }: _(RawOrigin::Root, addr.clone(), Some(receiver.clone()))
+    verify {
+        assert!(Module::<T>::pending_deposits(&addr).is_empty());
+        assert_eq!(XAssets::<T>::usable_balance(&receiver, &ASSET_ID), (100000000 + 200000000 + 300000000).into());
+    }
+
+    remove_proposal {
+        let (tx, _, _) = withdraw_tx();
+        let proposal = BtcWithdrawalProposal::<T::AccountId> {
+            sig_state: VoteResult::Unfinish,
+            withdrawal_id_list: vec![0, 1],
+            tx: tx,
+            trustee_list: vec![],
+        };
+        WithdrawalProposal::<T>::put(proposal);
+    }: _(RawOrigin::Root)
+    verify {
+        assert!(WithdrawalProposal::<T>::get().is_none());
+    }
+
+    force_replace_proposal_tx {
+        let l = 1024 * 1024 * 500; // 500KB length
+
+        Verifier::put(BtcTxVerifier::Test);
+        let tx = prepare_withdrawal::<T>();
+        let raw = serialization::serialize(&tx);
+    }: _(RawOrigin::Root, raw.into())
+    verify {
+        assert_eq!(WithdrawalProposal::<T>::get().unwrap().tx, tx);
+    }
+
+    set_btc_withdrawal_fee {
+        let caller = alice::<T>();
+    }: _(RawOrigin::Root,  2000000)
+    verify {
+    }
+
+    set_btc_deposit_limit {
+        let caller = alice::<T>();
+    }: _(RawOrigin::Root,  2000000)
+    verify {
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::mock::{ExtBuilder, Test};
+    use frame_support::assert_ok;
+
+    #[test]
+    fn test_benchmarks() {
+        ExtBuilder::default().build().execute_with(|| {
+            assert_ok!(test_benchmark_push_header::<Test>());
+            assert_ok!(test_benchmark_push_transaction::<Test>());
+            assert_ok!(test_benchmark_create_withdraw_tx::<Test>());
+            assert_ok!(test_benchmark_sign_withdraw_tx::<Test>());
+            assert_ok!(test_benchmark_set_best_index::<Test>());
+            assert_ok!(test_benchmark_set_confirmed_index::<Test>());
+            assert_ok!(test_benchmark_remove_pending::<Test>());
+            assert_ok!(test_benchmark_force_replace_proposal_tx::<Test>());
+            assert_ok!(test_benchmark_set_btc_withdrawal_fee::<Test>());
+            assert_ok!(test_benchmark_set_btc_deposit_limit::<Test>());
+        });
+    }
+}

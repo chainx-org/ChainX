@@ -338,8 +338,8 @@ impl<T: Trait> Module<T> {
         );
 
         // check sig
-        if !parse_check_taproot_tx::<T>(&tx, &spent_outputs) {
-            return Err(Error::<T>::InvalidSignCount.into());
+        if parse_check_taproot_tx::<T>(&tx, &spent_outputs).is_err() {
+            return Err(Error::<T>::VerifySignFailed.into());
         };
 
         xpallet_gateway_records::Module::<T>::process_withdrawals(

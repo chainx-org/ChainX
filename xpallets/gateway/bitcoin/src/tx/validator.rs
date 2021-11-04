@@ -77,27 +77,27 @@ pub fn parse_and_check_signed_tx<T: Trait>(tx: &Transaction) -> Result<u32, Disp
 pub fn parse_check_taproot_tx<T: Trait>(
     tx: &Transaction,
     spent_outputs: &Vec<TransactionOutput>,
-) -> bool {
-    let hot_addr = if let Ok(addr) = get_hot_trustee_address::<T>() {
-        addr
-    } else {
-        return false;
-    };
+) -> Result<bool, DispatchError> {
+    let hot_addr = get_hot_trustee_address::<T>()?;
     let mut script_pubkeys = spent_outputs
         .iter()
         .map(|d| d.script_pubkey.clone())
         .collect::<Vec<_>>();
     script_pubkeys.dedup();
     if script_pubkeys.len() != 1 {
-        return false;
+        return Err(Error::<T>::InvalidPublicKey.into());
     }
     let mut keys = [0u8; 32];
     keys.copy_from_slice(&script_pubkeys[0][..]);
     let tweak_pubkey = XOnly(keys);
     if AddressTypes::WitnessV1Taproot(tweak_pubkey) != hot_addr.hash {
-        return false;
+        return Err(Error::<T>::InvalidPublicKey.into());
     }
-    check_taproot_tx(tx, spent_outputs)
+    if check_taproot_tx(tx, spent_outputs).is_err() {
+        Err(Error::<T>::VerifySignFailed.into())
+    } else {
+        Ok(true)
+    }
 }
 
 /// for test convenient
