@@ -212,7 +212,7 @@ impl<T: Trait> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo>
             .generate_address(&Module::<T>::network_id().to_string())
             .map_err(|_| Error::<T>::InvalidAddress)?
             .parse()
-            .unwrap();
+            .map_err(|_| Error::<T>::InvalidAddress)?;
         hot_trustee_addr_info.addr = threshold_addr.to_string().into_bytes();
 
         let cold_trustee_addr_info: BtcTrusteeAddrInfo =

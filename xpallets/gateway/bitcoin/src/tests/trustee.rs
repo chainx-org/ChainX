@@ -8,6 +8,7 @@ use light_bitcoin::{
     chain::Transaction,
     crypto::dhash160,
     keys::{Address, AddressTypes, Network, Public, Type},
+    mast::Mast,
     script::{Builder, Opcode},
     serialization::{self, Reader},
 };
@@ -24,6 +25,7 @@ use crate::{
     types::{BtcTxVerifier, BtcWithdrawalProposal, VoteResult},
     Verifier, WithdrawalProposal,
 };
+use sp_std::convert::TryInto;
 
 #[test]
 pub fn test_check_trustee_entity() {
@@ -221,4 +223,31 @@ fn force_replace_withdraw() {
         assert_ok!(XGatewayBitcoin::force_replace_proposal_tx(RawOrigin::Root.into(), raw.into()));
         assert_eq!(XGatewayBitcoin::withdrawal_proposal().unwrap().tx, new_withdraw);
     });
+}
+
+#[test]
+fn test_create_taproot_address() {
+    let mut hot_keys = Vec::new();
+    let pubkey1_bytes = hex!("0283f579dd2380bd31355d066086e1b4d46b518987c1f8a64d4c0101560280eae2");
+    let pubkey2_bytes = hex!("027a0868a14bd18e2e45ff3ad960f892df8d0edd1a5685f0a1dc63c7986d4ad55d");
+    let pubkey3_bytes = hex!("02c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f");
+    hot_keys.push(Public::from_slice(&pubkey1_bytes).unwrap());
+    hot_keys.push(Public::from_slice(&pubkey2_bytes).unwrap());
+    hot_keys.push(Public::from_slice(&pubkey3_bytes).unwrap());
+    ExtBuilder::default().build_and_execute(|| {
+        let pks = hot_keys
+            .into_iter()
+            .map(|k| k.try_into().unwrap())
+            .collect::<Vec<_>>();
+        let threshold_addr: Address = Mast::new(pks, 2 as usize)
+            .unwrap()
+            .generate_address(&crate::Module::<Test>::network_id().to_string())
+            .unwrap()
+            .parse()
+            .unwrap();
+        assert_eq!(
+            threshold_addr.to_string(),
+            "bc1pn202yeugfa25nssxk2hv902kmxrnp7g9xt487u256n20jgahuwas6syxhp"
+        )
+    })
 }
