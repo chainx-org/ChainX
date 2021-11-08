@@ -453,9 +453,18 @@ dependencies = [
 [[package]]
 name = "bitcoin-bech32"
 version = "0.12.1"
-source = "git+https://github.com/hacpy/rust-bech32-bitcoin?branch=master#1de465d410c8f83e16409e71303b3389a82a3e50"
+source = "git+https://github.com/chainx-org/rust-bech32-bitcoin?branch=master#1de465d410c8f83e16409e71303b3389a82a3e50"
 dependencies = [
  "bech32",
+]
+
+[[package]]
+name = "bitcoin_hashes"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "006cc91e1a1d99819bc5b8214be3555c1f0611b169f527a1fdc54ed1f2b745b0"
+dependencies = [
+ "core2",
 ]
 
 [[package]]
@@ -1072,6 +1081,15 @@ name = "core-foundation-sys"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b3a71ab494c0b5b860bdc8407ae08978052417070c2ced38573a9157ad75b8ac"
+
+[[package]]
+name = "core2"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2cf12d2dad3ed124aa116f59561428478993d69ab81ae4d30e5349c9c5b5a5f6"
+dependencies = [
+ "memchr",
+]
 
 [[package]]
 name = "cpufeatures"
@@ -2451,9 +2469,9 @@ dependencies = [
 
 [[package]]
 name = "hex"
-version = "0.4.2"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "644f9158b2f133fd50f5fb3242878846d9eb792e445c893805ff0e3824006e35"
+checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
 name = "hex-literal"
@@ -3492,6 +3510,7 @@ dependencies = [
  "light-bitcoin-chain",
  "light-bitcoin-crypto",
  "light-bitcoin-keys",
+ "light-bitcoin-mast",
  "light-bitcoin-merkle",
  "light-bitcoin-primitives",
  "light-bitcoin-script",
@@ -3534,8 +3553,26 @@ dependencies = [
  "light-bitcoin-crypto",
  "light-bitcoin-primitives",
  "light-bitcoin-serialization",
+ "musig2",
  "parity-scale-codec",
  "serde",
+ "sha2 0.9.8",
+]
+
+[[package]]
+name = "light-bitcoin-mast"
+version = "0.2.0"
+dependencies = [
+ "arrayref",
+ "bitcoin-bech32",
+ "bitcoin_hashes",
+ "core2",
+ "digest 0.9.0",
+ "hex",
+ "light-bitcoin-keys",
+ "light-bitcoin-script",
+ "light-bitcoin-serialization",
+ "musig2",
  "sha2 0.9.8",
 ]
 
@@ -4056,6 +4093,22 @@ dependencies = [
  "pin-project 1.0.1",
  "smallvec 1.4.2",
  "unsigned-varint 0.5.1",
+]
+
+[[package]]
+name = "musig2"
+version = "0.1.0"
+source = "git+https://github.com/chainx-org/Musig2?branch=lib#c52503eab20d3c6215335659e5f4861efbca56f5"
+dependencies = [
+ "arrayref",
+ "digest 0.9.0",
+ "hex",
+ "libsecp256k1",
+ "log",
+ "rand 0.8.4",
+ "rand_core 0.6.3",
+ "serde",
+ "sha2 0.9.8",
 ]
 
 [[package]]

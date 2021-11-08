@@ -9,12 +9,16 @@ use frame_support::{
     ensure, StorageValue,
 };
 use sp_runtime::SaturatedConversion;
-use sp_std::{convert::TryFrom, prelude::*};
+use sp_std::{
+    convert::{TryFrom, TryInto},
+    prelude::*,
+};
 
 use light_bitcoin::{
-    chain::Transaction,
+    chain::{Transaction, TransactionOutput},
     crypto::dhash160,
     keys::{Address, AddressTypes, Public, Type},
+    mast::Mast,
     primitives::Bytes,
     script::{Builder, Opcode, Script},
 };
@@ -35,7 +39,6 @@ use crate::{
     types::{BtcWithdrawalProposal, VoteResult},
     Error, Event, Module, Trait, WithdrawalProposal,
 };
-use light_bitcoin::chain::TransactionOutput;
 
 pub fn current_trustee_session<T: Trait>(
 ) -> Result<TrusteeSessionInfo<T::AccountId, BtcTrusteeAddrInfo>, DispatchError> {
@@ -200,10 +203,16 @@ impl<T: Trait> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo>
             })?;
 
         // Set hot address for test
-        let threshold_addr: Address =
-            "tb1pmjp2nsea0pey9kq0k3f4hnydjza38pplaffvneutks79g8wkq7uslfl7nn"
-                .parse()
-                .unwrap();
+        let pks = hot_keys
+            .into_iter()
+            .map(|k| k.try_into().map_err(|_| Error::<T>::InvalidPublicKey))
+            .collect::<Result<Vec<_>, Error<T>>>()?;
+        let threshold_addr: Address = Mast::new(pks, sig_num as usize)
+            .map_err(|_| Error::<T>::InvalidAddress)?
+            .generate_address(&Module::<T>::network_id().to_string())
+            .map_err(|_| Error::<T>::InvalidAddress)?
+            .parse()
+            .unwrap();
         hot_trustee_addr_info.addr = threshold_addr.to_string().into_bytes();
 
         let cold_trustee_addr_info: BtcTrusteeAddrInfo =
