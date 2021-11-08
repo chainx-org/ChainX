@@ -27,41 +27,37 @@ use crate::{
     Trait, WithdrawalProposal,
 };
 
-// Tyoe is p2tr. Address farmat is Mainnet. Generate by:
-// https://github.com/chainx-org/threshold_signature/issues/3#issuecomment-950774633
-const DEPOSIT_HOT_ADDR: &str = "bc1pmjp2nsea0pey9kq0k3f4hnydjza38pplaffvneutks79g8wkq7usgpf3fu";
+// Tyoe is p2tr. Address farmat is Mainnet.:
+const DEPOSIT_HOT_ADDR: &str = "bc1pn202yeugfa25nssxk2hv902kmxrnp7g9xt487u256n20jgahuwas6syxhp";
 // Tyoe is p2sh. Address farmat is Mainnet.
-const DEPOSIT_COLD_ADDR: &str = "3FLBhPfEqmw4Wn5EQMeUzPLrQtJMprgwnw";
+const DEPOSIT_COLD_ADDR: &str = "3Ac85hjgeyNX96Q4BqUoAH5bh6gARxRDJm";
 
 lazy_static::lazy_static! {
-    // Manually created test data
-    // https://github.com/chainx-org/threshold_signature/issues/3#issuecomment-950774633
     // deposit without op return, output addr is DEPOSIT_HOT_ADDR. Withdraw is an example of spending from the script path.
     static ref deposit_taproot1_input_account: Vec<u8> = b"bc1pexff2s7l58sthpyfrtx500ax234stcnt0gz2lr4kwe0ue95a2e0s5wxhqg".to_vec();
-    static ref deposit_taproot1_prev: Transaction = "02000000000101b09a3de57c2abd16265b908324cc6d58fb9647c884dfbf408abe97b6e4cebed70000000000ffffffff0100e1f50500000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f024730440220025472b3856c2d18972bad1abe5694e1cad78d78c4c5aa4b949f70fa3fae7dff022070bc711e477b66529f674712d5e51e48d6342c2d487a62c7ed508a9de4bdd7030121036003a62fe33a962084b7c41f44ed45a2a738f8ed7ab05e1a021f2097d8c17cf800000000".parse().unwrap();
-    static ref deposit_taproot1: Transaction = "02000000000101346ac7c1c80bef298009828daf21617b445c7c4f2d4988415e47e8829fc91e2a000000000000000000028096980000000000225120dc82a9c33d787242d80fb4535bcc8d90bb13843fea52c9e78bb43c541dd607b900b4c40400000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f014030a9cde28b2689435b171b150ce93121288d6fc587a86bbc5cfecd0a2c5eb55ad207807f955b14916f96fc202b356629cf87cc228a77899993da2708e55ebc4c00000000".parse().unwrap();
-    static ref withdraw_taproot1_prev: Transaction = "02000000000101346ac7c1c80bef298009828daf21617b445c7c4f2d4988415e47e8829fc91e2a000000000000000000028096980000000000225120dc82a9c33d787242d80fb4535bcc8d90bb13843fea52c9e78bb43c541dd607b900b4c40400000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f014030a9cde28b2689435b171b150ce93121288d6fc587a86bbc5cfecd0a2c5eb55ad207807f955b14916f96fc202b356629cf87cc228a77899993da2708e55ebc4c00000000".parse().unwrap();
-    static ref withdraw_taproot1: Transaction = "02000000000101db94dc62de168881b3b319c5e42a49195b90f7d78e10d0dec284a81da1b6b4d400000000000000000002404b4c0000000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f00093d0000000000225120dc82a9c33d787242d80fb4535bcc8d90bb13843fea52c9e78bb43c541dd607b90340a41f46c76d216964a7944d245e88d4141dd4885d07d214346228839ab954b7560c87219770a4dbd2dd6b78f8d18426496e121ea454fef8739acc510d15485918222083f579dd2380bd31355d066086e1b4d46b518987c1f8a64d4c0101560280eae2ac61c1032513ab37143495fcf3bc088de5cdecb94f1c3d7c313075f14a9e35230bb824142b1d0be52980a4791a097a4b7a7df52a97dfe0b1b5023b97c0937a9ab884db9c0bc456a7da1e3879b4e78139e31603c6b6305dc8248e2ede5b4a5b5d45e3dd00000000".parse().unwrap();
+    // https://signet.bitcoinexplorer.org/tx/b647a483444f60e547772fea7297bfceeb7bf9c3897e1b733c3c023b3140e64b#JSON
+    static ref deposit_taproot1_prev: Transaction = "020000000001015dce8efe6cbd845587aa230a0b3667d4b52a45d3965d1607ab187de1f9d9d82b00000000000000000002a086010000000000225120dc82a9c33d787242d80fb4535bcc8d90bb13843fea52c9e78bb43c541dd607b900350c0000000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f0140708f206174a9e2963dd87d3afbb9f390fb320e2e9d4fdfc7b8bd7bc71a29c252026aa505ae71d4155ee3c13ce189ccba1fc0a26cfbcaa5f8b91bab377c2124eb00000000".parse().unwrap();
+    // https://signet.bitcoinexplorer.org/tx/1f8e0f7dfa37b184244d022cdf2bc7b8e0bac8b52143ea786fa3f7bbe049eeae#JSON
+    static ref deposit_taproot1: Transaction = "020000000001014be640313b023c3c731b7e89c3f97bebcebf9772ea2f7747e5604f4483a447b601000000000000000002a0860100000000002251209a9ea267884f5549c206b2aec2bd56d98730f90532ea7f7154d4d4f923b7e3bbc027090000000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f01404dc68b31efc1468f84db7e9716a84c19bbc53c2d252fd1d72fa6469e860a74486b0990332b69718dbcb5acad9d48634d23ee9c215ab15fb16f4732bed1770fdf00000000".parse().unwrap();
+    static ref withdraw_taproot1_prev: Transaction = "020000000001014be640313b023c3c731b7e89c3f97bebcebf9772ea2f7747e5604f4483a447b601000000000000000002a0860100000000002251209a9ea267884f5549c206b2aec2bd56d98730f90532ea7f7154d4d4f923b7e3bbc027090000000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f01404dc68b31efc1468f84db7e9716a84c19bbc53c2d252fd1d72fa6469e860a74486b0990332b69718dbcb5acad9d48634d23ee9c215ab15fb16f4732bed1770fdf00000000".parse().unwrap();
+    // https://signet.bitcoinexplorer.org/tx/1b342e9799748d4d5d415745350c38d9cb1e9f7fb078229a526ec47440e53ade#JSON
+    static ref withdraw_taproot1: Transaction = "02000000000101aeee49e0bbf7a36f78ea4321b5c8bae0b8c72bdf2c024d2484b137fa7d0f8e1f0000000000000000000250c3000000000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f409c0000000000002251209a9ea267884f5549c206b2aec2bd56d98730f90532ea7f7154d4d4f923b7e3bb0340cfa8f924e169e72a6a098f8e72dcd03623f3836e5408a3682b77585e7716fd212ea9d842f8d775809e7fa10651fb0f0f709b176408edd58ea5b44b9b0d4dd29a222086a60c7d5dd3f4931cc8ad77a614402bdb591c042347c89281c48c7e9439be9dac61c0e56a1792f348690cdeebe60e3db6c4e94d94e742c619f7278e52f6cbadf5efe96a528ba3f61a5b0d4fbceea425a9028381458b32492bccc3f1faa473a649e23605554f5ea4b4044229173719228a35635eeffbd8a8fe526270b737ad523b99f600000000".parse().unwrap();
 
-    // https://github.com/chainx-org/threshold_signature/issues/3#issuecomment-952649555
     // deposit with op return, output addr is DEPOSIT_HOT_ADDR. Withdraw is an example of spending from the script path.
     static ref op_account: AccountId = "5Qjpo7rQnwQetysagGzc4Rj7oswXSLmMqAuC2AbU6LFFFGj8".parse().unwrap();
-    static ref deposit_taproot2_prev: Transaction = "0200000000010110828a897ccb70b42f498d429c4e440a2e5d2a96c6337f1c67c7959fa05bc1890000000000ffffffff0100e1f50500000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f02473044022068d2087f73c49c708f072ea50e73b5af3722718c9f8a6711b7636ce16443413b022012e71b3e0955dd9a61162f5e5e9799f6a6bcfa848aa77fb39618d827c387e62401210218b9905bda59ffca6ccb860ecd32e957ce005ca63dd712dd4b6d79aab09619a000000000".parse().unwrap();
-    static ref deposit_taproot2: Transaction = "02000000000101f91ff392cdb43d74d929fcd1db06d45486e449f797ec605293a3adb2e4625abb000000000000000000038096980000000000225120dc82a9c33d787242d80fb4535bcc8d90bb13843fea52c9e78bb43c541dd607b90000000000000000326a3035516a706f3772516e7751657479736167477a6334526a376f737758534c6d4d7141754332416255364c464646476a3800b4c40400000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f0140466b46018f41404f9913c9ae7f8dbbaedd0c7593dddd14e1ee32adf24107a80acf6b3d7120957eb0ab0c1b3c35c0989bdc967caeba6f1b0777b02d94367ea63000000000".parse().unwrap();
-    static ref withdraw_taproot2_prev: Transaction = "02000000000101f91ff392cdb43d74d929fcd1db06d45486e449f797ec605293a3adb2e4625abb000000000000000000038096980000000000225120dc82a9c33d787242d80fb4535bcc8d90bb13843fea52c9e78bb43c541dd607b90000000000000000326a3035516a706f3772516e7751657479736167477a6334526a376f737758534c6d4d7141754332416255364c464646476a3800b4c40400000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f0140466b46018f41404f9913c9ae7f8dbbaedd0c7593dddd14e1ee32adf24107a80acf6b3d7120957eb0ab0c1b3c35c0989bdc967caeba6f1b0777b02d94367ea63000000000".parse().unwrap();
-    static ref withdraw_taproot2: Transaction = "0200000000010139e74aa117501008762579a94d14339d413f2f73b829123c454a593a306b60c800000000000000000002404b4c0000000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f00093d0000000000225120dc82a9c33d787242d80fb4535bcc8d90bb13843fea52c9e78bb43c541dd607b903409b11af3a62d8a27ef8afae3da41da6923035922ad17b414da20619a90cfd1fcce2af4c9efa0506d21283bcb4e443753013bc7184733c0095c4f55c9abc7cfb2e222083f579dd2380bd31355d066086e1b4d46b518987c1f8a64d4c0101560280eae2ac61c1032513ab37143495fcf3bc088de5cdecb94f1c3d7c313075f14a9e35230bb824142b1d0be52980a4791a097a4b7a7df52a97dfe0b1b5023b97c0937a9ab884db9c0bc456a7da1e3879b4e78139e31603c6b6305dc8248e2ede5b4a5b5d45e3dd00000000".parse().unwrap();
+    // https://signet.bitcoinexplorer.org/tx/1f8e0f7dfa37b184244d022cdf2bc7b8e0bac8b52143ea786fa3f7bbe049eeae#JSON
+    static ref deposit_taproot2_prev: Transaction = "020000000001014be640313b023c3c731b7e89c3f97bebcebf9772ea2f7747e5604f4483a447b601000000000000000002a0860100000000002251209a9ea267884f5549c206b2aec2bd56d98730f90532ea7f7154d4d4f923b7e3bbc027090000000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f01404dc68b31efc1468f84db7e9716a84c19bbc53c2d252fd1d72fa6469e860a74486b0990332b69718dbcb5acad9d48634d23ee9c215ab15fb16f4732bed1770fdf00000000".parse().unwrap();
+    // https://signet.bitcoinexplorer.org/tx/8e5d37c768acc4f3e794a10ad27bf0256237c80c22fa67117e3e3e1aec22ea5f#JSON
+    static ref deposit_taproot2: Transaction = "02000000000101aeee49e0bbf7a36f78ea4321b5c8bae0b8c72bdf2c024d2484b137fa7d0f8e1f01000000000000000003a0860100000000002251209a9ea267884f5549c206b2aec2bd56d98730f90532ea7f7154d4d4f923b7e3bb0000000000000000326a3035516a706f3772516e7751657479736167477a6334526a376f737758534c6d4d7141754332416255364c464646476a38801a060000000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f01409e325889515ed47099fdd7098e6fafdc880b21456d3f368457de923f4229286e34cef68816348a0581ae5885ede248a35ac4b09da61a7b9b90f34c200872d2e300000000".parse().unwrap();
+    static ref withdraw_taproot2_prev: Transaction = "02000000000101aeee49e0bbf7a36f78ea4321b5c8bae0b8c72bdf2c024d2484b137fa7d0f8e1f01000000000000000003a0860100000000002251209a9ea267884f5549c206b2aec2bd56d98730f90532ea7f7154d4d4f923b7e3bb0000000000000000326a3035516a706f3772516e7751657479736167477a6334526a376f737758534c6d4d7141754332416255364c464646476a38801a060000000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f01409e325889515ed47099fdd7098e6fafdc880b21456d3f368457de923f4229286e34cef68816348a0581ae5885ede248a35ac4b09da61a7b9b90f34c200872d2e300000000".parse().unwrap();
+    // https://signet.bitcoinexplorer.org/tx/0f592933b493bedab209851cb2cf07871558ff57d86d645877b16651479b51a2#JSON
+    static ref withdraw_taproot2: Transaction = "020000000001015fea22ec1a3e3e7e1167fa220cc8376225f07bd20aa194e7f3c4ac68c7375d8e0000000000000000000250c3000000000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f409c0000000000002251209a9ea267884f5549c206b2aec2bd56d98730f90532ea7f7154d4d4f923b7e3bb03402639d4d9882f6e7e42db38dbd2845c87b131737bf557643ef575c49f8fc6928869d9edf5fd61606fb07cced365fdc2c7b637e6ecc85b29906c16d314e7543e94222086a60c7d5dd3f4931cc8ad77a614402bdb591c042347c89281c48c7e9439be9dac61c0e56a1792f348690cdeebe60e3db6c4e94d94e742c619f7278e52f6cbadf5efe96a528ba3f61a5b0d4fbceea425a9028381458b32492bccc3f1faa473a649e23605554f5ea4b4044229173719228a35635eeffbd8a8fe526270b737ad523b99f600000000".parse().unwrap();
 
-    // https://github.com/chainx-org/threshold_signature/issues/3#issuecomment-953662987
-    // deposit without op return, output addr is DEPOSIT_HOT_ADDR. Withdraw is an example of spending from the key path.
-    static ref deposit_taproot3_prev: Transaction = "0200000000010128b3b526bcf3c4f705504bb8e263feb6f1d80d5843e90e7c10eb703fca7cc0ed0000000000ffffffff0100e1f50500000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f0247304402207fafad1bc48c43f7f81b19eed5de129ec4a545aac0ab0cb170ccafd52538ac7f02201690182ee864921bf51e59a3bc254f9e391086deaa4b6778d109560713b307870121024000c600ce35aa90502bae3582332570e67e8f730614727aab322099c400c16100000000".parse().unwrap();
-    static ref deposit_taproot3: Transaction = "020000000001016728889cf3b35069645ebdfef7a9755d061040c7ab686c0d7b837f6ae98ff292000000000000000000028096980000000000225120dc82a9c33d787242d80fb4535bcc8d90bb13843fea52c9e78bb43c541dd607b900b4c40400000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f0140d03db1449a72b86d5f88428d3bed8a5f82671354c372c4bf5bc72e92aa8ed866faf31e53e3c08dca0c2f0dae6c46a269c51ef0e6ece872216cc61e09518cba1a00000000".parse().unwrap();
-    static ref withdraw_taproot3_prev: Transaction = "020000000001016728889cf3b35069645ebdfef7a9755d061040c7ab686c0d7b837f6ae98ff292000000000000000000028096980000000000225120dc82a9c33d787242d80fb4535bcc8d90bb13843fea52c9e78bb43c541dd607b900b4c40400000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f0140d03db1449a72b86d5f88428d3bed8a5f82671354c372c4bf5bc72e92aa8ed866faf31e53e3c08dca0c2f0dae6c46a269c51ef0e6ece872216cc61e09518cba1a00000000".parse().unwrap();
-    static ref withdraw_taproot3: Transaction = "020000000001015f0fd40729a3b57bd932a12604e67e207f86c5c656ca63777644e39e9a77f6cb00000000000000000002404b4c0000000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f00093d0000000000225120dc82a9c33d787242d80fb4535bcc8d90bb13843fea52c9e78bb43c541dd607b90140c1ef7a80205371ca16c630a91dfd954b68ab7c66192137e578949be829468f1248e758974e9580adf3953e13c304960685a7cd41fda2e94987269a019e0ae61100000000".parse().unwrap();
-
-    // https://github.com/chainx-org/threshold_signature/issues/3#issuecomment-952754761
     // Convert between DEPOSIT_HOT_ADDR and DEPOSIT_COLD_ADDR
-    static ref hot_to_cold_prev: Transaction = "02000000000101c2215cb7fa11f93bfe20b683208e95f31ffd28bf73201d0dbee9ea67a80914cf000000000000000000028096980000000000225120dc82a9c33d787242d80fb4535bcc8d90bb13843fea52c9e78bb43c541dd607b900b4c40400000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f01408f43d11ad35545ffdd8db26fd5253522a8355ad3a2a3297dfc2cdfa4f94858d0225b5e9eb7aa9e693c9962de467c4eea2a46ea3d5ccd935b1d07c912e587659400000000".parse().unwrap();
-    static ref hot_to_cold: Transaction = "02000000000101ea55abcd26dd7b067f7ede826af1735bf325374e0a10cb6bf00478eb8a7ddb7500000000000000000002404b4c000000000017a91495a12f1eba77d085711e9c837d04e4d8868a83438700093d0000000000225120dc82a9c33d787242d80fb4535bcc8d90bb13843fea52c9e78bb43c541dd607b90340c8b59695329f1eab623147f702a650dfdc7283a01d72f27ed707cbf2422a92bae4d340462a07e3e0200ea64d7cbbc0e82a80ede9dbbbf7879680398e3e82ff51222083f579dd2380bd31355d066086e1b4d46b518987c1f8a64d4c0101560280eae2ac61c1032513ab37143495fcf3bc088de5cdecb94f1c3d7c313075f14a9e35230bb824142b1d0be52980a4791a097a4b7a7df52a97dfe0b1b5023b97c0937a9ab884db9c0bc456a7da1e3879b4e78139e31603c6b6305dc8248e2ede5b4a5b5d45e3dd00000000".parse().unwrap();
+    // https://signet.bitcoinexplorer.org/tx/0f592933b493bedab209851cb2cf07871558ff57d86d645877b16651479b51a2#JSON
+    static ref hot_to_cold_prev: Transaction = "020000000001015fea22ec1a3e3e7e1167fa220cc8376225f07bd20aa194e7f3c4ac68c7375d8e0000000000000000000250c3000000000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f409c0000000000002251209a9ea267884f5549c206b2aec2bd56d98730f90532ea7f7154d4d4f923b7e3bb03402639d4d9882f6e7e42db38dbd2845c87b131737bf557643ef575c49f8fc6928869d9edf5fd61606fb07cced365fdc2c7b637e6ecc85b29906c16d314e7543e94222086a60c7d5dd3f4931cc8ad77a614402bdb591c042347c89281c48c7e9439be9dac61c0e56a1792f348690cdeebe60e3db6c4e94d94e742c619f7278e52f6cbadf5efe96a528ba3f61a5b0d4fbceea425a9028381458b32492bccc3f1faa473a649e23605554f5ea4b4044229173719228a35635eeffbd8a8fe526270b737ad523b99f600000000".parse().unwrap();
+    // https://signet.bitcoinexplorer.org/tx/917a751b9ccd91c7e184b028739a5520420df5cf04cd851a6ddf51f7bf33cf8a#JSON
+    static ref hot_to_cold: Transaction = "02000000000101a2519b475166b17758646dd857ff58158707cfb21c8509b2dabe93b43329590f01000000000000000002204e00000000000017a91461cc314f71a88ebb492939784ca2663afaa8e88c8710270000000000002251209a9ea267884f5549c206b2aec2bd56d98730f90532ea7f7154d4d4f923b7e3bb0340aba2ce052b2fce8285ad550c4fd9182c8c8b4d2bcb91a4fd548d41c4a52f1137910ec79bf64ebc908db5c2713908e4cbb63d4e57dd723fdaf90f281b091d6f3e222086a60c7d5dd3f4931cc8ad77a614402bdb591c042347c89281c48c7e9439be9dac61c0e56a1792f348690cdeebe60e3db6c4e94d94e742c619f7278e52f6cbadf5efe96a528ba3f61a5b0d4fbceea425a9028381458b32492bccc3f1faa473a649e23605554f5ea4b4044229173719228a35635eeffbd8a8fe526270b737ad523b99f600000000".parse().unwrap();
     // Todo generate cold to hot
     // static ref cold_to_hot_prev: Transaction = "01000000015dfd7ae51ea70f3dfc9d4a49d57ae0d02660f089204fc8c4d086624d065f85620000000000000000000180010b270100000017a91495a12f1eba77d085711e9c837d04e4d8868a83438700000000".parse().unwrap();
     // static ref cold_to_hot: Transaction = "0100000001bc7be600cba239950fd664995bb9bc2cb88a29d95ddd49625644ef188c98012e0000000000000000000180010b270100000022512052898a03a9f04bb83f8a48fb953089de10e6ee70658b059551ebf7c008b05b7a00000000".parse().unwrap();
@@ -149,13 +145,6 @@ fn test_detect_tx_type() {
         _ => unreachable!("wrong type"),
     }
 
-    match mock_detect_transaction_type::<Test>(&deposit_taproot3, None) {
-        BtcTxMetaType::Deposit(info) => {
-            assert!(info.input_addr.is_none() && info.op_return.is_none())
-        }
-        _ => unreachable!("wrong type"),
-    }
-
     match mock_detect_transaction_type::<Test>(&deposit_taproot1, Some(&deposit_taproot1_prev)) {
         BtcTxMetaType::Deposit(info) => {
             assert!(info.input_addr.is_some() && info.op_return.is_none())
@@ -170,24 +159,12 @@ fn test_detect_tx_type() {
         _ => unreachable!("wrong type"),
     }
 
-    match mock_detect_transaction_type::<Test>(&deposit_taproot3, Some(&deposit_taproot3_prev)) {
-        BtcTxMetaType::Deposit(info) => {
-            assert!(info.input_addr.is_some() && info.op_return.is_none())
-        }
-        _ => unreachable!("wrong type"),
-    }
-
     match mock_detect_transaction_type::<Test>(&withdraw_taproot1, Some(&withdraw_taproot1_prev)) {
         BtcTxMetaType::Withdrawal => {}
         _ => unreachable!("wrong type"),
     }
 
     match mock_detect_transaction_type::<Test>(&withdraw_taproot2, Some(&withdraw_taproot2_prev)) {
-        BtcTxMetaType::Withdrawal => {}
-        _ => unreachable!("wrong type"),
-    }
-
-    match mock_detect_transaction_type::<Test>(&withdraw_taproot3, Some(&withdraw_taproot3_prev)) {
         BtcTxMetaType::Withdrawal => {}
         _ => unreachable!("wrong type"),
     }
@@ -309,7 +286,7 @@ fn test_process_tx() {
             XGatewayBitcoin::pending_deposits(&deposit_taproot1_input_account.to_vec()),
             vec![BtcDepositCache {
                 txid: deposit_taproot1.hash(),
-                balance: 10000000,
+                balance: 100000,
             }]
         );
 
@@ -332,7 +309,7 @@ fn test_process_tx() {
         // with op return and without input address
         let r = mock_process_tx::<Test>(deposit_taproot2.clone(), None);
         assert_eq!(r.result, BtcTxResult::Success);
-        assert_eq!(XAssets::usable_balance(&op_account, &X_BTC), 10000000);
+        assert_eq!(XAssets::usable_balance(&op_account, &X_BTC), 100000);
         assert_eq!(XGatewayCommon::bound_addrs(&op_account), Default::default());
         // with op return and input address
         let r = mock_process_tx::<Test>(
@@ -340,7 +317,7 @@ fn test_process_tx() {
             Some(deposit_taproot2_prev.clone()),
         );
         assert_eq!(r.result, BtcTxResult::Success);
-        assert_eq!(XAssets::usable_balance(&op_account, &X_BTC), 30000000);
+        assert_eq!(XAssets::usable_balance(&op_account, &X_BTC), 300000);
 
         // withdraw
         WithdrawalProposal::<Test>::put(BtcWithdrawalProposal {
@@ -355,32 +332,6 @@ fn test_process_tx() {
         let r = mock_process_tx::<Test>(
             withdraw_taproot2.clone(),
             Some(withdraw_taproot2_prev.clone()),
-        );
-        assert_eq!(r.result, BtcTxResult::Success);
-
-        // without op return and input address
-        let r = mock_process_tx::<Test>(deposit_taproot3.clone(), None);
-        assert_eq!(r.result, BtcTxResult::Failure);
-        // without op return and with input address
-        let r = mock_process_tx::<Test>(
-            deposit_taproot3.clone(),
-            Some(deposit_taproot3_prev.clone()),
-        );
-        assert_eq!(r.result, BtcTxResult::Success);
-
-        // withdraw
-        WithdrawalProposal::<Test>::put(BtcWithdrawalProposal {
-            sig_state: VoteResult::Unfinish,
-            withdrawal_id_list: vec![],
-            tx: withdraw_taproot3.clone(),
-            trustee_list: vec![],
-        });
-
-        let r = mock_process_tx::<Test>(withdraw_taproot3.clone(), None);
-        assert_eq!(r.result, BtcTxResult::Failure);
-        let r = mock_process_tx::<Test>(
-            withdraw_taproot3.clone(),
-            Some(withdraw_taproot3_prev.clone()),
         );
         assert_eq!(r.result, BtcTxResult::Success);
 
