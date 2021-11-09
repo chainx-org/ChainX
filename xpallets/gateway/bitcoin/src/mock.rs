@@ -234,7 +234,7 @@ impl ExtBuilder {
             genesis_hash,
             network_id,
             params_info: BtcParams::new(
-                486604799,            // max_bits
+                545259519,            // max_bits
                 2 * 60 * 60,          // block_max_future
                 2 * 7 * 24 * 60 * 60, // target_timespan_seconds
                 10 * 60,              // target_spacing_seconds
@@ -242,7 +242,7 @@ impl ExtBuilder {
             ), // retargeting_factor
             verifier: BtcTxVerifier::Recover,
             confirmation_number: 4,
-            btc_withdrawal_fee: 500000,
+            btc_withdrawal_fee: 0,
             max_withdrawal_count: 100,
         }
         .assimilate_storage(&mut storage);
@@ -309,7 +309,7 @@ impl ExtBuilder {
             genesis_hash,
             network_id,
             params_info: BtcParams::new(
-                486604799,            // max_bits
+                545259519,            // max_bits
                 2 * 60 * 60,          // block_max_future
                 2 * 7 * 24 * 60 * 60, // target_timespan_seconds
                 10 * 60,              // target_spacing_seconds
@@ -317,7 +317,7 @@ impl ExtBuilder {
             ), // retargeting_factor
             verifier: BtcTxVerifier::Recover,
             confirmation_number: 4,
-            btc_withdrawal_fee: 500000,
+            btc_withdrawal_fee: 0,
             max_withdrawal_count: 100,
         }
         .assimilate_storage(&mut storage);
@@ -346,20 +346,20 @@ pub fn trustees() -> Vec<(AccountId32, Vec<u8>, Vec<u8>, Vec<u8>)> {
         (
             alice(),
             b"Alice".to_vec(),
-            hex!("02df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6").to_vec(),
-            hex!("0386b58f51da9b37e59c40262153173bdb59d7e4e45b73994b99eec4d964ee7e88").to_vec(),
+            hex!("0283f579dd2380bd31355d066086e1b4d46b518987c1f8a64d4c0101560280eae2").to_vec(),
+            hex!("0300849497d4f88ebc3e1bc2583677c5abdbd3b63640b3c5c50cd4628a33a2a2ca").to_vec(),
         ),
         (
             bob(),
             b"Bob".to_vec(),
-            hex!("0244d81efeb4171b1a8a433b87dd202117f94e44c909c49e42e77b69b5a6ce7d0d").to_vec(),
-            hex!("02e4631e46255571122d6e11cda75d5d601d5eb2585e65e4e87fe9f68c7838a278").to_vec(),
+            hex!("027a0868a14bd18e2e45ff3ad960f892df8d0edd1a5685f0a1dc63c7986d4ad55d").to_vec(),
+            hex!("032122032ae9656f9a133405ffe02101469a8d62002270a33ceccf0e40dda54d08").to_vec(),
         ),
         (
             charlie(),
             b"Charlie".to_vec(),
-            hex!("03a36339f413da869df12b1ab0def91749413a0dee87f0bfa85ba7196e6cdad102").to_vec(),
-            hex!("0263d46c760d3e04883d4b433c9ce2bc32130acd9faad0192a2b375dbba9f865c3").to_vec(),
+            hex!("02c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f").to_vec(),
+            hex!("02b3cc747f572d33f12870fa6866aebbfd2b992ba606b8dc89b676b3697590ad63").to_vec(),
         ),
     ]
 }
@@ -370,19 +370,19 @@ pub fn load_mainnet_btc_genesis_header_info() -> ((BtcHeader, u32), H256, BtcNet
             BtcHeader {
                 version: 536870912,
                 previous_header_hash: h256_rev(
-                    "0000000000000000000a4adf6c5192128535d4dcb56cfb5753755f8d392b26bf",
+                    "00000010c44946edda38dda2df46c0e56be083e5370508102cb475ff22e21b17",
                 ),
                 merkle_root_hash: h256_rev(
-                    "1d21e60acb0b12e5cfd3f775edb647f982a2d666f9886b2f61ea5e72577b0f5e",
+                    "dbe3a8e027f045d4e50cc12770484b4f4273e248249578942fd77f84e3c3a7b7",
                 ),
-                time: 1558168296,
-                bits: Compact::new(388627269),
-                nonce: 1439505020,
+                time: 1636330862,
+                bits: Compact::new(503404827),
+                nonce: 2456102,
             },
-            576576,
+            63290,
         ),
-        h256_rev("0000000000000000001721f58deb88b0710295a02551f0dde1e2e231a15f1882"),
-        BtcNetwork::Mainnet,
+        h256_rev("0000012504d3007ab7954a6baef767e522bb0d55771acb0fa46f9f4182fd0a0e"),
+        BtcNetwork::Testnet,
     )
 }
 

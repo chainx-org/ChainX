@@ -16,18 +16,32 @@ use light_bitcoin::{
     chain::{BlockHeader, Transaction},
     merkle::PartialMerkleTree,
     primitives::H256,
-    serialization::{self, Reader},
+    serialization::{self, Reader, SERIALIZE_TRANSACTION_WITNESS},
 };
 
 use crate::{
-    types::*, Call, Module, PendingDeposits, Trait, TxState, Verifier, WithdrawalProposal,
+    types::*, Call, Module, PendingDeposits, Trait, TransactionOutputArray, TxState, Verifier,
+    WithdrawalProposal,
 };
 
 const ASSET_ID: AssetId = xp_protocol::X_BTC;
 
-fn generate_blocks_576576_578692() -> BTreeMap<u32, BlockHeader> {
-    let bytes = include_bytes!("./res/headers-576576-578692.raw");
-    Decode::decode(&mut &bytes[..]).unwrap()
+// fn generate_blocks_576576_578692() -> BTreeMap<u32, BlockHeader> {
+//     let bytes = include_bytes!("./res/headers-576576-578692.raw");
+//     Decode::decode(&mut &bytes[..]).unwrap()
+// }
+
+fn generate_blocks_63290_63310() -> BTreeMap<u32, BlockHeader> {
+    let headers = include_str!("./res/headers-63290-63310.json");
+    let headers: Vec<(u32, String)> = serde_json::from_str(headers).unwrap();
+    headers
+        .into_iter()
+        .map(|(height, header_hex)| {
+            let data = hex::decode(header_hex).unwrap();
+            let header = serialization::deserialize(Reader::new(&data)).unwrap();
+            (height, header)
+        })
+        .collect()
 }
 
 fn account<T: Trait>(pubkey: &str) -> T::AccountId {
@@ -49,20 +63,20 @@ fn bob<T: Trait>() -> T::AccountId {
 }
 
 fn withdraw_tx() -> (Transaction, BtcRelayedTxInfo, Transaction) {
-    // block height: 577696
-    // https://blockchain.info/rawtx/62c389f1974b8a44737d76f92da0f5cd7f6f48d065e7af6ba368298361141270?format=hex
-    const RAW_TX: &str = "0100000001052ceda6cf9c93012a994f4ffa2a29c9e31ecf96f472b175eb8e602bfa2b2c5100000000fdfd000047304402200e4d732c456f4722d376252be16554edb27fc93c55db97859e16682bc62b014502202b9c4b01ad55daa1f76e6a564b7762cd0a81240c947806ab3f3b056f2e77c1da01483045022100c7cd680992de60da8c33fc3ef7f5ead85b204660822d9fbda2d85f9fadba732a022021fdc49b20a6007ea971a385732a4065d1d7c792ac9dc391034fb78aa9f5034b014c69522102df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6210244d81efeb4171b1a8a433b87dd202117f94e44c909c49e42e77b69b5a6ce7d0d2103a36339f413da869df12b1ab0def91749413a0dee87f0bfa85ba7196e6cdad10253aeffffffff03e0349500000000001976a91413256ff2dee6e80c275ddb877abc1ffe453a731488ace00f9700000000001976a914ea6e8dd56703ace584eb9dff0224629f8486672988acc88a02000000000017a914cb94110435d0635223eebe25ed2aaabc03781c458700000000";
+    // block height: 63299
+    // https://signet.bitcoinexplorer.org/tx/0f592933b493bedab209851cb2cf07871558ff57d86d645877b16651479b51a2
+    const RAW_TX: &str = "020000000001015fea22ec1a3e3e7e1167fa220cc8376225f07bd20aa194e7f3c4ac68c7375d8e0000000000000000000250c3000000000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f409c0000000000002251209a9ea267884f5549c206b2aec2bd56d98730f90532ea7f7154d4d4f923b7e3bb03402639d4d9882f6e7e42db38dbd2845c87b131737bf557643ef575c49f8fc6928869d9edf5fd61606fb07cced365fdc2c7b637e6ecc85b29906c16d314e7543e94222086a60c7d5dd3f4931cc8ad77a614402bdb591c042347c89281c48c7e9439be9dac61c0e56a1792f348690cdeebe60e3db6c4e94d94e742c619f7278e52f6cbadf5efe96a528ba3f61a5b0d4fbceea425a9028381458b32492bccc3f1faa473a649e23605554f5ea4b4044229173719228a35635eeffbd8a8fe526270b737ad523b99f600000000";
     let tx = RAW_TX.parse::<Transaction>().unwrap();
 
-    // https://blockchain.info/rawtx/512c2bfa2b608eeb75b172f496cf1ee3c9292afa4f4f992a01939ccfa6ed2c05?format=hex
-    const RAW_TX_PREV: &str = "02000000018554af3a19f2475bb293e81fe123b588a50d7c86ce97ed4f015853b427e45f12040000006a473044022037957f493964792e6bedd37aa5193892bd9fdb5d974d87f5334f36b0d544c7f202203d7bb2ac644204437b77e9c34ea5bf875da41d728ef7352c9d74ff507da64502012102bd47917d4cf403ca8e9cb71c84a127e0451686877fe186614385025ccd1ed9cc000000000260a62f010000000017a914cb94110435d0635223eebe25ed2aaabc03781c45870000000000000000366a343552547a425a4d3274346537414d547442534e3853424c3878316b716e39713769355a75566e3569537876526341326b40484c5400000000";
+    // https://signet.bitcoinexplorer.org/tx/8e5d37c768acc4f3e794a10ad27bf0256237c80c22fa67117e3e3e1aec22ea5f
+    const RAW_TX_PREV: &str = "02000000000101aeee49e0bbf7a36f78ea4321b5c8bae0b8c72bdf2c024d2484b137fa7d0f8e1f01000000000000000003a0860100000000002251209a9ea267884f5549c206b2aec2bd56d98730f90532ea7f7154d4d4f923b7e3bb0000000000000000326a3035516a706f3772516e7751657479736167477a6334526a376f737758534c6d4d7141754332416255364c464646476a38801a060000000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f01409e325889515ed47099fdd7098e6fafdc880b21456d3f368457de923f4229286e34cef68816348a0581ae5885ede248a35ac4b09da61a7b9b90f34c200872d2e300000000";
     let prev_tx = RAW_TX_PREV.parse::<Transaction>().unwrap();
 
-    const RAW_PROOF: &str = "550b00000de5fe93267100092415bc4203eac82319e7560f1c8d1f13ff127f6bdfeda4c0d55dd9a20c18bf308fb09ee5ca03d6e9870ede459785a157c9f06ad17544b38fbd507ecd6c351d88035bf29e2f5758449b2ba582120a76306113a996e67e1b5ddb00ddb99fd307521d3e2b63d145bf9e26da9e944e4e221880c22a08fe6d45a9c970121461832968a36bafe765d0486f7fcdf5a02df9767d73448a4b97f189c362459db0ca16f5f6a6b369ab12e77a7da93eafdda7c6ea816c65270c8b698cf0ebe34519452b2871b119eac61e55d535466c7d248e7e3d49518aa2a616ac6abf371e5b163838b18c246a90c92f03771252991ff13aef709bcdfcb02f440ab07a6ef04f8f3b4644b47a2687a17d4af1e2901923fd611e98472cd983ea1f3510355143a918715513706610b538293c74dd73a2aef8aed25754225310403b32d9e603c47c6f65f2eb6694b347b3071c99a75cf24b4d1dfcaca307f66706e6bac9b9218e00f786051630f1b483575b1d11e81164b4d989b53515f7f3eb86ec0c0d293895bdfbd13cedeb5c5ba391a66ef9c9e53ac47e997ca122cc8bfad8ea653fb95404d7af0100";
+    const RAW_PROOF: &str = "0a00000005b82e08a0de8576c7e073c97ce57656bfdcee783dc2f2d9d2b484a4914c0a5a22a2519b475166b17758646dd857ff58158707cfb21c8509b2dabe93b43329590f513fea84b67b1c21bdf184e97a64ac2d4744570d1959203f5e992e314de4385d1687d11a3fd8f21e2105a52a3c36a17ea870e326ecddb23221d4cc0398b6c44bdcce3f191919a31f4cfaca5a786cc8315db76683ad6b8008f2ed9b348df76a0d023700";
     let proof = hex::decode(RAW_PROOF).unwrap();
     let merkle_proof: PartialMerkleTree = serialization::deserialize(Reader::new(&proof)).unwrap();
 
-    let header = generate_blocks_576576_578692()[&577696];
+    let header = generate_blocks_63290_63310()[&63299];
     let info = BtcRelayedTxInfo {
         block_hash: header.hash(),
         merkle_proof,
@@ -119,19 +133,19 @@ fn prepare_withdrawal<T: Trait>() -> Transaction {
     new_withdraw
 }
 
-// block height: 577696
-// https://blockchain.info/rawtx/62c389f1974b8a44737d76f92da0f5cd7f6f48d065e7af6ba368298361141270?format=hex
+// block height: 63299
+// https://signet.bitcoinexplorer.org/tx/0f592933b493bedab209851cb2cf07871558ff57d86d645877b16651479b51a2
 fn create_tx() -> Transaction {
-    "0100000001052ceda6cf9c93012a994f4ffa2a29c9e31ecf96f472b175eb8e602bfa2b2c5100000000b40047304402200e4d732c456f4722d376252be16554edb27fc93c55db97859e16682bc62b014502202b9c4b01ad55daa1f76e6a564b7762cd0a81240c947806ab3f3b056f2e77c1da014c69522102df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6210244d81efeb4171b1a8a433b87dd202117f94e44c909c49e42e77b69b5a6ce7d0d2103a36339f413da869df12b1ab0def91749413a0dee87f0bfa85ba7196e6cdad10253aeffffffff03e0349500000000001976a91413256ff2dee6e80c275ddb877abc1ffe453a731488ace00f9700000000001976a914ea6e8dd56703ace584eb9dff0224629f8486672988acc88a02000000000017a914cb94110435d0635223eebe25ed2aaabc03781c458700000000".parse::<Transaction>().unwrap()
+    "020000000001015fea22ec1a3e3e7e1167fa220cc8376225f07bd20aa194e7f3c4ac68c7375d8e0000000000000000000250c3000000000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f409c0000000000002251209a9ea267884f5549c206b2aec2bd56d98730f90532ea7f7154d4d4f923b7e3bb03402639d4d9882f6e7e42db38dbd2845c87b131737bf557643ef575c49f8fc6928869d9edf5fd61606fb07cced365fdc2c7b637e6ecc85b29906c16d314e7543e94222086a60c7d5dd3f4931cc8ad77a614402bdb591c042347c89281c48c7e9439be9dac61c0e56a1792f348690cdeebe60e3db6c4e94d94e742c619f7278e52f6cbadf5efe96a528ba3f61a5b0d4fbceea425a9028381458b32492bccc3f1faa473a649e23605554f5ea4b4044229173719228a35635eeffbd8a8fe526270b737ad523b99f600000000".parse::<Transaction>().unwrap()
 }
 
 // push header 576577 - 577702 (current confirm height is 577696)
 fn prepare_headers<T: Trait>(caller: &T::AccountId) {
-    for (height, header) in generate_blocks_576576_578692() {
-        if height == 576576 {
+    for (height, header) in generate_blocks_63290_63310() {
+        if height == 63290 {
             continue;
         }
-        if height == 577702 {
+        if height == 63307 {
             // confirm for 577696, confirmation number is 6
             break;
         }
@@ -145,8 +159,8 @@ benchmarks! {
 
     push_header {
         let receiver: T::AccountId = whitelisted_caller();
-        let insert_height = 576576 + 1;
-        let header = generate_blocks_576576_578692()[&insert_height];
+        let insert_height = 63290 + 1;
+        let header = generate_blocks_63290_63310()[&insert_height];
         let hash = header.hash();
         let header_raw = serialization::serialize(&header).into();
         let amount: BalanceOf<T> = 1000.into();
@@ -159,7 +173,7 @@ benchmarks! {
         let n = 1024 * 1024 * 500; // 500KB length
         let l = 1024 * 1024 * 500; // 500KB length
 
-        let caller: T::AccountId = whitelisted_caller();
+        let caller: T::AccountId = alice::<T>();
 
         prepare_headers::<T>(&caller);
         let (tx, info, prev_tx) = withdraw_tx();
@@ -167,16 +181,13 @@ benchmarks! {
         let tx_raw = serialization::serialize(&tx).into();
         let prev_tx_raw = serialization::serialize(&prev_tx).into();
 
-        XGatewayRecords::<T>::deposit(&caller, ASSET_ID, 9778400.into()).unwrap();
-        XGatewayRecords::<T>::deposit(&caller, ASSET_ID, 9900000.into()).unwrap();
-        XGatewayRecords::<T>::withdraw(&caller, ASSET_ID, 9778400.into(), b"".to_vec(), b"".to_vec().into()).unwrap();
-        XGatewayRecords::<T>::withdraw(&caller, ASSET_ID, 9900000.into(), b"".to_vec(), b"".to_vec().into()).unwrap();
+        XGatewayRecords::<T>::deposit(&caller, ASSET_ID, 100000.into()).unwrap();
+        XGatewayRecords::<T>::withdraw(&caller, ASSET_ID, 50000.into(), b"tb1pexff2s7l58sthpyfrtx500ax234stcnt0gz2lr4kwe0ue95a2e0srxsc68".to_vec(), b"".to_vec().into()).unwrap();
         xpallet_gateway_records::WithdrawalStateOf::insert(0, WithdrawalState::Processing);
-        xpallet_gateway_records::WithdrawalStateOf::insert(1, WithdrawalState::Processing);
 
         let proposal = BtcWithdrawalProposal::<T::AccountId> {
             sig_state: VoteResult::Finish,
-            withdrawal_id_list: vec![0, 1],
+            withdrawal_id_list: vec![0],
             tx: tx.clone(),
             trustee_list: vec![],
         };
@@ -194,7 +205,7 @@ benchmarks! {
         );
     }
 
-    create_withdraw_tx {
+    create_taproot_withdraw_tx {
         let n = 100;                // 100 withdrawal count
         let l = 1024 * 1024 * 500;  // 500KB length
 
@@ -202,44 +213,63 @@ benchmarks! {
 
         let (tx, info, prev_tx) = withdraw_tx();
         let tx_hash = tx.hash();
-        let tx_raw: Vec<u8> = serialization::serialize(&tx).into();
-        let prev_tx_raw: Vec<u8> = serialization::serialize(&prev_tx).into();
+        let tx_raw: Vec<u8> = serialization::serialize_with_flags(&tx, SERIALIZE_TRANSACTION_WITNESS).into();
 
-        let btc_withdrawal_fee = Module::<T>::btc_withdrawal_fee();
-        let first_withdraw = (9778400 + btc_withdrawal_fee).saturated_into();
-        let second_withdraw = (9900000 + btc_withdrawal_fee).saturated_into();
-        XGatewayRecords::<T>::deposit(&caller, ASSET_ID, first_withdraw).unwrap();
-        XGatewayRecords::<T>::deposit(&caller, ASSET_ID, second_withdraw).unwrap();
-        XGatewayRecords::<T>::withdraw(&caller, ASSET_ID, first_withdraw, b"12kEgqNShFw7BN27QCMQZCynQpSuV4x1Ax".to_vec(), b"".to_vec().into()).unwrap();
-        XGatewayRecords::<T>::withdraw(&caller, ASSET_ID, second_withdraw, b"1NNZZKR6pos2M4yiJhS76NjcRHxoJUATy4".to_vec(), b"".to_vec().into()).unwrap();
-
-        let tx = create_tx();
-        let tx_raw: Vec<u8> = serialization::serialize(&tx).into();
-    }: _(RawOrigin::Signed(caller), vec![0, 1], tx_raw)
-    verify {
-        assert!(WithdrawalProposal::<T>::get().is_some());
-    }
-
-    sign_withdraw_tx {
-        let l = 1024 * 1024 * 500; // 500KB length
-        let tx = create_tx();
-        let alice = alice::<T>();
-        let bob = bob::<T>();
-
-        let proposal = BtcWithdrawalProposal::<T::AccountId> {
-            sig_state: VoteResult::Unfinish,
-            withdrawal_id_list: vec![0, 1],
-            tx: tx,
-            trustee_list: vec![ (alice, true) ],
+        let transaction_output = TransactionOutputArray {
+            outputs: vec![prev_tx.outputs[0].clone()],
         };
-        WithdrawalProposal::<T>::put(proposal);
+        let spent_outputs_raw = serialization::serialize(&transaction_output).into();
 
-        let (signed_tx, _, _) = withdraw_tx();
-        let tx_raw: Vec<u8> = serialization::serialize(&signed_tx).into();
-    }: _(RawOrigin::Signed(bob), Some(tx_raw))
+        XGatewayRecords::<T>::deposit(&caller, ASSET_ID, 100000.saturated_into()).unwrap();
+        XGatewayRecords::<T>::withdraw(&caller, ASSET_ID, 50000.saturated_into(), b"tb1pexff2s7l58sthpyfrtx500ax234stcnt0gz2lr4kwe0ue95a2e0srxsc68".to_vec(), b"".to_vec().into()).unwrap();
+        xpallet_gateway_records::WithdrawalStateOf::insert(0, WithdrawalState::Applying);
+
+    }: _(RawOrigin::Signed(caller), vec![0], tx_raw, spent_outputs_raw)
     verify {
         assert_eq!(WithdrawalProposal::<T>::get().unwrap().sig_state, VoteResult::Finish);
     }
+
+    // create_withdraw_tx {
+    //     let n = 100;                // 100 withdrawal count
+    //     let l = 1024 * 1024 * 500;  // 500KB length
+
+    //     let caller = alice::<T>();
+
+    //     let (tx, info, prev_tx) = withdraw_tx();
+    //     let tx_hash = tx.hash();
+    //     let tx_raw: Vec<u8> = serialization::serialize(&tx).into();
+    //     let prev_tx_raw: Vec<u8> = serialization::serialize(&prev_tx).into();
+
+    //     XGatewayRecords::<T>::deposit(&caller, ASSET_ID, 100000.saturated_into()).unwrap();
+    //     XGatewayRecords::<T>::withdraw(&caller, ASSET_ID, 50000.saturated_into(), b"tb1pexff2s7l58sthpyfrtx500ax234stcnt0gz2lr4kwe0ue95a2e0srxsc68".to_vec(), b"".to_vec().into()).unwrap();
+
+    //     let tx = create_tx();
+    //     let tx_raw: Vec<u8> = serialization::serialize(&tx).into();
+    // }: _(RawOrigin::Signed(caller), vec![0, 1], tx_raw)
+    // verify {
+    //     assert!(WithdrawalProposal::<T>::get().is_some());
+    // }
+
+    // sign_withdraw_tx {
+    //     let l = 1024 * 1024 * 500; // 500KB length
+    //     let tx = create_tx();
+    //     let alice = alice::<T>();
+    //     let bob = bob::<T>();
+
+    //     let proposal = BtcWithdrawalProposal::<T::AccountId> {
+    //         sig_state: VoteResult::Unfinish,
+    //         withdrawal_id_list: vec![0, 1],
+    //         tx: tx,
+    //         trustee_list: vec![ (alice, true) ],
+    //     };
+    //     WithdrawalProposal::<T>::put(proposal);
+
+    //     let (signed_tx, _, _) = withdraw_tx();
+    //     let tx_raw: Vec<u8> = serialization::serialize(&signed_tx).into();
+    // }: _(RawOrigin::Signed(bob), Some(tx_raw))
+    // verify {
+    //     assert_eq!(WithdrawalProposal::<T>::get().unwrap().sig_state, VoteResult::Finish);
+    // }
 
     set_best_index {
         let best = BtcHeaderIndex {
@@ -299,16 +329,16 @@ benchmarks! {
         assert!(WithdrawalProposal::<T>::get().is_none());
     }
 
-    force_replace_proposal_tx {
-        let l = 1024 * 1024 * 500; // 500KB length
+    // force_replace_proposal_tx {
+    //     let l = 1024 * 1024 * 500; // 500KB length
 
-        Verifier::put(BtcTxVerifier::Test);
-        let tx = prepare_withdrawal::<T>();
-        let raw = serialization::serialize(&tx);
-    }: _(RawOrigin::Root, raw.into())
-    verify {
-        assert_eq!(WithdrawalProposal::<T>::get().unwrap().tx, tx);
-    }
+    //     Verifier::put(BtcTxVerifier::Test);
+    //     let tx = prepare_withdrawal::<T>();
+    //     let raw = serialization::serialize(&tx);
+    // }: _(RawOrigin::Root, raw.into())
+    // verify {
+    //     assert_eq!(WithdrawalProposal::<T>::get().unwrap().tx, tx);
+    // }
 
     set_btc_withdrawal_fee {
         let caller = alice::<T>();
@@ -334,12 +364,13 @@ mod tests {
         ExtBuilder::default().build().execute_with(|| {
             assert_ok!(test_benchmark_push_header::<Test>());
             assert_ok!(test_benchmark_push_transaction::<Test>());
-            assert_ok!(test_benchmark_create_withdraw_tx::<Test>());
-            assert_ok!(test_benchmark_sign_withdraw_tx::<Test>());
+            assert_ok!(test_benchmark_create_taproot_withdraw_tx::<Test>());
+            // assert_ok!(test_benchmark_create_withdraw_tx::<Test>());
+            // assert_ok!(test_benchmark_sign_withdraw_tx::<Test>());
             assert_ok!(test_benchmark_set_best_index::<Test>());
             assert_ok!(test_benchmark_set_confirmed_index::<Test>());
             assert_ok!(test_benchmark_remove_pending::<Test>());
-            assert_ok!(test_benchmark_force_replace_proposal_tx::<Test>());
+            // assert_ok!(test_benchmark_force_replace_proposal_tx::<Test>());
             assert_ok!(test_benchmark_set_btc_withdrawal_fee::<Test>());
             assert_ok!(test_benchmark_set_btc_deposit_limit::<Test>());
         });

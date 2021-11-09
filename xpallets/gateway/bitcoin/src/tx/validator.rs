@@ -87,13 +87,21 @@ pub fn parse_check_taproot_tx<T: Trait>(
     if script_pubkeys.len() != 1 {
         return Err(Error::<T>::InvalidPublicKey.into());
     }
+
+    let script: Script = script_pubkeys[0].clone().into();
+
+    if !script.is_pay_to_witness_taproot() {
+        return Err(Error::<T>::InvalidPublicKey.into());
+    }
+
     let mut keys = [0u8; 32];
-    keys.copy_from_slice(&script_pubkeys[0][..]);
+    keys.copy_from_slice(&script_pubkeys[0][2..]);
     let tweak_pubkey = XOnly(keys);
     if AddressTypes::WitnessV1Taproot(tweak_pubkey) != hot_addr.hash {
         return Err(Error::<T>::InvalidPublicKey.into());
     }
     if check_taproot_tx(tx, spent_outputs).is_err() {
+        println!("tx {:#?}, spendt_outputs,{:#?}", tx, spent_outputs);
         Err(Error::<T>::VerifySignFailed.into())
     } else {
         Ok(true)
