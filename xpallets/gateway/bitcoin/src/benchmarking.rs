@@ -74,14 +74,13 @@ fn withdraw_tx() -> (Transaction, BtcRelayedTxInfo, Transaction) {
     (tx, info, prev_tx)
 }
 
-// push header 576577 - 577702 (current confirm height is 577696)
+// push header 63290 - 63310
 fn prepare_headers<T: Trait>(caller: &T::AccountId) {
     for (height, header) in generate_blocks_63290_63310() {
         if height == 63290 {
             continue;
         }
         if height == 63307 {
-            // confirm for 577696, confirmation number is 6
             break;
         }
         let header = serialization::serialize(&header).into();
