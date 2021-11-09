@@ -101,7 +101,6 @@ pub fn parse_check_taproot_tx<T: Trait>(
         return Err(Error::<T>::InvalidPublicKey.into());
     }
     if check_taproot_tx(tx, spent_outputs).is_err() {
-        println!("tx {:#?}, spendt_outputs,{:#?}", tx, spent_outputs);
         Err(Error::<T>::VerifySignFailed.into())
     } else {
         Ok(true)

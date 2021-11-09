@@ -412,6 +412,19 @@ pub fn generate_blocks_576576_578692() -> BTreeMap<u32, BtcHeader> {
         .collect()
 }
 
+pub fn generate_blocks_63290_63310() -> BTreeMap<u32, BtcHeader> {
+    let headers = include_str!("./res/headers-63290-63310.json");
+    let headers: Vec<(u32, String)> = serde_json::from_str(headers).unwrap();
+    headers
+        .into_iter()
+        .map(|(height, header_hex)| {
+            let data = hex::decode(header_hex).unwrap();
+            let header = serialization::deserialize(Reader::new(&data)).unwrap();
+            (height, header)
+        })
+        .collect()
+}
+
 pub fn generate_blocks_478557_478563() -> (u32, Vec<BtcHeader>, Vec<BtcHeader>) {
     let b0 = BtcHeader {
         version: 0x20000002,

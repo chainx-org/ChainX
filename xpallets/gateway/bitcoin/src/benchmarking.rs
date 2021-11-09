@@ -20,16 +20,11 @@ use light_bitcoin::{
 };
 
 use crate::{
-    types::*, Call, Module, PendingDeposits, Trait, TransactionOutputArray, TxState, Verifier,
+    types::*, Call, Module, PendingDeposits, Trait, TransactionOutputArray, TxState,
     WithdrawalProposal,
 };
 
 const ASSET_ID: AssetId = xp_protocol::X_BTC;
-
-// fn generate_blocks_576576_578692() -> BTreeMap<u32, BlockHeader> {
-//     let bytes = include_bytes!("./res/headers-576576-578692.raw");
-//     Decode::decode(&mut &bytes[..]).unwrap()
-// }
 
 fn generate_blocks_63290_63310() -> BTreeMap<u32, BlockHeader> {
     let headers = include_str!("./res/headers-63290-63310.json");
@@ -57,11 +52,6 @@ fn alice<T: Trait>() -> T::AccountId {
     account::<T>("d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d")
 }
 
-fn bob<T: Trait>() -> T::AccountId {
-    // sr25519 Bob
-    account::<T>("8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48")
-}
-
 fn withdraw_tx() -> (Transaction, BtcRelayedTxInfo, Transaction) {
     // block height: 63299
     // https://signet.bitcoinexplorer.org/tx/0f592933b493bedab209851cb2cf07871558ff57d86d645877b16651479b51a2
@@ -82,61 +72,6 @@ fn withdraw_tx() -> (Transaction, BtcRelayedTxInfo, Transaction) {
         merkle_proof,
     };
     (tx, info, prev_tx)
-}
-
-fn prepare_withdrawal<T: Trait>() -> Transaction {
-    // https://blockchain.info/rawtx/62c389f1974b8a44737d76f92da0f5cd7f6f48d065e7af6ba368298361141270?format=hex
-    const RAW_TX: &str = "0100000001052ceda6cf9c93012a994f4ffa2a29c9e31ecf96f472b175eb8e602bfa2b2c5100000000fdfd000047304402200e4d732c456f4722d376252be16554edb27fc93c55db97859e16682bc62b014502202b9c4b01ad55daa1f76e6a564b7762cd0a81240c947806ab3f3b056f2e77c1da01483045022100c7cd680992de60da8c33fc3ef7f5ead85b204660822d9fbda2d85f9fadba732a022021fdc49b20a6007ea971a385732a4065d1d7c792ac9dc391034fb78aa9f5034b014c69522102df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6210244d81efeb4171b1a8a433b87dd202117f94e44c909c49e42e77b69b5a6ce7d0d2103a36339f413da869df12b1ab0def91749413a0dee87f0bfa85ba7196e6cdad10253aeffffffff03e0349500000000001976a91413256ff2dee6e80c275ddb877abc1ffe453a731488ace00f9700000000001976a914ea6e8dd56703ace584eb9dff0224629f8486672988acc88a02000000000017a914cb94110435d0635223eebe25ed2aaabc03781c458700000000";
-    let old_withdraw = RAW_TX.parse::<Transaction>().unwrap();
-
-    // https://blockchain.info/rawtx/092684402f9b21abdb1d2d76511d5983bd1250d173ced171a3f76d03fcc43e97?format=hex
-    const ANOTHER_TX: &str = "0100000001059ec66e2a2123364a56bd48f10f57d8a41ecf4082669e6fc85485637043879100000000fdfd00004830450221009fbe7b8f2f4ae771e8773cb5206b9f20286676e2c7cfa98a8e95368acfc3cb3c02203969727a276d7333d5f8815fa364307b8015783cfefbd53def28befdb81855fc0147304402205e5bbe039457d7657bb90dbe63ac30b9547242b44cc03e1f7a690005758e34aa02207208ed76a269d193f1e10583bd902561dbd02826d0486c33a4b1b1839a3d226f014c69522102df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6210244d81efeb4171b1a8a433b87dd202117f94e44c909c49e42e77b69b5a6ce7d0d2103a36339f413da869df12b1ab0def91749413a0dee87f0bfa85ba7196e6cdad10253aeffffffff04288e0300000000001976a914eb016d7998c88a79a50a0408dd7d5839b1ce1a6888aca0bb0d00000000001976a914646fe05e35369248c3f8deea436dc2b92c7dc86888ac50c30000000000001976a914d1a68d6e891a88d53d9bc3b88d172a3ff6b238c388ac20ee03020000000017a914cb94110435d0635223eebe25ed2aaabc03781c458700000000";
-    let tmp = ANOTHER_TX.parse::<Transaction>().unwrap();
-
-    let alice = alice::<T>();
-    let bob = bob::<T>();
-    let withdrawal_fee = Module::<T>::btc_withdrawal_fee();
-
-    let balance1 = (9778400 + withdrawal_fee).saturated_into();
-    let balance2 = (9900000 + withdrawal_fee).saturated_into();
-    XGatewayRecords::<T>::deposit(&alice, ASSET_ID, balance1).unwrap();
-    XGatewayRecords::<T>::deposit(&bob, ASSET_ID, balance2).unwrap();
-    // prepare withdraw info
-    XGatewayRecords::<T>::withdraw(
-        &alice,
-        ASSET_ID,
-        balance1,
-        b"12kEgqNShFw7BN27QCMQZCynQpSuV4x1Ax".to_vec(),
-        b"memo".to_vec().into(),
-    )
-    .unwrap();
-    XGatewayRecords::<T>::withdraw(
-        &bob,
-        ASSET_ID,
-        balance2,
-        b"1NNZZKR6pos2M4yiJhS76NjcRHxoJUATy4".to_vec(),
-        b"memo".to_vec().into(),
-    )
-    .unwrap();
-
-    let proposal = BtcWithdrawalProposal::<T::AccountId> {
-        sig_state: VoteResult::Finish,
-        withdrawal_id_list: vec![0, 1],
-        tx: old_withdraw.clone(),
-        trustee_list: vec![(alice, true), (bob, true)],
-    };
-    WithdrawalProposal::<T>::put(proposal);
-
-    // replace tx
-    let mut new_withdraw = old_withdraw;
-    new_withdraw.inputs = tmp.inputs; // replace inputs
-    new_withdraw
-}
-
-// block height: 63299
-// https://signet.bitcoinexplorer.org/tx/0f592933b493bedab209851cb2cf07871558ff57d86d645877b16651479b51a2
-fn create_tx() -> Transaction {
-    "020000000001015fea22ec1a3e3e7e1167fa220cc8376225f07bd20aa194e7f3c4ac68c7375d8e0000000000000000000250c3000000000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f409c0000000000002251209a9ea267884f5549c206b2aec2bd56d98730f90532ea7f7154d4d4f923b7e3bb03402639d4d9882f6e7e42db38dbd2845c87b131737bf557643ef575c49f8fc6928869d9edf5fd61606fb07cced365fdc2c7b637e6ecc85b29906c16d314e7543e94222086a60c7d5dd3f4931cc8ad77a614402bdb591c042347c89281c48c7e9439be9dac61c0e56a1792f348690cdeebe60e3db6c4e94d94e742c619f7278e52f6cbadf5efe96a528ba3f61a5b0d4fbceea425a9028381458b32492bccc3f1faa473a649e23605554f5ea4b4044229173719228a35635eeffbd8a8fe526270b737ad523b99f600000000".parse::<Transaction>().unwrap()
 }
 
 // push header 576577 - 577702 (current confirm height is 577696)
@@ -229,48 +164,6 @@ benchmarks! {
         assert_eq!(WithdrawalProposal::<T>::get().unwrap().sig_state, VoteResult::Finish);
     }
 
-    // create_withdraw_tx {
-    //     let n = 100;                // 100 withdrawal count
-    //     let l = 1024 * 1024 * 500;  // 500KB length
-
-    //     let caller = alice::<T>();
-
-    //     let (tx, info, prev_tx) = withdraw_tx();
-    //     let tx_hash = tx.hash();
-    //     let tx_raw: Vec<u8> = serialization::serialize(&tx).into();
-    //     let prev_tx_raw: Vec<u8> = serialization::serialize(&prev_tx).into();
-
-    //     XGatewayRecords::<T>::deposit(&caller, ASSET_ID, 100000.saturated_into()).unwrap();
-    //     XGatewayRecords::<T>::withdraw(&caller, ASSET_ID, 50000.saturated_into(), b"tb1pexff2s7l58sthpyfrtx500ax234stcnt0gz2lr4kwe0ue95a2e0srxsc68".to_vec(), b"".to_vec().into()).unwrap();
-
-    //     let tx = create_tx();
-    //     let tx_raw: Vec<u8> = serialization::serialize(&tx).into();
-    // }: _(RawOrigin::Signed(caller), vec![0, 1], tx_raw)
-    // verify {
-    //     assert!(WithdrawalProposal::<T>::get().is_some());
-    // }
-
-    // sign_withdraw_tx {
-    //     let l = 1024 * 1024 * 500; // 500KB length
-    //     let tx = create_tx();
-    //     let alice = alice::<T>();
-    //     let bob = bob::<T>();
-
-    //     let proposal = BtcWithdrawalProposal::<T::AccountId> {
-    //         sig_state: VoteResult::Unfinish,
-    //         withdrawal_id_list: vec![0, 1],
-    //         tx: tx,
-    //         trustee_list: vec![ (alice, true) ],
-    //     };
-    //     WithdrawalProposal::<T>::put(proposal);
-
-    //     let (signed_tx, _, _) = withdraw_tx();
-    //     let tx_raw: Vec<u8> = serialization::serialize(&signed_tx).into();
-    // }: _(RawOrigin::Signed(bob), Some(tx_raw))
-    // verify {
-    //     assert_eq!(WithdrawalProposal::<T>::get().unwrap().sig_state, VoteResult::Finish);
-    // }
-
     set_best_index {
         let best = BtcHeaderIndex {
             hash: H256::repeat_byte(1),
@@ -329,17 +222,6 @@ benchmarks! {
         assert!(WithdrawalProposal::<T>::get().is_none());
     }
 
-    // force_replace_proposal_tx {
-    //     let l = 1024 * 1024 * 500; // 500KB length
-
-    //     Verifier::put(BtcTxVerifier::Test);
-    //     let tx = prepare_withdrawal::<T>();
-    //     let raw = serialization::serialize(&tx);
-    // }: _(RawOrigin::Root, raw.into())
-    // verify {
-    //     assert_eq!(WithdrawalProposal::<T>::get().unwrap().tx, tx);
-    // }
-
     set_btc_withdrawal_fee {
         let caller = alice::<T>();
     }: _(RawOrigin::Root,  2000000)
@@ -365,12 +247,9 @@ mod tests {
             assert_ok!(test_benchmark_push_header::<Test>());
             assert_ok!(test_benchmark_push_transaction::<Test>());
             assert_ok!(test_benchmark_create_taproot_withdraw_tx::<Test>());
-            // assert_ok!(test_benchmark_create_withdraw_tx::<Test>());
-            // assert_ok!(test_benchmark_sign_withdraw_tx::<Test>());
             assert_ok!(test_benchmark_set_best_index::<Test>());
             assert_ok!(test_benchmark_set_confirmed_index::<Test>());
             assert_ok!(test_benchmark_remove_pending::<Test>());
-            // assert_ok!(test_benchmark_force_replace_proposal_tx::<Test>());
             assert_ok!(test_benchmark_set_btc_withdrawal_fee::<Test>());
             assert_ok!(test_benchmark_set_btc_deposit_limit::<Test>());
         });
