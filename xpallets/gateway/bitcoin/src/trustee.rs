@@ -1,6 +1,7 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 extern crate alloc;
+
 use alloc::string::ToString;
 
 use frame_support::{
@@ -10,6 +11,7 @@ use frame_support::{
 };
 use sp_runtime::SaturatedConversion;
 use sp_std::{
+    cmp::max,
     convert::{TryFrom, TryInto},
     prelude::*,
 };
@@ -18,7 +20,7 @@ use light_bitcoin::{
     chain::{Transaction, TransactionOutput},
     crypto::dhash160,
     keys::{Address, AddressTypes, Public, Type},
-    mast::Mast,
+    mast::{compute_min_threshold, Mast},
     primitives::Bytes,
     script::{Builder, Opcode, Script},
 };
@@ -112,6 +114,8 @@ const EC_P: [u8; 32] = [
 
 const ZERO_P: [u8; 32] = [0; 32];
 
+const MAX_TAPROOT_NODES: u32 = 250;
+
 impl<T: Trait> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo> for Module<T> {
     fn check_trustee_entity(raw_addr: &[u8]) -> Result<BtcTrusteeType, DispatchError> {
         let trustee_type = BtcTrusteeType::try_from(raw_addr.to_vec())
@@ -191,29 +195,28 @@ impl<T: Trait> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo>
             hot_keys, cold_keys
         );
 
-        let sig_num = two_thirds_unsafe(trustees.len() as u32);
+        let sig_num = max(
+            two_thirds_unsafe(trustees.len() as u32),
+            compute_min_threshold(trustees.len(), MAX_TAPROOT_NODES as usize) as u32,
+        );
 
-        let mut hot_trustee_addr_info: BtcTrusteeAddrInfo =
-            create_multi_address::<T>(&hot_keys, sig_num).ok_or_else(|| {
-                error!(
-                    "[generate_trustee_session_info] Create hot_addr error, hot_keys:{:?}",
-                    hot_keys
-                );
-                Error::<T>::GenerateMultisigFailed
-            })?;
-
-        // Set hot address for test
+        // Set hot address for taproot threshold address
         let pks = hot_keys
             .into_iter()
             .map(|k| k.try_into().map_err(|_| Error::<T>::InvalidPublicKey))
             .collect::<Result<Vec<_>, Error<T>>>()?;
+
         let threshold_addr: Address = Mast::new(pks, sig_num as usize)
             .map_err(|_| Error::<T>::InvalidAddress)?
             .generate_address(&Module::<T>::network_id().to_string())
             .map_err(|_| Error::<T>::InvalidAddress)?
             .parse()
             .map_err(|_| Error::<T>::InvalidAddress)?;
-        hot_trustee_addr_info.addr = threshold_addr.to_string().into_bytes();
+
+        let hot_trustee_addr_info: BtcTrusteeAddrInfo = BtcTrusteeAddrInfo {
+            addr: threshold_addr.to_string().into_bytes(),
+            redeem_script: vec![],
+        };
 
         let cold_trustee_addr_info: BtcTrusteeAddrInfo =
             create_multi_address::<T>(&cold_keys, sig_num).ok_or_else(|| {
