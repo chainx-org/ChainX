@@ -312,7 +312,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(T::WeightInfo::set_validator_count())]
-        pub(crate) fn set_validator_count(
+        pub fn set_validator_count(
             origin: OriginFor<T>,
             #[pallet::compact] new: u32,
         ) -> DispatchResult {
@@ -322,7 +322,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(T::WeightInfo::set_minimum_validator_count())]
-        pub(crate) fn set_minimum_validator_count(
+        pub fn set_minimum_validator_count(
             origin: OriginFor<T>,
             #[pallet::compact] new: u32,
         ) -> DispatchResult {
@@ -332,7 +332,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(T::WeightInfo::set_bonding_duration())]
-        pub(crate) fn set_bonding_duration(
+        pub fn set_bonding_duration(
             origin: OriginFor<T>,
             #[pallet::compact] new: T::BlockNumber,
         ) -> DispatchResult {
@@ -342,7 +342,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(T::WeightInfo::set_validator_bonding_duration())]
-        pub(crate) fn set_validator_bonding_duration(
+        pub fn set_validator_bonding_duration(
             origin: OriginFor<T>,
             #[pallet::compact] new: T::BlockNumber,
         ) -> DispatchResult {
@@ -352,7 +352,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(T::WeightInfo::set_minimum_penalty())]
-        pub(crate) fn set_minimum_penalty(
+        pub fn set_minimum_penalty(
             origin: OriginFor<T>,
             #[pallet::compact] new: BalanceOf<T>,
         ) -> DispatchResult {
@@ -362,7 +362,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(T::WeightInfo::set_sessions_per_era())]
-        pub(crate) fn set_sessions_per_era(
+        pub fn set_sessions_per_era(
             origin: OriginFor<T>,
             #[pallet::compact] new: SessionIndex,
         ) -> DispatchResult {
@@ -372,7 +372,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(10_000_000)]
-        pub(crate) fn set_immortals(
+        pub fn set_immortals(
             origin: OriginFor<T>,
             new: Vec<T::AccountId>,
         ) -> DispatchResult {
@@ -391,7 +391,7 @@ pub mod pallet {
 
         /// Clear the records in Staking for leaked `BondedWithdrawal` frozen balances.
         #[pallet::weight(T::WeightInfo::unlock_unbonded_withdrawal())]
-        pub(crate) fn force_unlock_bonded_withdrawal(
+        pub fn force_unlock_bonded_withdrawal(
             origin: OriginFor<T>,
             who: T::AccountId,
         ) -> DispatchResult {
@@ -405,7 +405,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(10_000_000)]
-        pub(crate) fn force_reset_staking_lock(
+        pub fn force_reset_staking_lock(
             origin: OriginFor<T>,
             accounts: Vec<T::AccountId>,
         ) -> DispatchResult {
@@ -421,7 +421,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(10_000_000)]
-        pub(crate) fn force_set_lock(
+        pub fn force_set_lock(
             origin: OriginFor<T>,
             new_locks: Vec<(T::AccountId, BalanceOf<T>)>,
         ) -> DispatchResult {
@@ -435,7 +435,6 @@ pub mod pallet {
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
-    #[pallet::metadata(T::AccountId = "AccountId", BalanceOf<T> = "Balance")]
     pub enum Event<T: Config> {
         /// Issue new balance to this account. [account, reward_amount]
         Minted(T::AccountId, BalanceOf<T>),

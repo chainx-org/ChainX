@@ -14,7 +14,7 @@ use frame_support::{
 };
 
 use orml_traits::{
-    account::MergeAccount, arithmetic::Signed, MultiCurrency, MultiCurrencyExtended,
+    currency::TransferAll, arithmetic::Signed, MultiCurrency, MultiCurrencyExtended,
     MultiLockableCurrency, MultiReservableCurrency,
 };
 
@@ -404,9 +404,9 @@ impl<T: Config> MultiLockableCurrency<T::AccountId> for Pallet<T> {
     }
 }
 
-impl<T: Config> MergeAccount<T::AccountId> for Pallet<T> {
+impl<T: Config> TransferAll<T::AccountId> for Pallet<T> {
     #[transactional]
-    fn merge_account(source: &T::AccountId, dest: &T::AccountId) -> DispatchResult {
+    fn transfer_all(source: &T::AccountId, dest: &T::AccountId) -> DispatchResult {
         AssetBalance::<T>::iter_prefix(source).try_for_each(
             |(currency_id, _account_data)| -> DispatchResult {
                 // ensure the account has no active reserved of non-native token

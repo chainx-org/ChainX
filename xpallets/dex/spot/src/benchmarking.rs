@@ -139,13 +139,13 @@ mod tests {
             // Reserve native coin, 100 native coins should be reserved.
             t_issue_pcx(who, 1000);
 
-            assert_ok!(test_benchmark_put_order::<Test>());
-            assert_ok!(test_benchmark_cancel_order::<Test>());
-            assert_ok!(test_benchmark_force_cancel_order::<Test>());
-            assert_ok!(test_benchmark_set_handicap::<Test>());
-            assert_ok!(test_benchmark_set_price_fluctuation::<Test>());
-            assert_ok!(test_benchmark_add_trading_pair::<Test>());
-            assert_ok!(test_benchmark_update_trading_pair::<Test>());
+            assert_ok!(Pallet::<Test>::test_benchmark_put_order());
+            assert_ok!(Pallet::<Test>::test_benchmark_cancel_order());
+            assert_ok!(Pallet::<Test>::test_benchmark_force_cancel_order());
+            assert_ok!(Pallet::<Test>::test_benchmark_set_handicap());
+            assert_ok!(Pallet::<Test>::test_benchmark_set_price_fluctuation());
+            assert_ok!(Pallet::<Test>::test_benchmark_add_trading_pair());
+            assert_ok!(Pallet::<Test>::test_benchmark_update_trading_pair());
         });
     }
 }

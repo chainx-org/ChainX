@@ -1,6 +1,7 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 use codec::{Codec, Decode, Encode};
+use scale_info::TypeInfo;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
@@ -22,7 +23,7 @@ pub type WithdrawalRecordId = u32;
 ///     |                           |
 ///     +---------------------------+----> NormalCancel (unlock token)
 ///
-#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum WithdrawalState {
     Applying,
@@ -40,7 +41,7 @@ impl Default for WithdrawalState {
 }
 
 /// WithdrawalRecord for withdrawal
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct WithdrawalRecord<AccountId, Balance, BlockNumber> {
     asset_id: AssetId,
     applicant: AccountId,
@@ -93,7 +94,7 @@ where
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, TypeInfo)]
 pub struct Withdrawal<AccountId, Balance, BlockNumber> {
     pub asset_id: AssetId,
     pub applicant: AccountId,

@@ -90,7 +90,7 @@ pub mod pallet {
         ///
         /// This is a root-only operation.
         #[pallet::weight(0)]
-        fn toggle_blacklist(
+        pub fn toggle_blacklist(
             origin: OriginFor<T>,
             who: <T::Lookup as StaticLookup>::Source,
             should_blacklist: bool,
@@ -112,7 +112,6 @@ pub mod pallet {
     /// Event for the XSystem Pallet
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
-    #[pallet::metadata(T::AccountId = "AccountId")]
     pub enum Event<T: Config> {
         /// An account was added to the blacklist. [who]
         Blacklisted(T::AccountId),

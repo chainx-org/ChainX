@@ -123,7 +123,6 @@ pub mod pallet {
     }
 
     #[pallet::event]
-    #[pallet::metadata(T::AccountId = "AccountId", BalanceOf<T> = "Balance", WithdrawalRecordOf<T> = "WithdrawalRecord")]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T: Config> {
         /// An account deposited some asset. [who, asset_id, amount]

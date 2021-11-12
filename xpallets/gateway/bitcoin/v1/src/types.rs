@@ -1,6 +1,7 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 use codec::{Decode, Encode};
+use scale_info::TypeInfo;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
@@ -22,14 +23,14 @@ use xp_gateway_bitcoin::BtcTxType;
 /// not layout state or public or else.
 pub type BtcAddress = Vec<u8>;
 
-#[derive(Clone, RuntimeDebug)]
+#[derive(Clone, RuntimeDebug, TypeInfo)]
 pub struct BtcRelayedTx {
     pub block_hash: H256,
     pub raw: BtcTransaction,
     pub merkle_proof: PartialMerkleTree,
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct BtcRelayedTxInfo {
     pub block_hash: H256,
     pub merkle_proof: PartialMerkleTree,
@@ -45,26 +46,26 @@ impl BtcRelayedTxInfo {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct BtcHeaderInfo {
     pub header: BtcHeader,
     pub height: u32,
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Default, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Copy, Default, Encode, Decode, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct BtcHeaderIndex {
     pub hash: H256,
     pub height: u32,
 }
 
-#[derive(PartialEq, Clone, Copy, Eq, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Clone, Copy, Eq, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct BtcTxState {
     pub tx_type: BtcTxType,
     pub result: BtcTxResult,
 }
 
-#[derive(PartialEq, Clone, Copy, Eq, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Clone, Copy, Eq, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub enum BtcTxResult {
     Success,
     Failure,
@@ -77,13 +78,13 @@ pub enum AccountInfo<AccountId> {
     Address(Address),
 }
 
-#[derive(PartialEq, Clone, Encode, Decode, Default, RuntimeDebug)]
+#[derive(PartialEq, Clone, Encode, Decode, Default, RuntimeDebug, TypeInfo)]
 pub struct BtcDepositCache {
     pub txid: H256,
     pub balance: u64,
 }
 
-#[derive(PartialEq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct BtcWithdrawalProposal<AccountId> {
     pub sig_state: VoteResult,
     pub withdrawal_id_list: Vec<u32>,
@@ -107,14 +108,14 @@ impl<AccountId> BtcWithdrawalProposal<AccountId> {
     }
 }
 
-#[derive(PartialEq, Clone, Copy, Eq, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Clone, Copy, Eq, Encode, Decode, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum VoteResult {
     Unfinish,
     Finish,
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, Default, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, Default, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct BtcParams {
@@ -174,7 +175,7 @@ impl BtcParams {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum BtcTxVerifier {
     Recover,

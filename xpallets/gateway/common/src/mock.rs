@@ -58,7 +58,7 @@ parameter_types! {
     pub const SS58Prefix: u8 = 42;
 }
 impl frame_system::Config for Test {
-    type BaseCallFilter = ();
+    type BaseCallFilter = frame_support::traits::Everything;
     type BlockWeights = ();
     type BlockLength = ();
     type Origin = Origin;
@@ -85,6 +85,7 @@ impl frame_system::Config for Test {
 
 parameter_types! {
     pub const ExistentialDeposit: u64 = 0;
+    pub const MaxReserves: u32 = 50;
 }
 impl pallet_balances::Config for Test {
     type MaxLocks = ();
@@ -94,6 +95,8 @@ impl pallet_balances::Config for Test {
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
     type WeightInfo = ();
+    type ReserveIdentifier = [u8; 8];
+    type MaxReserves = MaxReserves;
 }
 
 parameter_types! {
@@ -179,7 +182,7 @@ impl<T: xpallet_gateway_bitcoin::Config> ChainT<BalanceOf<T>> for MockBitcoin<T>
     }
 
     fn withdrawal_limit(asset_id: &u32) -> Result<WithdrawalLimit<BalanceOf<T>>, DispatchError> {
-        xpallet_gateway_bitcoin::Module::<T>::withdrawal_limit(asset_id)
+        xpallet_gateway_bitcoin::Pallet::<T>::withdrawal_limit(asset_id)
     }
 }
 impl<T: xpallet_gateway_bitcoin::Config>

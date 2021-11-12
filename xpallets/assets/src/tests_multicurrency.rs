@@ -219,7 +219,7 @@ fn transfer_should_work() {
         assert_eq!(XAssets::free_balance(X_BTC, &BOB), 150);
         assert_eq!(XAssets::total_issuance(&X_BTC), 200 + 800);
 
-        let transferred_event = Event::xpallet_assets(crate::Event::<Test>::Moved(
+        let transferred_event = Event::XAssets(crate::Event::<Test>::Moved(
             X_BTC,
             ALICE,
             AssetType::Usable,

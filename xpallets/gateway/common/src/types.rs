@@ -1,6 +1,7 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 use codec::{Decode, Encode};
+use scale_info::TypeInfo;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
@@ -12,7 +13,7 @@ use chainx_primitives::Text;
 use crate::traits::BytesLike;
 
 /// The config of trustee info.
-#[derive(PartialEq, Clone, Encode, Decode, Default, RuntimeDebug)]
+#[derive(PartialEq, Clone, Encode, Decode, Default, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct TrusteeInfoConfig {
@@ -21,7 +22,7 @@ pub struct TrusteeInfoConfig {
 }
 
 /// The trustee session info.
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct TrusteeSessionInfo<AccountId, TrusteeAddress: BytesLike> {
@@ -32,7 +33,7 @@ pub struct TrusteeSessionInfo<AccountId, TrusteeAddress: BytesLike> {
 }
 
 /// The generic trustee session info.
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct GenericTrusteeSessionInfo<AccountId>(pub TrusteeSessionInfo<AccountId, Vec<u8>>);
@@ -67,7 +68,7 @@ impl<AccountId, TrusteeAddress: BytesLike> TryFrom<GenericTrusteeSessionInfo<Acc
 }
 
 /// The trustee intention properties.
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct TrusteeIntentionProps<TrusteeEntity: BytesLike> {
@@ -78,7 +79,7 @@ pub struct TrusteeIntentionProps<TrusteeEntity: BytesLike> {
 }
 
 /// The generic trustee intention properties.
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct GenericTrusteeIntentionProps(pub TrusteeIntentionProps<Vec<u8>>);

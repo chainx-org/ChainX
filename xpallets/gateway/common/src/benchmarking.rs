@@ -2,7 +2,6 @@
 
 use codec::{Decode, Encode};
 use frame_benchmarking::benchmarks;
-use frame_support::storage::StorageMap;
 use frame_system::RawOrigin;
 use sp_core::crypto::AccountId32;
 use sp_runtime::traits::StaticLookup;
@@ -194,13 +193,13 @@ mod tests {
     #[test]
     fn test_benchmarks() {
         ExtBuilder::default().build().execute_with(|| {
-            assert_ok!(test_benchmark_withdraw::<Test>());
-            assert_ok!(test_benchmark_cancel_withdrawal::<Test>());
-            assert_ok!(test_benchmark_setup_trustee::<Test>());
-            assert_ok!(test_benchmark_transition_trustee_session::<Test>());
-            assert_ok!(test_benchmark_set_withdrawal_state::<Test>());
-            assert_ok!(test_benchmark_set_trustee_info_config::<Test>());
-            assert_ok!(test_benchmark_force_set_referral_binding::<Test>());
+            assert_ok!(Pallet::<Test>::test_benchmark_withdraw());
+            assert_ok!(Pallet::<Test>::test_benchmark_cancel_withdrawal());
+            assert_ok!(Pallet::<Test>::test_benchmark_setup_trustee());
+            assert_ok!(Pallet::<Test>::test_benchmark_transition_trustee_session());
+            assert_ok!(Pallet::<Test>::test_benchmark_set_withdrawal_state());
+            assert_ok!(Pallet::<Test>::test_benchmark_set_trustee_info_config());
+            assert_ok!(Pallet::<Test>::test_benchmark_force_set_referral_binding());
         });
     }
 }

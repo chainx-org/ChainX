@@ -57,7 +57,7 @@ parameter_types! {
 }
 
 impl frame_system::Config for Test {
-    type BaseCallFilter = ();
+    type BaseCallFilter = frame_support::traits::Everything;
     type BlockWeights = ();
     type BlockLength = ();
     type Origin = Origin;
@@ -100,6 +100,10 @@ impl Get<Balance> for ExistentialDeposit {
     }
 }
 
+parameter_types! {
+    pub const MaxReserves: u32 = 50;
+}
+
 impl pallet_balances::Config for Test {
     type MaxLocks = ();
     type Balance = Balance;
@@ -108,6 +112,8 @@ impl pallet_balances::Config for Test {
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
     type WeightInfo = ();
+    type ReserveIdentifier = [u8; 8];
+    type MaxReserves = MaxReserves;
 }
 
 parameter_types! {

@@ -8,6 +8,7 @@ edition = "2018"
 codec = { package = "parity-scale-codec", version = "2.3.1", default-features = false, features = ["derive"] }
 hex = { version = "0.4", default-features = false }
 serde = { version = "1.0", features = ["derive"], optional = true }
+scale-info = { version = "1.0", default-features = false, features = ["derive"] }
 
 # Substrate primitives
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
@@ -20,7 +21,7 @@ chainx-primitives = { path = "../../../primitives", default-features = false }
 xp-gateway-common = { path = "../../gateway/common", default-features = false }
 
 # light-bitcoin
-light-bitcoin = { git = "https://github.com/chainx-org/light-bitcoin", branch = "master", default-features = false }
+light-bitcoin = { git = "https://github.com/chainx-org/light-bitcoin", branch = "scale-info", default-features = false }
 
 [features]
 default = ["std"]
@@ -28,6 +29,7 @@ std = [
     "codec/std",
     "hex/std",
     "serde",
+    "scale-info/std",
     # Substrate primitives
     "sp-core/std",
     "sp-runtime/std",

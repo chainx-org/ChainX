@@ -7,6 +7,7 @@ edition = "2018"
 [dependencies]
 codec = { package = "parity-scale-codec", version = "2.3.1", features = ["derive"], default-features = false }
 serde = { version = "1.0", features = ["derive"], optional = true }
+scale-info = { version = "1.0", default-features = false, features = ["derive"] }
 
 # Substrate primitives
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
@@ -19,6 +20,7 @@ default = ["std"]
 std = [
     "codec/std",
     "serde",
+    "scale-info/std",
     # Substrate primitives
     "sp-runtime/std",
     # ChainX primitives

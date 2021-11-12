@@ -2,7 +2,6 @@
 
 use codec::{Decode, Encode};
 use frame_benchmarking::{benchmarks, whitelisted_caller};
-use frame_support::storage::StorageMap;
 use frame_system::RawOrigin;
 use sp_runtime::{AccountId32, SaturatedConversion};
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
@@ -169,8 +168,8 @@ benchmarks! {
         XGatewayRecords::<T>::deposit(&caller, ASSET_ID, 9900000u32.into()).unwrap();
         XGatewayRecords::<T>::withdraw(&caller, ASSET_ID, 9778400u32.into(), b"".to_vec(), b"".to_vec().into()).unwrap();
         XGatewayRecords::<T>::withdraw(&caller, ASSET_ID, 9900000u32.into(), b"".to_vec(), b"".to_vec().into()).unwrap();
-        XGatewayRecords::<T>::set_withdrawal_state(RawOrigin::Root.into(), 0, WithdrawalState::Processing);
-        XGatewayRecords::<T>::set_withdrawal_state(RawOrigin::Root.into(), 1, WithdrawalState::Processing);
+        let _ = XGatewayRecords::<T>::set_withdrawal_state(RawOrigin::Root.into(), 0, WithdrawalState::Processing);
+        let _ = XGatewayRecords::<T>::set_withdrawal_state(RawOrigin::Root.into(), 1, WithdrawalState::Processing);
 
         let proposal = BtcWithdrawalProposal::<T::AccountId> {
             sig_state: VoteResult::Finish,
@@ -330,16 +329,16 @@ mod tests {
     #[test]
     fn test_benchmarks() {
         ExtBuilder::default().build().execute_with(|| {
-            assert_ok!(test_benchmark_push_header::<Test>());
-            assert_ok!(test_benchmark_push_transaction::<Test>());
-            assert_ok!(test_benchmark_create_withdraw_tx::<Test>());
-            assert_ok!(test_benchmark_sign_withdraw_tx::<Test>());
-            assert_ok!(test_benchmark_set_best_index::<Test>());
-            assert_ok!(test_benchmark_set_confirmed_index::<Test>());
-            assert_ok!(test_benchmark_remove_pending::<Test>());
-            assert_ok!(test_benchmark_force_replace_proposal_tx::<Test>());
-            assert_ok!(test_benchmark_set_btc_withdrawal_fee::<Test>());
-            assert_ok!(test_benchmark_set_btc_deposit_limit::<Test>());
+            assert_ok!(Pallet::<Test>::test_benchmark_push_header());
+            assert_ok!(Pallet::<Test>::test_benchmark_push_transaction());
+            assert_ok!(Pallet::<Test>::test_benchmark_create_withdraw_tx());
+            assert_ok!(Pallet::<Test>::test_benchmark_sign_withdraw_tx());
+            assert_ok!(Pallet::<Test>::test_benchmark_set_best_index());
+            assert_ok!(Pallet::<Test>::test_benchmark_set_confirmed_index());
+            assert_ok!(Pallet::<Test>::test_benchmark_remove_pending());
+            assert_ok!(Pallet::<Test>::test_benchmark_force_replace_proposal_tx());
+            assert_ok!(Pallet::<Test>::test_benchmark_set_btc_withdrawal_fee());
+            assert_ok!(Pallet::<Test>::test_benchmark_set_btc_deposit_limit());
         });
     }
 }

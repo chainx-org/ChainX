@@ -368,7 +368,6 @@ pub mod pallet {
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
-    #[pallet::metadata(T::AccountId = "AccountId", BalanceOf<T> = "Balance")]
     pub enum Event<T: Config> {
         /// A Bitcoin header was validated and inserted. [btc_header_hash]
         HeaderInserted(H256),

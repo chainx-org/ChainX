@@ -77,10 +77,10 @@ mod tests {
     fn test_benchmarks() {
         ExtBuilder::default().build().execute_with(|| {
             assert_ok!(crate::tests::t_register_xbtc());
-            assert_ok!(test_benchmark_claim::<Test>());
-            assert_ok!(test_benchmark_set_claim_staking_requirement::<Test>());
-            assert_ok!(test_benchmark_set_claim_frequency_limit::<Test>());
-            assert_ok!(test_benchmark_set_asset_power::<Test>());
+            assert_ok!(Pallet::<Test>::test_benchmark_claim());
+            assert_ok!(Pallet::<Test>::test_benchmark_set_claim_staking_requirement());
+            assert_ok!(Pallet::<Test>::test_benchmark_set_claim_frequency_limit());
+            assert_ok!(Pallet::<Test>::test_benchmark_set_asset_power());
         });
     }
 }

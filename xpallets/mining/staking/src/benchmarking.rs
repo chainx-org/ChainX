@@ -195,18 +195,18 @@ mod tests {
     #[test]
     fn test_benchmarks() {
         ExtBuilder::default().build().execute_with(|| {
-            assert_ok!(test_benchmark_register::<Test>());
-            assert_ok!(test_benchmark_bond::<Test>());
-            assert_ok!(test_benchmark_unbond::<Test>());
-            assert_ok!(test_benchmark_unlock_unbonded_withdrawal::<Test>());
-            assert_ok!(test_benchmark_rebond::<Test>());
-            assert_ok!(test_benchmark_claim::<Test>());
-            assert_ok!(test_benchmark_chill::<Test>());
-            assert_ok!(test_benchmark_validate::<Test>());
-            assert_ok!(test_benchmark_set_validator_count::<Test>());
-            assert_ok!(test_benchmark_set_minimum_validator_count::<Test>());
-            assert_ok!(test_benchmark_set_bonding_duration::<Test>());
-            assert_ok!(test_benchmark_set_validator_bonding_duration::<Test>());
+            assert_ok!(Pallet::<Test>::test_benchmark_register());
+            assert_ok!(Pallet::<Test>::test_benchmark_bond());
+            assert_ok!(Pallet::<Test>::test_benchmark_unbond());
+            assert_ok!(Pallet::<Test>::test_benchmark_unlock_unbonded_withdrawal());
+            assert_ok!(Pallet::<Test>::test_benchmark_rebond());
+            assert_ok!(Pallet::<Test>::test_benchmark_claim());
+            assert_ok!(Pallet::<Test>::test_benchmark_chill());
+            assert_ok!(Pallet::<Test>::test_benchmark_validate());
+            assert_ok!(Pallet::<Test>::test_benchmark_set_validator_count());
+            assert_ok!(Pallet::<Test>::test_benchmark_set_minimum_validator_count());
+            assert_ok!(Pallet::<Test>::test_benchmark_set_bonding_duration());
+            assert_ok!(Pallet::<Test>::test_benchmark_set_validator_bonding_duration());
         });
     }
 }

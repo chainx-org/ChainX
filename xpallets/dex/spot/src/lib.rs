@@ -160,7 +160,7 @@ pub mod pallet {
 
         /// Force cancel an order.
         #[pallet::weight(<T as Config>::WeightInfo::force_cancel_order())]
-        fn force_cancel_order(
+        pub fn force_cancel_order(
             origin: OriginFor<T>,
             who: <T::Lookup as StaticLookup>::Source,
             #[pallet::compact] pair_id: TradingPairId,
@@ -241,7 +241,6 @@ pub mod pallet {
     }
 
     #[pallet::event]
-    #[pallet::metadata(BalanceOf<T> = "Balance", T::AccountId = "AccountId", T::BlockNumber = "BlockNumber", T::Price = "Price")]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T: Config> {
         /// A new order was created. [order_info]

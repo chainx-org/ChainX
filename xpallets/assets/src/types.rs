@@ -2,6 +2,7 @@
 
 use bitflags::bitflags;
 use codec::{Decode, Encode};
+use scale_info::TypeInfo;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
@@ -29,7 +30,7 @@ const ASSET_TYPES: [AssetType; 5] = [
 ///
 /// NOTE: The native token also reserves an AssetId in this module, but it's
 /// handle by Balances runtime module in fact.
-#[derive(PartialEq, PartialOrd, Ord, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, PartialOrd, Ord, Eq, Clone, Copy, Encode, Decode, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum AssetType {
     /// Free balance.
@@ -63,7 +64,7 @@ impl Default for AssetType {
 
 bitflags! {
     /// Restrictions for asset operations.
-    #[derive(Encode, Decode)]
+    #[derive(Encode, Decode, TypeInfo)]
     #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
     pub struct AssetRestrictions: u32 {
         const MOVE                = 1 << 0;
@@ -81,7 +82,7 @@ impl Default for AssetRestrictions {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct TotalAssetInfo<Balance> {
@@ -91,7 +92,7 @@ pub struct TotalAssetInfo<Balance> {
     pub restrictions: AssetRestrictions,
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum AssetErr {
     NotEnough,
@@ -117,7 +118,7 @@ impl<T: Config> From<AssetErr> for Error<T> {
 
 /// A single lock on a balance. There can be many of these on an account and
 /// they "overlap", so the same balance is frozen by multiple locks.
-#[derive(Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug)]
+#[derive(Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct BalanceLock<Balance> {
     /// An identifier for this lock. Only one lock may be in existence for each
     /// identifier.
@@ -127,7 +128,7 @@ pub struct BalanceLock<Balance> {
     pub amount: Balance,
 }
 
-#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct WithdrawalLimit<Balance> {

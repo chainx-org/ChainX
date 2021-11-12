@@ -173,7 +173,6 @@ pub mod pallet {
     /// Event for the Assets Pallet
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
-    #[pallet::metadata(T::AccountId = "AccountId", BalanceOf<T> = "Balance")]
     pub enum Event<T: Config> {
         /// Some balances of an asset was moved from one to another. [asset_id, from, from_type, to, to_type, amount]
         Moved(

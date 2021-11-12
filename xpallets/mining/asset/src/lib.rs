@@ -77,7 +77,7 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         /// Claims the staking reward given the `target` validator.
         #[pallet::weight(<T as Config>::WeightInfo::claim())]
-        pub(crate) fn claim(
+        pub fn claim(
             origin: OriginFor<T>,
             #[pallet::compact] target: AssetId,
         ) -> DispatchResult {
@@ -94,7 +94,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(<T as Config>::WeightInfo::set_claim_staking_requirement())]
-        pub(crate) fn set_claim_staking_requirement(
+        pub fn set_claim_staking_requirement(
             origin: OriginFor<T>,
             #[pallet::compact] asset_id: AssetId,
             #[pallet::compact] new: StakingRequirement,
@@ -107,7 +107,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(<T as Config>::WeightInfo::set_claim_frequency_limit())]
-        pub(crate) fn set_claim_frequency_limit(
+        pub fn set_claim_frequency_limit(
             origin: OriginFor<T>,
             #[pallet::compact] asset_id: AssetId,
             #[pallet::compact] new: T::BlockNumber,
@@ -120,7 +120,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(<T as Config>::WeightInfo::set_asset_power())]
-        pub(crate) fn set_asset_power(
+        pub fn set_asset_power(
             origin: OriginFor<T>,
             #[pallet::compact] asset_id: AssetId,
             #[pallet::compact] new: FixedAssetPower,
@@ -133,7 +133,6 @@ pub mod pallet {
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
-    #[pallet::metadata(T::AccountId = "AccountId", BalanceOf<T> = "Balance")]
     pub enum Event<T: Config> {
         /// An asset miner claimed the mining reward. [claimer, asset_id, amount]
         Claimed(T::AccountId, AssetId, BalanceOf<T>),
