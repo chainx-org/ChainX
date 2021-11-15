@@ -2,10 +2,14 @@
 
 use frame_support::{assert_noop, assert_ok};
 
-use light_bitcoin::{chain::BlockHeader, keys::Network, primitives::h256_rev, serialization};
+use light_bitcoin::{
+    chain::{h256, BlockHeader},
+    keys::Network,
+    serialization,
+};
 
 use crate::mock::{
-    generate_blocks_478557_478563, generate_blocks_576576_578692, ExtBuilder, XGatewayBitcoin,
+    generate_blocks_478557_478563, generate_blocks_63290_63310, ExtBuilder, XGatewayBitcoin,
     XGatewayBitcoinErr,
 };
 use crate::types::BtcHeaderIndex;
@@ -16,16 +20,16 @@ fn test_genesis() {
         let (header, num) = XGatewayBitcoin::genesis_info();
         assert_eq!(
             header.hash(),
-            h256_rev("0x0000000000000000001721f58deb88b0710295a02551f0dde1e2e231a15f1882")
+            h256("0x0e0afd82419f6fa40fcb1a77550dbb22e567f7ae6b4a95b77a00d30425010000")
         );
-        assert_eq!(num, 576576);
+        assert_eq!(num, 63290);
 
         let index = XGatewayBitcoin::best_index();
         assert_eq!(
             index,
             BtcHeaderIndex {
                 hash: header.hash(),
-                height: 576576
+                height: 63290
             }
         );
     })
@@ -231,15 +235,15 @@ fn test_insert_forked_headers() {
 #[test]
 fn test_change_difficulty() {
     ExtBuilder::default().build_and_execute(|| {
-        let headers = generate_blocks_576576_578692();
-        let to_height = 576576 + 2016 + 1;
-        let current_difficulty = headers[&576577].bits;
+        let headers = generate_blocks_63290_63310();
+        let to_height = 63290 + 20;
+        let current_difficulty = headers[&63291].bits;
         let new_difficulty = headers[&to_height].bits;
         println!(
             "current_difficulty: bit:{:?}|new_difficulty: bit:{:?}",
             current_difficulty, new_difficulty
         );
-        for i in 576577..to_height {
+        for i in 63291..to_height {
             assert_ok!(XGatewayBitcoin::apply_push_header(headers[&i].clone()));
         }
     })
@@ -248,9 +252,9 @@ fn test_change_difficulty() {
 #[test]
 fn test_call() {
     ExtBuilder::default().build_and_execute(|| {
-        let headers = generate_blocks_576576_578692();
+        let headers = generate_blocks_63290_63310();
         let origin = frame_system::RawOrigin::Signed(Default::default()).into();
-        let v = serialization::serialize(&headers[&(576576 + 1)]);
+        let v = serialization::serialize(&headers[&(63290 + 1)]);
         let v = v.take();
         assert_ok!(XGatewayBitcoin::push_header(origin, v));
     })

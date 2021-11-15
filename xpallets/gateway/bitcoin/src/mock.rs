@@ -168,7 +168,7 @@ impl Trait for Test {
 pub type System = frame_system::Module<Test>;
 pub type Balances = pallet_balances::Module<Test>;
 pub type XAssets = xpallet_assets::Module<Test>;
-pub type XGatewayRecords = xpallet_gateway_records::Module<Test>;
+// pub type XGatewayRecords = xpallet_gateway_records::Module<Test>;
 pub type XGatewayCommon = xpallet_gateway_common::Module<Test>;
 pub type XGatewayBitcoin = Module<Test>;
 pub type XGatewayBitcoinErr = Error<Test>;
@@ -397,19 +397,6 @@ fn trustees_info() -> Vec<(
         max_trustee_count: 15,
     };
     vec![(Chain::Bitcoin, btc_config, btc_trustees)]
-}
-
-pub fn generate_blocks_576576_578692() -> BTreeMap<u32, BtcHeader> {
-    let headers = include_str!("./res/headers-576576-578692.json");
-    let headers: Vec<(u32, String)> = serde_json::from_str(headers).unwrap();
-    headers
-        .into_iter()
-        .map(|(height, header_hex)| {
-            let data = hex::decode(header_hex).unwrap();
-            let header = serialization::deserialize(Reader::new(&data)).unwrap();
-            (height, header)
-        })
-        .collect()
 }
 
 pub fn generate_blocks_63290_63310() -> BTreeMap<u32, BtcHeader> {

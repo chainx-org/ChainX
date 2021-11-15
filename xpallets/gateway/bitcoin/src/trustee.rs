@@ -558,7 +558,6 @@ pub(crate) fn create_multi_address<T: Trait>(
         .push_opcode(opcode)
         .push_opcode(Opcode::OP_CHECKMULTISIG)
         .into_script();
-
     let addr = Address {
         kind: Type::P2SH,
         network: Module::<T>::network_id(),
