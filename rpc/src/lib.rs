@@ -16,7 +16,7 @@ use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 use sp_consensus::SelectChain;
 use sp_consensus_babe::BabeApi;
-use sp_transaction_pool::TransactionPool;
+use sc_transaction_pool_api::TransactionPool;
 
 use chainx_primitives::Block;
 use chainx_runtime::{AccountId, Balance, BlockNumber, Hash, Index};
@@ -84,7 +84,7 @@ pub type IoHandler = jsonrpc_core::IoHandler<sc_rpc::Metadata>;
 /// Instantiate all Full RPC extensions.
 pub fn create_full<C, P, SC, B>(
     deps: FullDeps<C, P, SC, B>,
-) -> jsonrpc_core::IoHandler<sc_rpc_api::Metadata>
+) -> Result<jsonrpc_core::IoHandler<sc_rpc_api::Metadata>, Box<dyn std::error::Error + Send + Sync>>
 where
     C: ProvideRuntimeApi<Block>
         + AuxStore
@@ -194,7 +194,7 @@ where
             shared_authority_set,
             shared_epoch_changes,
             deny_unsafe,
-        ),
+        )?,
     ));
 
     io.extend_with(XTransactionFeeApi::to_delegate(XTransactionFee::new(
@@ -210,7 +210,8 @@ where
         client.clone(),
     )));
     io.extend_with(XGatewayCommonApi::to_delegate(XGatewayCommon::new(client)));
-    io
+
+    Ok(io)
 }
 
 /// Instantiate all Light RPC extensions.

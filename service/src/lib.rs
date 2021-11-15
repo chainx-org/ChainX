@@ -9,10 +9,10 @@ use futures::prelude::*;
 
 use sc_client_api::{ExecutorProvider, RemoteBackend};
 use sc_consensus_babe::SlotProportion;
-use sc_executor::NativeExecutionDispatch;
+use sc_executor::{NativeElseWasmExecutor, NativeExecutionDispatch};
 use sc_finality_grandpa::FinalityProofProvider as GrandpaFinalityProofProvider;
 use sc_network::{Event, NetworkService};
-use sc_service::{config::Configuration, error::Error as ServiceError, TaskManager};
+use sc_service::{config::Configuration, error::Error as ServiceError, RpcHandlers, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryWorker};
 use sp_api::ConstructRuntimeApi;
 use sp_runtime::traits::Block as BlockT;
@@ -25,9 +25,9 @@ use client::RuntimeApiCollection;
 type LightBackend = sc_service::TLightBackendWithHash<Block, sp_runtime::traits::BlakeTwo256>;
 
 type LightClient<RuntimeApi, Executor> =
-    sc_service::TLightClientWithBackend<Block, RuntimeApi, Executor, LightBackend>;
+    sc_service::TLightClientWithBackend<Block, RuntimeApi, NativeElseWasmExecutor<Executor>, LightBackend>;
 
-type FullClient<RuntimeApi, Executor> = sc_service::TFullClient<Block, RuntimeApi, Executor>;
+type FullClient<RuntimeApi, Executor> = sc_service::TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>;
 
 type FullBackend = sc_service::TFullBackend<Block>;
 
@@ -47,10 +47,13 @@ pub fn new_partial<RuntimeApi, Executor>(
         FullClient<RuntimeApi, Executor>,
         FullBackend,
         FullSelectChain,
-        sp_consensus::DefaultImportQueue<Block, FullClient<RuntimeApi, Executor>>,
+        sc_consensus::DefaultImportQueue<Block, FullClient<RuntimeApi, Executor>>,
         sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, Executor>>,
         (
-            impl Fn(chainx_rpc::DenyUnsafe, sc_rpc::SubscriptionTaskExecutor) -> chainx_rpc::IoHandler,
+            impl Fn(
+                chainx_rpc::DenyUnsafe,
+                sc_rpc::SubscriptionTaskExecutor
+            ) -> Result<chainx_rpc::IoHandler, sc_service::Error>,
             (
                 sc_consensus_babe::BabeBlockImport<
                     Block,
@@ -88,10 +91,17 @@ where
         })
         .transpose()?;
 
+    let executor = NativeElseWasmExecutor::<Executor>::new(
+        config.wasm_method,
+        config.default_heap_pages,
+        config.max_runtime_instances,
+    );
+
     let (client, backend, keystore_container, task_manager) =
-        sc_service::new_full_parts::<Block, RuntimeApi, Executor>(
+        sc_service::new_full_parts::<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>(
             &config,
             telemetry.as_ref().map(|(_, telemetry)| telemetry.handle()),
+            executor
         )?;
     let client = Arc::new(client);
 
@@ -106,7 +116,7 @@ where
         config.transaction_pool.clone(),
         config.role.is_authority().into(),
         config.prometheus_registry(),
-        task_manager.spawn_handle(),
+        task_manager.spawn_essential_handle(),
         client.clone(),
     );
 
@@ -196,7 +206,7 @@ where
                 },
             };
 
-            chainx_rpc::create_full(deps)
+            chainx_rpc::create_full(deps).map_err(Into::into)
         });
 
         (rpc_extensions_builder, rpc_setup)
@@ -213,10 +223,16 @@ where
     })
 }
 
-pub struct NewFullBase<RuntimeApi, Executor> {
+pub struct NewFullBase<RuntimeApi, Executor>
+where
+    RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+    RuntimeApi::RuntimeApi: RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
+    Executor: NativeExecutionDispatch + 'static,
+{
     pub task_manager: TaskManager,
     pub client: Arc<FullClient<RuntimeApi, Executor>>,
     pub network: Arc<NetworkService<Block, <Block as BlockT>::Hash>>,
+    pub transaction_pool: Arc<sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, Executor>>>,
 }
 
 /// Creates a full service from the configuration.
@@ -242,20 +258,17 @@ where
     } = new_partial(&config)?;
 
     let shared_voter_state = rpc_setup;
+    let auth_disc_publish_non_global_ips = config.network.allow_non_globals_in_dht;
 
     config
         .network
         .extra_sets
         .push(sc_finality_grandpa::grandpa_peers_set_config());
 
-    config.network.request_response_protocols.push(
-        sc_finality_grandpa_warp_sync::request_response_config_for_chain(
-            &config,
-            task_manager.spawn_handle(),
-            backend.clone(),
-            import_setup.1.shared_authority_set().clone(),
-        ),
-    );
+    let warp_sync = Arc::new(sc_finality_grandpa::warp_proof::NetworkProvider::new(
+        backend.clone(),
+        import_setup.1.shared_authority_set().clone(),
+    ));
 
     let (network, system_rpc_tx, network_starter) =
         sc_service::build_network(sc_service::BuildNetworkParams {
@@ -266,6 +279,7 @@ where
             import_queue,
             on_demand: None,
             block_announce_validator_builder: None,
+            warp_sync: Some(warp_sync),
         })?;
 
     if config.offchain_worker.enabled {
@@ -279,15 +293,14 @@ where
 
     let role = config.role.clone();
     let force_authoring = config.force_authoring;
-    let backoff_authoring_blocks =
-        Some(sc_consensus_slots::BackoffAuthoringOnFinalizedHeadLagging::default());
+    let backoff_authoring_blocks: Option<()> = None;
     let name = config.network.node_name.clone();
     let enable_grandpa = !config.disable_grandpa;
     let prometheus_registry = config.prometheus_registry().cloned();
 
     let _rpc_handlers = sc_service::spawn_tasks(sc_service::SpawnTasksParams {
         config,
-        backend: backend.clone(),
+        backend,
         client: client.clone(),
         keystore: keystore_container.sync_keystore(),
         network: network.clone(),
@@ -302,11 +315,11 @@ where
 
     let (block_import, grandpa_link, babe_link) = import_setup;
 
-    if role.is_authority() {
+    if let sc_service::config::Role::Authority { .. } = &role {
         let proposer = sc_basic_authorship::ProposerFactory::new(
             task_manager.spawn_handle(),
             client.clone(),
-            transaction_pool,
+            transaction_pool.clone(),
             prometheus_registry.as_ref(),
             telemetry.as_ref().map(|x| x.handle()),
         );
@@ -323,6 +336,7 @@ where
             env: proposer,
             block_import,
             sync_oracle: network.clone(),
+            justification_sync_link: network.clone(),
             create_inherent_data_providers: move |parent, ()| {
                 let client_clone = client_clone.clone();
                 async move {
@@ -346,6 +360,7 @@ where
             babe_link,
             can_author_with,
             block_proposal_slot_portion: SlotProportion::new(0.5),
+            max_block_proposal_slot_portion: None,
             telemetry: telemetry.as_ref().map(|x| x.handle()),
         };
 
@@ -368,13 +383,18 @@ where
                         _ => None,
                     }
                 });
-        let (authority_discovery_worker, _service) = sc_authority_discovery::new_worker_and_service(
-            client.clone(),
-            network.clone(),
-            Box::pin(dht_event_stream),
-            authority_discovery_role,
-            prometheus_registry.clone(),
-        );
+        let (authority_discovery_worker, _service) =
+            sc_authority_discovery::new_worker_and_service_with_config(
+                sc_authority_discovery::WorkerConfig {
+                    publish_non_global_ips: auth_disc_publish_non_global_ips,
+                    ..Default::default()
+                },
+                client.clone(),
+                network.clone(),
+                Box::pin(dht_event_stream),
+                authority_discovery_role,
+                prometheus_registry.clone(),
+            );
 
         task_manager.spawn_handle().spawn(
             "authority-discovery-worker",
@@ -432,6 +452,7 @@ where
         task_manager,
         client,
         network,
+        transaction_pool
     })
 }
 
@@ -444,69 +465,61 @@ where
         RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
     Executor: NativeExecutionDispatch + 'static,
 {
-    new_full_base::<RuntimeApi, Executor>(config)
-        .map(|NewFullBase { task_manager, .. }| task_manager)
+    new_full_base(config)
+        .map(|base: NewFullBase<RuntimeApi, Executor>| base.task_manager)
 }
 
-/// Can be called for a `Configuration` to check if it is a configuration for the `ChainX` network.
-pub trait IdentifyVariant {
-    /// Returns if this is a configuration for the `ChainX` network.
-    fn is_chainx(&self) -> bool;
-
-    /// Returns if this is a configuration for the `Malan` network.
-    fn is_malan(&self) -> bool;
-
-    /// Returns if this is a configuration for the `Development` network.
-    fn is_dev(&self) -> bool;
-}
-
-impl IdentifyVariant for Box<dyn sc_service::ChainSpec> {
-    fn is_chainx(&self) -> bool {
-        self.id() == "chainx"
-    }
-    fn is_malan(&self) -> bool {
-        self.id().contains("malan")
-    }
-    fn is_dev(&self) -> bool {
-        self.id() == "dev"
-    }
-}
-
-pub fn build_full(config: Configuration) -> Result<TaskManager, ServiceError> {
-    if config.chain_spec.is_chainx() {
-        new_full::<chainx_runtime::RuntimeApi, chainx_executor::ChainXExecutor>(config)
-    } else if config.chain_spec.is_malan() {
-        new_full::<malan_runtime::RuntimeApi, chainx_executor::MalanExecutor>(config)
-    } else {
-        new_full::<dev_runtime::RuntimeApi, chainx_executor::DevExecutor>(config)
-    }
+pub struct NewLightBase<RuntimeApi, Executor>
+    where
+        RuntimeApi: ConstructRuntimeApi<Block, LightClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+        RuntimeApi::RuntimeApi: RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<LightBackend, Block>>,
+        Executor: NativeExecutionDispatch + 'static,
+{
+    pub task_manager: TaskManager,
+    pub rpc_handlers: RpcHandlers,
+    pub client: Arc<LightClient<RuntimeApi, Executor>>,
+    pub network: Arc<NetworkService<Block, <Block as BlockT>::Hash>>,
+    pub transaction_pool: Arc<
+        sc_transaction_pool::LightPool<
+            Block,
+            LightClient<RuntimeApi, Executor>,
+            sc_network::config::OnDemand<Block>
+        >>,
 }
 
 /// Builds a new service for a light client.
-pub fn new_light<Runtime, Dispatch>(mut config: Configuration) -> Result<TaskManager, ServiceError>
+pub fn new_light_base<RuntimeApi, Executor>(mut config: Configuration) -> Result<
+    NewLightBase<RuntimeApi, Executor>,
+    ServiceError,
+>
 where
-    Runtime: 'static + Send + Sync + ConstructRuntimeApi<Block, LightClient<Runtime, Dispatch>>,
-    <Runtime as ConstructRuntimeApi<Block, LightClient<Runtime, Dispatch>>>::RuntimeApi:
+    RuntimeApi: 'static + Send + Sync + ConstructRuntimeApi<Block, LightClient<RuntimeApi, Executor>>,
+    <RuntimeApi as ConstructRuntimeApi<Block, LightClient<RuntimeApi, Executor>>>::RuntimeApi:
         RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<LightBackend, Block>>,
-    Dispatch: NativeExecutionDispatch + 'static,
+    Executor: NativeExecutionDispatch + 'static,
 {
     let telemetry = config
         .telemetry_endpoints
         .clone()
         .filter(|x| !x.is_empty())
         .map(|endpoints| -> Result<_, sc_telemetry::Error> {
-            let transport = None;
-
-            let worker = TelemetryWorker::with_transport(16, transport)?;
+            let worker = TelemetryWorker::new(16)?;
             let telemetry = worker.handle().new_telemetry(endpoints);
             Ok((worker, telemetry))
         })
         .transpose()?;
 
+    let executor = NativeElseWasmExecutor::<Executor>::new(
+        config.wasm_method,
+        config.default_heap_pages,
+        config.max_runtime_instances,
+    );
+
     let (client, backend, keystore_container, mut task_manager, on_demand) =
-        sc_service::new_light_parts::<Block, Runtime, Dispatch>(
+        sc_service::new_light_parts::<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>(
             &config,
             telemetry.as_ref().map(|(_, telemetry)| telemetry.handle()),
+            executor
         )?;
 
     let mut telemetry = telemetry.map(|(worker, telemetry)| {
@@ -524,12 +537,12 @@ where
     let transaction_pool = Arc::new(sc_transaction_pool::BasicPool::new_light(
         config.transaction_pool.clone(),
         config.prometheus_registry(),
-        task_manager.spawn_handle(),
+        task_manager.spawn_essential_handle(),
         client.clone(),
         on_demand.clone(),
     ));
 
-    let (grandpa_block_import, _) = sc_finality_grandpa::block_import(
+    let (grandpa_block_import, grandpa_link) = sc_finality_grandpa::block_import(
         client.clone(),
         &(client.clone() as Arc<_>),
         select_chain.clone(),
@@ -570,6 +583,11 @@ where
         telemetry.as_ref().map(|x| x.handle()),
     )?;
 
+    let warp_sync = Arc::new(sc_finality_grandpa::warp_proof::NetworkProvider::new(
+        backend.clone(),
+        grandpa_link.shared_authority_set().clone(),
+    ));
+
     let (network, system_rpc_tx, network_starter) =
         sc_service::build_network(sc_service::BuildNetworkParams {
             config: &config,
@@ -579,16 +597,31 @@ where
             import_queue,
             on_demand: Some(on_demand.clone()),
             block_announce_validator_builder: None,
+            warp_sync: Some(warp_sync),
         })?;
-    network_starter.start_network();
+
+    let enable_grandpa = !config.disable_grandpa;
+    if enable_grandpa {
+        let name = config.network.node_name.clone();
+
+        let config = sc_finality_grandpa::Config {
+            gossip_duration: std::time::Duration::from_millis(333),
+            justification_period: 512,
+            name: Some(name),
+            observer_enabled: false,
+            keystore: None,
+            local_role: config.role.clone(),
+            telemetry: telemetry.as_ref().map(|x| x.handle()),
+        };
+
+        task_manager.spawn_handle().spawn_blocking(
+            "grandpa-observer",
+            sc_finality_grandpa::run_grandpa_observer(config, grandpa_link, network.clone())?,
+        );
+    }
 
     if config.offchain_worker.enabled {
-        sc_service::build_offchain_workers(
-            &config,
-            task_manager.spawn_handle(),
-            client.clone(),
-            network.clone(),
-        );
+        // TODO: add it if need
     }
 
     let light_deps = chainx_rpc::LightDeps {
@@ -600,22 +633,76 @@ where
 
     let rpc_extensions = chainx_rpc::create_light(light_deps);
 
-    let _rpc_handlers = sc_service::spawn_tasks(sc_service::SpawnTasksParams {
+    let rpc_handlers = sc_service::spawn_tasks(sc_service::SpawnTasksParams {
         on_demand: Some(on_demand),
         remote_blockchain: Some(backend.remote_blockchain()),
         rpc_extensions_builder: Box::new(sc_service::NoopRpcExtensionBuilder(rpc_extensions)),
-        client,
-        transaction_pool,
+        client: client.clone(),
+        transaction_pool: transaction_pool.clone(),
         config,
         keystore: keystore_container.sync_keystore(),
         backend,
         system_rpc_tx,
-        network,
+        network: network.clone(),
         task_manager: &mut task_manager,
         telemetry: telemetry.as_mut(),
     })?;
 
-    Ok(task_manager)
+    network_starter.start_network();
+
+    Ok(NewLightBase{
+        task_manager,
+        rpc_handlers,
+        client,
+        network,
+        transaction_pool
+    })
+}
+
+/// Builds a new service for a light client.
+pub fn new_light<RuntimeApi, Executor>(config: Configuration) -> Result<TaskManager, ServiceError>
+    where
+        RuntimeApi: 'static + Send + Sync + ConstructRuntimeApi<Block, LightClient<RuntimeApi, Executor>>,
+        <RuntimeApi as ConstructRuntimeApi<Block, LightClient<RuntimeApi, Executor>>>::RuntimeApi:
+        RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<LightBackend, Block>>,
+        Executor: NativeExecutionDispatch + 'static,
+{
+    new_light_base(config).map(|base: NewLightBase<RuntimeApi, Executor>| base.task_manager)
+}
+
+
+/// Can be called for a `Configuration` to check if it is a configuration for the `ChainX` network.
+pub trait IdentifyVariant {
+    /// Returns if this is a configuration for the `ChainX` network.
+    fn is_chainx(&self) -> bool;
+
+    /// Returns if this is a configuration for the `Malan` network.
+    fn is_malan(&self) -> bool;
+
+    /// Returns if this is a configuration for the `Development` network.
+    fn is_dev(&self) -> bool;
+}
+
+impl IdentifyVariant for Box<dyn sc_service::ChainSpec> {
+    fn is_chainx(&self) -> bool {
+        self.id() == "chainx"
+    }
+    fn is_malan(&self) -> bool {
+        self.id().contains("malan")
+    }
+    fn is_dev(&self) -> bool {
+        self.id() == "dev"
+    }
+}
+
+pub fn build_full(config: Configuration) -> Result<TaskManager, ServiceError> {
+    if config.chain_spec.is_chainx() {
+        new_full::<chainx_runtime::RuntimeApi, chainx_executor::ChainXExecutor>(config)
+    } else if config.chain_spec.is_malan() {
+        new_full::<malan_runtime::RuntimeApi, chainx_executor::MalanExecutor>(config)
+    } else {
+        new_full::<dev_runtime::RuntimeApi, chainx_executor::DevExecutor>(config)
+    }
 }
 
 pub fn build_light(config: Configuration) -> Result<TaskManager, ServiceError> {
