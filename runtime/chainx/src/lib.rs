@@ -10,7 +10,8 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-use codec::{Decode, Encode};
+use codec::{Decode, Encode, MaxEncodedLen};
+use scale_info::TypeInfo;
 use static_assertions::const_assert;
 
 use sp_api::impl_runtime_apis;
@@ -56,7 +57,7 @@ use xpallet_support::traits::MultisigAddressFor;
 pub use frame_support::{
     construct_runtime, debug, parameter_types,
     traits::{
-        Currency, Filter, Get, Imbalance, InstanceFilter, KeyOwnerProofSystem, LockIdentifier,
+        Currency, Contains, Get, Imbalance, InstanceFilter, KeyOwnerProofSystem, LockIdentifier,
         OnUnbalanced, Randomness,
     },
     weights::{
@@ -121,10 +122,10 @@ pub fn native_version() -> NativeVersion {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, codec::Encode, codec::Decode)]
+#[derive(Debug, Clone, Eq, PartialEq, codec::Encode, codec::Decode, scale_info::TypeInfo)]
 pub struct BaseFilter;
-impl Filter<Call> for BaseFilter {
-    fn filter(call: &Call) -> bool {
+impl Contains<Call> for BaseFilter {
+    fn contains(call: &Call) -> bool {
         use frame_support::dispatch::GetCallMetadata;
 
         match call {
@@ -157,7 +158,7 @@ impl SignedExtension for BaseFilter {
         _info: &DispatchInfoOf<Self::Call>,
         _len: usize,
     ) -> TransactionValidity {
-        if !Self::filter(&call) {
+        if !Self::contains(&call) {
             return Err(InvalidTransaction::Custom(FORBIDDEN_CALL).into());
         }
         if XSystem::blacklist(who) {
@@ -256,7 +257,12 @@ impl pallet_indices::Config for Runtime {
     type WeightInfo = pallet_indices::weights::SubstrateWeight<Runtime>;
 }
 
-impl pallet_authority_discovery::Config for Runtime {}
+parameter_types! {
+    pub const MaxAuthorities: u32 = 10_000;
+}
+impl pallet_authority_discovery::Config for Runtime {
+    type MaxAuthorities = MaxAuthorities;
+}
 
 parameter_types! {
     pub const UncleGenerations: BlockNumber = 0;
@@ -305,6 +311,8 @@ impl pallet_babe::Config for Runtime {
         pallet_babe::EquivocationHandler<Self::KeyOwnerIdentification, Offences, ReportLongevity>;
 
     type WeightInfo = ();
+    type DisabledValidators = Session;
+    type MaxAuthorities = MaxAuthorities;
 }
 
 impl pallet_grandpa::Config for Runtime {
@@ -320,6 +328,7 @@ impl pallet_grandpa::Config for Runtime {
     type HandleEquivocation = ();
 
     type WeightInfo = ();
+    type MaxAuthorities = MaxAuthorities;
 }
 
 parameter_types! {
@@ -368,6 +377,7 @@ parameter_types! {
     // For weight estimation, we assume that the most locks on an individual account will be 50.
     // This number may need to be adjusted in the future if this assumption no longer holds true.
     pub const MaxLocks: u32 = 50;
+    pub const MaxReserves: u32 = 50;
 }
 
 impl pallet_balances::Config for Runtime {
@@ -378,10 +388,13 @@ impl pallet_balances::Config for Runtime {
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
     type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
+    type ReserveIdentifier = [u8; 8];
+    type MaxReserves = MaxReserves;
 }
 
 parameter_types! {
     pub const TransactionByteFee: Balance = 10 * MILLICENTS; // 100 => 0.000001 pcx
+    pub const OperationalFeeMultiplier: u8 = 5;
 }
 
 impl pallet_transaction_payment::Config for Runtime {
@@ -389,6 +402,7 @@ impl pallet_transaction_payment::Config for Runtime {
     type TransactionByteFee = TransactionByteFee;
     type WeightToFee = IdentityFee<Balance>;
     type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
+    type OperationalFeeMultiplier = OperationalFeeMultiplier;
 }
 
 impl xpallet_transaction_fee::Config for Runtime {
@@ -400,6 +414,9 @@ parameter_types! {
     pub const ImOnlineUnsignedPriority: TransactionPriority = TransactionPriority::max_value();
     /// We prioritize im-online heartbeats over election solution submission.
     pub const StakingUnsignedPriority: TransactionPriority = TransactionPriority::max_value() / 2;
+    pub const MaxKeys: u32 = 10_000;
+    pub const MaxPeerInHeartbeats: u32 = 10_000;
+    pub const MaxPeerDataEncodingSize: u32 = 1_000;
 }
 
 impl pallet_im_online::Config for Runtime {
@@ -411,6 +428,9 @@ impl pallet_im_online::Config for Runtime {
     type ReportUnresponsiveness = Offences;
     type UnsignedPriority = ImOnlineUnsignedPriority;
     type WeightInfo = pallet_im_online::weights::SubstrateWeight<Runtime>;
+    type MaxKeys = MaxKeys;
+    type MaxPeerInHeartbeats = MaxPeerInHeartbeats;
+    type MaxPeerDataEncodingSize = MaxPeerDataEncodingSize;
 }
 
 impl frame_support::traits::ValidatorSet<AccountId> for Runtime {
@@ -594,6 +614,7 @@ impl pallet_democracy::Config for Runtime {
     type MaxVotes = MaxVotes;
     type WeightInfo = pallet_democracy::weights::SubstrateWeight<Runtime>;
     type MaxProposals = MaxProposals;
+    type VoteLockingPeriod = EnactmentPeriod;
 }
 
 parameter_types! {
@@ -807,7 +828,7 @@ parameter_types! {
 }
 
 /// The type used to represent the kinds of proxying allowed.
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, RuntimeDebug)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 pub enum ProxyType {
     Any = 0,
     NonTransfer = 1,
@@ -833,18 +854,16 @@ impl InstanceFilter<Call> for ProxyType {
                     | Call::Scheduler(..)
                     | Call::Babe(..)
                     | Call::Timestamp(..)
-                    | Call::Indices(pallet_indices::Call::claim(..))
-                    | Call::Indices(pallet_indices::Call::free(..))
-                    | Call::Indices(pallet_indices::Call::freeze(..))
+                    | Call::Indices(pallet_indices::Call::claim{..})
+                    | Call::Indices(pallet_indices::Call::free{..})
+                    | Call::Indices(pallet_indices::Call::freeze{..})
                     // Specifically omitting Indices `transfer`, `force_transfer`
                     // Specifically omitting the entire Balances pallet
                     | Call::Authorship(..)
                     | Call::XStaking(..)
-                    | Call::Offences(..)
                     | Call::Session(..)
                     | Call::Grandpa(..)
                     | Call::ImOnline(..)
-                    | Call::AuthorityDiscovery(..)
                     | Call::Democracy(..)
                     | Call::Council(..)
                     | Call::TechnicalCommittee(..)
@@ -871,10 +890,10 @@ impl InstanceFilter<Call> for ProxyType {
             ),
             ProxyType::IdentityJudgement => matches!(
                 c,
-                Call::Identity(pallet_identity::Call::provide_judgement(..)) | Call::Utility(..)
+                Call::Identity(pallet_identity::Call::provide_judgement{..}) | Call::Utility(..)
             ),
             ProxyType::CancelProxy => {
-                matches!(c, Call::Proxy(pallet_proxy::Call::reject_announcement(..)))
+                matches!(c, Call::Proxy(pallet_proxy::Call::reject_announcement{..}))
             }
         }
     }
@@ -1034,6 +1053,8 @@ impl xpallet_mining_asset::Config for Runtime {
 
 impl xpallet_genesis_builder::Config for Runtime {}
 
+impl pallet_randomness_collective_flip::Config for Runtime {}
+
 construct_runtime!(
     pub enum Runtime where
         Block = Block,
@@ -1042,7 +1063,7 @@ construct_runtime!(
     {
         // Basic stuff.
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
-        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Call, Storage} = 1,
+        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 1,
         Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 2,
 
         // Must be before session.
@@ -1055,15 +1076,15 @@ construct_runtime!(
 
         // Consensus support.
         Authorship: pallet_authorship::{Pallet, Call, Storage, Inherent} = 8,
-        Offences: pallet_offences::{Pallet, Call, Storage, Event} = 9,
+        Offences: pallet_offences::{Pallet, Storage, Event} = 9,
         Historical: pallet_session_historical::{Pallet} = 10,
         Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 11,
         Grandpa: pallet_grandpa::{Pallet, Call, Storage, Config, Event} = 12,
         ImOnline: pallet_im_online::{Pallet, Call, Storage, Event<T>, ValidateUnsigned, Config<T>} = 13,
-        AuthorityDiscovery: pallet_authority_discovery::{Pallet, Call, Config} = 14,
+        AuthorityDiscovery: pallet_authority_discovery::{Pallet, Config} = 14,
 
         // Governance stuff.
-        Democracy: pallet_democracy::{Pallet, Call, Storage, Config, Event<T>} = 15,
+        Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 15,
         Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 16,
         TechnicalCommittee: pallet_collective::<Instance2>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 17,
         Elections: pallet_elections_phragmen::{Pallet, Call, Storage, Event<T>, Config<T>} = 18,
@@ -1164,7 +1185,7 @@ impl_runtime_apis! {
 
     impl sp_api::Metadata<Block> for Runtime {
         fn metadata() -> OpaqueMetadata {
-            Runtime::metadata().into()
+            OpaqueMetadata::new(Runtime::metadata().into())
         }
     }
 
@@ -1193,8 +1214,9 @@ impl_runtime_apis! {
         fn validate_transaction(
             source: TransactionSource,
             tx: <Block as BlockT>::Extrinsic,
+            block_hash: <Block as BlockT>::Hash,
         ) -> TransactionValidity {
-            Executive::validate_transaction(source, tx)
+            Executive::validate_transaction(source, tx, block_hash)
         }
     }
 
@@ -1215,7 +1237,7 @@ impl_runtime_apis! {
                 slot_duration: Babe::slot_duration(),
                 epoch_length: EpochDuration::get(),
                 c: PRIMARY_PROBABILITY,
-                genesis_authorities: Babe::authorities(),
+                genesis_authorities: Babe::authorities().to_vec(),
                 randomness: Babe::randomness(),
                 allowed_slots: sp_consensus_babe::AllowedSlots::PrimaryAndSecondaryVRFSlots,
             }
@@ -1270,6 +1292,10 @@ impl_runtime_apis! {
     impl fg_primitives::GrandpaApi<Block> for Runtime {
         fn grandpa_authorities() -> GrandpaAuthorityList {
             Grandpa::grandpa_authorities()
+        }
+
+        fn current_set_id() -> fg_primitives::SetId {
+            Grandpa::current_set_id()
         }
 
         fn submit_report_equivocation_unsigned_extrinsic(

@@ -5,8 +5,8 @@ authors = ["The ChainX Authors"]
 edition = "2018"
 
 [dependencies]
-frame-benchmarking = "3.0.0"
-sc-executor = "0.9.0"
+frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11" }
+sc-executor = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11" }
 
 # ChainX runtime
 chainx-runtime = { path = "../runtime/chainx" }

@@ -107,6 +107,7 @@ pallet-utility = { git = "https://github.com/paritytech/substrate", branch = "po
 
 [workspace]
 members = [
+  "executor",
   "primitives",
   "primitives/assets-registrar",
   "primitives/gateway/bitcoin",
@@ -118,6 +119,10 @@ members = [
   "primitives/protocol",
   "primitives/rpc",
   "primitives/runtime",
+  "runtime/chainx",
+  "runtime/dev",
+  "runtime/malan",
+
   "xpallets/assets",
   "xpallets/assets/rpc",
   "xpallets/assets/rpc/runtime-api",
