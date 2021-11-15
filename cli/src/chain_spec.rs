@@ -350,31 +350,31 @@ fn build_genesis(
         .expect("bitcoin trustees generation can not fail; qed");
 
     dev::GenesisConfig {
-        frame_system: dev::SystemConfig {
+        system: dev::SystemConfig {
             code: wasm_binary.to_vec(),
             changes_trie_config: Default::default(),
         },
-        pallet_babe: dev::BabeConfig {
+        babe: dev::BabeConfig {
             authorities: vec![],
             epoch_config: Some(dev::BABE_GENESIS_EPOCH_CONFIG),
         },
-        pallet_grandpa: dev::GrandpaConfig {
+        grandpa: dev::GrandpaConfig {
             authorities: vec![],
         },
-        pallet_collective_Instance1: dev::CouncilConfig::default(),
-        pallet_collective_Instance2: dev::TechnicalCommitteeConfig {
+        council: dev::CouncilConfig::default(),
+        technical_committee: dev::TechnicalCommitteeConfig {
             members: tech_comm_members,
             phantom: Default::default(),
         },
-        pallet_membership_Instance1: Default::default(),
-        pallet_democracy: dev::DemocracyConfig::default(),
-        pallet_treasury: Default::default(),
-        pallet_elections_phragmen: dev::ElectionsConfig {
+        technical_membership: Default::default(),
+        democracy: dev::DemocracyConfig::default(),
+        treasury: Default::default(),
+        elections: dev::ElectionsConfig {
             members: phragmen_members,
         },
-        pallet_im_online: dev::ImOnlineConfig { keys: vec![] },
-        pallet_authority_discovery: dev::AuthorityDiscoveryConfig { keys: vec![] },
-        pallet_session: dev::SessionConfig {
+        im_online: dev::ImOnlineConfig { keys: vec![] },
+        authority_discovery: dev::AuthorityDiscoveryConfig { keys: vec![] },
+        session: dev::SessionConfig {
             keys: initial_authorities
                 .iter()
                 .map(|x| {
@@ -386,19 +386,19 @@ fn build_genesis(
                 })
                 .collect::<Vec<_>>(),
         },
-        pallet_balances: dev::BalancesConfig { balances },
-        pallet_indices: dev::IndicesConfig { indices: vec![] },
-        pallet_sudo: dev::SudoConfig { key: root_key },
-        xpallet_system: dev::XSystemConfig {
+        balances: dev::BalancesConfig { balances },
+        indices: dev::IndicesConfig { indices: vec![] },
+        sudo: dev::SudoConfig { key: root_key },
+        x_system: dev::XSystemConfig {
             network_props: NetworkType::Testnet,
         },
-        xpallet_assets_registrar: dev::XAssetsRegistrarConfig { assets },
-        xpallet_assets: dev::XAssetsConfig {
+        x_assets_registrar: dev::XAssetsRegistrarConfig { assets },
+        x_assets: dev::XAssetsConfig {
             assets_restrictions,
             endowed: assets_endowed,
         },
-        xpallet_gateway_common: dev::XGatewayCommonConfig { trustees },
-        xpallet_gateway_bitcoin: dev::XGatewayBitcoinConfig {
+        x_gateway_common: dev::XGatewayCommonConfig { trustees },
+        x_gateway_bitcoin: dev::XGatewayBitcoinConfig {
             genesis_trustees: btc_genesis_trustees,
             network_id: bitcoin.network,
             confirmation_number: bitcoin.confirmation_number,
@@ -415,7 +415,7 @@ fn build_genesis(
             max_withdrawal_count: 100,
             verifier: BtcTxVerifier::Recover,
         },
-        xpallet_mining_staking: dev::XStakingConfig {
+        x_staking: dev::XStakingConfig {
             validators,
             validator_count: 50,
             sessions_per_era: 12,
@@ -425,14 +425,14 @@ fn build_genesis(
             minimum_penalty: 2 * DOLLARS,
             ..Default::default()
         },
-        xpallet_mining_asset: dev::XMiningAssetConfig {
+        x_mining_asset: dev::XMiningAssetConfig {
             claim_restrictions: vec![(X_BTC, (10, DEV_DAYS * 7))],
             mining_power_map: vec![(X_BTC, 400)],
         },
-        xpallet_dex_spot: dev::XSpotConfig {
+        x_spot: dev::XSpotConfig {
             trading_pairs: vec![(PCX, X_BTC, 9, 2, 100000, true)],
         },
-        xpallet_genesis_builder: dev::XGenesisBuilderConfig {
+        x_genesis_builder: dev::XGenesisBuilderConfig {
             params: crate::genesis::genesis_builder_params(),
             initial_authorities_endowed,
             root_endowed: 0,
