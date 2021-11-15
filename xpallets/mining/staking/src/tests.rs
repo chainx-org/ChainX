@@ -8,16 +8,6 @@ fn t_issue_pcx(to: AccountId, value: Balance) {
     XStaking::mint(&to, value);
 }
 
-fn t_register(who: AccountId, initial_bond: Balance) -> DispatchResult {
-    let mut referral_id = who.to_string().as_bytes().to_vec();
-
-    if referral_id.len() < 2 {
-        referral_id.extend_from_slice(&[0, 0, 0, who as u8]);
-    }
-
-    XStaking::register(Origin::signed(who), referral_id, initial_bond)
-}
-
 fn t_bond(who: AccountId, target: AccountId, value: Balance) -> DispatchResult {
     XStaking::bond(Origin::signed(who), target, value)
 }
@@ -296,14 +286,13 @@ fn rebond_should_work() {
 
         // Block 3
         t_system_block_number_inc(1);
-
         assert_ok!(t_rebond(1, 2, 3, 5));
 
         assert_eq!(
             <ValidatorLedgers<Test>>::get(2),
             ValidatorLedger {
                 total_nomination: 25,
-                last_total_vote_weight: 30 + 40,
+                last_total_vote_weight: 10 + 60,
                 last_total_vote_weight_update: 3,
             }
         );
@@ -424,7 +413,7 @@ fn regular_staking_should_work() {
 
         t_start_session(2);
         assert_eq!(XStaking::current_era(), Some(1));
-        assert_eq!(Session::validators(), vec![4, 3, 2, 1]);
+        assert_eq!(Session::validators(), vec![1, 2, 3, 4]);
 
         // TODO: figure out the exact session for validators change.
         // sessions_per_era = 3
@@ -669,7 +658,7 @@ fn staker_reward_should_work() {
         // calculation is:
         // validator 3: 1_980_000_000 * 30/130 = 456_923_076
         //                    |_ validator 3: 456_923_076 / 10 = 45_692_307
-        //                    |_ validator 3's reward pot: 731_076_923 - 73_107_692
+        //                    |_ validator 3's reward pot: 456_923_076 - 45_692_307
 
         t_start_session(2);
         // The order is [3, 4, 1, 2] when calculating.
@@ -685,13 +674,13 @@ fn staker_reward_should_work() {
         assert_eq!(t_reward_pot_balance(1), 598_153_847);
         assert_eq!(t_reward_pot_balance(2), 872_307_693);
 
-        // validator 1: vote weight = 10 + 20 * 1 = 30
+        // validator 1: vote weight = 10 + 10 * 2 = 30
         // t_1 vote weight: 10 * 1  = 10
         assert_ok!(XStaking::claim(Origin::signed(t_1), 1));
         // t_1 = reward_pot_balance * 10 / 30
         assert_eq!(XStaking::free_balance(&t_1), 100 + 598_153_847 / 3);
 
-        // validator 2: vote weight = 40 * 1 + 20 = 60
+        // validator 2: vote weight = 20 + 20 * 2 = 60
         // t_2 vote weight = 20 * 1 = 20
         assert_ok!(XStaking::claim(Origin::signed(t_2), 2));
         assert_eq!(XStaking::free_balance(&t_2), 100 + 872_307_693 * 20 / 60);
