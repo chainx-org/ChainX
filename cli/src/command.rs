@@ -1,6 +1,6 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use sc_cli::{ChainSpec, Role, RuntimeVersion, SubstrateCli};
+use sc_cli::{ChainSpec, Role, RuntimeVersion, SubstrateCli, CliConfiguration};
 
 use chainx_service::{self as service, new_partial, IdentifyVariant};
 
@@ -39,6 +39,24 @@ impl SubstrateCli for Cli {
     fn load_spec(&self, id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
         // this id is from `--chain=<id>`
         load_spec(id)
+    }
+
+    /// Create a runner for the command provided in argument. This will create a Configuration and
+    /// a tokio runtime
+    fn create_runner<T: CliConfiguration>(&self, command: &T) -> sc_cli::Result<sc_cli::Runner<Self>> {
+        // Workaround for https://github.com/paritytech/substrate/issues/6856
+        // Remove this once the cli config file is supported in Substrate.
+        let raw_cli_args = std::env::args().collect::<Vec<_>>();
+        let cli = Cli::from_iter(crate::config::preprocess_cli_args(raw_cli_args));
+
+        // Try to enable the log rotation function if from config file.
+        if cli.run.config_file.is_some() && !cli.run.logger.no_log_rotation {
+            cli.try_init_logger()?;
+        } else {
+            command.init::<Self>()?;
+        }
+
+        sc_cli::Runner::new(self, command)
     }
 
     fn native_runtime_version(chain_spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
@@ -130,11 +148,6 @@ pub fn run() -> sc_cli::Result<()> {
     // Remove this once the cli config file is supported in Substrate.
     let raw_cli_args = std::env::args().collect::<Vec<_>>();
     let cli = Cli::from_iter(crate::config::preprocess_cli_args(raw_cli_args));
-
-    // Try to enable the log rotation function if not a dev chain.
-    if !cli.run.base.shared_params.dev {
-        cli.try_init_logger()?;
-    }
 
     match &cli.subcommand {
         None => {
