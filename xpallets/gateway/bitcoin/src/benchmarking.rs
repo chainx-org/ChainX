@@ -27,16 +27,8 @@ use crate::{
 const ASSET_ID: AssetId = xp_protocol::X_BTC;
 
 fn generate_blocks_63290_63310() -> BTreeMap<u32, BlockHeader> {
-    let headers = include_str!("./res/headers-63290-63310.json");
-    let headers: Vec<(u32, String)> = serde_json::from_str(headers).unwrap();
-    headers
-        .into_iter()
-        .map(|(height, header_hex)| {
-            let data = hex::decode(header_hex).unwrap();
-            let header = serialization::deserialize(Reader::new(&data)).unwrap();
-            (height, header)
-        })
-        .collect()
+    let bytes = include_bytes!("./res/headers-63290-63310.raw");
+    Decode::decode(&mut &bytes[..]).unwrap()
 }
 
 fn account<T: Trait>(pubkey: &str) -> T::AccountId {
