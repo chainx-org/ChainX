@@ -124,9 +124,7 @@ benchmarks! {
 
     chill {
         let validator: T::AccountId = create_validator::<T>("validator", 2, 1000);
-        if !Module::<T>::is_validator(&validator) {
-            Module::<T>::register(RawOrigin::Signed(validator.clone()).into(), (u as u32).to_be_bytes().to_vec(), 100.into())?;
-        }
+        let _validator_1: T::AccountId = create_validator::<T>("validator_1", 1, 100);
     }: _(RawOrigin::Signed(validator.clone()))
     verify {
         assert!(Module::<T>::is_chilled(&validator));
@@ -134,6 +132,7 @@ benchmarks! {
 
     validate {
         let validator: T::AccountId = create_validator::<T>("validator", 2, 1000);
+        let _validator_1: T::AccountId = create_validator::<T>("validator_1", 1, 100);
         if !Module::<T>::is_validator(&validator) {
             Module::<T>::register(RawOrigin::Signed(validator.clone()).into(), (u as u32).to_be_bytes().to_vec(), 100.into())?;
         }

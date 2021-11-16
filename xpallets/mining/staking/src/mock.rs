@@ -295,6 +295,10 @@ impl ExtBuilder {
 
         let mut ext = sp_io::TestExternalities::from(storage);
         ext.execute_with(|| {
+            let _ = t_register(1, 10);
+            let _ = t_register(2, 20);
+            let _ = t_register(3, 30);
+            let _ = t_register(4, 40);
             let validators = Session::validators();
             SESSION.with(|x| *x.borrow_mut() = (validators.clone(), HashSet::new()));
         });
@@ -324,3 +328,13 @@ pub type Balances = pallet_balances::Module<Test>;
 pub type Session = pallet_session::Module<Test>;
 pub type Timestamp = pallet_timestamp::Module<Test>;
 pub type XStaking = Module<Test>;
+
+pub fn t_register(who: AccountId, initial_bond: Balance) -> DispatchResult {
+    let mut referral_id = who.to_string().as_bytes().to_vec();
+
+    if referral_id.len() < 2 {
+        referral_id.extend_from_slice(&[0, 0, 0, who as u8]);
+    }
+
+    XStaking::register(Origin::signed(who), referral_id, initial_bond)
+}

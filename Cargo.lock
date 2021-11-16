@@ -396,6 +396,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 
 [[package]]
+name = "bech32"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf9ff0bbfd639f15c74af777d81383cf53efb7c93613f6cab67c6c11e05bbf8b"
+
+[[package]]
 name = "bincode"
 version = "1.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -442,6 +448,23 @@ dependencies = [
  "pbkdf2 0.3.0",
  "rand 0.6.5",
  "sha2 0.8.2",
+]
+
+[[package]]
+name = "bitcoin-bech32"
+version = "0.12.1"
+source = "git+https://github.com/chainx-org/rust-bech32-bitcoin?branch=master#1de465d410c8f83e16409e71303b3389a82a3e50"
+dependencies = [
+ "bech32",
+]
+
+[[package]]
+name = "bitcoin_hashes"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "006cc91e1a1d99819bc5b8214be3555c1f0611b169f527a1fdc54ed1f2b745b0"
+dependencies = [
+ "core2",
 ]
 
 [[package]]
@@ -1060,6 +1083,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b3a71ab494c0b5b860bdc8407ae08978052417070c2ced38573a9157ad75b8ac"
 
 [[package]]
+name = "core2"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2cf12d2dad3ed124aa116f59561428478993d69ab81ae4d30e5349c9c5b5a5f6"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
+name = "cpufeatures"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "95059428f66df56b63431fdb4e1947ed2190586af5c5a8a8b71122bdf5a7f469"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "cpuid-bool"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1533,7 +1574,7 @@ dependencies = [
  "ed25519",
  "rand 0.7.3",
  "serde",
- "sha2 0.9.2",
+ "sha2 0.9.8",
  "zeroize",
 ]
 
@@ -1712,6 +1753,18 @@ checksum = "11498d382790b7a8f2fd211780bec78619bba81cdad3a283997c0c41f836759c"
 dependencies = [
  "byteorder",
  "rand 0.7.3",
+ "rustc-hex",
+ "static_assertions",
+]
+
+[[package]]
+name = "fixed-hash"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cfcf0ed7fe52a17a03854ec54a9f76d6d84508d1c0e66bc1793301c73fc8493c"
+dependencies = [
+ "byteorder",
+ "rand 0.8.4",
  "rustc-hex",
  "static_assertions",
 ]
@@ -1945,9 +1998,9 @@ dependencies = [
 
 [[package]]
 name = "fs-swap"
-version = "0.2.4"
+version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "921d332c89b3b61a826de38c61ee5b6e02c56806cade1b0e5d81bd71f57a71bb"
+checksum = "03d47dad3685eceed8488986cad3d5027165ea5edb164331770e2059555f10a5"
 dependencies = [
  "lazy_static",
  "libc",
@@ -2416,9 +2469,9 @@ dependencies = [
 
 [[package]]
 name = "hex"
-version = "0.4.2"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "644f9158b2f133fd50f5fb3242878846d9eb792e445c893805ff0e3824006e35"
+checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
 name = "hex-literal"
@@ -2980,9 +3033,9 @@ checksum = "3576a87f2ba00f6f106fdfcd16db1d698d648a26ad8e0573cad8537c3c362d2a"
 
 [[package]]
 name = "libc"
-version = "0.2.80"
+version = "0.2.105"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d58d1b70b004888f764dfbf6a26a3b0342a1632d33968e4a179d8011c760614"
+checksum = "869d572136620d55835903746bcb5cdc54cb2851fd0aeec53220b4bb65ef3013"
 
 [[package]]
 name = "libloading"
@@ -3065,7 +3118,7 @@ dependencies = [
  "rand 0.7.3",
  "ring",
  "rw-stream-sink",
- "sha2 0.9.2",
+ "sha2 0.9.8",
  "smallvec 1.4.2",
  "thiserror",
  "unsigned-varint 0.5.1",
@@ -3143,7 +3196,7 @@ dependencies = [
  "prost",
  "prost-build",
  "rand 0.7.3",
- "sha2 0.9.2",
+ "sha2 0.9.8",
  "smallvec 1.4.2",
  "unsigned-varint 0.5.1",
  "wasm-timer",
@@ -3184,7 +3237,7 @@ dependencies = [
  "prost",
  "prost-build",
  "rand 0.7.3",
- "sha2 0.9.2",
+ "sha2 0.9.8",
  "smallvec 1.4.2",
  "uint",
  "unsigned-varint 0.5.1",
@@ -3247,7 +3300,7 @@ dependencies = [
  "prost",
  "prost-build",
  "rand 0.7.3",
- "sha2 0.9.2",
+ "sha2 0.9.8",
  "snow",
  "static_assertions",
  "x25519-dalek",
@@ -3453,11 +3506,12 @@ dependencies = [
 [[package]]
 name = "light-bitcoin"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#f87c15b4a460331de56ce64e30bc15ea6b240a33"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=taproot#043d410330c4df62f452047ff5068ee7dfdcbcfc"
 dependencies = [
  "light-bitcoin-chain",
  "light-bitcoin-crypto",
  "light-bitcoin-keys",
+ "light-bitcoin-mast",
  "light-bitcoin-merkle",
  "light-bitcoin-primitives",
  "light-bitcoin-script",
@@ -3467,7 +3521,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-chain"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#f87c15b4a460331de56ce64e30bc15ea6b240a33"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=taproot#043d410330c4df62f452047ff5068ee7dfdcbcfc"
 dependencies = [
  "hex",
  "light-bitcoin-crypto",
@@ -3480,35 +3534,59 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-crypto"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#f87c15b4a460331de56ce64e30bc15ea6b240a33"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=taproot#043d410330c4df62f452047ff5068ee7dfdcbcfc"
 dependencies = [
  "digest 0.9.0",
  "light-bitcoin-primitives",
  "ripemd160",
  "sha-1 0.9.2",
- "sha2 0.9.2",
+ "sha2 0.9.8",
  "siphasher",
 ]
 
 [[package]]
 name = "light-bitcoin-keys"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#f87c15b4a460331de56ce64e30bc15ea6b240a33"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=taproot#043d410330c4df62f452047ff5068ee7dfdcbcfc"
 dependencies = [
+ "arrayref",
+ "bitcoin-bech32",
  "bs58 0.4.0",
+ "digest 0.9.0",
  "hex",
  "libsecp256k1",
  "light-bitcoin-crypto",
  "light-bitcoin-primitives",
  "light-bitcoin-serialization",
+ "musig2",
  "parity-scale-codec",
  "serde",
+ "sha2 0.9.8",
+]
+
+[[package]]
+name = "light-bitcoin-mast"
+version = "0.2.0"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=taproot#043d410330c4df62f452047ff5068ee7dfdcbcfc"
+dependencies = [
+ "arrayref",
+ "bitcoin-bech32",
+ "bitcoin_hashes",
+ "core2",
+ "digest 0.9.0",
+ "hex",
+ "light-bitcoin-keys",
+ "light-bitcoin-script",
+ "light-bitcoin-serialization",
+ "musig2",
+ "rayon",
+ "sha2 0.9.8",
 ]
 
 [[package]]
 name = "light-bitcoin-merkle"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#f87c15b4a460331de56ce64e30bc15ea6b240a33"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=taproot#043d410330c4df62f452047ff5068ee7dfdcbcfc"
 dependencies = [
  "light-bitcoin-chain",
  "light-bitcoin-primitives",
@@ -3519,10 +3597,10 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-primitives"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#f87c15b4a460331de56ce64e30bc15ea6b240a33"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=taproot#043d410330c4df62f452047ff5068ee7dfdcbcfc"
 dependencies = [
  "byteorder",
- "fixed-hash",
+ "fixed-hash 0.7.0",
  "hex",
  "impl-codec",
  "impl-serde",
@@ -3533,20 +3611,22 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-script"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#f87c15b4a460331de56ce64e30bc15ea6b240a33"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=taproot#043d410330c4df62f452047ff5068ee7dfdcbcfc"
 dependencies = [
  "hex",
+ "libsecp256k1",
  "light-bitcoin-chain",
  "light-bitcoin-crypto",
  "light-bitcoin-keys",
  "light-bitcoin-primitives",
  "light-bitcoin-serialization",
+ "sha2 0.9.8",
 ]
 
 [[package]]
 name = "light-bitcoin-serialization"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#f87c15b4a460331de56ce64e30bc15ea6b240a33"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=taproot#043d410330c4df62f452047ff5068ee7dfdcbcfc"
 dependencies = [
  "light-bitcoin-primitives",
  "light-bitcoin-serialization-derive",
@@ -3555,7 +3635,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-serialization-derive"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=master#f87c15b4a460331de56ce64e30bc15ea6b240a33"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=taproot#d42889f65931c74fdcd42eaf54cc81a0f73c947c"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4002,7 +4082,7 @@ dependencies = [
  "blake2s_simd",
  "digest 0.9.0",
  "sha-1 0.9.2",
- "sha2 0.9.2",
+ "sha2 0.9.8",
  "sha3",
  "unsigned-varint 0.5.1",
 ]
@@ -4025,6 +4105,22 @@ dependencies = [
  "pin-project 1.0.1",
  "smallvec 1.4.2",
  "unsigned-varint 0.5.1",
+]
+
+[[package]]
+name = "musig2"
+version = "0.1.0"
+source = "git+https://github.com/chainx-org/Musig2?branch=lib#c52503eab20d3c6215335659e5f4861efbca56f5"
+dependencies = [
+ "arrayref",
+ "digest 0.9.0",
+ "hex",
+ "libsecp256k1",
+ "log",
+ "rand 0.8.4",
+ "rand_core 0.6.3",
+ "serde",
+ "sha2 0.9.8",
 ]
 
 [[package]]
@@ -5147,7 +5243,7 @@ version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7dd39dcacf71411ba488570da7bbc89b717225e46478b30ba99b92db6b149809"
 dependencies = [
- "fixed-hash",
+ "fixed-hash 0.6.1",
  "impl-codec",
  "impl-serde",
  "uint",
@@ -5391,6 +5487,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "rand"
+version = "0.8.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2e7573632e6454cf6b99d7aac4ccca54be06da05aca2ef7423d22d27d4d4bcd8"
+dependencies = [
+ "libc",
+ "rand_chacha 0.3.1",
+ "rand_core 0.6.3",
+]
+
+[[package]]
 name = "rand_chacha"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5408,6 +5515,16 @@ checksum = "f4c8ed856279c9737206bf725bf36935d8666ead7aa69b52be55af369d193402"
 dependencies = [
  "ppv-lite86",
  "rand_core 0.5.1",
+]
+
+[[package]]
+name = "rand_chacha"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e6c10a63a0fa32252be49d21e7709d4d4baf8d231c2dbce1eaa8141b9b127d88"
+dependencies = [
+ "ppv-lite86",
+ "rand_core 0.6.3",
 ]
 
 [[package]]
@@ -5432,6 +5549,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "90bde5296fc891b0cef12a6d03ddccc162ce7b2aff54160af9338f8d40df6d19"
 dependencies = [
  "getrandom 0.1.15",
+]
+
+[[package]]
+name = "rand_core"
+version = "0.6.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d34f1408f55294453790c48b2f1ebbb1c5b4b7563eb1f418bcfcfdbb06ebb4e7"
+dependencies = [
+ "getrandom 0.2.0",
 ]
 
 [[package]]
@@ -6941,13 +7067,13 @@ dependencies = [
 
 [[package]]
 name = "sha2"
-version = "0.9.2"
+version = "0.9.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e7aab86fe2149bad8c507606bdb3f4ef5e7b2380eb92350f56122cca72a42a8"
+checksum = "b69f9a4c9740d74c5baa3fd2e547f9525fa8088a8a958e0ca2409a514e33f5fa"
 dependencies = [
  "block-buffer 0.9.0",
  "cfg-if 1.0.0",
- "cpuid-bool",
+ "cpufeatures",
  "digest 0.9.0",
  "opaque-debug 0.3.0",
 ]
@@ -7079,7 +7205,7 @@ dependencies = [
  "rand_core 0.5.1",
  "ring",
  "rustc_version",
- "sha2 0.9.2",
+ "sha2 0.9.8",
  "subtle 2.3.0",
  "x25519-dalek",
 ]
@@ -8060,7 +8186,7 @@ dependencies = [
  "pbkdf2 0.4.0",
  "rand 0.7.3",
  "rustc-hash",
- "sha2 0.9.2",
+ "sha2 0.9.8",
  "thiserror",
  "unicode-normalization",
  "zeroize",
@@ -8517,7 +8643,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.7.3",
+ "rand 0.3.23",
  "static_assertions",
 ]
 

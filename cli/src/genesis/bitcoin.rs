@@ -89,17 +89,17 @@ pub fn local_testnet_trustees() -> Vec<(Chain, TrusteeInfoConfig, Vec<BtcTrustee
     let btc_trustees = vec![
         btc_trustee_gen(
             "Alice",
-            "0376b9649206c74cc3dad6332c3a86d925a251bf9a55e6381f5d67b29a47559634",
+            "0283f579dd2380bd31355d066086e1b4d46b518987c1f8a64d4c0101560280eae2",
             "0300849497d4f88ebc3e1bc2583677c5abdbd3b63640b3c5c50cd4628a33a2a2ca",
         ),
         btc_trustee_gen(
             "Bob",
-            "0285eed6fa121c3a82ba6d0c37fa37e72bb06740761bfe9f294d2fa95fe237d5ba",
+            "027a0868a14bd18e2e45ff3ad960f892df8d0edd1a5685f0a1dc63c7986d4ad55d",
             "032122032ae9656f9a133405ffe02101469a8d62002270a33ceccf0e40dda54d08",
         ),
         btc_trustee_gen(
             "Charlie",
-            "036e1b175cc285b62a8b86e4ea94f32d627b36d60673b37eb3dd07d7b8c9ae6ddb",
+            "02c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f",
             "02b3cc747f572d33f12870fa6866aebbfd2b992ba606b8dc89b676b3697590ad63",
         ),
     ];

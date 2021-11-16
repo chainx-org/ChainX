@@ -6,6 +6,7 @@ use frame_support::{dispatch::DispatchError, traits::Contains};
 use sp_std::{convert::TryFrom, marker::PhantomData, prelude::*};
 
 use xp_logging::{error, warn};
+#[cfg(feature = "std")]
 use xpallet_assets::Chain;
 use xpallet_support::traits::MultiSig;
 
