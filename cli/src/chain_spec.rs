@@ -256,6 +256,248 @@ pub fn malan_config() -> Result<MalanChainSpec, String> {
     MalanChainSpec::from_json_bytes(&include_bytes!("./res/malan.json")[..])
 }
 
+pub fn taproot_config_raw() -> Result<MalanChainSpec, String> {
+    use hex_literal::hex;
+    use sp_core::crypto::UncheckedInto;
+
+    let wasm_binary =
+        malan::WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
+
+    // 5RGu8p3xo8WH44s6HN2dzvNRRrgRMbbGsHeneFF8L9msxJ5n
+    let root_key: AccountId =
+        hex!["485bf22c979d4a61643f57a2006ff4fb7447a2a8ed905997c5f6b0230f39b860"].into();
+    // 5RGu8p3xo8WH44s6HN2dzvNRRrgRMbbGsHeneFF8L9msxJ5n
+    let vesting_key: AccountId =
+        hex!["485bf22c979d4a61643f57a2006ff4fb7447a2a8ed905997c5f6b0230f39b860"].into();
+    // export SECRET="YOUR SECRET"
+    // cd scripts/genesis && bash generate_keys.sh
+    let initial_authorities: Vec<AuthorityKeysTuple> = vec![
+        (
+            (
+                // 5CcqG82V8GXnxAfR9Htacg2fF4JJk8cyFRFqbb92KAPB9CAZ
+                hex!["1880c73bc154852f900b5db6b3ee9d98c9dd39120f9702ded76f07af558b7d53"].into(),
+                b"Taproot-Validator1".to_vec(),
+            ),
+            // 5C7kRjxKBUaJg85L6eZ1LcpwX46qMVuhg38nALaBRM6keo2o
+            hex!["0252636a2254619db458c1fe40e91ca39a7bb52bf8c99bd8a4efef458360ba0b"]
+                .unchecked_into(),
+            // 5FrMW6Jya5NqcWDvTgxw9Xvq57ukF8MKJT7u15Akkb7WfcrR
+            hex!["a78577fd7eacdf075bd80fb8dcdbc7c745a43bb2e0785a5a2a9cb8ab142cd9b3"]
+                .unchecked_into(),
+            // 5C7oRLv5b4ujJcUh8sWYsFYALbNtZYWSUB2v6Aq5u3t3ThUo
+            hex!["025c76d4c6369a8c8cb9a74dd91c11d233c0b15767359b404d2f4032f7129302"]
+                .unchecked_into(),
+            // 5DJ89DTfYsjorQMqajiGUHBJet8rx8yBUrpfHQPewkDsj28Z
+            hex!["36782cdf9ee4a785e783580c10cfb9642c9ee11571521a20da22fb08de1dc870"]
+                .unchecked_into(),
+        ),
+        (
+            (
+                // 5FYzhi2nppHtx1JZ9jNVuD9NeQyew1FYXHnxNbpyPTnSWVJX
+                hex!["9a48475a09f29793de67dc583a4330f2032ce4c2adac65f9a96e945ba2550346"].into(),
+                b"Taproot-Validator2".to_vec(),
+            ),
+            // 5EkGDwY81zVh6dUsSsfwkgA2L6vXXfGXCkpspqj8LCHCMUE8
+            hex!["76a3fe716f99773641a8c99a055dedb5d6fa69a1ce6630e2e5dee3ad923feb7b"]
+                .unchecked_into(),
+            // 5GcmEAwGHeeYCBjb4joBK2nGsJqJST6daowQ5RN2p3uUCjVW
+            hex!["c964223a26a2866f7553c58464f5a0bf47f447714ec96e69a1fb5d8e9a49e28e"]
+                .unchecked_into(),
+            // 5E7N9xriVo235G5tjehJ9zEhzvrycwteXEFvstV2QzUjtRua
+            hex!["5a7fe183feb982b71c56f25ea5ad7af6f694db46c6beba1f3274270949aec165"]
+                .unchecked_into(),
+            // 5H8RvZ5Hc8mXUpaH6RpTLXpkNNxZBpYXEnBsvy5hEtGn4AfB
+            hex!["e0048379400160e63f3dd1afd7bc0986b2892084cacaed6ec87b6d1ffce26473"]
+                .unchecked_into(),
+        ),
+    ];
+    let constructor = move || {
+        taproot_genesis(
+            &wasm_binary[..],
+            initial_authorities.clone(),
+            root_key.clone(),
+            vesting_key.clone(),
+            genesis_assets(),
+            btc_genesis_params(include_str!("res/btc_genesis_params_testnet.json")),
+            crate::genesis::bitcoin::local_testnet_trustees(),
+        )
+    };
+    Ok(MalanChainSpec::from_genesis(
+        "ChainX Taproot",
+        "chainx",
+        ChainType::Live,
+        constructor,
+        [].to_vec(),
+        Some(
+            sc_service::config::TelemetryEndpoints::new(vec![(
+                CHAINX_TELEMETRY_URL.to_string(),
+                0,
+            )])
+            .expect("ChainX telemetry url is valid; qed"),
+        ),
+        Some("pcx-taproot"),
+        Some(as_properties(NetworkType::Testnet)),
+        Default::default(),
+    ))
+}
+
+fn malan_session_keys(
+    babe: BabeId,
+    grandpa: GrandpaId,
+    im_online: ImOnlineId,
+    authority_discovery: AuthorityDiscoveryId,
+) -> malan::SessionKeys {
+    malan::SessionKeys {
+        grandpa,
+        babe,
+        im_online,
+        authority_discovery,
+    }
+}
+
+fn taproot_genesis(
+    wasm_binary: &[u8],
+    initial_authorities: Vec<AuthorityKeysTuple>,
+    root_key: AccountId,
+    vesting_account: AccountId,
+    assets: Vec<AssetParams>,
+    bitcoin: BtcGenesisParams,
+    trustees: Vec<(Chain, TrusteeInfoConfig, Vec<BtcTrusteeParams>)>,
+) -> malan::GenesisConfig {
+    use hex_literal::hex;
+    use malan_runtime::constants::time::DAYS;
+
+    // 1000 PCX
+    const STAKING_LOCKED: Balance = 100_000 * DOLLARS;
+    // 100000 PCX
+    const ROOT_ENDOWED: Balance = 10_000_000 * DOLLARS;
+
+    let (assets, assets_restrictions) = init_assets(assets);
+    let initial_authorities_len = initial_authorities.len();
+    let tech_comm_members: Vec<AccountId> = vec![
+        // 5DhacpyA2Ykpjx4AUJGbF7qa8tPqFELEVQYXQsxXQSauPb9r
+        hex!["485bf22c979d4a61643f57a2006ff4fb7447a2a8ed905997c5f6b0230f39b860"].into(),
+        // 5D7F1AJoDwuCvZZKEggeGk2brxYty9mkamUcFHyshYBnbWs3
+        hex!["2e2b928d39b7a9c8688509927e17031001fab604557db093ead5069474e0584e"].into(),
+        // 5HG5CswZ6X39BYqt8Dc8e4Cn2HieGnnUiG39ddGn2oq5G36W
+        hex!["e5d8bb656b124beb40990ef9346c441f888981ec7e0d4c55c9c72c176aec5290"].into(),
+    ];
+    let mut balances = initial_authorities
+        .iter()
+        .map(|((validator, _), _, _, _, _)| validator)
+        .cloned()
+        .map(|validator| (validator, STAKING_LOCKED))
+        .collect::<Vec<_>>();
+    // 100 PCX to root account for paying the transaction fee.
+    balances.push((root_key.clone(), ROOT_ENDOWED));
+    let initial_authorities_endowed = initial_authorities_len as Balance * STAKING_LOCKED;
+    let validators = initial_authorities
+        .clone()
+        .into_iter()
+        .map(|((validator, referral_id), _, _, _, _)| (validator, referral_id, STAKING_LOCKED))
+        .collect::<Vec<_>>();
+    let btc_genesis_trustees = trustees
+        .iter()
+        .find_map(|(chain, _, trustee_params)| {
+            if *chain == Chain::Bitcoin {
+                Some(
+                    trustee_params
+                        .iter()
+                        .map(|i| (i.0).clone())
+                        .collect::<Vec<_>>(),
+                )
+            } else {
+                None
+            }
+        })
+        .expect("bitcoin trustees generation can not fail; qed");
+    malan::GenesisConfig {
+        frame_system: Some(dev::SystemConfig {
+            code: wasm_binary.to_vec(),
+            changes_trie_config: Default::default(),
+        }),
+        pallet_babe: Some(Default::default()),
+        pallet_grandpa: Some(dev::GrandpaConfig {
+            authorities: vec![],
+        }),
+        pallet_collective_Instance1: Some(malan::CouncilConfig::default()),
+        pallet_collective_Instance2: Some(malan::TechnicalCommitteeConfig {
+            members: tech_comm_members,
+            phantom: Default::default(),
+        }),
+        pallet_membership_Instance1: Some(Default::default()),
+        pallet_democracy: Some(malan::DemocracyConfig::default()),
+        pallet_treasury: Some(Default::default()),
+        pallet_elections_phragmen: Some(malan::ElectionsConfig { members: vec![] }),
+        pallet_im_online: Some(malan::ImOnlineConfig { keys: vec![] }),
+        pallet_authority_discovery: Some(malan::AuthorityDiscoveryConfig { keys: vec![] }),
+        pallet_session: Some(malan::SessionConfig {
+            keys: initial_authorities
+                .iter()
+                .map(|x| {
+                    (
+                        (x.0).0.clone(),
+                        (x.0).0.clone(),
+                        malan_session_keys(x.1.clone(), x.2.clone(), x.3.clone(), x.4.clone()),
+                    )
+                })
+                .collect::<Vec<_>>(),
+        }),
+        pallet_balances: Some(malan::BalancesConfig { balances }),
+        pallet_indices: Some(malan::IndicesConfig { indices: vec![] }),
+        pallet_sudo: Some(malan::SudoConfig { key: root_key }),
+        xpallet_system: Some(malan::XSystemConfig {
+            network_props: NetworkType::Testnet,
+        }),
+        xpallet_assets_registrar: Some(malan::XAssetsRegistrarConfig { assets }),
+        xpallet_assets: Some(malan::XAssetsConfig {
+            assets_restrictions,
+            endowed: Default::default(),
+        }),
+        xpallet_gateway_common: Some(malan::XGatewayCommonConfig { trustees }),
+        xpallet_gateway_bitcoin: Some(malan::XGatewayBitcoinConfig {
+            genesis_trustees: btc_genesis_trustees,
+            network_id: bitcoin.network,
+            confirmation_number: bitcoin.confirmation_number,
+            genesis_hash: bitcoin.hash(),
+            genesis_info: (bitcoin.header(), bitcoin.height),
+            params_info: BtcParams::new(
+                545259519,            // max_bits
+                2 * 60 * 60,          // block_max_future
+                2 * 7 * 24 * 60 * 60, // target_timespan_seconds
+                10 * 60,              // target_spacing_seconds
+                4,                    // retargeting_factor
+            ), // retargeting_factor
+            btc_withdrawal_fee: 500000,
+            max_withdrawal_count: 100,
+            verifier: BtcTxVerifier::Recover,
+        }),
+        xpallet_mining_staking: Some(malan::XStakingConfig {
+            validators,
+            validator_count: 50,
+            sessions_per_era: 12,
+            glob_dist_ratio: (12, 88), // (Treasury, X-type Asset and Staking) = (12, 88)
+            mining_ratio: (10, 90),    // (Asset Mining, Staking) = (10, 90)
+            minimum_penalty: 2 * DOLLARS,
+            ..Default::default()
+        }),
+        xpallet_mining_asset: Some(malan::XMiningAssetConfig {
+            claim_restrictions: vec![(X_BTC, (10, DAYS * 7))],
+            mining_power_map: vec![(X_BTC, 400)],
+        }),
+        xpallet_dex_spot: Some(malan::XSpotConfig {
+            trading_pairs: vec![(PCX, X_BTC, 9, 2, 100000, true)],
+        }),
+        xpallet_genesis_builder: Some(malan::XGenesisBuilderConfig {
+            params: crate::genesis::genesis_builder_params(),
+            initial_authorities: initial_authorities
+                .iter()
+                .map(|i| (i.0).1.clone())
+                .collect(),
+        }),
+    }
+}
+
 fn dev_session_keys(
     babe: BabeId,
     grandpa: GrandpaId,
