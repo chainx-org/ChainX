@@ -1,17 +1,26 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
+extern crate alloc;
+
+use alloc::string::ToString;
+
 use frame_support::{
     debug::native,
     dispatch::{DispatchError, DispatchResult},
     ensure, StorageValue,
 };
 use sp_runtime::SaturatedConversion;
-use sp_std::{convert::TryFrom, prelude::*};
+use sp_std::{
+    cmp::max,
+    convert::{TryFrom, TryInto},
+    prelude::*,
+};
 
 use light_bitcoin::{
-    chain::Transaction,
+    chain::{Transaction, TransactionOutput},
     crypto::dhash160,
-    keys::{Address, Public, Type},
+    keys::{Address, AddressTypes, Public, Type},
+    mast::{compute_min_threshold, Mast},
     primitives::Bytes,
     script::{Builder, Opcode, Script},
 };
@@ -26,8 +35,9 @@ use xpallet_gateway_common::{
     utils::two_thirds_unsafe,
 };
 
+use crate::tx::validator::parse_check_taproot_tx;
 use crate::{
-    tx::{addr2vecu8, ensure_identical, validator::parse_and_check_signed_tx},
+    tx::{ensure_identical, validator::parse_and_check_signed_tx},
     types::{BtcWithdrawalProposal, VoteResult},
     Error, Event, Module, Trait, WithdrawalProposal,
 };
@@ -103,6 +113,8 @@ const EC_P: [u8; 32] = [
 ];
 
 const ZERO_P: [u8; 32] = [0; 32];
+
+const MAX_TAPROOT_NODES: u32 = 250;
 
 impl<T: Trait> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo> for Module<T> {
     fn check_trustee_entity(raw_addr: &[u8]) -> Result<BtcTrusteeType, DispatchError> {
@@ -183,16 +195,28 @@ impl<T: Trait> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo>
             hot_keys, cold_keys
         );
 
-        let sig_num = two_thirds_unsafe(trustees.len() as u32);
+        let sig_num = max(
+            two_thirds_unsafe(trustees.len() as u32),
+            compute_min_threshold(trustees.len(), MAX_TAPROOT_NODES as usize) as u32,
+        );
 
-        let hot_trustee_addr_info: BtcTrusteeAddrInfo =
-            create_multi_address::<T>(&hot_keys, sig_num).ok_or_else(|| {
-                error!(
-                    "[generate_trustee_session_info] Create hot_addr error, hot_keys:{:?}",
-                    hot_keys
-                );
-                Error::<T>::GenerateMultisigFailed
-            })?;
+        // Set hot address for taproot threshold address
+        let pks = hot_keys
+            .into_iter()
+            .map(|k| k.try_into().map_err(|_| Error::<T>::InvalidPublicKey))
+            .collect::<Result<Vec<_>, Error<T>>>()?;
+
+        let threshold_addr: Address = Mast::new(pks, sig_num as usize)
+            .map_err(|_| Error::<T>::InvalidAddress)?
+            .generate_address(&Module::<T>::network_id().to_string())
+            .map_err(|_| Error::<T>::InvalidAddress)?
+            .parse()
+            .map_err(|_| Error::<T>::InvalidAddress)?;
+
+        let hot_trustee_addr_info: BtcTrusteeAddrInfo = BtcTrusteeAddrInfo {
+            addr: threshold_addr.to_string().into_bytes(),
+            redeem_script: vec![],
+        };
 
         let cold_trustee_addr_info: BtcTrusteeAddrInfo =
             create_multi_address::<T>(&cold_keys, sig_num).ok_or_else(|| {
@@ -301,6 +325,60 @@ impl<T: Trait> Module<T> {
                 panic!("insert_trustee_vote_state should not be error")
             }
         }
+
+        WithdrawalProposal::<T>::put(proposal);
+
+        Ok(())
+    }
+
+    pub fn apply_create_taproot_withdraw(
+        who: T::AccountId,
+        tx: Transaction,
+        withdrawal_id_list: Vec<u32>,
+        spent_outputs: Vec<TransactionOutput>,
+    ) -> DispatchResult {
+        let withdraw_amount = Self::max_withdrawal_count();
+        if withdrawal_id_list.len() > withdraw_amount as usize {
+            error!(
+                "[apply_create_withdraw] Current list (len:{}) exceeding the max withdrawal amount {}",
+                withdrawal_id_list.len(), withdraw_amount
+            );
+            return Err(Error::<T>::WroungWithdrawalCount.into());
+        }
+        // remove duplicate
+        let mut withdrawal_id_list = withdrawal_id_list;
+        withdrawal_id_list.sort();
+        withdrawal_id_list.dedup();
+
+        check_withdraw_tx::<T>(&tx, &withdrawal_id_list)?;
+        info!(
+            "[apply_create_withdraw] Create new withdraw, id_list:{:?}",
+            withdrawal_id_list
+        );
+
+        // check sig
+        if parse_check_taproot_tx::<T>(&tx, &spent_outputs).is_err() {
+            return Err(Error::<T>::VerifySignFailed.into());
+        };
+
+        xpallet_gateway_records::Module::<T>::process_withdrawals(
+            &withdrawal_id_list,
+            Chain::Bitcoin,
+        )?;
+
+        let proposal = BtcWithdrawalProposal::new(
+            VoteResult::Finish,
+            withdrawal_id_list.clone(),
+            tx,
+            Vec::new(),
+        );
+
+        info!("[apply_create_withdraw] Pass the legality check of withdrawal");
+
+        Self::deposit_event(Event::<T>::WithdrawalProposalCreated(
+            who.clone(),
+            withdrawal_id_list,
+        ));
 
         WithdrawalProposal::<T>::put(proposal);
 
@@ -480,15 +558,14 @@ pub(crate) fn create_multi_address<T: Trait>(
         .push_opcode(opcode)
         .push_opcode(Opcode::OP_CHECKMULTISIG)
         .into_script();
-
     let addr = Address {
         kind: Type::P2SH,
         network: Module::<T>::network_id(),
-        hash: dhash160(&redeem_script),
+        hash: AddressTypes::Legacy(dhash160(&redeem_script)),
     };
     let script_bytes: Bytes = redeem_script.into();
     Some(BtcTrusteeAddrInfo {
-        addr: addr2vecu8(&addr),
+        addr: addr.to_string().into_bytes(),
         redeem_script: script_bytes.into(),
     })
 }

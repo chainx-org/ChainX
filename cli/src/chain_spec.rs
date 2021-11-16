@@ -393,7 +393,8 @@ fn build_genesis(
             genesis_hash: bitcoin.hash(),
             genesis_info: (bitcoin.header(), bitcoin.height),
             params_info: BtcParams::new(
-                486604799,            // max_bits
+                // for signet and regtest
+                545259519,            // max_bits
                 2 * 60 * 60,          // block_max_future
                 2 * 7 * 24 * 60 * 60, // target_timespan_seconds
                 10 * 60,              // target_spacing_seconds
