@@ -1,9 +1,8 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 use sc_cli::{ChainSpec, Role, RuntimeVersion, SubstrateCli};
-use sc_service::PartialComponents;
 
-use chainx_service::{self as service, new_partial};
+use chainx_service::{self as service, new_partial, IdentifyVariant};
 
 use crate::chain_spec;
 use crate::cli::{Cli, Subcommand};
@@ -42,8 +41,14 @@ impl SubstrateCli for Cli {
         load_spec(id)
     }
 
-    fn native_runtime_version(_: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-        &chainx_runtime::VERSION
+    fn native_runtime_version(chain_spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
+        if chain_spec.is_malan() {
+            &malan_runtime::VERSION
+        } else if chain_spec.is_dev() {
+            &dev_runtime::VERSION
+        } else {
+            &chainx_runtime::VERSION
+        }
     }
 }
 
@@ -75,6 +80,48 @@ fn load_spec(id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
             Box::new(chain_spec::ChainXChainSpec::from_json_file(p)?)
         }
     })
+}
+
+macro_rules! construct_async_run {
+    (|$components:ident, $cli:ident, $cmd:ident, $config:ident| $( $code:tt )* ) => {{
+        let runner = $cli.create_runner($cmd)?;
+        set_default_ss58_version(&runner.config().chain_spec);
+
+        if runner.config().chain_spec.is_malan() {
+            runner.async_run(|$config| {
+                let $components = new_partial::<
+                    malan_runtime::RuntimeApi,
+                    chainx_executor::MalanExecutor
+                >(
+                    &$config,
+                )?;
+                let task_manager = $components.task_manager;
+                { $( $code )* }.map(|v| (v, task_manager))
+            })
+        } else if runner.config().chain_spec.is_dev() {
+            runner.async_run(|$config| {
+                let $components = new_partial::<
+                    dev_runtime::RuntimeApi,
+                    chainx_executor::DevExecutor
+                >(
+                    &$config,
+                )?;
+                let task_manager = $components.task_manager;
+                { $( $code )* }.map(|v| (v, task_manager))
+            })
+        } else {
+            runner.async_run(|$config| {
+                let $components = new_partial::<
+                    chainx_runtime::RuntimeApi,
+                    chainx_executor::ChainXExecutor,
+                >(
+                    &$config,
+                )?;
+                let task_manager = $components.task_manager;
+                { $( $code )* }.map(|v| (v, task_manager))
+            })
+        }
+    }}
 }
 
 /// Parse and run command line arguments
@@ -133,65 +180,23 @@ pub fn run() -> sc_cli::Result<()> {
             runner.sync_run(|config| cmd.run(config.chain_spec, config.network))
         }
         Some(Subcommand::CheckBlock(cmd)) => {
-            let runner = cli.create_runner(cmd)?;
-            set_default_ss58_version(&runner.config().chain_spec);
-
-            runner.async_run(|config| {
-                let PartialComponents {
-                    client,
-                    task_manager,
-                    import_queue,
-                    ..
-                } = new_partial::<chainx_runtime::RuntimeApi, chainx_executor::ChainXExecutor>(
-                    &config,
-                )?;
-                Ok((cmd.run(client, import_queue), task_manager))
+            construct_async_run!(|components, cli, cmd, config| {
+                Ok(cmd.run(components.client, components.import_queue))
             })
         }
         Some(Subcommand::ExportBlocks(cmd)) => {
-            let runner = cli.create_runner(cmd)?;
-            set_default_ss58_version(&runner.config().chain_spec);
-
-            runner.async_run(|config| {
-                let PartialComponents {
-                    client,
-                    task_manager,
-                    ..
-                } = new_partial::<chainx_runtime::RuntimeApi, chainx_executor::ChainXExecutor>(
-                    &config,
-                )?;
-                Ok((cmd.run(client, config.database), task_manager))
+            construct_async_run!(|components, cli, cmd, config| {
+                Ok(cmd.run(components.client, config.database))
             })
         }
         Some(Subcommand::ExportState(cmd)) => {
-            let runner = cli.create_runner(cmd)?;
-            set_default_ss58_version(&runner.config().chain_spec);
-
-            runner.async_run(|config| {
-                let PartialComponents {
-                    client,
-                    task_manager,
-                    ..
-                } = new_partial::<chainx_runtime::RuntimeApi, chainx_executor::ChainXExecutor>(
-                    &config,
-                )?;
-                Ok((cmd.run(client, config.chain_spec), task_manager))
+            construct_async_run!(|components, cli, cmd, config| {
+                Ok(cmd.run(components.client, config.chain_spec))
             })
         }
         Some(Subcommand::ImportBlocks(cmd)) => {
-            let runner = cli.create_runner(cmd)?;
-            set_default_ss58_version(&runner.config().chain_spec);
-
-            runner.async_run(|config| {
-                let PartialComponents {
-                    client,
-                    task_manager,
-                    import_queue,
-                    ..
-                } = new_partial::<chainx_runtime::RuntimeApi, chainx_executor::ChainXExecutor>(
-                    &config,
-                )?;
-                Ok((cmd.run(client, import_queue), task_manager))
+            construct_async_run!(|components, cli, cmd, config| {
+                Ok(cmd.run(components.client, components.import_queue))
             })
         }
         Some(Subcommand::PurgeChain(cmd)) => {
@@ -201,19 +206,8 @@ pub fn run() -> sc_cli::Result<()> {
             runner.sync_run(|config| cmd.run(config.database))
         }
         Some(Subcommand::Revert(cmd)) => {
-            let runner = cli.create_runner(cmd)?;
-            set_default_ss58_version(&runner.config().chain_spec);
-
-            runner.async_run(|config| {
-                let PartialComponents {
-                    client,
-                    task_manager,
-                    backend,
-                    ..
-                } = new_partial::<chainx_runtime::RuntimeApi, chainx_executor::ChainXExecutor>(
-                    &config,
-                )?;
-                Ok((cmd.run(client, backend), task_manager))
+            construct_async_run!(|components, cli, cmd, config| {
+                Ok(cmd.run(components.client, components.backend))
             })
         }
     }
