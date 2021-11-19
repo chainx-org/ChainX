@@ -7,7 +7,7 @@ use crate::types::Side::{Buy, Sell};
 use sp_runtime::traits::{CheckedAdd, CheckedSub};
 
 /// Internal mutables
-impl<T: Trait> Module<T> {
+impl<T: Config> Pallet<T> {
     /// It's worth noting that the handicap is not always related to some real orders, i.e.,
     /// current lowest_ask(or highest_bid) is suprious.
     ///
@@ -27,6 +27,7 @@ impl<T: Trait> Module<T> {
                         <HandicapOf<T>>::insert(pair.id, &handicap);
 
                         debug!(
+                            target: "runtime::dex::spot",
                             "[update_handicap] pair_index: {:?}, lowest_ask: {:?}, side: {:?}",
                             pair.id, handicap.lowest_ask, Sell,
                         );
@@ -40,6 +41,7 @@ impl<T: Trait> Module<T> {
                         <HandicapOf<T>>::insert(pair.id, &handicap);
 
                         debug!(
+                            target: "runtime::dex::spot",
                             "[update_handicap] pair_index: {:?}, highest_bid: {:?}, side: {:?}",
                             pair.id, handicap.highest_bid, Buy
                         );
@@ -82,6 +84,7 @@ impl<T: Trait> Module<T> {
                 if new_highest_bid >= handicap.lowest_ask {
                     handicap.lowest_ask = Self::tick_up(new_highest_bid, pair.tick());
                     debug!(
+                        target: "runtime::dex::spot",
                         "[update_handicap] pair_id: {:?}, lowest_ask: {:?}, side: {:?}",
                         order.pair_id(),
                         handicap.lowest_ask,
@@ -91,6 +94,7 @@ impl<T: Trait> Module<T> {
 
                 handicap.highest_bid = new_highest_bid;
                 debug!(
+                    target: "runtime::dex::spot",
                     "[update_handicap] pair_id: {:?}, highest_bid: {:?}, side: {:?}",
                     order.pair_id(),
                     new_highest_bid,
@@ -110,6 +114,7 @@ impl<T: Trait> Module<T> {
                 if new_lowest_ask <= handicap.highest_bid {
                     handicap.highest_bid = Self::tick_down(new_lowest_ask, pair.tick());
                     debug!(
+                        target: "runtime::dex::spot",
                         "[update_handicap] pair_id: {:?}, highest_bid: {:?}, side: {:?}",
                         order.pair_id(),
                         handicap.highest_bid,
@@ -119,6 +124,7 @@ impl<T: Trait> Module<T> {
 
                 handicap.lowest_ask = new_lowest_ask;
                 debug!(
+                    target: "runtime::dex::spot",
                     "[update_handicap] pair_id: {:?}, lowest_ask: {:?}, side: {:?}",
                     order.pair_id(),
                     new_lowest_ask,
@@ -137,6 +143,7 @@ impl<T: Trait> Module<T> {
         fulfilled_orders: Vec<(T::AccountId, OrderId)>,
     ) {
         debug!(
+            target: "runtime::dex::spot",
             "[remove_orders_and_quotations] These fulfilled orders will be removed: {:?}",
             fulfilled_orders
         );
@@ -162,6 +169,7 @@ impl<T: Trait> Module<T> {
                 // NOTE: Can't use swap_remove since the original order must be preserved.
                 let _removed = quotations.remove(idx);
                 debug!(
+                    target: "runtime::dex::spot",
                     "[remove_quotation] (who, order_index): {:?}, removed order: {:?}",
                     order_key, _removed
                 );
@@ -173,7 +181,7 @@ impl<T: Trait> Module<T> {
     ///
     /// This happens after an order is executed every time.
     pub(crate) fn update_latest_price(pair_index: TradingPairId, latest: T::Price) {
-        let current_block = <frame_system::Module<T>>::block_number();
+        let current_block = <frame_system::Pallet<T>>::block_number();
 
         <TradingPairInfoOf<T>>::insert(
             pair_index,

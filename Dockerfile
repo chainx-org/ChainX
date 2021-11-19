@@ -4,7 +4,7 @@ LABEL description="The build stage for ChainX. We create the ChainX binary in th
 
 ARG PROFILE=release
 ARG APP=chainx
-ARG RUSTC_VERSION=nightly-2020-09-30
+ARG RUSTC_VERSION=nightly-2021-03-01
 
 WORKDIR /$APP
 
@@ -40,7 +40,7 @@ RUN mv /usr/share/ca* /tmp && \
 
 RUN rm -rf /usr/bin /usr/sbin
 
-EXPOSE 20222 8086 8087
+EXPOSE 20222 8086 8087 9615
 
 VOLUME ["/data"]
 

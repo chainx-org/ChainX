@@ -6,13 +6,12 @@ use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
-use frame_support::storage::{IterableStorageDoubleMap, StorageDoubleMap, StorageMap};
 use sp_runtime::RuntimeDebug;
 
 use xp_mining_common::RewardPotAccountFor;
 
 use crate::{
-    types::*, BalanceOf, LastRebondOf, Module, Nominations, SessionInterface, Trait,
+    types::*, BalanceOf, Config, LastRebondOf, Nominations, Pallet, SessionInterface,
     ValidatorLedgers, Validators,
 };
 
@@ -46,7 +45,7 @@ pub struct NominatorInfo<BlockNumber> {
     pub last_rebond: Option<BlockNumber>,
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Pallet<T> {
     pub fn validators_info(
     ) -> Vec<ValidatorInfo<T::AccountId, BalanceOf<T>, VoteWeight, T::BlockNumber>> {
         Self::validator_set().map(Self::validator_info_of).collect()
@@ -74,7 +73,7 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn staking_dividend_of(who: T::AccountId) -> BTreeMap<T::AccountId, BalanceOf<T>> {
-        let current_block = <frame_system::Module<T>>::block_number();
+        let current_block = <frame_system::Pallet<T>>::block_number();
         Nominations::<T>::iter_prefix(&who)
             .filter_map(|(validator, _)| {
                 match Self::compute_dividend_at(&who, &validator, current_block) {

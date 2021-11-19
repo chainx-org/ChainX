@@ -1,8 +1,8 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use std::fmt;
 use std::sync::Arc;
 
+use sc_client_api::AuxStore;
 use sc_consensus_babe::Epoch;
 use sc_consensus_babe_rpc::BabeRpcHandler;
 use sc_finality_grandpa::{
@@ -16,7 +16,7 @@ use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 use sp_consensus::SelectChain;
 use sp_consensus_babe::BabeApi;
-use sp_transaction_pool::TransactionPool;
+use sc_transaction_pool_api::TransactionPool;
 
 use chainx_primitives::Block;
 use chainx_runtime::{AccountId, Balance, BlockNumber, Hash, Index};
@@ -68,6 +68,8 @@ pub struct FullDeps<C, P, SC, B> {
     pub pool: Arc<P>,
     /// The SelectionChain Strategy.
     pub select_chain: SC,
+    /// A copy of the chain spec.
+    pub chain_spec: Box<dyn sc_chain_spec::ChainSpec>,
     /// Whether to deny unsafe calls
     pub deny_unsafe: DenyUnsafe,
     /// BABE specific dependencies.
@@ -82,11 +84,15 @@ pub type IoHandler = jsonrpc_core::IoHandler<sc_rpc::Metadata>;
 /// Instantiate all Full RPC extensions.
 pub fn create_full<C, P, SC, B>(
     deps: FullDeps<C, P, SC, B>,
-) -> jsonrpc_core::IoHandler<sc_rpc_api::Metadata>
+) -> Result<jsonrpc_core::IoHandler<sc_rpc_api::Metadata>, Box<dyn std::error::Error + Send + Sync>>
 where
-    C: ProvideRuntimeApi<Block>,
-    C: HeaderBackend<Block> + HeaderMetadata<Block, Error = BlockChainError> + 'static,
-    C: Send + Sync + 'static,
+    C: ProvideRuntimeApi<Block>
+        + AuxStore
+        + HeaderBackend<Block>
+        + HeaderMetadata<Block, Error = BlockChainError>
+        + Send
+        + Sync
+        + 'static,
     C::Api: BlockBuilder<Block>,
     C::Api: BabeApi<Block>,
     C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>,
@@ -116,7 +122,6 @@ where
         BlockNumber,
     >,
     C::Api: xpallet_transaction_fee_rpc_runtime_api::XTransactionFeeApi<Block, Balance>,
-    <C::Api as sp_api::ApiErrorExt>::Error: fmt::Debug,
     P: TransactionPool + 'static,
     SC: SelectChain<Block> + 'static,
     B: sc_client_api::Backend<Block> + Send + Sync + 'static,
@@ -137,6 +142,7 @@ where
         client,
         pool,
         select_chain,
+        chain_spec,
         deny_unsafe,
         grandpa,
         babe,
@@ -165,7 +171,7 @@ where
     io.extend_with(sc_consensus_babe_rpc::BabeApi::to_delegate(
         BabeRpcHandler::new(
             client.clone(),
-            shared_epoch_changes,
+            shared_epoch_changes.clone(),
             keystore,
             babe_config,
             select_chain,
@@ -174,12 +180,21 @@ where
     ));
     io.extend_with(sc_finality_grandpa_rpc::GrandpaApi::to_delegate(
         GrandpaRpcHandler::new(
-            shared_authority_set,
+            shared_authority_set.clone(),
             shared_voter_state,
             justification_stream,
             subscription_executor,
             finality_provider,
         ),
+    ));
+    io.extend_with(sc_sync_state_rpc::SyncStateRpcApi::to_delegate(
+        sc_sync_state_rpc::SyncStateRpcHandler::new(
+            chain_spec,
+            client.clone(),
+            shared_authority_set,
+            shared_epoch_changes,
+            deny_unsafe,
+        )?,
     ));
 
     io.extend_with(XTransactionFeeApi::to_delegate(XTransactionFee::new(
@@ -195,7 +210,8 @@ where
         client.clone(),
     )));
     io.extend_with(XGatewayCommonApi::to_delegate(XGatewayCommon::new(client)));
-    io
+
+    Ok(io)
 }
 
 /// Instantiate all Light RPC extensions.

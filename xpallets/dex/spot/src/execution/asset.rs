@@ -5,7 +5,7 @@
 use super::*;
 use xpallet_assets::AssetType::{self, ReservedDexSpot, Usable};
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Pallet<T> {
     /// Delivery the assets to maker and taker respectively when executing the order.
     pub(super) fn delivery_asset_to_each_other(
         maker_order_side: Side,
@@ -78,7 +78,7 @@ impl<T: Trait> Module<T> {
         value: BalanceOf<T>,
     ) -> DispatchResult {
         if Self::is_native_asset(asset_id) {
-            <T as xpallet_assets::Trait>::Currency::unreserve(who, value);
+            <T as xpallet_assets::Config>::Currency::unreserve(who, value);
             NativeReserves::<T>::mutate(who, |reserved| *reserved -= value);
         } else {
             Self::unreserve_foreign_asset(who, asset_id, value)?;
@@ -93,11 +93,11 @@ impl<T: Trait> Module<T> {
         value: BalanceOf<T>,
     ) -> DispatchResult {
         if Self::is_native_asset(asset_id) {
-            <T as xpallet_assets::Trait>::Currency::reserve(who, value)?;
+            <T as xpallet_assets::Config>::Currency::reserve(who, value)?;
             NativeReserves::<T>::mutate(who, |reserved| *reserved += value);
         } else {
             ensure!(
-                <xpallet_assets::Module<T>>::usable_balance(who, &asset_id) >= value,
+                <xpallet_assets::Pallet<T>>::usable_balance(who, &asset_id) >= value,
                 Error::<T>::InsufficientBalance
             );
             Self::move_foreign_asset(asset_id, who, Usable, who, ReservedDexSpot, value)?;
@@ -111,14 +111,26 @@ impl<T: Trait> Module<T> {
         to: &T::AccountId,
         value: BalanceOf<T>,
     ) -> DispatchResult {
+        // FIXME: https://github.com/paritytech/substrate/issues/7992
+        //
         // The account `to` definitely exists so this should always succeed.
         // This is equivalent to unreserve(from, value) + transfer(from, to, value)
-        <T as xpallet_assets::Trait>::Currency::repatriate_reserved(
+        //
+        // <T as xpallet_assets::Config>::Currency::repatriate_reserved(
+        // from,
+        // to,
+        // value,
+        // frame_support::traits::BalanceStatus::Free,
+        // )?;
+
+        <T as xpallet_assets::Config>::Currency::unreserve(from, value);
+        <T as xpallet_assets::Config>::Currency::transfer(
             from,
             to,
             value,
-            frame_support::traits::BalanceStatus::Free,
+            frame_support::traits::ExistenceRequirement::KeepAlive,
         )?;
+
         NativeReserves::<T>::mutate(from, |reserved| *reserved -= value);
         Ok(())
     }
@@ -141,7 +153,7 @@ impl<T: Trait> Module<T> {
         to_ty: AssetType,
         value: BalanceOf<T>,
     ) -> DispatchResult {
-        <xpallet_assets::Module<T>>::move_balance(&asset_id, from, from_ty, to, to_ty, value)
-            .map_err(|_| DispatchError::Other("Unexpected error from assets Module"))
+        <xpallet_assets::Pallet<T>>::move_balance(&asset_id, from, from_ty, to, to_ty, value)
+            .map_err(|_| DispatchError::Other("Unexpected error from assets Pallet"))
     }
 }

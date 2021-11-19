@@ -4,18 +4,19 @@ mod asset;
 mod order;
 mod state;
 
-use xp_logging::debug;
+use frame_support::log::debug;
 
 use super::*;
 use crate::types::*;
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Pallet<T> {
     fn check_bid_price(
         quote: T::Price,
         lowest_ask: T::Price,
         fluctuation: T::Price,
     ) -> Result<(), Error<T>> {
         debug!(
+            target: "runtime::dex::spot",
             "[check_bid_price] quote: {:?}, lowest_ask: {:?}, fluctuation: {:?}",
             quote, lowest_ask, fluctuation
         );
@@ -38,6 +39,7 @@ impl<T: Trait> Module<T> {
         fluctuation: T::Price,
     ) -> Result<(), Error<T>> {
         debug!(
+            target: "runtime::dex::spot",
             "[check_ask_price] Sell: quote: {:?}, highest_bid: {:?}, fluctuation: {:?}",
             quote, highest_bid, fluctuation
         );
@@ -95,7 +97,7 @@ impl<T: Trait> Module<T> {
     }
 
     fn currency_decimals_of(asset_id: AssetId) -> Option<u8> {
-        <xpallet_assets_registrar::Module<T>>::asset_info_of(asset_id).map(|x| x.decimals())
+        <xpallet_assets_registrar::Pallet<T>>::asset_info_of(asset_id).map(|x| x.decimals())
     }
 
     /// Converts the base currency to the quote currency given the trading pair.

@@ -1,9 +1,0 @@
-[package]
-name = "xp-logging"
-version = "3.0.0"
-authors = ["The ChainX Authors"]
-edition = "2018"
-
-[features]
-default = ["std"]
-std = []

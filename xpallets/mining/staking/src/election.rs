@@ -1,20 +1,23 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 use super::*;
+use frame_support::log;
+use sp_std::vec::Vec;
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Pallet<T> {
     /// Returns a new validator set for the new era.
     pub(crate) fn new_era(start_session_index: SessionIndex) -> Option<Vec<T::AccountId>> {
         // Increment or set current era.
-        let current_era = CurrentEra::mutate(|s| {
+        let current_era = CurrentEra::<T>::mutate(|s| {
             *s = Some(s.map(|s| s + 1).unwrap_or(0));
             s.unwrap()
         });
-        ErasStartSessionIndex::insert(&current_era, &start_session_index);
+        ErasStartSessionIndex::<T>::insert(&current_era, &start_session_index);
 
         // Set staking information for new era.
         let maybe_new_validators = Self::select_and_update_validators(current_era);
         debug!(
+            target: "runtime::mining::staking",
             "[new_era] era_index:{}, start_session_index:{}, maybe_new_validators:{:?}",
             current_era, start_session_index, maybe_new_validators
         );
@@ -40,7 +43,10 @@ impl<T: Trait> Module<T> {
             Self::validator_self_bonded(who) >= self_bonded && Self::total_votes_of(who) >= total;
 
         if !threshold_satisfied && Self::try_force_chilled(who).is_ok() {
-            xp_logging::info!("[meet_candidate_threshold] Force {:?} to be inactive since it doesn't meet the minimum bond requirement", who);
+            log::info!(
+                target: "runtime::mining::staking",
+                "[meet_candidate_threshold] Force {:?} to be inactive since \
+                it doesn't meet the minimum bond requirement", who);
         }
 
         threshold_satisfied
@@ -66,7 +72,10 @@ impl<T: Trait> Module<T> {
         // TODO: might move to offchain worker solution in the future.
         // Currently there is no performance issue practically.
         let candidates = Self::filter_out_candidates();
-        debug!("[select_and_update_validators] candidates:{:?}", candidates);
+        debug!(
+            target: "runtime::mining::staking",
+            "[select_and_update_validators] candidates:{:?}", candidates
+        );
 
         // Avoid reevaluate validator set if it would leave us with fewer than the minimum
         // needed validators.
@@ -74,7 +83,7 @@ impl<T: Trait> Module<T> {
             return None;
         }
 
-        let desired_validator_count = ValidatorCount::get() as usize;
+        let desired_validator_count = ValidatorCount::<T>::get() as usize;
 
         let validators = candidates
             .into_iter()
