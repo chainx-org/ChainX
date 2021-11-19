@@ -41,7 +41,7 @@ pub trait WeightInfo {
 
 /// Weights for xpallet_gateway_common using the Substrate node and recommended hardware.
 pub struct SubstrateWeight<T>(PhantomData<T>);
-impl<T: frame_system::Trait> WeightInfo for SubstrateWeight<T> {
+impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
     fn withdraw() -> Weight {
         (226_245_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(10 as Weight))

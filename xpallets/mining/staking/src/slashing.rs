@@ -1,10 +1,11 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 use sp_std::ops::Mul;
+use sp_std::vec::Vec;
 
 use super::*;
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Pallet<T> {
     /// Returns the force chilled offenders if any after applying the slashings.
     ///
     /// The slashed balances will be moved to the treasury.
@@ -56,6 +57,7 @@ impl<T: Trait> Module<T> {
                 match slasher.try_slash(&offender, penalty) {
                     SlashOutcome::Slashed(_) => {
                         debug!(
+                            target: "runtime::mining::staking",
                             "Slash the offender:{:?} for penalty {:?} by the given slash_fraction:{:?} successfully",
                             offender, penalty, slash_fraction
                         );
@@ -63,13 +65,17 @@ impl<T: Trait> Module<T> {
                     }
                     SlashOutcome::InsufficientSlash(actual_slashed) => {
                         debug!(
+                            target: "runtime::mining::staking",
                             "Insufficient reward pot balance of {:?}, actual slashed:{:?}",
                             offender, actual_slashed
                         );
                         chill_offender_safe(offender)
                     }
                     SlashOutcome::SlashFailed(e) => {
-                        debug!("Slash the offender {:?} for {:?} somehow failed: {:?}", offender, penalty, e);
+                        debug!(
+                            target: "runtime::mining::staking",
+                            "Slash the offender {:?} for {:?} somehow failed: {:?}", offender, penalty, e,
+                        );
                         // we still chill the offender even the slashing failed as currently
                         // the offender is only the authorties without running a node.
                         //

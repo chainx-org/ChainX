@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 hex = "0.4"
-jsonrpc-core = "15.0.0"
+jsonrpc-core = "18.0.0"
 serde = { version = "1.0", features = ["derive"] }
 
 [dev-dependencies]

@@ -6,13 +6,13 @@ use chainx_primitives::AssetId;
 
 use crate::traits::OnAssetChanged;
 use crate::types::{AssetErr, AssetType};
-use crate::{BalanceOf, Event, Module, Trait};
+use crate::{BalanceOf, Config, Event, Pallet};
 
 impl<AccountId, Balance> OnAssetChanged<AccountId, Balance> for () {}
 
-pub struct AssetChangedTrigger<T: Trait>(sp_std::marker::PhantomData<T>);
+pub struct AssetChangedTrigger<T: Config>(sp_std::marker::PhantomData<T>);
 
-impl<T: Trait> AssetChangedTrigger<T> {
+impl<T: Config> AssetChangedTrigger<T> {
     pub fn on_move_pre(
         id: &AssetId,
         from: &T::AccountId,
@@ -32,7 +32,7 @@ impl<T: Trait> AssetChangedTrigger<T> {
         to_type: AssetType,
         value: BalanceOf<T>,
     ) -> Result<(), AssetErr> {
-        Module::<T>::deposit_event(Event::<T>::Moved(
+        Pallet::<T>::deposit_event(Event::<T>::Moved(
             *id,
             from.clone(),
             from_type,
@@ -49,7 +49,7 @@ impl<T: Trait> AssetChangedTrigger<T> {
     }
 
     pub fn on_issue_post(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
-        Module::<T>::deposit_event(Event::<T>::Issued(*id, who.clone(), value));
+        Pallet::<T>::deposit_event(Event::<T>::Issued(*id, who.clone(), value));
         T::OnAssetChanged::on_issue_post(id, who, value)?;
         Ok(())
     }
@@ -63,7 +63,7 @@ impl<T: Trait> AssetChangedTrigger<T> {
         who: &T::AccountId,
         value: BalanceOf<T>,
     ) -> DispatchResult {
-        Module::<T>::deposit_event(Event::<T>::Destroyed(*id, who.clone(), value));
+        Pallet::<T>::deposit_event(Event::<T>::Destroyed(*id, who.clone(), value));
         T::OnAssetChanged::on_destroy_post(id, who, value)?;
         Ok(())
     }
@@ -74,7 +74,7 @@ impl<T: Trait> AssetChangedTrigger<T> {
         type_: AssetType,
         value: BalanceOf<T>,
     ) -> DispatchResult {
-        Module::<T>::deposit_event(Event::<T>::BalanceSet(*id, who.clone(), type_, value));
+        Pallet::<T>::deposit_event(Event::<T>::BalanceSet(*id, who.clone(), type_, value));
         T::OnAssetChanged::on_set_balance(id, who, type_, value)?;
         Ok(())
     }

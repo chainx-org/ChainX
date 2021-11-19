@@ -24,72 +24,177 @@ pub mod weights;
 use sp_std::{
     collections::btree_map::BTreeMap,
     convert::{TryFrom, TryInto},
-    prelude::*,
 };
 
 use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchError, DispatchResult},
     ensure,
-    traits::{Currency, Get, Happened, IsDeadAccount, LockableCurrency, ReservableCurrency},
-    Parameter, StorageDoubleMap,
-};
-use frame_system::{ensure_root, ensure_signed};
-use orml_traits::arithmetic::{Signed, SimpleArithmetic};
-use sp_runtime::traits::{
-    CheckedAdd, CheckedSub, MaybeSerializeDeserialize, Member, Saturating, StaticLookup, Zero,
+    inherent::Vec,
+    log::{debug, error, info},
+    traits::{Currency, Get, HandleLifetime, LockableCurrency, ReservableCurrency},
+    Parameter,
 };
 
+use frame_system::{ensure_root, ensure_signed, AccountInfo};
+use orml_traits::arithmetic::{Signed, SimpleArithmetic};
+use sp_runtime::traits::{CheckedAdd, CheckedSub, Saturating, StaticLookup, Zero};
+
+use self::trigger::AssetChangedTrigger;
 use chainx_primitives::AssetId;
-use xp_logging::{debug, error, info};
-pub use xpallet_assets_registrar::{AssetInfo, Chain};
 use xpallet_support::traits::TreasuryAccount;
 
 pub use self::traits::{ChainT, OnAssetChanged};
-use self::trigger::AssetChangedTrigger;
 pub use self::types::{
     AssetErr, AssetRestrictions, AssetType, BalanceLock, TotalAssetInfo, WithdrawalLimit,
 };
 pub use self::weights::WeightInfo;
+pub use xpallet_assets_registrar::{AssetInfo, Chain};
 
 pub type BalanceOf<T> =
-    <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
+    <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
-/// The module's config trait.
-///
-/// `frame_system::Trait` should always be included in our implied traits.
-pub trait Trait: xpallet_assets_registrar::Trait {
-    /// The overarching event type.
-    type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+pub use pallet::*;
 
-    type Currency: ReservableCurrency<Self::AccountId>
-        + LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
+#[frame_support::pallet]
+pub mod pallet {
+    use super::*;
+    use frame_support::pallet_prelude::*;
+    use frame_system::pallet_prelude::*;
 
-    /// The amount type, should be signed version of `Balance`
-    type Amount: Parameter
-        + Member
-        + Default
-        + Copy
-        + MaybeSerializeDeserialize
-        + Signed
-        + SimpleArithmetic
-        + TryInto<BalanceOf<Self>>
-        + TryFrom<BalanceOf<Self>>;
+    /// The pallet's config trait.
+    ///
+    /// `frame_system::Config` should always be included in our implied traits.
+    #[pallet::config]
+    pub trait Config: frame_system::Config + xpallet_assets_registrar::Config {
+        /// The overarching event type.
+        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-    type TreasuryAccount: TreasuryAccount<Self::AccountId>;
+        /// The native currency.
+        type Currency: ReservableCurrency<Self::AccountId>
+            + LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
 
-    type OnCreatedAccount: Happened<Self::AccountId>;
+        /// The amount type, should be signed version of `Balance`
+        type Amount: Parameter
+            + Member
+            + Default
+            + Copy
+            + MaybeSerializeDeserialize
+            + Signed
+            + SimpleArithmetic
+            + TryInto<BalanceOf<Self>>
+            + TryFrom<BalanceOf<Self>>;
 
-    type OnAssetChanged: OnAssetChanged<Self::AccountId, BalanceOf<Self>>;
+        /// The treasury account.
+        type TreasuryAccount: TreasuryAccount<Self::AccountId>;
 
-    /// Weight information for extrinsics in this pallet.
-    type WeightInfo: WeightInfo;
-}
+        /// The hook for doing something on the event of creating an account.
+        type OnCreatedAccount: HandleLifetime<Self::AccountId>;
 
-decl_error! {
-    /// Error for the Assets Module
-    pub enum Error for Module<T: Trait> {
-        ///
+        /// The hook triggered whenever the asset balance of an account is changed.
+        type OnAssetChanged: OnAssetChanged<Self::AccountId, BalanceOf<Self>>;
+
+        /// Weight information for extrinsics in this pallet.
+        type WeightInfo: WeightInfo;
+    }
+
+    #[pallet::pallet]
+    #[pallet::generate_store(pub(super) trait Store)]
+    pub struct Pallet<T>(PhantomData<T>);
+
+    #[pallet::call]
+    impl<T: Config> Pallet<T> {
+        /// transfer between two accounts
+        #[pallet::weight(0)]
+        pub fn transfer(
+            origin: OriginFor<T>,
+            dest: <T::Lookup as StaticLookup>::Source,
+            #[pallet::compact] id: AssetId,
+            #[pallet::compact] value: BalanceOf<T>,
+        ) -> DispatchResult {
+            let transactor = ensure_signed(origin)?;
+            let dest = T::Lookup::lookup(dest)?;
+            debug!(target: "runtime::assets", "[transfer] from:{:?}, to:{:?}, id:{}, value:{:?}", transactor, dest, id, value);
+            Self::can_transfer(&id)?;
+
+            Self::move_usable_balance(&id, &transactor, &dest, value)
+                .map_err::<Error<T>, _>(Into::into)?;
+
+            Ok(())
+        }
+
+        /// transfer method reserved for root(sudo)
+        #[pallet::weight(0)]
+        pub fn force_transfer(
+            origin: OriginFor<T>,
+            transactor: <T::Lookup as StaticLookup>::Source,
+            dest: <T::Lookup as StaticLookup>::Source,
+            #[pallet::compact] id: AssetId,
+            #[pallet::compact] value: BalanceOf<T>,
+        ) -> DispatchResult {
+            ensure_root(origin)?;
+
+            let transactor = T::Lookup::lookup(transactor)?;
+            let dest = T::Lookup::lookup(dest)?;
+            debug!(target: "runtime::assets", "[force_transfer] from:{:?}, to:{:?}, id:{}, value:{:?}", transactor, dest, id, value);
+            Self::can_transfer(&id)?;
+            Self::move_usable_balance(&id, &transactor, &dest, value)
+                .map_err::<Error<T>, _>(Into::into)?;
+            Ok(())
+        }
+
+        /// set free token for an account
+        #[pallet::weight(0)]
+        pub fn set_balance(
+            origin: OriginFor<T>,
+            who: <T::Lookup as StaticLookup>::Source,
+            #[pallet::compact] id: AssetId,
+            balances: BTreeMap<AssetType, BalanceOf<T>>,
+        ) -> DispatchResult {
+            ensure_root(origin)?;
+
+            let who = T::Lookup::lookup(who)?;
+            info!(target: "runtime::assets", "[set_balance] Set balance by root, who:{:?}, id:{}, balances:{:?}", who, id, balances);
+            Self::set_balance_impl(&who, &id, balances)?;
+            Ok(())
+        }
+
+        /// asset restriction method reserved for root
+        #[pallet::weight(<T as Config>::WeightInfo::set_asset_limit())]
+        pub fn set_asset_limit(
+            origin: OriginFor<T>,
+            #[pallet::compact] id: AssetId,
+            restrictions: AssetRestrictions,
+        ) -> DispatchResult {
+            ensure_root(origin)?;
+            Self::set_asset_restrictions(id, restrictions)
+        }
+    }
+
+    /// Event for the Assets Pallet
+    #[pallet::event]
+    #[pallet::generate_deposit(pub(super) fn deposit_event)]
+    pub enum Event<T: Config> {
+        /// Some balances of an asset was moved from one to another. [asset_id, from, from_type, to, to_type, amount]
+        Moved(
+            AssetId,
+            T::AccountId,
+            AssetType,
+            T::AccountId,
+            AssetType,
+            BalanceOf<T>,
+        ),
+        /// New balances of an asset were issued. [asset_id, receiver, amount]
+        Issued(AssetId, T::AccountId, BalanceOf<T>),
+        /// Some balances of an asset were destoryed. [asset_id, who, amount]
+        Destroyed(AssetId, T::AccountId, BalanceOf<T>),
+        /// Set asset balance of an account by root. [asset_id, who, asset_type, amount]
+        BalanceSet(AssetId, T::AccountId, AssetType, BalanceOf<T>),
+    }
+
+    /// Error for the Assets Pallet
+    #[pallet::error]
+    pub enum Error<T> {
+        /// Got and Invalid Asset
         InvalidAsset,
         /// Got an overflow after adding
         Overflow,
@@ -107,151 +212,101 @@ decl_error! {
         DenyNativeAsset,
         /// Action is not allowed.
         ActionNotAllowed,
+        /// Account still has active reserved
+        StillHasActiveReserved,
     }
-}
 
-decl_event!(
-    pub enum Event<T>
-    where
-        <T as frame_system::Trait>::AccountId,
-        Balance = BalanceOf<T>,
-    {
-        /// Some balances of an asset was moved from one to another. [asset_id, from, from_type, to, to_type, amount]
-        Moved(AssetId, AccountId, AssetType, AccountId, AssetType, Balance),
-        /// New balances of an asset were issued. [asset_id, receiver, amount]
-        Issued(AssetId, AccountId, Balance),
-        /// Some balances of an asset were destoryed. [asset_id, who, amount]
-        Destroyed(AssetId, AccountId, Balance),
-        /// Set asset balance of an account by root. [asset_id, who, asset_type, amount]
-        BalanceSet(AssetId, AccountId, AssetType, Balance),
+    /// asset extend limit properties, set asset "can do", example, `CanTransfer`, `CanDestroyWithdrawal`
+    /// notice if not set AssetRestriction, default is true for this limit
+    /// if want let limit make sense, must set false for the limit
+    #[pallet::storage]
+    #[pallet::getter(fn asset_restrictions_of)]
+    pub type AssetRestrictionsOf<T: Config> =
+        StorageMap<_, Twox64Concat, AssetId, AssetRestrictions, ValueQuery>;
+
+    /// asset balance for user&asset_id, use btree_map to accept different asset type
+    #[pallet::storage]
+    #[pallet::getter(fn asset_balance)]
+    pub type AssetBalance<T: Config> = StorageDoubleMap<
+        _,
+        Blake2_128Concat,
+        T::AccountId,
+        Twox64Concat,
+        AssetId,
+        BTreeMap<AssetType, BalanceOf<T>>,
+        ValueQuery,
+    >;
+
+    /// Any liquidity locks of a token type under an account.
+    /// NOTE: Should only be accessed when setting, changing and freeing a lock.
+    #[pallet::storage]
+    #[pallet::getter(fn locks)]
+    pub type Locks<T: Config> = StorageDoubleMap<
+        _,
+        Blake2_128Concat,
+        T::AccountId,
+        Twox64Concat,
+        AssetId,
+        Vec<BalanceLock<BalanceOf<T>>>,
+        ValueQuery,
+    >;
+
+    /// asset balance for an asset_id, use btree_map to accept different asset type
+    #[pallet::storage]
+    #[pallet::getter(fn total_asset_balance)]
+    pub type TotalAssetBalance<T: Config> =
+        StorageMap<_, Twox64Concat, AssetId, BTreeMap<AssetType, BalanceOf<T>>, ValueQuery>;
+
+    #[pallet::genesis_config]
+    pub struct GenesisConfig<T: Config> {
+        pub assets_restrictions: Vec<(AssetId, AssetRestrictions)>,
+        pub endowed: BTreeMap<AssetId, Vec<(T::AccountId, BalanceOf<T>)>>,
     }
-);
 
-decl_storage! {
-    trait Store for Module<T: Trait> as XAssets {
-        /// asset extend limit properties, set asset "can do", example, `CanTransfer`, `CanDestroyWithdrawal`
-        /// notice if not set AssetRestriction, default is true for this limit
-        /// if want let limit make sense, must set false for the limit
-        pub AssetRestrictionsOf get(fn asset_restrictions_of):
-            map hasher(twox_64_concat) AssetId => AssetRestrictions;
-
-        /// asset balance for user&asset_id, use btree_map to accept different asset type
-        pub AssetBalance get(fn asset_balance):
-            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) AssetId
-            => BTreeMap<AssetType, BalanceOf<T>>;
-
-        /// Any liquidity locks of a token type under an account.
-        /// NOTE: Should only be accessed when setting, changing and freeing a lock.
-        pub Locks get(fn locks):
-            double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) AssetId
-            => Vec<BalanceLock<BalanceOf<T>>>;
-
-        /// asset balance for an asset_id, use btree_map to accept different asset type
-        pub TotalAssetBalance get(fn total_asset_balance):
-            map hasher(twox_64_concat) AssetId => BTreeMap<AssetType, BalanceOf<T>>;
+    #[cfg(feature = "std")]
+    impl<T: Config> Default for GenesisConfig<T> {
+        fn default() -> Self {
+            Self {
+                assets_restrictions: Default::default(),
+                endowed: Default::default(),
+            }
+        }
     }
-    add_extra_genesis {
-        config(assets_restrictions): Vec<(AssetId, AssetRestrictions)>;
-        config(endowed): BTreeMap<AssetId, Vec<(T::AccountId, BalanceOf<T>)>>;
-        build(|config| {
-            for (id, endowed) in &config.endowed {
-                if *id != T::NativeAssetId::get() {
-                    for (accountid, value) in endowed.iter() {
-                        Module::<T>::issue(id, accountid, *value)
-                            .expect("asset issuance during the genesis can not fail");
+
+    #[pallet::genesis_build]
+    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+        fn build(&self) {
+            let extra_genesis_builder: fn(&Self) = |config| {
+                for (id, endowed) in &config.endowed {
+                    if *id != T::NativeAssetId::get() {
+                        for (accountid, value) in endowed.iter() {
+                            Pallet::<T>::issue(id, accountid, *value)
+                                .expect("asset issuance during the genesis can not fail");
+                        }
                     }
                 }
-            }
-            for (id, restrictions) in &config.assets_restrictions {
-                if *id != T::NativeAssetId::get() {
-                    Module::<T>::set_asset_restrictions(*id, *restrictions)
-                        .expect("should not fail in genesis, qed");
+                for (id, restrictions) in &config.assets_restrictions {
+                    if *id != T::NativeAssetId::get() {
+                        Pallet::<T>::set_asset_restrictions(*id, *restrictions)
+                            .expect("should not fail in genesis, qed");
+                    }
                 }
-            }
-        })
-    }
-}
-
-decl_module! {
-    pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-        type Error = Error<T>;
-
-        fn deposit_event() = default;
-
-        /// transfer between account
-        #[weight = 0]
-        pub fn transfer(
-            origin,
-            dest: <T::Lookup as StaticLookup>::Source,
-            #[compact] id: AssetId,
-            #[compact] value: BalanceOf<T>
-        ) -> DispatchResult {
-            let transactor = ensure_signed(origin)?;
-            let dest = T::Lookup::lookup(dest)?;
-            debug!("[transfer] from:{:?}, to:{:?}, id:{}, value:{:?}", transactor, dest, id, value);
-            Self::can_transfer(&id)?;
-
-            Self::move_usable_balance(&id, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;
-
-            Ok(())
-        }
-
-        /// for transfer by root
-        #[weight = 0]
-        pub fn force_transfer(
-            origin,
-            transactor: <T::Lookup as StaticLookup>::Source,
-            dest: <T::Lookup as StaticLookup>::Source,
-            #[compact] id: AssetId,
-            #[compact] value: BalanceOf<T>
-        ) -> DispatchResult {
-            ensure_root(origin)?;
-
-            let transactor = T::Lookup::lookup(transactor)?;
-            let dest = T::Lookup::lookup(dest)?;
-            debug!("[force_transfer] from:{:?}, to:{:?}, id:{}, value:{:?}", transactor, dest, id, value);
-            Self::can_transfer(&id)?;
-            Self::move_usable_balance(&id, &transactor, &dest, value).map_err::<Error::<T>, _>(Into::into)?;
-            Ok(())
-        }
-
-        /// set free token for an account
-        #[weight = 0]
-        pub fn set_balance(
-            origin,
-            who: <T::Lookup as StaticLookup>::Source,
-            #[compact] id: AssetId,
-            balances: BTreeMap<AssetType, BalanceOf<T>>
-        ) -> DispatchResult {
-            ensure_root(origin)?;
-
-            let who = T::Lookup::lookup(who)?;
-            info!("[set_balance] Set balance by root, who:{:?}, id:{}, balances:{:?}", who, id, balances);
-            Self::set_balance_impl(&who, &id, balances)?;
-            Ok(())
-        }
-
-        #[weight = <T as Trait>::WeightInfo::set_asset_limit()]
-        pub fn set_asset_limit(origin, #[compact] id: AssetId, restrictions: AssetRestrictions) -> DispatchResult {
-            ensure_root(origin)?;
-            Self::set_asset_restrictions(id, restrictions)
+            };
+            extra_genesis_builder(self);
         }
     }
 }
 
-// others
-impl<T: Trait> Module<T> {
+impl<T: Config> Pallet<T> {
     fn set_asset_restrictions(
         asset_id: AssetId,
         restrictions: AssetRestrictions,
     ) -> DispatchResult {
-        xpallet_assets_registrar::Module::<T>::ensure_asset_exists(&asset_id)?;
-        AssetRestrictionsOf::insert(asset_id, restrictions);
+        xpallet_assets_registrar::Pallet::<T>::ensure_asset_exists(&asset_id)?;
+        AssetRestrictionsOf::<T>::insert(asset_id, restrictions);
         Ok(())
     }
-}
 
-impl<T: Trait> Module<T> {
     pub fn ensure_not_native_asset(asset_id: &AssetId) -> DispatchResult {
         ensure!(
             *asset_id != T::NativeAssetId::get(),
@@ -259,12 +314,11 @@ impl<T: Trait> Module<T> {
         );
         Ok(())
     }
-}
 
-// asset related
-impl<T: Trait> Module<T> {
+    // Asset related
+    /// Returns a map of all registered assets by far.
     pub fn total_asset_infos() -> BTreeMap<AssetId, TotalAssetInfo<BalanceOf<T>>> {
-        xpallet_assets_registrar::Module::<T>::asset_infos()
+        xpallet_assets_registrar::Pallet::<T>::asset_infos()
             .filter_map(|(id, info)| {
                 if id == T::NativeAssetId::get() {
                     // ignore native asset
@@ -275,7 +329,7 @@ impl<T: Trait> Module<T> {
                         TotalAssetInfo {
                             info,
                             balance: Self::total_asset_balance(id),
-                            is_online: xpallet_assets_registrar::Module::<T>::is_online(&id),
+                            is_online: xpallet_assets_registrar::Pallet::<T>::is_online(&id),
                             restrictions: Self::asset_restrictions_of(id),
                         },
                     );
@@ -285,24 +339,25 @@ impl<T: Trait> Module<T> {
             .collect()
     }
 
+    /// Returns the invalid asset info of `who`.
     pub fn valid_assets_of(
         who: &T::AccountId,
     ) -> BTreeMap<AssetId, BTreeMap<AssetType, BalanceOf<T>>> {
-        use frame_support::IterableStorageDoubleMap;
         AssetBalance::<T>::iter_prefix(who)
-            .filter(|(id, _)| xpallet_assets_registrar::Module::<T>::asset_online(id))
+            .filter(|(id, _)| xpallet_assets_registrar::Pallet::<T>::asset_online(id))
             .collect()
     }
 
-    pub fn can_do(id: &AssetId, limit: AssetRestrictions) -> bool {
-        !Self::asset_restrictions_of(id).contains(limit)
+    /// Returns whether `restriction` is applied for given asset `id`.
+    pub fn can_do(id: &AssetId, restriction: AssetRestrictions) -> bool {
+        !Self::asset_restrictions_of(id).contains(restriction)
     }
 
     // can do wrapper
     #[inline]
     pub fn can_move(id: &AssetId) -> DispatchResult {
         if !Self::can_do(id, AssetRestrictions::MOVE) {
-            error!("Not allowed to move asset, id:{}", id);
+            error!(target: "runtime::assets", "Not allowed to move asset, id:{}", id);
             return Err(Error::<T>::ActionNotAllowed.into());
         }
         Ok(())
@@ -311,7 +366,7 @@ impl<T: Trait> Module<T> {
     #[inline]
     pub fn can_transfer(id: &AssetId) -> DispatchResult {
         if !Self::can_do(id, AssetRestrictions::TRANSFER) {
-            error!("Not allowed to transfer asset, id:{}", id);
+            error!(target: "runtime::assets", "Not allowed to transfer asset, id:{}", id);
             return Err(Error::<T>::ActionNotAllowed.into());
         }
         Ok(())
@@ -320,7 +375,7 @@ impl<T: Trait> Module<T> {
     #[inline]
     pub fn can_destroy_withdrawal(id: &AssetId) -> DispatchResult {
         if !Self::can_do(id, AssetRestrictions::DESTROY_WITHDRAWAL) {
-            error!("Not allowed to destroy withdrawal asset, id:{}", id);
+            error!(target: "runtime::assets", "Not allowed to destroy withdrawal asset, id:{}", id);
             return Err(Error::<T>::ActionNotAllowed.into());
         }
         Ok(())
@@ -329,56 +384,66 @@ impl<T: Trait> Module<T> {
     #[inline]
     pub fn can_destroy_usable(id: &AssetId) -> DispatchResult {
         if !Self::can_do(id, AssetRestrictions::DESTROY_USABLE) {
-            error!("Not allowed to destroy usable asset, id:{}", id);
+            error!(target: "runtime::assets", "Not allowed to destroy usable asset, id:{}", id);
             return Err(Error::<T>::ActionNotAllowed.into());
         }
         Ok(())
     }
-}
 
-// public read interface
-impl<T: Trait> Module<T> {
+    // Public read functions.
+    /// Returns the total issuance of asset `id` by far.
     pub fn total_issuance(id: &AssetId) -> BalanceOf<T> {
         let map = Self::total_asset_balance(id);
         map.values().fold(Zero::zero(), |acc, &x| acc + x)
     }
 
-    pub fn total_asset_balance_of(id: &AssetId, type_: AssetType) -> BalanceOf<T> {
+    /// Returns the total balance of asset `id` given the specific asset type `ty`.
+    pub fn total_asset_balance_of(id: &AssetId, ty: AssetType) -> BalanceOf<T> {
         Self::total_asset_balance(id)
-            .get(&type_)
+            .get(&ty)
             .copied()
             .unwrap_or_default()
     }
 
+    /// Returns the sum of all kinds of `who`'s balances given asset `id`.
     pub fn all_type_asset_balance(who: &T::AccountId, id: &AssetId) -> BalanceOf<T> {
         let map = Self::asset_balance(who, id);
         map.values().fold(Zero::zero(), |acc, &x| acc + x)
     }
 
-    pub fn asset_balance_of(who: &T::AccountId, id: &AssetId, type_: AssetType) -> BalanceOf<T> {
-        Self::asset_typed_balance(who, id, type_)
+    /// Returns the balance of `who` given the asset `id` and type `ty`.
+    pub fn asset_balance_of(who: &T::AccountId, id: &AssetId, ty: AssetType) -> BalanceOf<T> {
+        Self::asset_typed_balance(who, id, ty)
     }
 
+    /// Returns the free balance of `who` for asset `id`.
     pub fn usable_balance(who: &T::AccountId, id: &AssetId) -> BalanceOf<T> {
-        Self::asset_typed_balance(&who, &id, AssetType::Usable)
+        Self::asset_typed_balance(who, id, AssetType::Usable)
     }
 
     pub fn locked_balance(who: &T::AccountId, id: &AssetId) -> BalanceOf<T> {
-        Self::asset_typed_balance(&who, &id, AssetType::Locked)
+        Self::asset_typed_balance(who, id, AssetType::Locked)
     }
-}
 
-// public write interface
-impl<T: Trait> Module<T> {
+    pub fn total_reserved_balance(who: &T::AccountId, id: &AssetId) -> BalanceOf<T> {
+        use AssetType::{Reserved, ReservedDexSpot, ReservedWithdrawal};
+
+        let total_balances = Self::asset_balance(who, id);
+        let balance_for = |ty: AssetType| total_balances.get(&ty).copied().unwrap_or_default();
+
+        balance_for(Reserved) + balance_for(ReservedWithdrawal) + balance_for(ReservedDexSpot)
+    }
+
     /// Sets the free balance of `who` without sanity checks and triggering the asset changed hook.
     #[cfg(feature = "std")]
     pub fn force_set_free_balance(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) {
         Self::make_type_balance_be(who, id, AssetType::Usable, value);
     }
 
+    /// Increases the Usable balance of `who` given the asset `id` by this `value`.
     pub fn issue(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
         Self::ensure_not_native_asset(id)?;
-        xpallet_assets_registrar::Module::<T>::ensure_asset_is_valid(id)?;
+        xpallet_assets_registrar::Pallet::<T>::ensure_asset_is_valid(id)?;
 
         let _imbalance = Self::inner_issue(id, who, AssetType::Usable, value)?;
         Ok(())
@@ -390,7 +455,7 @@ impl<T: Trait> Module<T> {
         value: BalanceOf<T>,
     ) -> DispatchResult {
         Self::ensure_not_native_asset(id)?;
-        xpallet_assets_registrar::Module::<T>::ensure_asset_is_valid(id)?;
+        xpallet_assets_registrar::Pallet::<T>::ensure_asset_is_valid(id)?;
         Self::can_destroy_withdrawal(id)?;
 
         Self::inner_destroy(id, who, AssetType::ReservedWithdrawal, value)?;
@@ -399,7 +464,7 @@ impl<T: Trait> Module<T> {
 
     pub fn destroy_usable(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
         Self::ensure_not_native_asset(id)?;
-        xpallet_assets_registrar::Module::<T>::ensure_asset_is_valid(id)?;
+        xpallet_assets_registrar::Pallet::<T>::ensure_asset_is_valid(id)?;
         Self::can_destroy_usable(id)?;
 
         Self::inner_destroy(id, who, AssetType::Usable, value)?;
@@ -414,9 +479,8 @@ impl<T: Trait> Module<T> {
         to_type: AssetType,
         value: BalanceOf<T>,
     ) -> Result<(), AssetErr> {
-        // check
         Self::ensure_not_native_asset(id).map_err(|_| AssetErr::InvalidAsset)?;
-        xpallet_assets_registrar::Module::<T>::ensure_asset_is_valid(id)
+        xpallet_assets_registrar::Pallet::<T>::ensure_asset_is_valid(id)
             .map_err(|_| AssetErr::InvalidAsset)?;
         Self::can_move(id).map_err(|_| AssetErr::NotAllow)?;
 
@@ -429,6 +493,7 @@ impl<T: Trait> Module<T> {
         let to_balance = Self::asset_typed_balance(to, id, to_type);
 
         debug!(
+            target: "runtime::assets",
             "[move_balance] id:{}, from:[who:{:?}, type:{:?}, balance:{:?}], to:[who:{:?}, type:{:?}, balance:{:?}], value:{:?}",
             id, from, from_type, from_balance, to, to_type, to_balance, value
         );
@@ -486,10 +551,7 @@ impl<T: Trait> Module<T> {
         }
         Ok(())
     }
-}
 
-/// token issue destroy reserve/unreserve, it's core function
-impl<T: Trait> Module<T> {
     /// Returns the balance of `who` given `asset_id` and `ty`.
     fn asset_typed_balance(who: &T::AccountId, asset_id: &AssetId, ty: AssetType) -> BalanceOf<T> {
         Self::asset_balance(who, asset_id)
@@ -499,13 +561,23 @@ impl<T: Trait> Module<T> {
     }
 
     fn new_account(who: &T::AccountId) {
-        info!("[new_account] account:{:?}", who);
-        T::OnCreatedAccount::happened(&who)
+        info!(target: "runtime::assets", "[new_account] account:{:?}", who);
+        // FIXME: handle the result properly.
+        let _ = T::OnCreatedAccount::created(who);
+    }
+
+    fn is_dead_account(who: &T::AccountId) -> bool {
+        let AccountInfo {
+            providers,
+            consumers,
+            ..
+        } = frame_system::pallet::Account::<T>::get(who);
+        providers.is_zero() && consumers.is_zero()
     }
 
     fn try_new_account(who: &T::AccountId) {
         // lookup chainx balance
-        if frame_system::Module::<T>::is_dead_account(who) {
+        if Self::is_dead_account(who) {
             Self::new_account(who);
         }
     }
@@ -541,9 +613,10 @@ impl<T: Trait> Module<T> {
         );
         if !existed && exists {
             Self::try_new_account(who);
-            frame_system::Module::<T>::inc_ref(who);
+            // FIXME: handle the result properly
+            let _ = frame_system::Pallet::<T>::inc_consumers(who);
         } else if existed && !exists {
-            frame_system::Module::<T>::dec_ref(who);
+            frame_system::Pallet::<T>::dec_consumers(who);
             AssetBalance::<T>::remove(who, id);
         }
 
@@ -569,6 +642,7 @@ impl<T: Trait> Module<T> {
         let current = Self::asset_typed_balance(&who, id, type_);
 
         debug!(
+            target: "runtime::assets",
             "[issue] account:{:?}, asset:[id:{}, type:{:?}, current:{:?}, issue:{:?}]",
             who, id, type_, current, value
         );
@@ -592,6 +666,7 @@ impl<T: Trait> Module<T> {
         let current = Self::asset_typed_balance(&who, id, type_);
 
         debug!(
+            target: "runtime::assets",
             "[destroy] account:{:?}, asset:[id:{}, type:{:?}, current:{:?}, destroy:{:?}]",
             who, id, type_, current, value
         );
@@ -645,6 +720,7 @@ impl<T: Trait> Module<T> {
             if let Err(err) = result {
                 // should not fail, for set lock need to check free_balance, free_balance = usable + free
                 error!(
+                    target: "runtime::assets",
                     "[update_locks] Should not be failed when move asset (usable <=> locked), \
                     who:{:?}, asset:[id:{}, max_locked:{:?}, current_locked:{:?}], err:{:?}",
                     who, currency_id, max_locked, current_locked, err

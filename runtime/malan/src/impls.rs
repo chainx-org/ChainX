@@ -3,7 +3,7 @@
 //! Some configurable implementations as associated type for the ChainX runtime.
 
 use codec::{Decode, Encode};
-
+use scale_info::TypeInfo;
 use sp_runtime::{
     traits::{DispatchInfoOf, SignedExtension},
     transaction_validity::{
@@ -44,12 +44,12 @@ impl OnUnbalanced<NegativeImbalance> for DealWithFees {
         let to_author_numeric_amount = to_author.peek();
         let to_reward_pot_numeric_amount = to_reward_pot.peek();
 
-        let author = <pallet_authorship::Module<Runtime>>::author();
-        let reward_pot = <xpallet_mining_staking::Module<Runtime>>::reward_pot_for(&author);
+        let author = <pallet_authorship::Pallet<Runtime>>::author();
+        let reward_pot = <xpallet_mining_staking::Pallet<Runtime>>::reward_pot_for(&author);
 
-        <pallet_balances::Module<Runtime>>::resolve_creating(&author, to_author);
-        <pallet_balances::Module<Runtime>>::resolve_creating(&reward_pot, to_reward_pot);
-        <frame_system::Module<Runtime>>::deposit_event(
+        <pallet_balances::Pallet<Runtime>>::resolve_creating(&author, to_author);
+        <pallet_balances::Pallet<Runtime>>::resolve_creating(&reward_pot, to_reward_pot);
+        <frame_system::Pallet<Runtime>>::deposit_event(
             xpallet_transaction_fee::Event::<Runtime>::FeePaid(
                 author,
                 to_author_numeric_amount,
@@ -70,7 +70,7 @@ pub type SlowAdjustingFeeUpdate<R> =
     TargetedFeeAdjustment<R, TargetBlockFullness, AdjustmentVariable, MinimumMultiplier>;
 
 /// A struct for charging additional fee for some special calls.
-#[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug)]
+#[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct ChargeExtraFee;
 
 impl ChargeExtraFee {
@@ -81,13 +81,13 @@ impl ChargeExtraFee {
 
         let extra_cofficient: Option<u32> = match call {
             Call::XGatewayCommon(xgateway_common) => match xgateway_common {
-                XGatewayCommonCall::setup_trustee(..) => Some(1),
+                XGatewayCommonCall::setup_trustee{..} => Some(1),
                 _ => None,
             },
             Call::XStaking(xstaking) => match xstaking {
-                XStakingCall::register(..) => Some(10),
-                XStakingCall::validate(..) => Some(1),
-                XStakingCall::rebond(..) => Some(1),
+                XStakingCall::register{..} => Some(10),
+                XStakingCall::validate{..} => Some(1),
+                XStakingCall::rebond{..} => Some(1),
                 _ => None,
             },
             _ => None,

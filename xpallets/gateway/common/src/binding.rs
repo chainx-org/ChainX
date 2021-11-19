@@ -1,22 +1,22 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use frame_support::{IterableStorageDoubleMap, StorageDoubleMap};
+use frame_support::log::{debug, error, info, warn};
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
 use chainx_primitives::{AssetId, ChainAddress, ReferralId};
-use xp_logging::{debug, error, info, warn};
 use xpallet_assets::Chain;
 use xpallet_support::{traits::Validator, try_addr, try_str};
 
 use crate::traits::{AddressBinding, ReferralBinding};
-use crate::{AddressBindingOf, BoundAddressOf, Module, Trait};
+use crate::{AddressBindingOf, BoundAddressOf, Config, Pallet};
 
-impl<T: Trait> ReferralBinding<T::AccountId> for Module<T> {
+impl<T: Config> ReferralBinding<T::AccountId> for Pallet<T> {
     fn update_binding(assert_id: &AssetId, who: &T::AccountId, referral_name: Option<ReferralId>) {
-        let chain = match xpallet_assets_registrar::Module::<T>::chain_of(assert_id) {
+        let chain = match xpallet_assets_registrar::Pallet::<T>::chain_of(assert_id) {
             Ok(chain) => chain,
             Err(err) => {
                 error!(
+                    target: "runtime::gateway::common",
                     "[update_referral_binding] Unexpected asset_id:{:?}, error:{:?}",
                     assert_id, err
                 );
@@ -33,6 +33,7 @@ impl<T: Trait> ReferralBinding<T::AccountId> for Module<T> {
                     }
                     Some(channel) => {
                         debug!(
+                            target: "runtime::gateway::common",
                             "[update_referral_binding] Already has referral binding:[assert id:{}, chain:{:?}, who:{:?}, referral:{:?}]",
                             assert_id, chain, who, channel
                         );
@@ -40,6 +41,7 @@ impl<T: Trait> ReferralBinding<T::AccountId> for Module<T> {
                 }
             } else {
                 warn!(
+                    target: "runtime::gateway::common",
                     "[update_referral_binding] {:?} has no referral, cannot update binding",
                     try_str(name)
                 );
@@ -48,17 +50,18 @@ impl<T: Trait> ReferralBinding<T::AccountId> for Module<T> {
     }
 
     fn referral(assert_id: &AssetId, who: &T::AccountId) -> Option<T::AccountId> {
-        let chain = xpallet_assets_registrar::Module::<T>::chain_of(assert_id).ok()?;
+        let chain = xpallet_assets_registrar::Pallet::<T>::chain_of(assert_id).ok()?;
         Self::referral_binding_of(who, chain)
     }
 }
 
-impl<T: Trait, Address: Into<Vec<u8>>> AddressBinding<T::AccountId, Address> for Module<T> {
+impl<T: Config, Address: Into<Vec<u8>>> AddressBinding<T::AccountId, Address> for Pallet<T> {
     fn update_binding(chain: Chain, address: Address, who: T::AccountId) {
         let address = address.into();
         if let Some(accountid) = AddressBindingOf::<T>::get(chain, &address) {
             if accountid != who {
                 debug!(
+                    target: "runtime::gateway::common",
                     "[update_address_binding] Current address binding need to changed (old:{:?} => new:{:?})",
                     accountid, who
                 );
@@ -77,6 +80,7 @@ impl<T: Trait, Address: Into<Vec<u8>>> AddressBinding<T::AccountId, Address> for
         });
 
         info!(
+            target: "runtime::gateway::common",
             "[update_address_binding] Update address binding:[chain:{:?}, addr:{:?}, who:{:?}]",
             chain,
             try_addr(&address),
@@ -92,7 +96,7 @@ impl<T: Trait, Address: Into<Vec<u8>>> AddressBinding<T::AccountId, Address> for
 }
 
 // export for runtime-api
-impl<T: Trait> Module<T> {
+impl<T: Config> Pallet<T> {
     pub fn bound_addrs(who: &T::AccountId) -> BTreeMap<Chain, Vec<ChainAddress>> {
         BoundAddressOf::<T>::iter_prefix(&who).collect()
     }

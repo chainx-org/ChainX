@@ -8,24 +8,29 @@ use sp_std::{convert::TryInto, prelude::*};
 
 use frame_support::{
     ensure,
+    log::error,
     traits::{BalanceStatus, LockIdentifier},
+    transactional,
 };
 
 use orml_traits::{
-    arithmetic::Signed, MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency,
-    MultiReservableCurrency,
+    currency::TransferAll, arithmetic::Signed, MultiCurrency, MultiCurrencyExtended,
+    MultiLockableCurrency, MultiReservableCurrency,
 };
 
 use chainx_primitives::AssetId;
-use xp_logging::error;
 use xpallet_support::traits::TreasuryAccount;
 
 use crate::types::{AssetType, BalanceLock};
-use crate::{BalanceOf, Error, Module, Trait};
+use crate::{AssetBalance, BalanceOf, Config, Error, Pallet};
 
-impl<T: Trait> MultiCurrency<T::AccountId> for Module<T> {
+impl<T: Config> MultiCurrency<T::AccountId> for Pallet<T> {
     type CurrencyId = AssetId;
     type Balance = BalanceOf<T>;
+
+    fn minimum_balance(_currency_id: Self::CurrencyId) -> Self::Balance {
+        Zero::zero()
+    }
 
     fn total_issuance(currency_id: Self::CurrencyId) -> Self::Balance {
         Self::total_issuance(&currency_id)
@@ -168,7 +173,7 @@ impl<T: Trait> MultiCurrency<T::AccountId> for Module<T> {
     }
 }
 
-impl<T: Trait> MultiCurrencyExtended<T::AccountId> for Module<T> {
+impl<T: Config> MultiCurrencyExtended<T::AccountId> for Pallet<T> {
     type Amount = T::Amount;
 
     fn update_balance(
@@ -190,7 +195,7 @@ impl<T: Trait> MultiCurrencyExtended<T::AccountId> for Module<T> {
     }
 }
 
-impl<T: Trait> MultiReservableCurrency<T::AccountId> for Module<T> {
+impl<T: Config> MultiReservableCurrency<T::AccountId> for Pallet<T> {
     fn can_reserve(
         currency_id: Self::CurrencyId,
         who: &T::AccountId,
@@ -224,6 +229,7 @@ impl<T: Trait> MultiReservableCurrency<T::AccountId> for Module<T> {
             actual,
         ) {
             error!(
+                target: "runtime::assets",
                 "[slash_reserved] Should not be failed when move asset (reserved => usable), \
                 who:{:?}, id:{}, err:{:?}",
                 who, currency_id, err
@@ -274,6 +280,7 @@ impl<T: Trait> MultiReservableCurrency<T::AccountId> for Module<T> {
             actual,
         ) {
             error!(
+                target: "runtime::assets",
                 "[unreserve] Should not be failed when move asset (reserved => usable), \
                 who:{:?}, id:{}, err:{:?}",
                 who, currency_id, err
@@ -319,7 +326,7 @@ impl<T: Trait> MultiReservableCurrency<T::AccountId> for Module<T> {
     }
 }
 
-impl<T: Trait> MultiLockableCurrency<T::AccountId> for Module<T> {
+impl<T: Config> MultiLockableCurrency<T::AccountId> for Pallet<T> {
     type Moment = T::BlockNumber;
 
     fn set_lock(
@@ -327,9 +334,9 @@ impl<T: Trait> MultiLockableCurrency<T::AccountId> for Module<T> {
         currency_id: Self::CurrencyId,
         who: &T::AccountId,
         amount: Self::Balance,
-    ) {
+    ) -> DispatchResult {
         if amount.is_zero() {
-            return;
+            return Ok(());
         }
         let mut new_lock = Some(BalanceLock {
             id: lock_id,
@@ -349,6 +356,7 @@ impl<T: Trait> MultiLockableCurrency<T::AccountId> for Module<T> {
             locks.push(lock)
         }
         Self::update_locks(currency_id, who, &locks[..]);
+        Ok(())
     }
 
     fn extend_lock(
@@ -356,9 +364,9 @@ impl<T: Trait> MultiLockableCurrency<T::AccountId> for Module<T> {
         currency_id: Self::CurrencyId,
         who: &T::AccountId,
         amount: Self::Balance,
-    ) {
+    ) -> DispatchResult {
         if amount.is_zero() {
-            return;
+            return Ok(());
         }
         let mut new_lock = Some(BalanceLock {
             id: lock_id,
@@ -381,11 +389,43 @@ impl<T: Trait> MultiLockableCurrency<T::AccountId> for Module<T> {
             locks.push(lock)
         }
         Self::update_locks(currency_id, who, &locks[..]);
+        Ok(())
     }
 
-    fn remove_lock(lock_id: LockIdentifier, currency_id: Self::CurrencyId, who: &T::AccountId) {
+    fn remove_lock(
+        lock_id: LockIdentifier,
+        currency_id: Self::CurrencyId,
+        who: &T::AccountId,
+    ) -> DispatchResult {
         let mut locks = Self::locks(who, currency_id);
         locks.retain(|lock| lock.id != lock_id);
         Self::update_locks(currency_id, who, &locks[..]);
+        Ok(())
+    }
+}
+
+impl<T: Config> TransferAll<T::AccountId> for Pallet<T> {
+    #[transactional]
+    fn transfer_all(source: &T::AccountId, dest: &T::AccountId) -> DispatchResult {
+        AssetBalance::<T>::iter_prefix(source).try_for_each(
+            |(currency_id, _account_data)| -> DispatchResult {
+                // ensure the account has no active reserved of non-native token
+                //
+                // TODO: Should use Reserved + ReservedWithdrawal + ReservedWithdrawal?
+                ensure!(
+                    Self::reserved_balance(currency_id, source).is_zero(),
+                    Error::<T>::StillHasActiveReserved
+                );
+
+                // transfer all free to recipient
+                <Self as MultiCurrency<T::AccountId>>::transfer(
+                    currency_id,
+                    source,
+                    dest,
+                    Self::usable_balance(source, &currency_id),
+                )?;
+                Ok(())
+            },
+        )
     }
 }

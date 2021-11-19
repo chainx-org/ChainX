@@ -1,6 +1,7 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 use sp_std::cmp::Ordering;
+use sp_std::vec::Vec;
 
 use codec::Encode;
 use frame_support::weights::Weight;
@@ -78,7 +79,7 @@ where
     }
 }
 
-impl<T: Trait> ComputeMiningWeight<T::AccountId, T::BlockNumber> for Module<T> {
+impl<T: Config> ComputeMiningWeight<T::AccountId, T::BlockNumber> for Pallet<T> {
     type Claimee = T::AccountId;
     type Error = Error<T>;
 
@@ -104,10 +105,10 @@ type DividendParams<T> = (
     BalanceOf<T>,
     WeightType,
     WeightType,
-    <T as frame_system::Trait>::AccountId,
+    <T as frame_system::Config>::AccountId,
 );
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Pallet<T> {
     /// Returns the tuple of (dividend, source_weight, target_weight) if the nominator claims right now.
     pub fn calculate_dividend_on_claim(
         nominator: &T::AccountId,
@@ -193,12 +194,12 @@ impl<T: Trait> Module<T> {
     }
 }
 
-impl<T: Trait> Claim<T::AccountId> for Module<T> {
+impl<T: Config> Claim<T::AccountId> for Pallet<T> {
     type Claimee = T::AccountId;
     type Error = Error<T>;
 
     fn claim(claimer: &T::AccountId, claimee: &Self::Claimee) -> Result<(), Self::Error> {
-        let current_block = <frame_system::Module<T>>::block_number();
+        let current_block = <frame_system::Pallet<T>>::block_number();
 
         let (dividend, source_weight, target_weight, claimee_pot) =
             Self::calculate_dividend_on_claim(claimer, claimee, current_block)?;
@@ -220,7 +221,7 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
     }
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Pallet<T> {
     /// Issue new session reward and try slashing the offenders at the same time.
     fn mint_and_slash(session_index: SessionIndex) {
         // Only the active validators can be rewarded.
@@ -239,9 +240,10 @@ impl<T: Trait> Module<T> {
     }
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Pallet<T> {
     fn new_session(session_index: SessionIndex) -> Option<Vec<T::AccountId>> {
         debug!(
+            target: "runtime::mining::staking",
             "[new_session] session_index:{:?}, current_era:{:?}",
             session_index,
             Self::current_era(),
@@ -260,14 +262,14 @@ impl<T: Trait> Module<T> {
 
             let ideal_era_length = Self::sessions_per_era().saturated_into::<SessionIndex>();
 
-            match ForceEra::get() {
-                Forcing::ForceNew => ForceEra::kill(),
+            match ForceEra::<T>::get() {
+                Forcing::ForceNew => ForceEra::<T>::kill(),
                 Forcing::ForceAlways => (),
                 Forcing::NotForcing if era_length >= ideal_era_length => (),
                 _ => {
                     // Either `ForceNone`, or `NotForcing && era_length < T::SessionsPerEra::get()`.
                     if era_length + 1 == ideal_era_length {
-                        IsCurrentSessionFinal::put(true);
+                        IsCurrentSessionFinal::<T>::put(true);
                     } else if era_length >= ideal_era_length {
                         // Should only happen when we are ready to trigger an era but we have ForceNone,
                         // otherwise previous arm would short circuit.
@@ -296,6 +298,7 @@ impl<T: Trait> Module<T> {
 
         let next_active_era = Self::active_era().map(|e| e.index + 1).unwrap_or(0);
         debug!(
+            target: "runtime::mining::staking",
             "[start_session] start_session:{}, next_active_era:{:?}",
             start_session, next_active_era
         );
@@ -332,7 +335,7 @@ impl<T: Trait> Module<T> {
     /// * reset `active_era.start`,
     /// * update `BondedEras` and apply slashes.
     fn start_era(_start_session: SessionIndex) {
-        let _active_era = ActiveEra::mutate(|active_era| {
+        let _active_era = ActiveEra::<T>::mutate(|active_era| {
             let new_index = active_era.as_ref().map(|info| info.index + 1).unwrap_or(0);
             *active_era = Some(ActiveEraInfo {
                 index: new_index,
@@ -354,7 +357,7 @@ impl<T: Trait> Module<T> {
 ///
 /// Once the first new_session is planned, all session must start and then end in order, though
 /// some session can lag in between the newest session planned and the latest session started.
-impl<T: Trait> pallet_session::SessionManager<T::AccountId> for Module<T> {
+impl<T: Config> pallet_session::SessionManager<T::AccountId> for Pallet<T> {
     fn new_session(new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
         Self::new_session(new_index)
     }
@@ -367,16 +370,16 @@ impl<T: Trait> pallet_session::SessionManager<T::AccountId> for Module<T> {
 }
 
 /// Validator ID that reported this offence.
-type Reporter<T> = <T as frame_system::Trait>::AccountId;
+type Reporter<T> = <T as frame_system::Config>::AccountId;
 
 /// Substrate:
 /// A tuple of the validator's ID and their full identification.
-/// pub type IdentificationTuple<T> = (<T as crate::Trait>::ValidatorId, <T as Trait>::FullIdentification);
+/// pub type IdentificationTuple<T> = (<T as crate::Config>::ValidatorId, <T as Config>::FullIdentification);
 /// ChainX:
 /// We do not have the FullIdentification info, but the reward pot.
 pub type IdentificationTuple<T> = (
-    <T as frame_system::Trait>::AccountId,
-    <T as frame_system::Trait>::AccountId,
+    <T as frame_system::Config>::AccountId,
+    <T as frame_system::Config>::AccountId,
 );
 
 /// Stable ID of a validator.
@@ -384,21 +387,21 @@ type Offender<T> = IdentificationTuple<T>;
 
 /// This is intended to be used with `FilterHistoricalOffences` in Substrate/Staking.
 /// In ChainX, we always apply the slash immediately, no deferred slash.
-impl<T: Trait> OnOffenceHandler<Reporter<T>, IdentificationTuple<T>, Weight> for Module<T>
+impl<T: Config> OnOffenceHandler<Reporter<T>, IdentificationTuple<T>, Weight> for Pallet<T>
 where
-    T: pallet_session::Trait<ValidatorId = <T as frame_system::Trait>::AccountId>,
-    T::SessionHandler: pallet_session::SessionHandler<<T as frame_system::Trait>::AccountId>,
-    T::SessionManager: pallet_session::SessionManager<<T as frame_system::Trait>::AccountId>,
+    T: pallet_session::Config<ValidatorId = <T as frame_system::Config>::AccountId>,
+    T::SessionHandler: pallet_session::SessionHandler<<T as frame_system::Config>::AccountId>,
+    T::SessionManager: pallet_session::SessionManager<<T as frame_system::Config>::AccountId>,
     T::ValidatorIdOf: Convert<
-        <T as frame_system::Trait>::AccountId,
-        Option<<T as frame_system::Trait>::AccountId>,
+        <T as frame_system::Config>::AccountId,
+        Option<<T as frame_system::Config>::AccountId>,
     >,
 {
     fn on_offence(
         offenders: &[OffenceDetails<Reporter<T>, Offender<T>>],
         slash_fraction: &[Perbill],
         slash_session: SessionIndex,
-    ) -> Result<Weight, ()> {
+    ) -> Weight {
         let offenders_tuple = offenders
             .iter()
             .zip(slash_fraction)
@@ -410,6 +413,7 @@ where
             .collect::<BTreeMap<_, _>>();
 
         debug!(
+            target: "runtime::mining::staking",
             "Reported the offenders:{:?} happened in session {:?}",
             offenders_tuple, slash_session
         );
@@ -418,29 +422,25 @@ where
         // together later and then perform the slashing operation only once.
         <SessionOffenders<T>>::put(offenders_tuple);
 
-        Ok(1)
-    }
-
-    fn can_report() -> bool {
-        true
+        1
     }
 }
 
 /// Simple validator reward pot account determiner.
 ///
 /// Formula: `blake2_256(blake2_256(validator_pubkey) + blake2_256(registered_at))`
-pub struct SimpleValidatorRewardPotAccountDeterminer<T: Trait>(sp_std::marker::PhantomData<T>);
+pub struct SimpleValidatorRewardPotAccountDeterminer<T: Config>(sp_std::marker::PhantomData<T>);
 
-impl<T: Trait> xp_mining_common::RewardPotAccountFor<T::AccountId, T::AccountId>
+impl<T: Config> xp_mining_common::RewardPotAccountFor<T::AccountId, T::AccountId>
     for SimpleValidatorRewardPotAccountDeterminer<T>
 where
     T::AccountId: UncheckedFrom<T::Hash> + AsRef<[u8]>,
 {
     fn reward_pot_account_for(validator: &T::AccountId) -> T::AccountId {
-        let validator_hash = <T as frame_system::Trait>::Hashing::hash(validator.as_ref());
+        let validator_hash = <T as frame_system::Config>::Hashing::hash(validator.as_ref());
         let registered_at: T::BlockNumber = Validators::<T>::get(validator).registered_at;
         let registered_at_hash =
-            <T as frame_system::Trait>::Hashing::hash(registered_at.encode().as_ref());
+            <T as frame_system::Config>::Hashing::hash(registered_at.encode().as_ref());
 
         let validator_slice = validator_hash.as_ref();
         let registered_at_slice = registered_at_hash.as_ref();

@@ -6,6 +6,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
+use scale_info::TypeInfo;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{DispatchError, DispatchResult};
@@ -28,7 +29,7 @@ pub fn xss_check(input: &[u8]) -> DispatchResult {
 }
 
 /// Type for leaving a note when sending a transaction.
-#[derive(PartialEq, Eq, Clone, sp_core::RuntimeDebug, Encode, Decode, Default)]
+#[derive(PartialEq, Eq, Clone, sp_core::RuntimeDebug, Encode, Decode, Default, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct Memo(Vec<u8>);
 

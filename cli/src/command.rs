@@ -1,14 +1,8 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use std::net::SocketAddr;
+use sc_cli::{ChainSpec, Role, RuntimeVersion, SubstrateCli, CliConfiguration};
 
-use sc_cli::{
-    ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
-    NetworkParams, Role, RuntimeVersion, SharedParams, SubstrateCli,
-};
-use sc_service::{config::PrometheusConfig, PartialComponents};
-
-use chainx_service::{self as service, new_partial};
+use chainx_service::{self as service, new_partial, IdentifyVariant};
 
 use crate::chain_spec;
 use crate::cli::{Cli, Subcommand};
@@ -156,8 +150,32 @@ impl SubstrateCli for Cli {
         load_spec(id)
     }
 
-    fn native_runtime_version(_: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-        &chainx_runtime::VERSION
+    /// Create a runner for the command provided in argument. This will create a Configuration and
+    /// a tokio runtime
+    fn create_runner<T: CliConfiguration>(&self, command: &T) -> sc_cli::Result<sc_cli::Runner<Self>> {
+        // Workaround for https://github.com/paritytech/substrate/issues/6856
+        // Remove this once the cli config file is supported in Substrate.
+        let raw_cli_args = std::env::args().collect::<Vec<_>>();
+        let cli = Cli::from_iter(crate::config::preprocess_cli_args(raw_cli_args));
+
+        // Try to enable the log rotation function if from config file.
+        if cli.run.config_file.is_some() && !cli.run.logger.no_log_rotation {
+            cli.try_init_logger()?;
+        } else {
+            command.init::<Self>()?;
+        }
+
+        sc_cli::Runner::new(self, command)
+    }
+
+    fn native_runtime_version(chain_spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
+        if chain_spec.is_malan() {
+            &malan_runtime::VERSION
+        } else if chain_spec.is_dev() {
+            &dev_runtime::VERSION
+        } else {
+            &chainx_runtime::VERSION
+        }
     }
 }
 
@@ -191,6 +209,48 @@ fn load_spec(id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
     })
 }
 
+macro_rules! construct_async_run {
+    (|$components:ident, $cli:ident, $cmd:ident, $config:ident| $( $code:tt )* ) => {{
+        let runner = $cli.create_runner($cmd)?;
+        set_default_ss58_version(&runner.config().chain_spec);
+
+        if runner.config().chain_spec.is_malan() {
+            runner.async_run(|$config| {
+                let $components = new_partial::<
+                    malan_runtime::RuntimeApi,
+                    chainx_executor::MalanExecutor
+                >(
+                    &$config,
+                )?;
+                let task_manager = $components.task_manager;
+                { $( $code )* }.map(|v| (v, task_manager))
+            })
+        } else if runner.config().chain_spec.is_dev() {
+            runner.async_run(|$config| {
+                let $components = new_partial::<
+                    dev_runtime::RuntimeApi,
+                    chainx_executor::DevExecutor
+                >(
+                    &$config,
+                )?;
+                let task_manager = $components.task_manager;
+                { $( $code )* }.map(|v| (v, task_manager))
+            })
+        } else {
+            runner.async_run(|$config| {
+                let $components = new_partial::<
+                    chainx_runtime::RuntimeApi,
+                    chainx_executor::ChainXExecutor,
+                >(
+                    &$config,
+                )?;
+                let task_manager = $components.task_manager;
+                { $( $code )* }.map(|v| (v, task_manager))
+            })
+        }
+    }}
+}
+
 /// Parse and run command line arguments
 pub fn run() -> sc_cli::Result<()> {
     // Workaround for https://github.com/paritytech/substrate/issues/6856
@@ -198,23 +258,20 @@ pub fn run() -> sc_cli::Result<()> {
     let raw_cli_args = std::env::args().collect::<Vec<_>>();
     let cli = Cli::from_iter(crate::config::preprocess_cli_args(raw_cli_args));
 
-    // Try to enable the log rotation function if not a dev chain.
-    if !cli.run.base.shared_params.dev {
-        cli.try_init_logger()?;
-    }
-
     match &cli.subcommand {
         None => {
             let runner = cli.create_runner(&cli.run.base)?;
             let chain_spec = &runner.config().chain_spec;
             set_default_ss58_version(chain_spec);
 
-            runner.run_node_until_exit(|config| async move {
-                match config.role {
-                    Role::Light => service::build_light(config),
-                    _ => service::build_full(config),
-                }
-            })
+            runner
+                .run_node_until_exit(|config| async move {
+                    match config.role {
+                        Role::Light => service::build_light(config),
+                        _ => service::build_full(config),
+                    }
+                })
+                .map_err(sc_cli::Error::Service)
         }
         Some(Subcommand::Benchmark(cmd)) => {
             if cfg!(feature = "runtime-benchmarks") {
@@ -234,7 +291,7 @@ pub fn run() -> sc_cli::Result<()> {
                 Ok(())
             }
         }
-        Some(Subcommand::Key(cmd)) => cmd.run(),
+        Some(Subcommand::Key(cmd)) => cmd.run(&cli),
         Some(Subcommand::Sign(cmd)) => cmd.run(),
         Some(Subcommand::Verify(cmd)) => cmd.run(),
         Some(Subcommand::Vanity(cmd)) => cmd.run(),
@@ -245,65 +302,23 @@ pub fn run() -> sc_cli::Result<()> {
             runner.sync_run(|config| cmd.run(config.chain_spec, config.network))
         }
         Some(Subcommand::CheckBlock(cmd)) => {
-            let runner = cli.create_runner(cmd)?;
-            set_default_ss58_version(&runner.config().chain_spec);
-
-            runner.async_run(|config| {
-                let PartialComponents {
-                    client,
-                    task_manager,
-                    import_queue,
-                    ..
-                } = new_partial::<chainx_runtime::RuntimeApi, chainx_executor::ChainXExecutor>(
-                    &config,
-                )?;
-                Ok((cmd.run(client, import_queue), task_manager))
+            construct_async_run!(|components, cli, cmd, config| {
+                Ok(cmd.run(components.client, components.import_queue))
             })
         }
         Some(Subcommand::ExportBlocks(cmd)) => {
-            let runner = cli.create_runner(cmd)?;
-            set_default_ss58_version(&runner.config().chain_spec);
-
-            runner.async_run(|config| {
-                let PartialComponents {
-                    client,
-                    task_manager,
-                    ..
-                } = new_partial::<chainx_runtime::RuntimeApi, chainx_executor::ChainXExecutor>(
-                    &config,
-                )?;
-                Ok((cmd.run(client, config.database), task_manager))
+            construct_async_run!(|components, cli, cmd, config| {
+                Ok(cmd.run(components.client, config.database))
             })
         }
         Some(Subcommand::ExportState(cmd)) => {
-            let runner = cli.create_runner(cmd)?;
-            set_default_ss58_version(&runner.config().chain_spec);
-
-            runner.async_run(|config| {
-                let PartialComponents {
-                    client,
-                    task_manager,
-                    ..
-                } = new_partial::<chainx_runtime::RuntimeApi, chainx_executor::ChainXExecutor>(
-                    &config,
-                )?;
-                Ok((cmd.run(client, config.chain_spec), task_manager))
+            construct_async_run!(|components, cli, cmd, config| {
+                Ok(cmd.run(components.client, config.chain_spec))
             })
         }
         Some(Subcommand::ImportBlocks(cmd)) => {
-            let runner = cli.create_runner(cmd)?;
-            set_default_ss58_version(&runner.config().chain_spec);
-
-            runner.async_run(|config| {
-                let PartialComponents {
-                    client,
-                    task_manager,
-                    import_queue,
-                    ..
-                } = new_partial::<chainx_runtime::RuntimeApi, chainx_executor::ChainXExecutor>(
-                    &config,
-                )?;
-                Ok((cmd.run(client, import_queue), task_manager))
+            construct_async_run!(|components, cli, cmd, config| {
+                Ok(cmd.run(components.client, components.import_queue))
             })
         }
         Some(Subcommand::PurgeChain(cmd)) => {
@@ -313,19 +328,8 @@ pub fn run() -> sc_cli::Result<()> {
             runner.sync_run(|config| cmd.run(config.database))
         }
         Some(Subcommand::Revert(cmd)) => {
-            let runner = cli.create_runner(cmd)?;
-            set_default_ss58_version(&runner.config().chain_spec);
-
-            runner.async_run(|config| {
-                let PartialComponents {
-                    client,
-                    task_manager,
-                    backend,
-                    ..
-                } = new_partial::<chainx_runtime::RuntimeApi, chainx_executor::ChainXExecutor>(
-                    &config,
-                )?;
-                Ok((cmd.run(client, backend), task_manager))
+            construct_async_run!(|components, cli, cmd, config| {
+                Ok(cmd.run(components.client, components.backend))
             })
         }
     }

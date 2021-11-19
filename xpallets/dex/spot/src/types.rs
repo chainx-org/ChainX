@@ -4,6 +4,7 @@
 
 use super::*;
 use codec::{Decode, Encode};
+use scale_info::TypeInfo;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_arithmetic::traits::BaseArithmetic;
@@ -27,7 +28,7 @@ pub type PriceFluctuation = u32;
 /// Type of an order.
 ///
 /// Currently only Limit Order is supported.
-#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum OrderType {
     Limit,
@@ -41,7 +42,7 @@ impl Default for OrderType {
 }
 
 /// Direction of an order.
-#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum Side {
     Buy,
@@ -55,7 +56,7 @@ impl Default for Side {
 }
 
 /// Status of an order.
-#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum OrderStatus {
     /// Order just got created.
@@ -83,7 +84,7 @@ impl Default for OrderStatus {
 /// -------------------
 ///   bid(buy price)
 /// ------------------- Highest Bid
-#[derive(PartialEq, Eq, Clone, Encode, Decode, Default, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, Default, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct Handicap<Price> {
@@ -132,7 +133,7 @@ impl<Price: Copy + BaseArithmetic> Handicap<Price> {
 /// Conversely, when you sell the currency pair, you sell the base currency
 /// and receive the quote currency. The ask (sell price) for the currency pair
 /// represents how much you will get in the quote currency for selling one unit of base currency.
-#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct CurrencyPair {
@@ -154,7 +155,7 @@ impl CurrencyPair {
 ///
 /// PCX/BTC = pip, a.k.a, percentage in point. Also called exchange rate.
 /// tick decimals for BTC
-#[derive(PartialEq, Eq, Clone, Encode, Decode, Default, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, Default, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct TradingPairProfile {
@@ -204,8 +205,8 @@ impl TradingPairProfile {
     }
 
     /// The maximum ticks that the price can deviate from the handicap.
-    pub fn calc_fluctuation<T: Trait>(&self) -> Tick {
-        let price_fluctuation = <Module<T>>::price_fluctuation_of(self.id);
+    pub fn calc_fluctuation<T: Config>(&self) -> Tick {
+        let price_fluctuation = <Pallet<T>>::price_fluctuation_of(self.id);
         price_fluctuation
             .saturated_into::<Tick>()
             .saturating_mul(self.tick())
@@ -218,7 +219,7 @@ impl TradingPairProfile {
 }
 
 /// Immutable information of an order.
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct OrderProperty<PairId, AccountId, Amount, Price, BlockNumber> {
@@ -241,7 +242,7 @@ pub struct OrderProperty<PairId, AccountId, Amount, Price, BlockNumber> {
 }
 
 /// Details of an order.
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct Order<PairId, AccountId, Balance, Price, BlockNumber> {
@@ -381,7 +382,7 @@ where
 }
 
 /// Latest price of a trading pair.
-#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct TradingPairInfo<Price, BlockNumber> {
@@ -392,7 +393,7 @@ pub struct TradingPairInfo<Price, BlockNumber> {
 }
 
 /// Information about the executed orders.
-#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct OrderExecutedInfo<AccountId, Balance, BlockNumber, Price> {
     trading_history_idx: TradingHistoryIndex,
     pair_id: TradingPairId,

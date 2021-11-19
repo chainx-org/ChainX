@@ -2,7 +2,6 @@
 
 use codec::{Decode, Encode};
 use frame_benchmarking::benchmarks;
-use frame_support::storage::StorageMap;
 use frame_system::RawOrigin;
 use sp_core::crypto::AccountId32;
 use sp_runtime::traits::StaticLookup;
@@ -10,32 +9,32 @@ use sp_std::prelude::*;
 
 use chainx_primitives::AssetId;
 use xpallet_assets::{BalanceOf, Chain};
-use xpallet_gateway_records::{Module as XGatewayRecords, WithdrawalRecordId, WithdrawalState};
+use xpallet_gateway_records::{Pallet as XGatewayRecords, WithdrawalRecordId, WithdrawalState};
 
-use crate::{types::*, Call, Module, Trait, TrusteeMultiSigAddr};
+use crate::{types::*, Call, Config, Pallet, TrusteeMultiSigAddr};
 
 const ASSET_ID: AssetId = xp_protocol::X_BTC;
 
-fn account<T: Trait>(pubkey: &str) -> T::AccountId {
+fn account<T: Config>(pubkey: &str) -> T::AccountId {
     let pubkey = hex::decode(pubkey).unwrap();
     let mut public = [0u8; 32];
     public.copy_from_slice(pubkey.as_slice());
     let account = AccountId32::from(public).encode();
     Decode::decode(&mut account.as_slice()).unwrap()
 }
-fn alice<T: Trait>() -> T::AccountId {
+fn alice<T: Config>() -> T::AccountId {
     // sr25519 Alice
     account::<T>("d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d")
 }
-fn bob<T: Trait>() -> T::AccountId {
+fn bob<T: Config>() -> T::AccountId {
     // sr25519 Bob
     account::<T>("8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48")
 }
-fn charlie<T: Trait>() -> T::AccountId {
+fn charlie<T: Config>() -> T::AccountId {
     // sr25519 Charlie
     account::<T>("90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22")
 }
-fn new_trustees<T: Trait>() -> Vec<(T::AccountId, Vec<u8>, Vec<u8>, Vec<u8>)> {
+fn new_trustees<T: Config>() -> Vec<(T::AccountId, Vec<u8>, Vec<u8>, Vec<u8>)> {
     vec![
         (
             alice::<T>(),
@@ -65,11 +64,9 @@ fn new_trustees<T: Trait>() -> Vec<(T::AccountId, Vec<u8>, Vec<u8>, Vec<u8>)> {
 }
 
 benchmarks! {
-    _{ }
-
     withdraw {
         let caller: T::AccountId = alice::<T>();
-        let amount: BalanceOf<T> = 10_00000000.into();
+        let amount: BalanceOf<T> = 1_000_000_000u32.into();
         XGatewayRecords::<T>::deposit(&caller, ASSET_ID, amount).unwrap();
 
         let addr = b"3PgYgJA6h5xPEc3HbnZrUZWkpRxuCZVyEP".to_vec();
@@ -85,13 +82,13 @@ benchmarks! {
 
     cancel_withdrawal {
         let caller: T::AccountId = alice::<T>();
-        let amount: BalanceOf<T> = 10_00000000.into();
+        let amount: BalanceOf<T> = 100_000_0000u32.into();
         XGatewayRecords::<T>::deposit(&caller, ASSET_ID, amount).unwrap();
 
-        let withdrawal = amount - 500.into();
+        let withdrawal = amount - 500u32.into();
         let addr = b"3PgYgJA6h5xPEc3HbnZrUZWkpRxuCZVyEP".to_vec();
         let memo = b"".to_vec().into();
-        Module::<T>::withdraw(
+        Pallet::<T>::withdraw(
             RawOrigin::Signed(caller.clone()).into(),
             ASSET_ID, withdrawal, addr, memo,
         )
@@ -117,10 +114,10 @@ benchmarks! {
         let cold = hex::decode("0386b58f51da9b37e59c40262153173bdb59d7e4e45b73994b99eec4d964ee7e88")
                 .unwrap();
 
-        assert!(Module::<T>::trustee_intention_props_of(caller.clone(), Chain::Bitcoin).is_none());
+        assert!(Pallet::<T>::trustee_intention_props_of(caller.clone(), Chain::Bitcoin).is_none());
     }: _(RawOrigin::Signed(caller.clone()), Chain::Bitcoin, b"about".to_vec(), hot, cold)
     verify {
-        assert!(Module::<T>::trustee_intention_props_of(caller, Chain::Bitcoin).is_some());
+        assert!(Pallet::<T>::trustee_intention_props_of(caller, Chain::Bitcoin).is_some());
     }
 
     transition_trustee_session {
@@ -129,30 +126,30 @@ benchmarks! {
 
         let mut candidators = vec![];
         for (account, about, hot, cold) in new_trustees::<T>() {
-            Module::<T>::setup_trustee_impl(account.clone(), Chain::Bitcoin, about, hot, cold).unwrap();
+            Pallet::<T>::setup_trustee_impl(account.clone(), Chain::Bitcoin, about, hot, cold).unwrap();
             candidators.push(account);
         }
 
-        assert_eq!(Module::<T>::trustee_session_info_len(Chain::Bitcoin), 0);
-        assert!(Module::<T>::trustee_session_info_of(Chain::Bitcoin, 0).is_none());
+        assert_eq!(Pallet::<T>::trustee_session_info_len(Chain::Bitcoin), 0);
+        assert!(Pallet::<T>::trustee_session_info_of(Chain::Bitcoin, 0).is_none());
 
     }: _(RawOrigin::Signed(caller.clone()), Chain::Bitcoin, candidators)
     verify {
-        assert_eq!(Module::<T>::trustee_session_info_len(Chain::Bitcoin), 1);
-        assert!(Module::<T>::trustee_session_info_of(Chain::Bitcoin, 0).is_some());
+        assert_eq!(Pallet::<T>::trustee_session_info_len(Chain::Bitcoin), 1);
+        assert!(Pallet::<T>::trustee_session_info_of(Chain::Bitcoin, 0).is_some());
     }
 
     set_withdrawal_state {
         let caller: T::AccountId = alice::<T>();
         TrusteeMultiSigAddr::<T>::insert(Chain::Bitcoin, caller.clone());
 
-        let amount: BalanceOf<T> = 10_00000000.into();
+        let amount: BalanceOf<T> = 1_000_000_000u32.into();
         XGatewayRecords::<T>::deposit(&caller, ASSET_ID, amount).unwrap();
 
-        let withdrawal = amount - 500.into();
+        let withdrawal = amount - 500u32.into();
         let addr = b"3PgYgJA6h5xPEc3HbnZrUZWkpRxuCZVyEP".to_vec();
         let memo = b"".to_vec().into();
-        Module::<T>::withdraw(
+        Pallet::<T>::withdraw(
             RawOrigin::Signed(caller.clone()).into(),
             ASSET_ID, withdrawal, addr, memo,
         )
@@ -175,7 +172,7 @@ benchmarks! {
         };
     }: _(RawOrigin::Root, Chain::Bitcoin, config.clone())
     verify {
-        assert_eq!(Module::<T>::trustee_info_config_of(Chain::Bitcoin), config);
+        assert_eq!(Pallet::<T>::trustee_info_config_of(Chain::Bitcoin), config);
     }
 
     force_set_referral_binding {
@@ -183,7 +180,7 @@ benchmarks! {
         let who_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(who.clone());
     }: _(RawOrigin::Root, Chain::Bitcoin, who_lookup.clone(), who_lookup.clone())
     verify {
-        assert_eq!(Module::<T>::referral_binding_of(&who, Chain::Bitcoin), Some(who));
+        assert_eq!(Pallet::<T>::referral_binding_of(&who, Chain::Bitcoin), Some(who));
     }
 }
 
@@ -196,13 +193,13 @@ mod tests {
     #[test]
     fn test_benchmarks() {
         ExtBuilder::default().build().execute_with(|| {
-            assert_ok!(test_benchmark_withdraw::<Test>());
-            assert_ok!(test_benchmark_cancel_withdrawal::<Test>());
-            assert_ok!(test_benchmark_setup_trustee::<Test>());
-            assert_ok!(test_benchmark_transition_trustee_session::<Test>());
-            assert_ok!(test_benchmark_set_withdrawal_state::<Test>());
-            assert_ok!(test_benchmark_set_trustee_info_config::<Test>());
-            assert_ok!(test_benchmark_force_set_referral_binding::<Test>());
+            assert_ok!(Pallet::<Test>::test_benchmark_withdraw());
+            assert_ok!(Pallet::<Test>::test_benchmark_cancel_withdrawal());
+            assert_ok!(Pallet::<Test>::test_benchmark_setup_trustee());
+            assert_ok!(Pallet::<Test>::test_benchmark_transition_trustee_session());
+            assert_ok!(Pallet::<Test>::test_benchmark_set_withdrawal_state());
+            assert_ok!(Pallet::<Test>::test_benchmark_set_trustee_info_config());
+            assert_ok!(Pallet::<Test>::test_benchmark_force_set_referral_binding());
         });
     }
 }

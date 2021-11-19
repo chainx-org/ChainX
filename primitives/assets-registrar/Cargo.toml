@@ -5,13 +5,14 @@ authors = ["The ChainX Authors"]
 edition = "2018"
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "1.3.4", features = ["derive"], default-features = false }
+codec = { package = "parity-scale-codec", version = "2.3.1", default-features = false }
 serde = { version = "1.0", features = ["derive"], optional = true }
-impl-trait-for-tuples = "0.1.3"
+scale-info = { version = "1.0", default-features = false, features = ["derive"] }
+impl-trait-for-tuples = "0.2.1"
 
 # Substrate primitives
-sp-runtime = { version = "2.0.0", default-features = false }
-sp-std = { version = "2.0.0", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
 
 # ChainX primitives
 chainx-primitives = { path = "../../primitives", default-features = false }
@@ -21,6 +22,7 @@ default = ["std"]
 std = [
     "codec/std",
     "serde",
+    "scale-info/std",
     # Substrate primitives
     "sp-runtime/std",
     # ChainX primitives

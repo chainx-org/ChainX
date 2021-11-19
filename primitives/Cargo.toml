@@ -5,23 +5,25 @@ authors = ["The ChainX Authors"]
 edition = "2018"
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "1.3.4", default-features = false }
-serde = { version = "1.0.101", features = ["derive"], optional = true }
+codec = { package = "parity-scale-codec", version = "2.3.1", default-features = false }
+serde = { version = "1.0", features = ["derive"], optional = true }
+scale-info = { version = "1.0", default-features = false, features = ["derive"] }
 
 # Substrate primitives
-sp-application-crypto = { version = "2.0.0", default-features = false }
-sp-core = { version = "2.0.0", default-features = false }
-sp-runtime = { version = "2.0.0", default-features = false }
-sp-std = { version = "2.0.0", default-features = false }
+sp-application-crypto = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
 
 # Substrate pallets
-frame-system = { version = "2.0.0", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
 
 [features]
 default = ["std"]
 std = [
     "codec/std",
     "serde",
+    "scale-info/std",
     # Substrate primitives
     "sp-application-crypto/std",
     "sp-core/std",

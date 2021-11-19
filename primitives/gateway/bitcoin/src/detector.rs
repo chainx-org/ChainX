@@ -3,7 +3,7 @@
 use sp_std::fmt::Debug;
 
 use chainx_primitives::ReferralId;
-use xp_logging::{debug, warn};
+use frame_support::log::{debug, warn};
 
 use light_bitcoin::{
     chain::Transaction,

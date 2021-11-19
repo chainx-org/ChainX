@@ -6,7 +6,7 @@ use super::*;
 use sp_runtime::traits::CheckedAdd;
 use sp_std::cmp::Ordering;
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Pallet<T> {
     /// When the price is far from the current handicap, i.e.,
     /// - buy: less than the lowest_ask
     /// - sell: larger than the highest_bid
@@ -66,7 +66,7 @@ impl<T: Trait> Module<T> {
             pair_id, price, order_id, submitter, order_type, side, amount, remaining,
         );
 
-        debug!("[inject_order] New order:{:?}", order);
+        debug!(target: "runtime::dex::spot", "[inject_order] New order:{:?}", order);
         <OrderInfoOf<T>>::insert(&who, order_id, &order);
 
         // The order count of user should be increased after a new order is created.
@@ -89,7 +89,7 @@ impl<T: Trait> Module<T> {
         amount: BalanceOf<T>,
         remaining: BalanceOf<T>,
     ) -> Order<TradingPairId, T::AccountId, BalanceOf<T>, T::Price, T::BlockNumber> {
-        let current_block = <frame_system::Module<T>>::block_number();
+        let current_block = <frame_system::Pallet<T>>::block_number();
         let props = OrderProperty {
             pair_id,
             side,
@@ -126,7 +126,7 @@ impl<T: Trait> Module<T> {
         Self::apply_match_order(order, pair, handicap);
 
         #[cfg(feature = "std")]
-        debug!("Took {:?}ms to match this order", now.elapsed().as_millis());
+        debug!(target: "runtime::dex::spot", "Took {:?}ms to match this order", now.elapsed().as_millis());
 
         // Remove the full filled order, otherwise the quotations, order status and handicap
         // should be updated.
@@ -312,7 +312,7 @@ impl<T: Trait> Module<T> {
             Ordering::Less => OrderStatus::PartialFill,
             Ordering::Equal => OrderStatus::Filled,
         };
-        order.last_update_at = <frame_system::Module<T>>::block_number();
+        order.last_update_at = <frame_system::Pallet<T>>::block_number();
     }
 
     /// Writes the `order` to the storage.
@@ -353,7 +353,7 @@ impl<T: Trait> Module<T> {
         let pair = Self::trading_pair(pair_id)?;
 
         let trading_history_idx = Self::trading_history_index_of(pair_id);
-        TradingHistoryIndexOf::insert(pair_id, trading_history_idx + 1);
+        TradingHistoryIndexOf::<T>::insert(pair_id, trading_history_idx + 1);
 
         Self::update_order_on_execute(maker_order, &turnover, trading_history_idx);
         Self::update_order_on_execute(taker_order, &turnover, trading_history_idx);
@@ -391,7 +391,7 @@ impl<T: Trait> Module<T> {
             turnover,
             maker_order,
             taker_order,
-            <frame_system::Module<T>>::block_number(),
+            <frame_system::Pallet<T>>::block_number(),
         )));
 
         Ok(())
@@ -412,7 +412,7 @@ impl<T: Trait> Module<T> {
 
         order.update_status_on_cancel();
         order.decrease_remaining_on_cancel(refund_amount);
-        order.last_update_at = <frame_system::Module<T>>::block_number();
+        order.last_update_at = <frame_system::Pallet<T>>::block_number();
 
         OrderInfoOf::<T>::insert(order.submitter(), order.id(), order.clone());
 

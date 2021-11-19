@@ -11,9 +11,9 @@ use xp_mining_staking::MiningPower;
 
 use super::*;
 
-impl<'a, T: Trait> BaseMiningWeight<BalanceOf<T>, T::BlockNumber> for AssetLedgerWrapper<'a, T> {
+impl<'a, T: Config> BaseMiningWeight<BalanceOf<T>, T::BlockNumber> for AssetLedgerWrapper<'a, T> {
     fn amount(&self) -> BalanceOf<T> {
-        xpallet_assets::Module::<T>::total_issuance(&self.asset_id)
+        xpallet_assets::Pallet::<T>::total_issuance(&self.asset_id)
     }
 
     fn last_acum_weight(&self) -> WeightType {
@@ -33,9 +33,9 @@ impl<'a, T: Trait> BaseMiningWeight<BalanceOf<T>, T::BlockNumber> for AssetLedge
     }
 }
 
-impl<'a, T: Trait> BaseMiningWeight<BalanceOf<T>, T::BlockNumber> for MinerLedgerWrapper<'a, T> {
+impl<'a, T: Config> BaseMiningWeight<BalanceOf<T>, T::BlockNumber> for MinerLedgerWrapper<'a, T> {
     fn amount(&self) -> BalanceOf<T> {
-        xpallet_assets::Module::<T>::all_type_asset_balance(&self.miner, &self.asset_id)
+        xpallet_assets::Pallet::<T>::all_type_asset_balance(&self.miner, &self.asset_id)
     }
 
     fn last_acum_weight(&self) -> WeightType {
@@ -55,7 +55,7 @@ impl<'a, T: Trait> BaseMiningWeight<BalanceOf<T>, T::BlockNumber> for MinerLedge
     }
 }
 
-impl<T: Trait> ComputeMiningWeight<T::AccountId, T::BlockNumber> for Module<T> {
+impl<T: Config> ComputeMiningWeight<T::AccountId, T::BlockNumber> for Pallet<T> {
     type Claimee = AssetId;
     type Error = Error<T>;
 
@@ -91,9 +91,9 @@ impl<T: Trait> ComputeMiningWeight<T::AccountId, T::BlockNumber> for Module<T> {
 //     return Ok(());
 // }
 // ```
-impl<T: Trait> xpallet_assets::OnAssetChanged<T::AccountId, BalanceOf<T>> for Module<T> {
+impl<T: Config> xpallet_assets::OnAssetChanged<T::AccountId, BalanceOf<T>> for Pallet<T> {
     fn on_issue_pre(target: &AssetId, source: &T::AccountId) {
-        let current_block = <frame_system::Module<T>>::block_number();
+        let current_block = <frame_system::Pallet<T>>::block_number();
         Self::init_receiver_mining_ledger(source, target, current_block);
 
         Self::update_mining_weights(source, target, current_block);
@@ -119,7 +119,7 @@ impl<T: Trait> xpallet_assets::OnAssetChanged<T::AccountId, BalanceOf<T>> for Mo
             return;
         }
 
-        let current_block = <frame_system::Module<T>>::block_number();
+        let current_block = <frame_system::Pallet<T>>::block_number();
         Self::init_receiver_mining_ledger(to, asset_id, current_block);
 
         Self::update_miner_mining_weight(from, asset_id, current_block);
@@ -127,12 +127,12 @@ impl<T: Trait> xpallet_assets::OnAssetChanged<T::AccountId, BalanceOf<T>> for Mo
     }
 
     fn on_destroy_pre(target: &AssetId, source: &T::AccountId) {
-        let current_block = <frame_system::Module<T>>::block_number();
+        let current_block = <frame_system::Pallet<T>>::block_number();
         Self::update_mining_weights(source, target, current_block);
     }
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Pallet<T> {
     /// Returns the tuple of (dividend, source_weight, target_weight, reward_pot_account).
     pub fn calculate_dividend_on_claim(
         claimer: &T::AccountId,
@@ -180,7 +180,7 @@ impl<T: Trait> Module<T> {
     ) -> Result<(), Error<T>> {
         let to_referral_or_treasury = dividend / 10u32.saturated_into();
         let reward_splitter = T::GatewayInterface::referral_of(claimer, *claimee)
-            .unwrap_or_else(<T as Trait>::TreasuryAccount::treasury_account);
+            .unwrap_or_else(<T as Config>::TreasuryAccount::treasury_account);
         Self::transfer(
             claimee_reward_pot,
             &reward_splitter,
@@ -194,12 +194,12 @@ impl<T: Trait> Module<T> {
     }
 }
 
-impl<T: Trait> Claim<T::AccountId> for Module<T> {
+impl<T: Config> Claim<T::AccountId> for Pallet<T> {
     type Claimee = AssetId;
     type Error = Error<T>;
 
     fn claim(claimer: &T::AccountId, claimee: &Self::Claimee) -> Result<(), Error<T>> {
-        let current_block = <frame_system::Module<T>>::block_number();
+        let current_block = <frame_system::Pallet<T>>::block_number();
 
         let ClaimRestriction {
             staking_requirement,
@@ -232,16 +232,16 @@ impl<T: Trait> Claim<T::AccountId> for Module<T> {
     }
 }
 
-impl<T: Trait> xpallet_assets_registrar::RegistrarHandler for Module<T> {
+impl<T: Config> xpallet_assets_registrar::RegistrarHandler for Pallet<T> {
     fn on_register(asset_id: &AssetId, has_mining_rights: bool) -> DispatchResult {
         if !has_mining_rights {
             return Ok(());
         }
-        MiningPrevilegedAssets::mutate(|i| i.push(*asset_id));
+        MiningPrevilegedAssets::<T>::mutate(|i| i.push(*asset_id));
         AssetLedgers::<T>::insert(
             asset_id,
             AssetLedger {
-                last_total_mining_weight_update: <frame_system::Module<T>>::block_number(),
+                last_total_mining_weight_update: <frame_system::Pallet<T>>::block_number(),
                 ..Default::default()
             },
         );
@@ -249,7 +249,7 @@ impl<T: Trait> xpallet_assets_registrar::RegistrarHandler for Module<T> {
     }
 
     fn on_deregister(asset_id: &AssetId) -> DispatchResult {
-        MiningPrevilegedAssets::mutate(|v| {
+        MiningPrevilegedAssets::<T>::mutate(|v| {
             v.retain(|i| i != asset_id);
         });
         Ok(())
@@ -259,18 +259,18 @@ impl<T: Trait> xpallet_assets_registrar::RegistrarHandler for Module<T> {
 /// Simple Asset reward pot account determiner.
 ///
 /// Formula: `blake2_256(blake2_256(asset_id) + blake2_256(registered_block_number))`
-pub struct SimpleAssetRewardPotAccountDeterminer<T: Trait>(sp_std::marker::PhantomData<T>);
+pub struct SimpleAssetRewardPotAccountDeterminer<T: Config>(sp_std::marker::PhantomData<T>);
 
-impl<T: Trait> xp_mining_common::RewardPotAccountFor<T::AccountId, AssetId>
+impl<T: Config> xp_mining_common::RewardPotAccountFor<T::AccountId, AssetId>
     for SimpleAssetRewardPotAccountDeterminer<T>
 where
     T::AccountId: UncheckedFrom<T::Hash> + AsRef<[u8]>,
 {
     fn reward_pot_account_for(asset_id: &AssetId) -> T::AccountId {
         let id_hash = T::Hashing::hash(&asset_id.to_le_bytes()[..]);
-        let registered_block = <xpallet_assets_registrar::Module<T>>::registered_at(asset_id);
+        let registered_block = <xpallet_assets_registrar::Pallet<T>>::registered_at(asset_id);
         let registered_block_hash =
-            <T as frame_system::Trait>::Hashing::hash(registered_block.encode().as_ref());
+            <T as frame_system::Config>::Hashing::hash(registered_block.encode().as_ref());
 
         let id_slice = id_hash.as_ref();
         let registered_slice = registered_block_hash.as_ref();
@@ -283,13 +283,13 @@ where
     }
 }
 
-impl<T: Trait> xp_mining_staking::AssetMining<BalanceOf<T>> for Module<T> {
+impl<T: Config> xp_mining_staking::AssetMining<BalanceOf<T>> for Pallet<T> {
     /// Collects the mining power of all mining assets.
     fn asset_mining_power() -> Vec<(AssetId, MiningPower)> {
         // Currently only X-BTC asset.
-        FixedAssetPowerOf::iter()
+        FixedAssetPowerOf::<T>::iter()
             .map(|(asset_id, fixed_power)| {
-                let total_issuance = <xpallet_assets::Module<T>>::total_issuance(&asset_id);
+                let total_issuance = <xpallet_assets::Pallet<T>>::total_issuance(&asset_id);
                 (
                     asset_id,
                     total_issuance
@@ -303,7 +303,7 @@ impl<T: Trait> xp_mining_staking::AssetMining<BalanceOf<T>> for Module<T> {
     /// Issues reward to the reward pot of an Asset.
     fn reward(asset_id: AssetId, value: BalanceOf<T>) {
         let reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(&asset_id);
-        <T as xpallet_assets::Trait>::Currency::deposit_creating(&reward_pot, value);
+        <T as xpallet_assets::Config>::Currency::deposit_creating(&reward_pot, value);
         Self::deposit_event(Event::<T>::Minted(reward_pot, value));
     }
 }
