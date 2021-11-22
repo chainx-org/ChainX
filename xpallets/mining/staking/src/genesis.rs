@@ -1,6 +1,6 @@
 use crate::*;
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Pallet<T> {
     /// Initializes the genesis validators.
     ///
     /// Set the weight to 0.

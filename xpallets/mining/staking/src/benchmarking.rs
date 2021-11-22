@@ -123,13 +123,9 @@ benchmarks! {
     chill {
         let u in 1 .. 1000;
         let validator: T::AccountId = create_validator::<T>("validator", 2, 1000);
-<<<<<<< HEAD
-        let _validator_1: T::AccountId = create_validator::<T>("validator_1", 1, 100);
-=======
         if !Pallet::<T>::is_validator(&validator) {
             Pallet::<T>::register(RawOrigin::Signed(validator.clone()).into(), (u as u32).to_be_bytes().to_vec(), 100u32.into())?;
         }
->>>>>>> polkadot-v0.9.11
     }: _(RawOrigin::Signed(validator.clone()))
     verify {
         assert!(Pallet::<T>::is_chilled(&validator));
@@ -138,14 +134,8 @@ benchmarks! {
     validate {
         let u in 1 .. 1000;
         let validator: T::AccountId = create_validator::<T>("validator", 2, 1000);
-<<<<<<< HEAD
-        let _validator_1: T::AccountId = create_validator::<T>("validator_1", 1, 100);
-        if !Module::<T>::is_validator(&validator) {
-            Module::<T>::register(RawOrigin::Signed(validator.clone()).into(), (u as u32).to_be_bytes().to_vec(), 100.into())?;
-=======
         if !Pallet::<T>::is_validator(&validator) {
             Pallet::<T>::register(RawOrigin::Signed(validator.clone()).into(), (u as u32).to_be_bytes().to_vec(), 100u32.into())?;
->>>>>>> polkadot-v0.9.11
         }
         Pallet::<T>::chill(RawOrigin::Signed(validator.clone()).into())?;
     }: _(RawOrigin::Signed(validator.clone()))

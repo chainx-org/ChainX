@@ -1,14 +1,14 @@
-use crate::{GenesisConfig, Trait};
+use crate::{GenesisConfig, Config};
 
-mod balances {
-    use frame_support::{traits::StoredMap, StorageValue};
+pub(crate) mod balances {
+    use frame_support::traits::StoredMap;
     use pallet_balances::AccountData;
     use xp_genesis_builder::FreeBalanceInfo;
 
-    use crate::Trait;
+    use crate::Config;
 
     // Set PCX free balance.
-    pub fn initialize<T: Trait>(free_balances: &[FreeBalanceInfo<T::AccountId, T::Balance>]) {
+    pub fn initialize<T: Config>(free_balances: &[FreeBalanceInfo<T::AccountId, T::Balance>]) {
         let set_free_balance = |who: &T::AccountId, free: &T::Balance| {
             T::AccountStore::insert(
                 who,
@@ -22,7 +22,7 @@ mod balances {
         let mut total_issuance = T::Balance::default();
 
         for FreeBalanceInfo { who, free } in free_balances {
-            set_free_balance(who, free);
+            let _ = set_free_balance(who, free);
             total_issuance += *free;
         }
 
@@ -30,7 +30,7 @@ mod balances {
     }
 }
 
-mod xassets {
+pub(crate) mod xassets {
     // Set XBTC free balance.
     use xp_genesis_builder::FreeBalanceInfo;
     use xp_protocol::X_BTC;
@@ -38,21 +38,21 @@ mod xassets {
     use super::*;
     use crate::AssetBalanceOf;
 
-    pub fn initialize<T: Trait>(xbtc_assets: &[FreeBalanceInfo<T::AccountId, AssetBalanceOf<T>>]) {
+    pub fn initialize<T: Config>(xbtc_assets: &[FreeBalanceInfo<T::AccountId, AssetBalanceOf<T>>]) {
         for FreeBalanceInfo { who, free } in xbtc_assets {
-            xpallet_assets::Module::<T>::force_set_free_balance(&X_BTC, who, *free);
+            xpallet_assets::Pallet::<T>::force_set_free_balance(&X_BTC, who, *free);
         }
     }
 }
 
-mod xstaking {
+pub(crate) mod xstaking {
     use xp_genesis_builder::{Nomination, NominatorInfo, XStakingParams};
 
     use super::*;
     use crate::StakingBalanceOf;
 
     // Simulate the bond operation.
-    pub fn initialize<T: Trait>(
+    pub fn initialize<T: Config>(
         params: &XStakingParams<T::AccountId, StakingBalanceOf<T>>,
         initial_authorities: &[Vec<u8>],
     ) {
@@ -62,7 +62,7 @@ mod xstaking {
         } = params;
 
         // Firstly register the genesis validators.
-        xpallet_mining_staking::Module::<T>::initialize_validators(validators, initial_authorities)
+        xpallet_mining_staking::Pallet::<T>::initialize_validators(validators, initial_authorities)
             .expect("Failed to initialize genesis staking validators");
 
         // Then mock the validator bond themselves and set the vote weights.
@@ -76,19 +76,19 @@ mod xstaking {
                 nomination,
             } in nominations
             {
-                xpallet_mining_staking::Module::<T>::force_set_nominator_vote_weight(
+                xpallet_mining_staking::Pallet::<T>::force_set_nominator_vote_weight(
                     nominator,
                     nominee,
                     Default::default(),
                 );
-                xpallet_mining_staking::Module::<T>::force_bond(nominator, nominee, *nomination)
+                xpallet_mining_staking::Pallet::<T>::force_bond(nominator, nominee, *nomination)
                     .expect("force validator self-bond can not fail; qed");
             }
         }
     }
 }
 
-mod xmining_asset {
+pub(crate) mod xmining_asset {
     use xp_genesis_builder::FreeBalanceInfo;
     use xp_protocol::X_BTC;
 
@@ -96,11 +96,11 @@ mod xmining_asset {
     use crate::AssetBalanceOf;
 
     // Set the weight related to zero.
-    pub fn initialize<T: Trait>(xbtc_assets: &[FreeBalanceInfo<T::AccountId, AssetBalanceOf<T>>]) {
-        let current_block = frame_system::Module::<T>::block_number();
+    pub fn initialize<T: Config>(xbtc_assets: &[FreeBalanceInfo<T::AccountId, AssetBalanceOf<T>>]) {
+        let current_block = frame_system::Pallet::<T>::block_number();
 
         for FreeBalanceInfo { who, .. } in xbtc_assets {
-            xpallet_mining_asset::Module::<T>::force_set_miner_mining_weight(
+            xpallet_mining_asset::Pallet::<T>::force_set_miner_mining_weight(
                 who,
                 &X_BTC,
                 Default::default(),
@@ -108,7 +108,7 @@ mod xmining_asset {
             );
         }
 
-        xpallet_mining_asset::Module::<T>::force_set_asset_mining_weight(
+        xpallet_mining_asset::Pallet::<T>::force_set_asset_mining_weight(
             &X_BTC,
             Default::default(),
             current_block,
@@ -116,7 +116,7 @@ mod xmining_asset {
     }
 }
 
-pub(crate) fn initialize<T: Trait>(config: &GenesisConfig<T>) {
+pub(crate) fn initialize<T: Config>(config: &GenesisConfig<T>) {
     let now = std::time::Instant::now();
 
     balances::initialize::<T>(&config.params.balances);
@@ -124,7 +124,7 @@ pub(crate) fn initialize<T: Trait>(config: &GenesisConfig<T>) {
     xstaking::initialize::<T>(&config.params.xstaking, &config.initial_authorities);
     xmining_asset::initialize::<T>(&config.params.xassets);
 
-    xp_logging::info!(
+    frame_support::log::info!(
         "Took {:?}ms to orchestrate the regenesis state",
         now.elapsed().as_millis()
     );

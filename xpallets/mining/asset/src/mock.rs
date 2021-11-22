@@ -403,16 +403,6 @@ impl ExtBuilder {
         ext.execute_with(test);
     }
 }
-<<<<<<< HEAD
-
-pub type System = frame_system::Module<Test>;
-pub type Balances = pallet_balances::Module<Test>;
-pub type XAssetsRegistrar = xpallet_assets_registrar::Module<Test>;
-pub type XAssets = xpallet_assets::Module<Test>;
-pub type Session = pallet_session::Module<Test>;
-pub type Timestamp = pallet_timestamp::Module<Test>;
-pub type XStaking = xpallet_mining_staking::Module<Test>;
-pub type XMiningAsset = Module<Test>;
 
 pub fn t_register(who: AccountId, initial_bond: Balance) -> DispatchResult {
     let mut referral_id = who.to_string().as_bytes().to_vec();
@@ -423,5 +413,3 @@ pub fn t_register(who: AccountId, initial_bond: Balance) -> DispatchResult {
 
     XStaking::register(Origin::signed(who), referral_id, initial_bond)
 }
-=======
->>>>>>> polkadot-v0.9.11

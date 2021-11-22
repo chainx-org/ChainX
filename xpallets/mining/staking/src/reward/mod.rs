@@ -1,15 +1,10 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 use super::*;
-<<<<<<< HEAD
 #[allow(unused_imports)]
 use micromath::F32Ext;
-use xp_logging::debug;
-=======
 use sp_std::vec::Vec;
-use xp_mining_staking::SessionIndex;
 
->>>>>>> polkadot-v0.9.11
 mod proposal09;
 
 impl<T: Config> Pallet<T> {
@@ -43,13 +38,23 @@ impl<T: Config> Pallet<T> {
         // Validator themselves can only directly gain 10%, the rest 90% is for the reward pot.
         let off_the_table = reward.saturated_into::<BalanceOf<T>>() / 10u32.saturated_into();
         Self::mint(who, off_the_table);
-        debug!(target: "runtime::mining::staking", "💸 Mint validator({:?}):{:?}", who, off_the_table);
+        frame_support::log::debug!(
+            target: "runtime::mining::staking",
+            "� Mint validator({:?}):{:?}",
+            who,
+            off_the_table
+        );
 
         // Issue the rest 90% to validator's reward pot.
         let to_reward_pot = reward - off_the_table;
         let reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(who);
         Self::mint(&reward_pot, to_reward_pot);
-        debug!(target: "runtime::mining::staking", "💸 Mint reward_pot({:?}):{:?}", reward_pot, to_reward_pot);
+        frame_support::log::debug!(
+            target: "runtime::mining::staking",
+            "� Mint reward_pot({:?}):{:?}",
+            reward_pot,
+            to_reward_pot
+        );
     }
 
     /// Reward the intention and slash the validators that went offline in last session.
@@ -61,25 +66,6 @@ impl<T: Config> Pallet<T> {
         Self::apply_reward_validator(validator, reward);
     }
 
-<<<<<<< HEAD
-=======
-    /// 20% reward of each session is for the vesting schedule in the first halving epoch.
-    pub(crate) fn try_vesting(
-        current_index: SessionIndex,
-        this_session_reward: BalanceOf<T>,
-    ) -> BalanceOf<T> {
-        if !Self::first_halving_epoch_arrived(current_index) {
-            let to_vesting = this_session_reward / 5u32.saturated_into::<BalanceOf<T>>();
-            let vesting_account = Self::vesting_account();
-            Self::mint(&vesting_account, to_vesting);
-            debug!(target: "runtime::mining::staking", "💸 Mint vesting({:?}):{:?}", vesting_account, to_vesting);
-            this_session_reward - to_vesting
-        } else {
-            this_session_reward
-        }
-    }
-
->>>>>>> polkadot-v0.9.11
     /// Distribute the session reward to all the receivers, returns the total reward for validators.
     pub(crate) fn distribute_session_reward() -> Vec<(T::AccountId, BalanceOf<T>)> {
         let session_reward = Self::this_session_reward();
