@@ -63,93 +63,22 @@ pub type BalanceOf<T> =
 /// Counter for the number of eras that have passed.
 pub type EraIndex = u32;
 
-<<<<<<< HEAD
-pub trait Trait: frame_system::Trait {
-    /// The overarching event type.
-    type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
-
-    /// The currency mechanism.
-    type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
-
-    /// Get the treasury account.
-    type TreasuryAccount: TreasuryAccount<Self::AccountId>;
-
-    /// Asset mining integration.
-    type AssetMining: AssetMining<BalanceOf<Self>>;
-
-    /// Generate the reward pot account for a validator.
-    type DetermineRewardPotAccount: RewardPotAccountFor<Self::AccountId, Self::AccountId>;
-
-    /// Interface for interacting with a session module.
-    type SessionInterface: self::SessionInterface<Self::AccountId>;
-
-    /// The minimum byte length of validator referral id.
-    type MinimumReferralId: Get<u32>;
-
-    /// The maximum byte length of validator referral id.
-    type MaximumReferralId: Get<u32>;
-
-    /// An expected duration of the session.
-    ///
-    /// This parameter is used to determine the longevity of `heartbeat` transaction
-    /// and a rough time when we should start considering sending heartbeats,
-    /// since the workers avoids sending them at the very beginning of the session, assuming
-    /// there is a chance the authority will produce a block and they won't be necessary.
-    type SessionDuration: Get<Self::BlockNumber>;
-
-    /// Weight information for extrinsics in this pallet.
-    type WeightInfo: WeightInfo;
-}
-
-decl_storage! {
-    trait Store for Module<T: Trait> as XStaking {
-        /// The ideal number of staking participants.
-        pub ValidatorCount get(fn validator_count) config(): u32;
-
-        /// Minimum number of staking participants before emergency conditions are imposed.
-        pub MinimumValidatorCount get(fn minimum_validator_count) config(): u32;
-
-        /// Maximum number of staking participants before emergency conditions are imposed.
-        pub MaximumValidatorCount get(fn maximum_validator_count) config():
-            u32 = DEFAULT_MAXIMUM_VALIDATOR_COUNT;
-
-        /// Minimum value (self_bonded, total_bonded) to be a candidate of validator election.
-        pub ValidatorCandidateRequirement get(fn validator_candidate_requirement):
-            BondRequirement<BalanceOf<T>>;
-
-        /// The length of a staking era in sessions.
-        pub SessionsPerEra get(fn sessions_per_era) config(): SessionIndex = 12;
-
-        /// The length of the bonding duration in blocks.
-        pub BondingDuration get(fn bonding_duration) config():
-            T::BlockNumber = T::BlockNumber::saturated_from::<u64>(DEFAULT_BONDING_DURATION);
-
-        /// The length of the bonding duration in blocks for validator.
-        pub ValidatorBondingDuration get(fn validator_bonding_duration) config():
-            T::BlockNumber = T::BlockNumber::saturated_from::<u64>(DEFAULT_VALIDATOR_BONDING_DURATION);
-=======
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
     use frame_support::{dispatch::DispatchResult, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
->>>>>>> polkadot-v0.9.11
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
         /// The overarching event type.
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-<<<<<<< HEAD
-        /// The validator account behind the referral id.
-        pub ValidatorFor: map hasher(twox_64_concat) ReferralId => Option<T::AccountId>;
-=======
         /// The currency mechanism.
         type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
 
         /// Get the treasury account.
         type TreasuryAccount: TreasuryAccount<Self::AccountId>;
->>>>>>> polkadot-v0.9.11
 
         /// Asset mining integration.
         type AssetMining: AssetMining<BalanceOf<Self>>;
@@ -159,11 +88,6 @@ pub mod pallet {
 
         /// Interface for interacting with a session module.
         type SessionInterface: self::SessionInterface<Self::AccountId>;
-
-        /// The number of unfinished sessions in the first halving epoch.
-        ///
-        /// When the ChainX 2.0 migration happens, the first halving epoch is not over yet.
-        type MigrationSessionOffset: Get<SessionIndex>;
 
         /// The minimum byte length of validator referral id.
         #[pallet::constant]
@@ -175,134 +99,6 @@ pub mod pallet {
 
         /// An expected duration of the session.
         ///
-<<<<<<< HEAD
-        /// Immortals will be intialized from the genesis validators.
-        Immortals get(fn immortals): Option<Vec<T::AccountId>>;
-    }
-
-    add_extra_genesis {
-        config(validators): Vec<(T::AccountId, ReferralId, BalanceOf<T>)>;
-        config(glob_dist_ratio): (u32, u32);
-        config(mining_ratio): (u32, u32);
-        config(candidate_requirement): (BalanceOf<T>, BalanceOf<T>);
-        build(|config: &GenesisConfig<T>| {
-            assert!(config.glob_dist_ratio.0 + config.glob_dist_ratio.1 > 0);
-            assert!(config.mining_ratio.0 + config.mining_ratio.1 > 0);
-            GlobalDistributionRatio::put(GlobalDistribution {
-                treasury: config.glob_dist_ratio.0,
-                mining: config.glob_dist_ratio.1,
-            });
-            MiningDistributionRatio::put(MiningDistribution {
-                asset: config.mining_ratio.0,
-                staking: config.mining_ratio.1,
-            });
-            ValidatorCandidateRequirement::<T>::put(BondRequirement {
-                self_bonded: config.candidate_requirement.0,
-                total: config.candidate_requirement.1,
-            });
-
-            /*
-            Immortals::<T>::put(
-                config
-                    .validators
-                    .iter()
-                    .map(|(validator, _, _)| validator.clone())
-                    .collect::<Vec<_>>(),
-            );
-
-            for (validator, referral_id, balance) in &config.validators {
-                assert!(
-                    Module::<T>::free_balance(validator) >= *balance,
-                    "Validator does not have enough balance to bond."
-                );
-                Module::<T>::check_referral_id(referral_id)
-                    .expect("Validator referral id must be valid; qed");
-                Module::<T>::apply_register(validator, referral_id.to_vec());
-                Module::<T>::apply_bond(validator, validator, *balance)
-                    .expect("Bonding to validator itself can not fail; qed");
-            }
-            */
-        });
-    }
-}
-
-decl_event!(
-    pub enum Event<T>
-    where
-        Balance = BalanceOf<T>,
-        <T as frame_system::Trait>::AccountId
-    {
-        /// Issue new balance to this account. [account, reward_amount]
-        Minted(AccountId, Balance),
-        /// A validator (and its reward pot) was slashed. [validator, slashed_amount]
-        Slashed(AccountId, Balance),
-        /// A nominator bonded to the validator this amount. [nominator, validator, amount]
-        Bonded(AccountId, AccountId, Balance),
-        /// A nominator switched the vote from one validator to another. [nominator, from, to, amount]
-        Rebonded(AccountId, AccountId, AccountId, Balance),
-        /// A nominator unbonded this amount. [nominator, validator, amount]
-        Unbonded(AccountId, AccountId, Balance),
-        /// A nominator claimed the staking dividend. [nominator, validator, dividend]
-        Claimed(AccountId, AccountId, Balance),
-        /// The nominator withdrew the locked balance from the unlocking queue. [nominator, amount]
-        Withdrawn(AccountId, Balance),
-        /// Offenders were forcibly to be chilled due to insufficient reward pot balance. [session_index, chilled_validators]
-        ForceChilled(SessionIndex, Vec<AccountId>),
-        /// Unlock the unbonded withdrawal by force. [account]
-        ForceAllWithdrawn(AccountId),
-    }
-);
-
-decl_error! {
-    /// Error for the staking module.
-    pub enum Error for Module<T: Trait> {
-        /// The operation of zero balance in Staking makes no sense.
-        ZeroBalance,
-        /// No rewards when the vote weight is zero.
-        ZeroVoteWeight,
-        /// Invalid validator target.
-        NotValidator,
-        /// The account is already registered as a validator.
-        AlreadyValidator,
-        /// The validators count already reaches `MaximumValidatorCount`.
-        TooManyValidators,
-        /// The validator can accept no more votes from other voters.
-        NoMoreAcceptableVotes,
-        /// The validator can not (forcedly) be chilled due to the limit of minimal validators count.
-        TooFewActiveValidators,
-        /// Free balance can not cover this bond operation.
-        InsufficientBalance,
-        /// Can not rebond due to the restriction of rebond frequency limit.
-        NoMoreRebond,
-        /// An account can only rebond the balance that is no more than what it has bonded to the validator.
-        InvalidRebondBalance,
-        /// Can not rebond the validator self-bonded votes as it has a much longer bonding duration.
-        RebondSelfBondedNotAllowed,
-        /// An account can only unbond the balance that is no more than what it has bonded to the validator.
-        InvalidUnbondBalance,
-        /// An account can have only `MaximumUnbondedChunkSize` unbonded entries in parallel.
-        NoMoreUnbondChunks,
-        /// The account has no unbonded entries.
-        EmptyUnbondedChunks,
-        /// Can not find the unbonded entry given the index.
-        InvalidUnbondedIndex,
-        /// The unbonded balances are still in the locked state.
-        UnbondedWithdrawalNotYetDue,
-        /// The length of referral identity is either too long or too short.
-        InvalidReferralIdentityLength,
-        /// The referral identity has been claimed by someone else.
-        OccupiedReferralIdentity,
-        /// Failed to pass the xss check.
-        XssCheckFailed,
-        /// Failed to allocate the dividend.
-        AllocateDividendFailed,
-    }
-}
-
-impl<T: Trait> From<ZeroMiningWeightError> for Error<T> {
-    fn from(_: ZeroMiningWeightError) -> Self {
-        Self::ZeroVoteWeight
-=======
         /// This parameter is used to determine the longevity of `heartbeat` transaction
         /// and a rough time when we should start considering sending heartbeats,
         /// since the workers avoids sending them at the very beginning of the session, assuming
@@ -311,7 +107,6 @@ impl<T: Trait> From<ZeroMiningWeightError> for Error<T> {
 
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
->>>>>>> polkadot-v0.9.11
     }
 
     #[pallet::pallet]
@@ -1057,101 +852,7 @@ impl<T: Config> xpallet_support::traits::Validator<T::AccountId> for Pallet<T> {
     }
 }
 
-<<<<<<< HEAD
-impl<T: Trait> Module<T> {
-=======
 impl<T: Config> Pallet<T> {
-    /// Initializes the validators exported from ChainX 1.0.
-    #[cfg(feature = "std")]
-    pub fn initialize_legacy_validators(
-        validators: &[xp_genesis_builder::ValidatorInfo<T::AccountId, BalanceOf<T>>],
-    ) -> DispatchResult {
-        for xp_genesis_builder::ValidatorInfo {
-            who,
-            referral_id,
-            self_bonded,
-            total_nomination,
-            total_weight,
-        } in validators
-        {
-            Self::check_referral_id(referral_id)?;
-            if !self_bonded.is_zero() {
-                assert!(
-                    Self::free_balance(who) >= *self_bonded,
-                    "Validator does not have enough balance to bond."
-                );
-                Self::bond_reserve(who, *self_bonded);
-                Nominations::<T>::mutate(who, who, |nominator| {
-                    nominator.nomination = *self_bonded;
-                });
-            }
-            Self::apply_register(who, referral_id.to_vec());
-            // These validators will be chilled on the network startup.
-            Self::apply_force_chilled(who);
-
-            ValidatorLedgers::<T>::mutate(who, |validator| {
-                validator.total_nomination = *total_nomination;
-                validator.last_total_vote_weight = *total_weight;
-            });
-        }
-        Ok(())
-    }
-
-    #[cfg(feature = "std")]
-    pub fn force_bond(
-        sender: &T::AccountId,
-        target: &T::AccountId,
-        value: BalanceOf<T>,
-    ) -> DispatchResult {
-        if !value.is_zero() {
-            Self::bond_reserve(sender, value);
-            Nominations::<T>::mutate(sender, target, |nominator| {
-                nominator.nomination = value;
-            });
-        }
-        Ok(())
-    }
-
-    /// Mock the `unbond` operation but lock the funds until the specific height `locked_until`.
-    #[cfg(feature = "std")]
-    pub fn force_unbond(
-        sender: &T::AccountId,
-        target: &T::AccountId,
-        value: BalanceOf<T>,
-        locked_until: T::BlockNumber,
-    ) -> DispatchResult {
-        // We can not reuse can_unbond() as the target can has no bond but has unbonds.
-        // Self::can_unbond(sender, target, value)?;
-        ensure!(Self::is_validator(target), Error::<T>::NotValidator);
-        ensure!(
-            Self::unbonded_chunks_of(sender, target).len()
-                < Self::maximum_unbonded_chunk_size() as usize,
-            Error::<T>::NoMoreUnbondChunks
-        );
-        Self::unbond_reserve(sender, value)?;
-        Self::mutate_unbonded_chunks(sender, target, value, locked_until);
-        Ok(())
-    }
-
-    #[cfg(feature = "std")]
-    pub fn force_set_nominator_vote_weight(
-        nominator: &T::AccountId,
-        validator: &T::AccountId,
-        new_weight: VoteWeight,
-    ) {
-        Nominations::<T>::mutate(nominator, validator, |nominator| {
-            nominator.last_vote_weight = new_weight;
-        });
-    }
-
-    #[cfg(feature = "std")]
-    pub fn force_set_validator_vote_weight(who: &T::AccountId, new_weight: VoteWeight) {
-        ValidatorLedgers::<T>::mutate(who, |validator| {
-            validator.last_total_vote_weight = new_weight;
-        });
-    }
-
->>>>>>> polkadot-v0.9.11
     /// Returns true if the account `who` is a validator.
     #[inline]
     pub fn is_validator(who: &T::AccountId) -> bool {
