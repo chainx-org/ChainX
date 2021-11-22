@@ -1,6 +1,12 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use sc_cli::{ChainSpec, Role, RuntimeVersion, SubstrateCli, CliConfiguration};
+use std::net::SocketAddr;
+
+use sc_cli::{
+    ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
+    NetworkParams, Role, RuntimeVersion, SharedParams, SubstrateCli,
+};
+use sc_service::config::PrometheusConfig;
 
 use chainx_service::{self as service, new_partial, IdentifyVariant};
 
@@ -83,12 +89,6 @@ impl CliConfiguration<Self> for Cli {
         default_listen_port: u16,
     ) -> sc_cli::Result<Option<PrometheusConfig>> {
         self.run.base.prometheus_config(default_listen_port)
-    }
-
-    fn telemetry_external_transport(
-        &self,
-    ) -> sc_cli::Result<Option<sc_service::config::ExtTransport>> {
-        self.run.base.telemetry_external_transport()
     }
 
     fn default_heap_pages(&self) -> sc_cli::Result<Option<u64>> {

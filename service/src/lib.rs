@@ -293,12 +293,10 @@ where
 
     let role = config.role.clone();
     let force_authoring = config.force_authoring;
-<<<<<<< HEAD
+
     // we are not interested in using any backoff from block authoring in case finality is
     // lagging, in particular because we use a small session duration (50 slots) and this
     // could be problematic.
-=======
->>>>>>> polkadot-v0.9.11
     let backoff_authoring_blocks: Option<()> = None;
     let name = config.network.node_name.clone();
     let enable_grandpa = !config.disable_grandpa;
