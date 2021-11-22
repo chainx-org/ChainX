@@ -20,14 +20,6 @@ mod tests;
 use sp_runtime::SaturatedConversion;
 use sp_std::prelude::*;
 
-use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage,
-    dispatch::{DispatchError, DispatchResult, DispatchResultWithPostInfo},
-    ensure,
-    traits::{EnsureOrigin, UnixTime},
-    weights::Pays,
-};
-use frame_system::{ensure_root, ensure_signed};
 use orml_utilities::with_transaction_result;
 
 #[cfg(feature = "std")]
@@ -671,7 +663,7 @@ impl<T: Config> Pallet<T> {
                     hash,
                     height: header_info.height,
                 };
-                BestIndex::put(new_best_index);
+                BestIndex::<T>::put(new_best_index);
             } else {
                 // forked chain
                 log!(info,

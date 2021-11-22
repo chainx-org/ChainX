@@ -568,4 +568,12 @@ impl<T: Config> Pallet<T> {
             })
             .collect()
     }
+
+    #[cfg(feature = "std")]
+    pub fn withdrawal_state_insert(
+        id: WithdrawalRecordId,
+        state: WithdrawalState,
+    ) {
+        WithdrawalStateOf::<T>::insert(id, state)
+    }
 }
