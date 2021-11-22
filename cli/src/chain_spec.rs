@@ -410,12 +410,12 @@ fn build_genesis(
             verifier: BtcTxVerifier::Recover,
         },
         x_staking: dev::XStakingConfig {
-            validators,
-            validator_count: 50,
+            validator_count: 40,
             sessions_per_era: 12,
             glob_dist_ratio: (12, 88), // (Treasury, X-type Asset and Staking) = (12, 88)
             mining_ratio: (10, 90),    // (Asset Mining, Staking) = (10, 90)
-            minimum_penalty: 2 * DOLLARS,
+            minimum_penalty: 100 * DOLLARS,
+            candidate_requirement: (100 * DOLLARS, 1_000 * DOLLARS), // Minimum value (self_bonded, total_bonded) to be a validator candidate
             ..Default::default()
         },
         x_mining_asset: dev::XMiningAssetConfig {
@@ -427,8 +427,10 @@ fn build_genesis(
         },
         x_genesis_builder: dev::XGenesisBuilderConfig {
             params: crate::genesis::genesis_builder_params(),
-            initial_authorities_endowed,
-            root_endowed: 0,
+            initial_authorities: initial_authorities
+                .iter()
+                .map(|i| (i.0).1.clone())
+                .collect(),
         },
     }
 }

@@ -1123,14 +1123,10 @@ construct_runtime!(
         // we put it at the end for keeping the extrinsic ordering.
         XTransactionFee: xpallet_transaction_fee::{Pallet, Event<T>} = 35,
 
-        Proxy: pallet_proxy::{Pallet, Call, Storage, Event<T>} = 37,
+        Proxy: pallet_proxy::{Pallet, Call, Storage, Event<T>} = 36,
 
-<<<<<<< HEAD
-        Proxy: pallet_proxy::{Module, Call, Storage, Event<T>} = 36,
-=======
-        Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 38,
-        Tips: pallet_tips::{Pallet, Call, Storage, Event<T>} = 39,
->>>>>>> polkadot-v0.9.11
+        Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 37,
+        Tips: pallet_tips::{Pallet, Call, Storage, Event<T>} = 38,
     }
 );
 
