@@ -1505,7 +1505,7 @@ impl_runtime_apis! {
 
             return (list, storage_info)
         }
-        
+
         fn dispatch_benchmark(
             config: frame_benchmarking::BenchmarkConfig
         ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, RuntimeString> {
