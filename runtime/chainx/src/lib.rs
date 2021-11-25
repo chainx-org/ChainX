@@ -1483,6 +1483,29 @@ impl_runtime_apis! {
 
     #[cfg(feature = "runtime-benchmarks")]
     impl frame_benchmarking::Benchmark<Block> for Runtime {
+        fn benchmark_metadata(extra: bool) -> (
+            Vec<frame_benchmarking::BenchmarkList>,
+            Vec<frame_support::traits::StorageInfo>,
+        ) {
+            use frame_benchmarking::{list_benchmark, Benchmarking, BenchmarkList};
+            use frame_support::traits::StorageInfoTrait;
+
+            let mut list = Vec::<BenchmarkList>::new();
+
+            list_benchmark!(list, extra, xpallet_assets, XAssets);
+            list_benchmark!(list, extra, xpallet_assets_registrar, XAssetsRegistrar);
+            list_benchmark!(list, extra, xpallet_mining_asset, XMiningAsset);
+            list_benchmark!(list, extra, xpallet_mining_staking, XStaking);
+            list_benchmark!(list, extra, xpallet_gateway_records, XGatewayRecords);
+            list_benchmark!(list, extra, xpallet_gateway_common, XGatewayCommon);
+            list_benchmark!(list, extra, xpallet_gateway_bitcoin, XGatewayBitcoin);
+            list_benchmark!(list, extra, xpallet_dex_spot, XSpot);
+
+            let storage_info = AllPalletsWithSystem::storage_info();
+
+            return (list, storage_info)
+        }
+
         fn dispatch_benchmark(
             config: frame_benchmarking::BenchmarkConfig
         ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, RuntimeString> {
