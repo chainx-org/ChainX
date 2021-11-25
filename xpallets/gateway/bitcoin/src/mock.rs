@@ -1,5 +1,6 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
+#![allow(clippy::type_complexity)]
 use std::{cell::RefCell, collections::BTreeMap, time::Duration};
 
 use hex_literal::hex;
@@ -158,10 +159,9 @@ impl UnixTime for Timestamp {
             m.borrow().unwrap_or_else(|| {
                 use std::time::{SystemTime, UNIX_EPOCH};
                 let start = SystemTime::now();
-                let since_the_epoch = start
+                start
                     .duration_since(UNIX_EPOCH)
-                    .expect("Time went backwards");
-                since_the_epoch
+                    .expect("Time went backwards")
             })
         })
     }
@@ -172,7 +172,7 @@ impl Config for Test {
     type UnixTime = Timestamp;
     type AccountExtractor = xp_gateway_bitcoin::OpReturnExtractor;
     type TrusteeSessionProvider =
-    xpallet_gateway_common::trustees::bitcoin::BtcTrusteeSessionManager<Test>;
+        xpallet_gateway_common::trustees::bitcoin::BtcTrusteeSessionManager<Test>;
     type TrusteeOrigin = EnsureSignedBy<
         xpallet_gateway_common::trustees::bitcoin::BtcTrusteeMultisig<Test>,
         AccountId,
@@ -194,7 +194,7 @@ pub(crate) fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {
             8,
             b"ChainX's cross-chain Bitcoin".to_vec(),
         )
-            .unwrap(),
+        .unwrap(),
         AssetRestrictions::DESTROY_USABLE,
     )
 }
@@ -231,13 +231,13 @@ impl ExtBuilder {
             },
             &mut storage,
         )
-            .unwrap();
+        .unwrap();
 
         let _ = xpallet_assets::GenesisConfig::<Test> {
             assets_restrictions,
             endowed: Default::default(),
         }
-            .assimilate_storage(&mut storage);
+        .assimilate_storage(&mut storage);
 
         // let (genesis_info, genesis_hash, network_id) = load_mock_btc_genesis_header_info();
         let genesis_hash = btc_genesis.0.hash();
@@ -259,10 +259,9 @@ impl ExtBuilder {
             btc_withdrawal_fee: 0,
             max_withdrawal_count: 100,
         }
-            .assimilate_storage(&mut storage);
+        .assimilate_storage(&mut storage);
 
-        let ext = sp_io::TestExternalities::new(storage);
-        ext
+        sp_io::TestExternalities::new(storage)
     }
 
     pub fn build(self) -> sp_io::TestExternalities {
@@ -290,13 +289,13 @@ impl ExtBuilder {
             },
             &mut storage,
         )
-            .unwrap();
+        .unwrap();
 
         let _ = xpallet_assets::GenesisConfig::<Test> {
             assets_restrictions,
             endowed: Default::default(),
         }
-            .assimilate_storage(&mut storage);
+        .assimilate_storage(&mut storage);
 
         let info = trustees_info();
         let genesis_trustees = info
@@ -337,12 +336,11 @@ impl ExtBuilder {
             btc_withdrawal_fee: 0,
             max_withdrawal_count: 100,
         }
-            .assimilate_storage(&mut storage);
+        .assimilate_storage(&mut storage);
 
-        let ext = sp_io::TestExternalities::new(storage);
-        ext
+        sp_io::TestExternalities::new(storage)
     }
-    pub fn build_and_execute(self, test: impl FnOnce() -> ()) {
+    pub fn build_and_execute(self, test: impl FnOnce()) {
         let mut ext = self.build();
         ext.execute_with(|| System::set_block_number(1));
         ext.execute_with(test);
@@ -572,7 +570,7 @@ pub fn generate_blocks_478557_478563() -> (u32, Vec<BtcHeader>, Vec<BtcHeader>) 
 
     (
         478557,
-        vec![b0.clone(), b1, b2, b3, b4, b5],
+        vec![b0, b1, b2, b3, b4, b5],
         vec![b0, b1, b2_fork, b3_fork, b4_fork, b5_fork, b6_fork],
     )
 }

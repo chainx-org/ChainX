@@ -1,7 +1,7 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 //! RPC interface for the transaction payment module.
-
+#![allow(clippy::type_complexity)]
 use std::collections::btree_map::BTreeMap;
 use std::fmt::Display;
 use std::str::FromStr;
@@ -112,8 +112,7 @@ where
     > {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-        Ok(api
-            .validators(&at)
+        api.validators(&at)
             .map(|validators| {
                 validators
                     .into_iter()
@@ -134,7 +133,7 @@ where
                     })
                     .collect::<Vec<_>>()
             })
-            .map_err(runtime_error_into_rpc_err)?)
+            .map_err(runtime_error_into_rpc_err)
     }
 
     fn validator_info_of(
@@ -145,8 +144,7 @@ where
     {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-        Ok(api
-            .validator_info_of(&at, who)
+        api.validator_info_of(&at, who)
             .map(|validator| ValidatorInfo {
                 account: validator.account,
                 profile: validator.profile,
@@ -160,7 +158,7 @@ where
                 reward_pot_account: validator.reward_pot_account,
                 reward_pot_balance: validator.reward_pot_balance.into(),
             })
-            .map_err(runtime_error_into_rpc_err)?)
+            .map_err(runtime_error_into_rpc_err)
     }
 
     fn staking_dividend_of(
@@ -170,15 +168,14 @@ where
     ) -> Result<BTreeMap<AccountId, RpcBalance<Balance>>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-        Ok(api
-            .staking_dividend_of(&at, who)
+        api.staking_dividend_of(&at, who)
             .map(|staking_dividend| {
                 staking_dividend
                     .into_iter()
                     .map(|(account, balance)| (account, balance.into()))
                     .collect()
             })
-            .map_err(runtime_error_into_rpc_err)?)
+            .map_err(runtime_error_into_rpc_err)
     }
 
     fn nomination_details_of(
@@ -193,8 +190,7 @@ where
     > {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-        Ok(api
-            .nomination_details_of(&at, who)
+        api.nomination_details_of(&at, who)
             .map(|nomination_details| {
                 nomination_details
                     .into_iter()
@@ -218,7 +214,7 @@ where
                     })
                     .collect()
             })
-            .map_err(runtime_error_into_rpc_err)?)
+            .map_err(runtime_error_into_rpc_err)
     }
 
     fn nominator_info_of(
@@ -228,8 +224,7 @@ where
     ) -> Result<NominatorInfo<BlockNumber>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-        Ok(api
-            .nominator_info_of(&at, who)
-            .map_err(runtime_error_into_rpc_err)?)
+        api.nominator_info_of(&at, who)
+            .map_err(runtime_error_into_rpc_err)
     }
 }

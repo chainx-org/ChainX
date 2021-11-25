@@ -98,9 +98,9 @@ mod tests {
     #[test]
     fn test_benchmarks() {
         ExtBuilder::default().build().execute_with(|| {
-            assert_ok!(test_benchmark_root_deposit::<Test>());
-            assert_ok!(test_benchmark_root_withdraw::<Test>());
-            assert_ok!(test_benchmark_set_withdrawal_state::<Test>());
+            assert_ok!(Pallet::<Test>::test_benchmark_root_deposit());
+            assert_ok!(Pallet::<Test>::test_benchmark_root_withdraw());
+            assert_ok!(Pallet::<Test>::test_benchmark_set_withdrawal_state());
         });
     }
 }

@@ -1,7 +1,7 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 //! RPC interface for the transaction payment module.
-
+#![allow(clippy::type_complexity)]
 use std::collections::btree_map::BTreeMap;
 use std::fmt::Display;
 use std::str::FromStr;
@@ -104,8 +104,7 @@ where
     > {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-        Ok(api
-            .mining_assets(&at)
+        api.mining_assets(&at)
             .map(|mining_assets| {
                 mining_assets
                     .into_iter()
@@ -126,7 +125,7 @@ where
                     })
                     .collect::<Vec<_>>()
             })
-            .map_err(runtime_error_into_rpc_err)?)
+            .map_err(runtime_error_into_rpc_err)
     }
 
     fn mining_dividend(
@@ -136,8 +135,7 @@ where
     ) -> Result<BTreeMap<AssetId, MiningDividendInfo<RpcBalance<Balance>>>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-        Ok(api
-            .mining_dividend(&at, who)
+        api.mining_dividend(&at, who)
             .map(|mining_dividend| {
                 mining_dividend
                     .into_iter()
@@ -153,7 +151,7 @@ where
                     })
                     .collect()
             })
-            .map_err(runtime_error_into_rpc_err)?)
+            .map_err(runtime_error_into_rpc_err)
     }
 
     fn miner_ledger(
@@ -163,8 +161,7 @@ where
     ) -> Result<BTreeMap<AssetId, MinerLedger<RpcMiningWeight<MiningWeight>, BlockNumber>>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-        Ok(api
-            .miner_ledger(&at, who)
+        api.miner_ledger(&at, who)
             .map(|miner_ledger| {
                 miner_ledger
                     .into_iter()
@@ -180,6 +177,6 @@ where
                     })
                     .collect()
             })
-            .map_err(runtime_error_into_rpc_err)?)
+            .map_err(runtime_error_into_rpc_err)
     }
 }

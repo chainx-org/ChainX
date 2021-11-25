@@ -1,4 +1,4 @@
-use crate::{GenesisConfig, Config};
+use crate::{Config, GenesisConfig};
 
 pub(crate) mod balances {
     use frame_support::traits::StoredMap;

@@ -1,7 +1,7 @@
 // Copyright 2021 ChainX Project Authors. Licensed under GPL-3.0.
 
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
-
+#![allow(clippy::type_complexity)]
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -24,10 +24,15 @@ use client::RuntimeApiCollection;
 
 type LightBackend = sc_service::TLightBackendWithHash<Block, sp_runtime::traits::BlakeTwo256>;
 
-type LightClient<RuntimeApi, Executor> =
-    sc_service::TLightClientWithBackend<Block, RuntimeApi, NativeElseWasmExecutor<Executor>, LightBackend>;
+type LightClient<RuntimeApi, Executor> = sc_service::TLightClientWithBackend<
+    Block,
+    RuntimeApi,
+    NativeElseWasmExecutor<Executor>,
+    LightBackend,
+>;
 
-type FullClient<RuntimeApi, Executor> = sc_service::TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>;
+type FullClient<RuntimeApi, Executor> =
+    sc_service::TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>;
 
 type FullBackend = sc_service::TFullBackend<Block>;
 
@@ -52,7 +57,7 @@ pub fn new_partial<RuntimeApi, Executor>(
         (
             impl Fn(
                 chainx_rpc::DenyUnsafe,
-                sc_rpc::SubscriptionTaskExecutor
+                sc_rpc::SubscriptionTaskExecutor,
             ) -> Result<chainx_rpc::IoHandler, sc_service::Error>,
             (
                 sc_consensus_babe::BabeBlockImport<
@@ -99,9 +104,9 @@ where
 
     let (client, backend, keystore_container, task_manager) =
         sc_service::new_full_parts::<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>(
-            &config,
+            config,
             telemetry.as_ref().map(|(_, telemetry)| telemetry.handle()),
-            executor
+            executor,
         )?;
     let client = Arc::new(client);
 
@@ -225,14 +230,17 @@ where
 
 pub struct NewFullBase<RuntimeApi, Executor>
 where
-    RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
-    RuntimeApi::RuntimeApi: RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
+    RuntimeApi:
+        ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+    RuntimeApi::RuntimeApi:
+        RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
     Executor: NativeExecutionDispatch + 'static,
 {
     pub task_manager: TaskManager,
     pub client: Arc<FullClient<RuntimeApi, Executor>>,
     pub network: Arc<NetworkService<Block, <Block as BlockT>::Hash>>,
-    pub transaction_pool: Arc<sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, Executor>>>,
+    pub transaction_pool:
+        Arc<sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, Executor>>>,
 }
 
 /// Creates a full service from the configuration.
@@ -456,7 +464,7 @@ where
         task_manager,
         client,
         network,
-        transaction_pool
+        transaction_pool,
     })
 }
 
@@ -469,15 +477,16 @@ where
         RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
     Executor: NativeExecutionDispatch + 'static,
 {
-    new_full_base(config)
-        .map(|base: NewFullBase<RuntimeApi, Executor>| base.task_manager)
+    new_full_base(config).map(|base: NewFullBase<RuntimeApi, Executor>| base.task_manager)
 }
 
 pub struct NewLightBase<RuntimeApi, Executor>
-    where
-        RuntimeApi: ConstructRuntimeApi<Block, LightClient<RuntimeApi, Executor>> + Send + Sync + 'static,
-        RuntimeApi::RuntimeApi: RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<LightBackend, Block>>,
-        Executor: NativeExecutionDispatch + 'static,
+where
+    RuntimeApi:
+        ConstructRuntimeApi<Block, LightClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+    RuntimeApi::RuntimeApi:
+        RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<LightBackend, Block>>,
+    Executor: NativeExecutionDispatch + 'static,
 {
     pub task_manager: TaskManager,
     pub rpc_handlers: RpcHandlers,
@@ -487,17 +496,18 @@ pub struct NewLightBase<RuntimeApi, Executor>
         sc_transaction_pool::LightPool<
             Block,
             LightClient<RuntimeApi, Executor>,
-            sc_network::config::OnDemand<Block>
-        >>,
+            sc_network::config::OnDemand<Block>,
+        >,
+    >,
 }
 
 /// Builds a new service for a light client.
-pub fn new_light_base<RuntimeApi, Executor>(mut config: Configuration) -> Result<
-    NewLightBase<RuntimeApi, Executor>,
-    ServiceError,
->
+pub fn new_light_base<RuntimeApi, Executor>(
+    mut config: Configuration,
+) -> Result<NewLightBase<RuntimeApi, Executor>, ServiceError>
 where
-    RuntimeApi: 'static + Send + Sync + ConstructRuntimeApi<Block, LightClient<RuntimeApi, Executor>>,
+    RuntimeApi:
+        'static + Send + Sync + ConstructRuntimeApi<Block, LightClient<RuntimeApi, Executor>>,
     <RuntimeApi as ConstructRuntimeApi<Block, LightClient<RuntimeApi, Executor>>>::RuntimeApi:
         RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<LightBackend, Block>>,
     Executor: NativeExecutionDispatch + 'static,
@@ -523,7 +533,7 @@ where
         sc_service::new_light_parts::<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>(
             &config,
             telemetry.as_ref().map(|(_, telemetry)| telemetry.handle()),
-            executor
+            executor,
         )?;
 
     let mut telemetry = telemetry.map(|(worker, telemetry)| {
@@ -654,26 +664,26 @@ where
 
     network_starter.start_network();
 
-    Ok(NewLightBase{
+    Ok(NewLightBase {
         task_manager,
         rpc_handlers,
         client,
         network,
-        transaction_pool
+        transaction_pool,
     })
 }
 
 /// Builds a new service for a light client.
 pub fn new_light<RuntimeApi, Executor>(config: Configuration) -> Result<TaskManager, ServiceError>
-    where
-        RuntimeApi: 'static + Send + Sync + ConstructRuntimeApi<Block, LightClient<RuntimeApi, Executor>>,
-        <RuntimeApi as ConstructRuntimeApi<Block, LightClient<RuntimeApi, Executor>>>::RuntimeApi:
+where
+    RuntimeApi:
+        'static + Send + Sync + ConstructRuntimeApi<Block, LightClient<RuntimeApi, Executor>>,
+    <RuntimeApi as ConstructRuntimeApi<Block, LightClient<RuntimeApi, Executor>>>::RuntimeApi:
         RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<LightBackend, Block>>,
-        Executor: NativeExecutionDispatch + 'static,
+    Executor: NativeExecutionDispatch + 'static,
 {
     new_light_base(config).map(|base: NewLightBase<RuntimeApi, Executor>| base.task_manager)
 }
-
 
 /// Can be called for a `Configuration` to check if it is a configuration for the `ChainX` network.
 pub trait IdentifyVariant {

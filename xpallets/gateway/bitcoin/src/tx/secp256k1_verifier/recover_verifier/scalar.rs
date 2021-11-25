@@ -1,5 +1,6 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
+#![allow(clippy::type_complexity)]
 use sp_std::ops::{Add, AddAssign, Mul, MulAssign};
 
 const SECP256K1_N_0: u32 = 0xD0364141;
@@ -60,12 +61,12 @@ impl Scalar {
         debug_assert!(count < 32);
         debug_assert!(offset + count <= 256);
         if (offset + count - 1) >> 5 == offset >> 5 {
-            return self.bits(offset, count);
+            self.bits(offset, count)
         } else {
             debug_assert!((offset >> 5) + 1 < 8);
-            return ((self.0[offset >> 5] >> (offset & 0x1f))
+            ((self.0[offset >> 5] >> (offset & 0x1f))
                 | (self.0[(offset >> 5) + 1] << (32 - (offset & 0x1f))))
-                & ((1 << count) - 1);
+                & ((1 << count) - 1)
         }
     }
 
@@ -85,7 +86,7 @@ impl Scalar {
         no = no || ((self.0[1] < SECP256K1_N_1) && !yes);
         yes = yes || ((self.0[1] > SECP256K1_N_1) && !no);
         yes = yes || ((self.0[0] >= SECP256K1_N_0) && !no);
-        return yes;
+        yes
     }
 
     #[must_use]
@@ -150,7 +151,7 @@ impl Scalar {
         overflow = t + if self.check_overflow() { 1 } else { 0 };
         debug_assert!(overflow == 0 || overflow == 1);
         overflow = overflow | if self.reduce(overflow == 1) { 1 } else { 0 };
-        return overflow == 1;
+        overflow == 1
     }
 
     /// Conditionally add a power of two to a scalar. The result is
@@ -346,7 +347,7 @@ impl Scalar {
         no = no || ((self.0[1] < SECP256K1_N_H_1) && !yes);
         yes = yes || ((self.0[1] > SECP256K1_N_H_1) && !no);
         yes = yes || ((self.0[0] >= SECP256K1_N_H_0) && !no);
-        return yes;
+        yes
     }
 
     /// Conditionally negate a number, in constant time. Returns -1 if
@@ -379,9 +380,9 @@ impl Scalar {
         self.0[7] = (t & nonzero) as u32;
 
         if mask == 0 {
-            return 1;
+            1
         } else {
-            return -1;
+            -1
         }
     }
 }
@@ -831,8 +832,8 @@ impl Scalar {
         self.0[4] = (self.0[4] >> n) + (self.0[5] << (32 - n));
         self.0[5] = (self.0[5] >> n) + (self.0[6] << (32 - n));
         self.0[6] = (self.0[6] >> n) + (self.0[7] << (32 - n));
-        self.0[7] = self.0[7] >> n;
-        return ret;
+        self.0[7] >>= n;
+        ret
     }
 
     pub fn sqr_in_place(&mut self, a: &Scalar) {
@@ -1004,7 +1005,7 @@ impl Scalar {
     }
 
     pub fn is_even(&self) -> bool {
-        return self.0[0] & 1 == 0;
+        self.0[0] & 1 == 0
     }
 }
 

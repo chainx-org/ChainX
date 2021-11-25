@@ -17,7 +17,7 @@ use light_bitcoin::{
 use crate::{
     trustee::{get_hot_trustee_address, get_hot_trustee_redeem_script},
     types::BtcRelayedTx,
-    Config, Error
+    Config, Error,
 };
 
 pub fn validate_transaction<T: Config>(
@@ -81,7 +81,7 @@ pub fn parse_and_check_signed_tx<T: Config>(tx: &Transaction) -> Result<u32, Dis
 /// Check Taproot tx
 pub fn parse_check_taproot_tx<T: Config>(
     tx: &Transaction,
-    spent_outputs: &Vec<TransactionOutput>,
+    spent_outputs: &[TransactionOutput],
 ) -> Result<bool, DispatchError> {
     let hot_addr = get_hot_trustee_address::<T>()?;
     let mut script_pubkeys = spent_outputs

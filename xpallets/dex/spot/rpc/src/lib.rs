@@ -102,8 +102,7 @@ where
     ) -> Result<Vec<FullPairInfo<RpcPrice<Price>, BlockNumber>>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-        Ok(api
-            .trading_pairs(&at)
+        api.trading_pairs(&at)
             .map(|trading_pairs| {
                 trading_pairs
                     .into_iter()
@@ -124,7 +123,7 @@ where
                     )
                     .collect::<Vec<_>>()
             })
-            .map_err(runtime_error_into_rpc_err)?)
+            .map_err(runtime_error_into_rpc_err)
     }
 
     fn orders(

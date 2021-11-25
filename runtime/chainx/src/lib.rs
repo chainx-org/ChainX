@@ -1,7 +1,7 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 //! The Substrate Node Template runtime. This can be compiled with `#[no_std]`, ready for Wasm.
-
+#![allow(clippy::unnecessary_cast)]
 #![cfg_attr(not(feature = "std"), no_std)]
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
 #![recursion_limit = "256"]
@@ -57,7 +57,7 @@ use xpallet_support::traits::MultisigAddressFor;
 pub use frame_support::{
     construct_runtime, debug, parameter_types,
     traits::{
-        Currency, Contains, Get, Imbalance, InstanceFilter, KeyOwnerProofSystem, LockIdentifier,
+        Contains, Currency, Get, Imbalance, InstanceFilter, KeyOwnerProofSystem, LockIdentifier,
         OnUnbalanced, Randomness,
     },
     weights::{
@@ -128,9 +128,8 @@ impl Contains<Call> for BaseFilter {
     fn contains(call: &Call) -> bool {
         use frame_support::dispatch::GetCallMetadata;
 
-        match call {
-            Call::Currencies(_) => return false, // forbidden Currencies call now
-            _ => {}
+        if let Call::Currencies(_) = call {
+            return false;
         }
 
         let metadata = call.get_call_metadata();
@@ -158,7 +157,7 @@ impl SignedExtension for BaseFilter {
         _info: &DispatchInfoOf<Self::Call>,
         _len: usize,
     ) -> TransactionValidity {
-        if !Self::contains(&call) {
+        if !Self::contains(call) {
             return Err(InvalidTransaction::Custom(FORBIDDEN_CALL).into());
         }
         if XSystem::blacklist(who) {
@@ -503,7 +502,7 @@ where
         let signature = raw_payload.using_encoded(|payload| C::sign(payload, public))?;
         let address = Indices::unlookup(account);
         let (call, extra, _) = raw_payload.deconstruct();
-        Some((call, (address, signature.into(), extra)))
+        Some((call, (address, signature, extra)))
     }
 }
 
@@ -560,7 +559,7 @@ parameter_types! {
     pub const EnactmentPeriod: BlockNumber = 8 * DAYS;
     pub const CooloffPeriod: BlockNumber = 7 * DAYS;
     // One cent: $10,000 / MB
-    pub const PreimageByteDeposit: Balance = 1 * CENTS;
+    pub const PreimageByteDeposit: Balance = CENTS;
     pub const MaxVotes: u32 = 100;
     pub const MaxProposals: u32 = 100;
 }
@@ -642,8 +641,8 @@ parameter_types! {
     pub const VotingBondBase: Balance = deposit(1, 64);
     // additional data per vote is 32 bytes (account id).
     pub const VotingBondFactor: Balance = deposit(0, 32);
-    pub const VotingBond: Balance = 1 * DOLLARS;
-    pub const TermDuration: BlockNumber = 1 * DAYS;
+    pub const VotingBond: Balance = DOLLARS;
+    pub const TermDuration: BlockNumber = DAYS;
     pub const DesiredMembers: u32 = 11;
     pub const DesiredRunnersUp: u32 = 7;
     pub const ElectionsPhragmenPalletId: LockIdentifier = *b"pcx/phre";
@@ -714,11 +713,11 @@ parameter_types! {
     pub const ProposalBondMinimum: Balance = 1000 * DOLLARS;
     pub const SpendPeriod: BlockNumber = 6 * DAYS;
     pub const NoBurn: Permill = Permill::from_percent(0);
-    pub const TipCountdown: BlockNumber = 1 * DAYS;
+    pub const TipCountdown: BlockNumber = DAYS;
     pub const TipFindersFee: Percent = Percent::from_percent(20);
-    pub const TipReportDepositBase: Balance = 1 * DOLLARS;
-    pub const DataDepositPerByte: Balance = 1 * CENTS;
-    pub const BountyDepositBase: Balance = 1 * DOLLARS;
+    pub const TipReportDepositBase: Balance = DOLLARS;
+    pub const DataDepositPerByte: Balance = CENTS;
+    pub const BountyDepositBase: Balance = DOLLARS;
     pub const BountyDepositPayoutDelay: BlockNumber = 4 * DAYS;
     pub const TreasuryPalletId: PalletId = PalletId(*b"pcx/trsy");
     pub const BountyUpdatePeriod: BlockNumber = 90 * DAYS;
@@ -828,7 +827,19 @@ parameter_types! {
 }
 
 /// The type used to represent the kinds of proxying allowed.
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, RuntimeDebug, MaxEncodedLen, TypeInfo)]
+#[derive(
+    Copy,
+    Clone,
+    Eq,
+    PartialEq,
+    Ord,
+    PartialOrd,
+    Encode,
+    Decode,
+    RuntimeDebug,
+    MaxEncodedLen,
+    TypeInfo,
+)]
 pub enum ProxyType {
     Any = 0,
     NonTransfer = 1,
@@ -890,10 +901,13 @@ impl InstanceFilter<Call> for ProxyType {
             ),
             ProxyType::IdentityJudgement => matches!(
                 c,
-                Call::Identity(pallet_identity::Call::provide_judgement{..}) | Call::Utility(..)
+                Call::Identity(pallet_identity::Call::provide_judgement { .. }) | Call::Utility(..)
             ),
             ProxyType::CancelProxy => {
-                matches!(c, Call::Proxy(pallet_proxy::Call::reject_announcement{..}))
+                matches!(
+                    c,
+                    Call::Proxy(pallet_proxy::Call::reject_announcement { .. })
+                )
             }
         }
     }

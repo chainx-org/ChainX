@@ -153,9 +153,7 @@ impl frame_support::traits::OneSessionHandler<AccountId> for OtherSessionHandler
         I: Iterator<Item = (&'a AccountId, Self::Key)>,
         AccountId: 'a,
     {
-        SESSION.with(|x| {
-            *x.borrow_mut() = (validators.map(|x| x.0.clone()).collect(), HashSet::new())
-        });
+        SESSION.with(|x| *x.borrow_mut() = (validators.map(|x| *x.0).collect(), HashSet::new()));
     }
 
     fn on_disabled(validator_index: usize) {
@@ -240,7 +238,7 @@ impl xp_mining_common::RewardPotAccountFor<AccountId, AccountId>
     for DummyStakingRewardPotAccountDeterminer
 {
     fn reward_pot_account_for(validator: &AccountId) -> AccountId {
-        10_000_000 + u64::from(*validator)
+        10_000_000 + *validator
     }
 }
 
@@ -398,7 +396,7 @@ impl ExtBuilder {
 
         ext
     }
-    pub fn build_and_execute(self, test: impl FnOnce() -> ()) {
+    pub fn build_and_execute(self, test: impl FnOnce()) {
         let mut ext = self.build();
         ext.execute_with(test);
     }

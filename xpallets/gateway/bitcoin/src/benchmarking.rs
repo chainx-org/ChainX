@@ -19,8 +19,8 @@ use light_bitcoin::{
 };
 
 use crate::{
-    types::*, Call, Config, Pallet, PendingDeposits, TxState, WithdrawalProposal,
-    TransactionOutputArray
+    types::*, Call, Config, Pallet, PendingDeposits, TransactionOutputArray, TxState,
+    WithdrawalProposal,
 };
 
 const ASSET_ID: AssetId = xp_protocol::X_BTC;
@@ -117,7 +117,7 @@ benchmarks! {
         let proposal = BtcWithdrawalProposal::<T::AccountId> {
             sig_state: VoteResult::Finish,
             withdrawal_id_list: vec![0],
-            tx: tx.clone(),
+            tx,
             trustee_list: vec![],
         };
         WithdrawalProposal::<T>::put(proposal);
@@ -208,7 +208,7 @@ benchmarks! {
         let proposal = BtcWithdrawalProposal::<T::AccountId> {
             sig_state: VoteResult::Unfinish,
             withdrawal_id_list: vec![0, 1],
-            tx: tx,
+            tx,
             trustee_list: vec![],
         };
         WithdrawalProposal::<T>::put(proposal);

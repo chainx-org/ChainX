@@ -93,13 +93,9 @@ fn check_keys<T: Config>(keys: &[Public]) -> DispatchResult {
         );
         return Err(Error::<T>::DuplicatedKeys.into());
     }
-    let has_normal_pubkey = keys.iter().any(|public: &Public| {
-        if let Public::Normal(_) = public {
-            true
-        } else {
-            false
-        }
-    });
+    let has_normal_pubkey = keys
+        .iter()
+        .any(|public: &Public| matches!(public, Public::Normal(_)));
     if has_normal_pubkey {
         return Err("Unexpect! All keys(bitcoin Public) should be compressed".into());
     }
@@ -177,7 +173,7 @@ impl<T: Config> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo
         }
 
         #[cfg(feature = "std")]
-            let pretty_print_keys = |keys: &[Public]| {
+        let pretty_print_keys = |keys: &[Public]| {
             keys.iter()
                 .map(|k| k.to_string().replace("\n", ""))
                 .collect::<Vec<_>>()
@@ -281,7 +277,7 @@ impl<T: Config> Pallet<T> {
         }
         // remove duplicate
         let mut withdrawal_id_list = withdrawal_id_list;
-        withdrawal_id_list.sort();
+        withdrawal_id_list.sort_unstable();
         withdrawal_id_list.dedup();
 
         check_withdraw_tx::<T>(&tx, &withdrawal_id_list)?;
@@ -364,7 +360,7 @@ impl<T: Config> Pallet<T> {
         }
         // remove duplicate
         let mut withdrawal_id_list = withdrawal_id_list;
-        withdrawal_id_list.sort();
+        withdrawal_id_list.sort_unstable();
         withdrawal_id_list.dedup();
 
         check_withdraw_tx::<T>(&tx, &withdrawal_id_list)?;
@@ -397,7 +393,7 @@ impl<T: Config> Pallet<T> {
         );
 
         Self::deposit_event(Event::<T>::WithdrawalProposalCreated(
-            who.clone(),
+            who,
             withdrawal_id_list,
         ));
 
@@ -581,7 +577,7 @@ pub(crate) fn create_multi_address<T: Config>(
     };
     let mut build = Builder::default().push_opcode(opcode);
     for pubkey in pubkeys.iter() {
-        build = build.push_bytes(&pubkey);
+        build = build.push_bytes(pubkey);
     }
 
     let opcode = match Opcode::from_u8(Opcode::OP_1 as u8 + sum as u8 - 1) {
@@ -613,7 +609,7 @@ fn insert_trustee_vote_state<T: Config>(
     who: &T::AccountId,
     trustee_list: &mut Vec<(T::AccountId, bool)>,
 ) -> DispatchResult {
-    match trustee_list.iter_mut().find(|ref info| info.0 == *who) {
+    match trustee_list.iter_mut().find(|info| info.0 == *who) {
         Some(_) => {
             // if account is exist, override state
             log!(error, "[insert_trustee_vote_state] {:?} has already vote for this withdrawal proposal, old vote:{}", who, state);
@@ -652,7 +648,7 @@ fn check_withdraw_tx_impl<T: Config>(
             .ok_or(Error::<T>::NoWithdrawalRecord)?;
         // record.addr() is base58
         // verify btc address would conveRelayedTx a base58 addr to Address
-        let addr: Address = Pallet::<T>::verify_btc_address(&record.addr())?;
+        let addr: Address = Pallet::<T>::verify_btc_address(record.addr())?;
 
         appl_withdrawal_list.push((addr, record.balance().saturated_into::<u64>()));
     }
@@ -663,7 +659,7 @@ fn check_withdraw_tx_impl<T: Config>(
     let btc_network = Pallet::<T>::network_id();
     let mut tx_withdraw_list = Vec::new();
     for output in &tx.outputs {
-        let addr = extract_output_addr(&output, btc_network).ok_or("not found addr in this out")?;
+        let addr = extract_output_addr(output, btc_network).ok_or("not found addr in this out")?;
         if addr.hash != hot_trustee_address.hash {
             // expect change to trustee_addr output
             tx_withdraw_list.push((addr, output.value + btc_withdrawal_fee));

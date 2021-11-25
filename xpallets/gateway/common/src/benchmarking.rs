@@ -82,7 +82,7 @@ benchmarks! {
 
     cancel_withdrawal {
         let caller: T::AccountId = alice::<T>();
-        let amount: BalanceOf<T> = 100_000_0000u32.into();
+        let amount: BalanceOf<T> = 1_000_000_000_u32.into();
         XGatewayRecords::<T>::deposit(&caller, ASSET_ID, amount).unwrap();
 
         let withdrawal = amount - 500u32.into();
@@ -178,7 +178,7 @@ benchmarks! {
     force_set_referral_binding {
         let who: T::AccountId = alice::<T>();
         let who_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(who.clone());
-    }: _(RawOrigin::Root, Chain::Bitcoin, who_lookup.clone(), who_lookup.clone())
+    }: _(RawOrigin::Root, Chain::Bitcoin, who_lookup.clone(), who_lookup)
     verify {
         assert_eq!(Pallet::<T>::referral_binding_of(&who, Chain::Bitcoin), Some(who));
     }

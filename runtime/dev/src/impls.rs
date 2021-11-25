@@ -80,14 +80,11 @@ impl ChargeExtraFee {
         const BASE_EXTRA_FEE: Balance = 100_000_000;
 
         let extra_cofficient: Option<u32> = match call {
-            Call::XGatewayCommon(xgateway_common) => match xgateway_common {
-                XGatewayCommonCall::setup_trustee{..} => Some(1),
-                _ => None,
-            },
+            Call::XGatewayCommon(XGatewayCommonCall::setup_trustee { .. }) => Some(1),
             Call::XStaking(xstaking) => match xstaking {
-                XStakingCall::register{..} => Some(10),
-                XStakingCall::validate{..} => Some(1),
-                XStakingCall::rebond{..} => Some(1),
+                XStakingCall::register { .. } => Some(10),
+                XStakingCall::validate { .. } => Some(1),
+                XStakingCall::rebond { .. } => Some(1),
                 _ => None,
             },
             _ => None,

@@ -1,4 +1,5 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+#![allow(clippy::borrowed_box)]
 
 use std::net::SocketAddr;
 
@@ -152,7 +153,10 @@ impl SubstrateCli for Cli {
 
     /// Create a runner for the command provided in argument. This will create a Configuration and
     /// a tokio runtime
-    fn create_runner<T: CliConfiguration>(&self, command: &T) -> sc_cli::Result<sc_cli::Runner<Self>> {
+    fn create_runner<T: CliConfiguration>(
+        &self,
+        command: &T,
+    ) -> sc_cli::Result<sc_cli::Runner<Self>> {
         // Workaround for https://github.com/paritytech/substrate/issues/6856
         // Remove this once the cli config file is supported in Substrate.
         let raw_cli_args = std::env::args().collect::<Vec<_>>();

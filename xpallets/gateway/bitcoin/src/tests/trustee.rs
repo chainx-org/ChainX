@@ -14,13 +14,8 @@ use light_bitcoin::{
 
 use xpallet_gateway_common::traits::TrusteeForChain;
 
-use crate::mock::{
-    ExtBuilder, Test, XGatewayBitcoin, XGatewayBitcoinErr
-};
-use crate::{
-    trustee::create_multi_address,
-    tx::validator::parse_and_check_signed_tx_impl
-};
+use crate::mock::{ExtBuilder, Test, XGatewayBitcoin, XGatewayBitcoinErr};
+use crate::{trustee::create_multi_address, tx::validator::parse_and_check_signed_tx_impl};
 use sp_std::convert::TryInto;
 
 #[test]
@@ -114,9 +109,7 @@ fn test_create_multi_address() {
             AddressTypes::WitnessV0KeyHash(_) => todo!(),
             AddressTypes::WitnessV1Taproot(_) => todo!(),
         };
-        let mut pubkeys = Vec::new();
-        pubkeys.push(Opcode::OP_HASH160 as u8);
-        pubkeys.push(Opcode::OP_PUSHBYTES_20 as u8);
+        let mut pubkeys = vec![Opcode::OP_HASH160 as u8, Opcode::OP_PUSHBYTES_20 as u8];
         pubkeys.extend_from_slice(&pk);
         pubkeys.push(Opcode::OP_EQUAL as u8);
         assert_eq!(pubkeys, pks);
@@ -180,7 +173,7 @@ fn test_create_taproot_address() {
             .into_iter()
             .map(|k| k.try_into().unwrap())
             .collect::<Vec<_>>();
-        let threshold_addr: Address = Mast::new(pks, 2 as usize)
+        let threshold_addr: Address = Mast::new(pks, 2_usize)
             .unwrap()
             .generate_address(&crate::Pallet::<Test>::network_id().to_string())
             .unwrap()
