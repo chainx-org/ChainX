@@ -104,8 +104,7 @@ impl ExtBuilder {
         )
         .unwrap();
 
-        let ext = sp_io::TestExternalities::new(storage);
-        ext
+        sp_io::TestExternalities::new(storage)
     }
 
     pub fn build_with(self) -> sp_io::TestExternalities {
@@ -114,7 +113,7 @@ impl ExtBuilder {
         self.build(assets)
     }
 
-    pub fn build_and_execute(self, test: impl FnOnce() -> ()) {
+    pub fn build_and_execute(self, test: impl FnOnce()) {
         let btc_assets = btc();
         let assets = vec![(btc_assets.0, btc_assets.1, true, true)];
         let mut ext = self.build(assets);

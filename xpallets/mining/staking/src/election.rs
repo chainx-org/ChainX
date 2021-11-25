@@ -58,7 +58,7 @@ impl<T: Config> Pallet<T> {
             .filter(Self::is_qualified_candidate)
             .map(|v| (Self::total_votes_of(&v), v))
             .collect::<Vec<_>>();
-        candidates.sort_by(|&(ref b1, _), &(ref b2, _)| b2.cmp(&b1));
+        candidates.sort_by(|&(ref b1, _), &(ref b2, _)| b2.cmp(b1));
         candidates
     }
 

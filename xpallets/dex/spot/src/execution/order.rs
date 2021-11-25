@@ -45,7 +45,7 @@ impl<T: Config> Pallet<T> {
                 _ => (),
             }
         } else {
-            Self::match_order(&pair, order, &handicap);
+            Self::match_order(pair, order, &handicap);
         }
     }
 
@@ -189,7 +189,7 @@ impl<T: Config> Pallet<T> {
                 // Remove maker_order if it has been full filled.
                 if maker_order.is_fulfilled() {
                     fulfilled_orders.push((maker_order.submitter(), maker_order.id()));
-                    Self::update_handicap(&pair, counterparty_price, maker_order.side());
+                    Self::update_handicap(pair, counterparty_price, maker_order.side());
                 }
 
                 Self::update_latest_price(pair.id, counterparty_price);

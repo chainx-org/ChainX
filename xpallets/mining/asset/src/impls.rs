@@ -13,7 +13,7 @@ use super::*;
 
 impl<'a, T: Config> BaseMiningWeight<BalanceOf<T>, T::BlockNumber> for AssetLedgerWrapper<'a, T> {
     fn amount(&self) -> BalanceOf<T> {
-        xpallet_assets::Pallet::<T>::total_issuance(&self.asset_id)
+        xpallet_assets::Pallet::<T>::total_issuance(self.asset_id)
     }
 
     fn last_acum_weight(&self) -> WeightType {
@@ -35,7 +35,7 @@ impl<'a, T: Config> BaseMiningWeight<BalanceOf<T>, T::BlockNumber> for AssetLedg
 
 impl<'a, T: Config> BaseMiningWeight<BalanceOf<T>, T::BlockNumber> for MinerLedgerWrapper<'a, T> {
     fn amount(&self) -> BalanceOf<T> {
-        xpallet_assets::Pallet::<T>::all_type_asset_balance(&self.miner, &self.asset_id)
+        xpallet_assets::Pallet::<T>::all_type_asset_balance(self.miner, self.asset_id)
     }
 
     fn last_acum_weight(&self) -> WeightType {

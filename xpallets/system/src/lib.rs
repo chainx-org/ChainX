@@ -68,14 +68,12 @@ pub mod pallet {
                     // pause the whole calls of the pallet
                     paused.insert(PALLET_MARK.to_vec(), ());
                 }
+            } else if let Some(c) = call {
+                // revoke the paused status of the call in the pallet
+                paused.remove(&c[..]);
             } else {
-                if let Some(c) = call {
-                    // revoke the paused status of the call in the pallet
-                    paused.remove(&c[..]);
-                } else {
-                    // revoke the paused status of the whole calls in the pallet.
-                    paused.remove(&PALLET_MARK[..]);
-                }
+                // revoke the paused status of the whole calls in the pallet.
+                paused.remove(&PALLET_MARK[..]);
             }
 
             if paused.is_empty() {

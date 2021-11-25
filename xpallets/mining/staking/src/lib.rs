@@ -11,6 +11,7 @@
 //!     Validator nickname and ReferralId is interchangeable in various scenarios.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::result_unit_err)]
 
 mod constants;
 mod election;
@@ -369,13 +370,10 @@ pub mod pallet {
         }
 
         #[pallet::weight(10_000_000)]
-        pub fn set_immortals(
-            origin: OriginFor<T>,
-            new: Vec<T::AccountId>,
-        ) -> DispatchResult {
+        pub fn set_immortals(origin: OriginFor<T>, new: Vec<T::AccountId>) -> DispatchResult {
             ensure_root(origin)?;
             ensure!(
-                new.iter().find(|&v| !Self::is_validator(v)).is_none(),
+                new.iter().all(|x| Self::is_validator(x)),
                 Error::<T>::NotValidator
             );
             if new.is_empty() {

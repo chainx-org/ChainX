@@ -58,7 +58,7 @@ pub mod pallet {
     #[cfg(feature = "std")]
     impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
         fn build(&self) {
-            regenesis::initialize(&self)
+            regenesis::initialize(self)
         }
     }
 }

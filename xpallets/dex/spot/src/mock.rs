@@ -218,11 +218,8 @@ impl ExtBuilder {
             (X_DOT, PCX, 4, 2, 100000, true),
         ];
 
-        let _ = xpallet_dex_spot::GenesisConfig::<Test> {
-            trading_pairs,
-            ..Default::default()
-        }
-        .assimilate_storage(&mut storage);
+        let _ = xpallet_dex_spot::GenesisConfig::<Test> { trading_pairs }
+            .assimilate_storage(&mut storage);
 
         let mut ext = sp_io::TestExternalities::from(storage);
 
@@ -235,7 +232,7 @@ impl ExtBuilder {
 
         ext
     }
-    pub fn build_and_execute(self, test: impl FnOnce() -> ()) {
+    pub fn build_and_execute(self, test: impl FnOnce()) {
         let mut ext = self.build();
         ext.execute_with(test);
     }

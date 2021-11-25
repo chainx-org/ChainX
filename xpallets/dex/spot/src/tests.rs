@@ -125,13 +125,13 @@ fn add_trading_pair_should_work() {
 fn update_trading_pair_should_work() {
     ExtBuilder::default().build_and_execute(|| {
         let pair = CurrencyPair::new(EOS, ETH);
-        t_add_trading_pair(pair.clone(), 2, 1, 100, true);
+        t_add_trading_pair(pair, 2, 1, 100, true);
         assert_eq!(t_trading_pair_of(2).tick_decimals, 1);
-        assert_eq!(t_trading_pair_of(2).tradable, true);
+        assert!(t_trading_pair_of(2).tradable);
 
         assert_ok!(XSpot::update_trading_pair(Origin::root(), 2, 888, false));
         assert_eq!(t_trading_pair_of(2).tick_decimals, 888);
-        assert_eq!(t_trading_pair_of(2).tradable, false);
+        assert!(!t_trading_pair_of(2).tradable);
     })
 }
 
@@ -285,9 +285,9 @@ fn update_handicap_should_work() {
 
         assert_eq!(XSpot::handicap_of(0).lowest_ask, 0);
 
-        assert_ok!(t_put_order_sell(2, 0, 800, 1_3200_000));
+        assert_ok!(t_put_order_sell(2, 0, 800, 13_200_000));
 
-        assert_eq!(XSpot::handicap_of(0).lowest_ask, 1_3200_000);
+        assert_eq!(XSpot::handicap_of(0).lowest_ask, 13_200_000);
     })
 }
 
@@ -413,19 +413,19 @@ fn refund_remaining_of_taker_order_should_work() {
 
         let mut bmap = BTreeMap::new();
         bmap.insert(AssetType::Usable, btc_for_seller1);
-        assert_eq!(XAssets::asset_balance(1, quote.clone()), bmap);
+        assert_eq!(XAssets::asset_balance(1, quote), bmap);
 
         let mut bmap = BTreeMap::new();
         bmap.insert(AssetType::Usable, btc_for_seller2);
-        assert_eq!(XAssets::asset_balance(2, quote.clone()), bmap);
+        assert_eq!(XAssets::asset_balance(2, quote), bmap);
 
         let mut bmap = BTreeMap::new();
         bmap.insert(AssetType::Usable, remaining);
-        assert_eq!(XAssets::asset_balance(3, quote.clone()), bmap);
+        assert_eq!(XAssets::asset_balance(3, quote), bmap);
 
-        assert_eq!(t_generic_free_balance(1, base.clone()), 0);
-        assert_eq!(t_generic_free_balance(2, base.clone()), 0);
-        assert_eq!(t_generic_free_balance(3, base.clone()), 238000000);
+        assert_eq!(t_generic_free_balance(1, base), 0);
+        assert_eq!(t_generic_free_balance(2, base), 0);
+        assert_eq!(t_generic_free_balance(3, base), 238000000);
     })
 }
 

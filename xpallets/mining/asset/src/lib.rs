@@ -77,10 +77,7 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         /// Claims the staking reward given the `target` validator.
         #[pallet::weight(<T as Config>::WeightInfo::claim())]
-        pub fn claim(
-            origin: OriginFor<T>,
-            #[pallet::compact] target: AssetId,
-        ) -> DispatchResult {
+        pub fn claim(origin: OriginFor<T>, #[pallet::compact] target: AssetId) -> DispatchResult {
             let sender = ensure_signed(origin)?;
 
             ensure!(

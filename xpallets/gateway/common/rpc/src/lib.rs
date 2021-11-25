@@ -125,7 +125,7 @@ where
         let result = api
             .trustee_properties(&at, chain, who)
             .map_err(runtime_error_into_rpc_err)?
-            .ok_or(trustee_inexistent_rpc_err())?;
+            .ok_or_else(trustee_inexistent_rpc_err)?;
 
         Ok(result)
     }
@@ -141,7 +141,7 @@ where
         let result = api
             .trustee_session_info(&at, chain)
             .map_err(runtime_error_into_rpc_err)?
-            .ok_or(trustee_inexistent_rpc_err())?;
+            .ok_or_else(trustee_inexistent_rpc_err)?;
 
         Ok(result)
     }
@@ -235,8 +235,8 @@ where
         at: Option<<Block as BlockT>::Hash>,
     ) -> Result<bool> {
         let value: Balance = Balance::from(value);
-        let addr = if addr.starts_with("0x") {
-            hex::decode(&addr[2..]).map_err(hex_decode_error_into_rpc_err)?
+        let addr = if let Some(stirp_addr) = addr.strip_prefix("0x") {
+            hex::decode(&stirp_addr).map_err(hex_decode_error_into_rpc_err)?
         } else {
             hex::decode(&addr).unwrap_or_else(|_| addr.into_bytes())
         };

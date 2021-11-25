@@ -25,7 +25,7 @@ impl<T: Config> Pallet<T> {
             if slash_fraction.is_zero() {
                 minimum_penalty
             } else {
-                let pot = Self::reward_pot_for(&offender);
+                let pot = Self::reward_pot_for(offender);
                 slash_fraction.mul(Self::free_balance(&pot))
             }
         };

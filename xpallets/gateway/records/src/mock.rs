@@ -192,10 +192,9 @@ impl ExtBuilder {
         }
         .assimilate_storage(&mut storage);
 
-        let ext = sp_io::TestExternalities::new(storage);
-        ext
+        sp_io::TestExternalities::new(storage)
     }
-    pub fn build_and_execute(self, test: impl FnOnce() -> ()) {
+    pub fn build_and_execute(self, test: impl FnOnce()) {
         let mut ext = self.build();
         ext.execute_with(|| System::set_block_number(1));
         ext.execute_with(test);

@@ -138,6 +138,6 @@ impl<T: Config> TransactionSignatureChecker<T> {
             return Ok(());
         }
 
-        Err(Error::<T>::VerifySignFailed)?
+        Err(Error::<T>::VerifySignFailed.into())
     }
 }

@@ -259,7 +259,7 @@ fn test_push_tx_call() {
         let confirmed = XGatewayBitcoin::confirmation_number();
         // insert headers
         for i in 63291..=63299 + confirmed {
-            assert_ok!(XGatewayBitcoin::apply_push_header(headers[&i].clone()));
+            assert_ok!(XGatewayBitcoin::apply_push_header(headers[&i]));
         }
         let info = BtcRelayedTxInfo {
             block_hash,

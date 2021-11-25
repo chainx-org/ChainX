@@ -1,4 +1,5 @@
 // Copyright 2019-2021 ChainX Project Authors. Licensed under GPL-3.0.
+#![allow(clippy::ptr_arg)]
 extern crate alloc;
 use alloc::string::ToString;
 
@@ -137,7 +138,7 @@ fn deposit_token<T: Config>(txid: H256, who: &T::AccountId, balance: u64) -> Dis
     let id: AssetId = <Pallet<T> as ChainT<_>>::ASSET_ID;
 
     let value: BalanceOf<T> = balance.saturated_into();
-    match <xpallet_gateway_records::Pallet<T>>::deposit(&who, id, value) {
+    match <xpallet_gateway_records::Pallet<T>>::deposit(who, id, value) {
         Ok(()) => {
             Pallet::<T>::deposit_event(Event::<T>::Deposited(txid, who.clone(), value));
             Ok(())
@@ -148,7 +149,7 @@ fn deposit_token<T: Config>(txid: H256, who: &T::AccountId, balance: u64) -> Dis
                 "[deposit_token] Deposit error:{:?}, must use root to fix it",
                 err
             );
-            Err(err.into())
+            Err(err)
         }
     }
 }
@@ -213,7 +214,7 @@ fn withdraw<T: Config>(tx: Transaction) -> BtcTxResult {
                 let withdraw_balance =
                     xpallet_gateway_records::Pallet::<T>::pending_withdrawals(number)
                         .map(|record| record.balance())
-                        .unwrap_or(BalanceOf::<T>::zero());
+                        .unwrap_or_else(BalanceOf::<T>::zero);
                 total += withdraw_balance;
 
                 match xpallet_gateway_records::Pallet::<T>::finish_withdrawal(*number, None) {

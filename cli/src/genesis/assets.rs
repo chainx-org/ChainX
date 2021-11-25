@@ -1,4 +1,5 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+#![allow(clippy::type_complexity)]
 
 use xp_protocol::{BTC_DECIMALS, PCX, PCX_DECIMALS, X_BTC};
 

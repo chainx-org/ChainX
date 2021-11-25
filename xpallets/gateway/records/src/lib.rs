@@ -540,7 +540,7 @@ impl<T: Config> Pallet<T> {
     }
 
     fn destroy(who: &T::AccountId, asset_id: AssetId, value: BalanceOf<T>) -> DispatchResult {
-        xpallet_assets::Pallet::<T>::destroy_reserved_withdrawal(&asset_id, &who, value)?;
+        xpallet_assets::Pallet::<T>::destroy_reserved_withdrawal(&asset_id, who, value)?;
         Ok(())
     }
 }
@@ -569,11 +569,7 @@ impl<T: Config> Pallet<T> {
             .collect()
     }
 
-    #[cfg(feature = "std")]
-    pub fn withdrawal_state_insert(
-        id: WithdrawalRecordId,
-        state: WithdrawalState,
-    ) {
+    pub fn withdrawal_state_insert(id: WithdrawalRecordId, state: WithdrawalState) {
         WithdrawalStateOf::<T>::insert(id, state)
     }
 }

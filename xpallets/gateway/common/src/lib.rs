@@ -358,7 +358,7 @@ impl<T: Config> Pallet<T> {
     ) -> Result<WithdrawalLimit<BalanceOf<T>>, DispatchError> {
         let chain = xpallet_assets_registrar::Pallet::<T>::chain_of(asset_id)?;
         match chain {
-            Chain::Bitcoin => T::Bitcoin::withdrawal_limit(&asset_id),
+            Chain::Bitcoin => T::Bitcoin::withdrawal_limit(asset_id),
             _ => Err(Error::<T>::NotSupportedChain.into()),
         }
     }
@@ -375,7 +375,7 @@ impl<T: Config> Pallet<T> {
         match chain {
             Chain::Bitcoin => {
                 // bitcoin do not need memo
-                T::Bitcoin::check_addr(&addr, b"")?;
+                T::Bitcoin::check_addr(addr, b"")?;
             }
             _ => return Err(Error::<T>::NotSupportedChain.into()),
         };
