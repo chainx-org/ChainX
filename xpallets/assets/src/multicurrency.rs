@@ -14,7 +14,7 @@ use frame_support::{
 };
 
 use orml_traits::{
-    currency::TransferAll, arithmetic::Signed, MultiCurrency, MultiCurrencyExtended,
+    arithmetic::Signed, currency::TransferAll, MultiCurrency, MultiCurrencyExtended,
     MultiLockableCurrency, MultiReservableCurrency,
 };
 
@@ -41,8 +41,8 @@ impl<T: Config> MultiCurrency<T::AccountId> for Pallet<T> {
     }
 
     fn free_balance(currency_id: Self::CurrencyId, who: &T::AccountId) -> Self::Balance {
-        Self::asset_typed_balance(&who, &currency_id, AssetType::Usable)
-            + Self::asset_typed_balance(&who, &currency_id, AssetType::Locked)
+        Self::asset_typed_balance(who, &currency_id, AssetType::Usable)
+            + Self::asset_typed_balance(who, &currency_id, AssetType::Locked)
     }
 
     fn ensure_can_withdraw(

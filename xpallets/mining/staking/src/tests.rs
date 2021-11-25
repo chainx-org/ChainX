@@ -39,7 +39,7 @@ fn t_withdraw_unbonded(
 }
 
 fn t_system_block_number_inc(number: BlockNumber) {
-    System::set_block_number((System::block_number() + number).into());
+    System::set_block_number(System::block_number() + number);
 }
 
 fn t_make_a_validator_candidate(who: AccountId, self_bonded: Balance) {
@@ -86,7 +86,7 @@ fn assert_bonded_withdrawal_locks(who: AccountId, value: Balance) {
 fn cannot_force_chill_should_work() {
     ExtBuilder::default().build_and_execute(|| {
         t_make_a_validator_candidate(123, 100);
-        assert_eq!(XStaking::can_force_chilled(), true);
+        assert!(XStaking::can_force_chilled());
         assert_ok!(XStaking::chill(Origin::signed(123)));
         assert_ok!(XStaking::chill(Origin::signed(2)));
         assert_ok!(XStaking::chill(Origin::signed(3)));
@@ -454,8 +454,8 @@ fn regular_staking_should_work() {
 
         t_start_session(6);
         assert_eq!(XStaking::current_era(), Some(2));
-        assert_eq!(XStaking::is_chilled(&5), true);
-        assert_eq!(XStaking::is_chilled(&6), true);
+        assert!(XStaking::is_chilled(&5));
+        assert!(XStaking::is_chilled(&6));
         assert_eq!(Session::validators(), vec![8, 7, 5, 4, 3, 2]);
 
         t_start_session(7);
@@ -528,7 +528,7 @@ fn staking_reward_should_work() {
                     Balances::free_balance(
                         &DummyStakingRewardPotAccountDeterminer::reward_pot_account_for(&validator)
                     ),
-                    0 + (val_total_reward - val_total_reward / 10) * session_index as u128
+                    (val_total_reward - val_total_reward / 10) * session_index as u128
                 );
             };
 
@@ -539,7 +539,7 @@ fn staking_reward_should_work() {
 
         assert_eq!(
             Balances::free_balance(&TREASURY_ACCOUNT),
-            (treasury_reward + asset_mining_reward) * 1
+            (treasury_reward + asset_mining_reward)
         );
 
         let validators_reward_pot = validators
@@ -554,13 +554,12 @@ fn staking_reward_should_work() {
             2_500_000_000u128 + issued_manually + endowed + (FIXED_TOTAL / 2) as u128
         );
 
-        let mut all = Vec::new();
-        all.push(TREASURY_ACCOUNT);
+        let mut all = vec![TREASURY_ACCOUNT];
         all.extend_from_slice(&[t_1, t_2, t_3]);
         all.extend_from_slice(&validators);
         all.extend_from_slice(&validators_reward_pot);
 
-        let total_issuance = || all.iter().map(|x| Balances::free_balance(x)).sum::<u128>();
+        let total_issuance = || all.iter().map(Balances::free_balance).sum::<u128>();
 
         assert_eq!(
             Balances::total_issuance(),
@@ -627,8 +626,7 @@ fn staker_reward_should_work() {
             |validator_votes: Balance, total_staked: Balance, total_reward: Balance| {
                 let total_reward_for_validator = validator_votes * total_reward / total_staked;
                 let to_validator = total_reward_for_validator / 10;
-                let to_pot = total_reward_for_validator - to_validator;
-                to_pot
+                total_reward_for_validator - to_validator
             };
 
         // Block 1
@@ -865,13 +863,13 @@ fn migration_session_offset_should_work() {
             (INITIAL_REWARD / 2) as u128
         );
 
-        XStaking::mint(&who, 1000 as u128);
+        XStaking::mint(&who, 1000_u128);
         assert_eq!(
             XStaking::this_session_reward(),
             (INITIAL_REWARD / 2) as u128
         );
 
-        XStaking::mint(&who, 350_000_000_000_000 as u128);
+        XStaking::mint(&who, 350_000_000_000_000_u128);
         assert_eq!(
             XStaking::this_session_reward(),
             (INITIAL_REWARD / 2) as u128
@@ -883,13 +881,13 @@ fn migration_session_offset_should_work() {
             (INITIAL_REWARD / 4) as u128
         );
 
-        XStaking::mint(&who, 175000000000000 as u128);
+        XStaking::mint(&who, 175_000_000_000_000_u128);
         assert_eq!(
             XStaking::this_session_reward(),
             (INITIAL_REWARD / 4) as u128
         );
 
-        XStaking::mint(&who, (FIXED_TOTAL / 8 - 175000000000000) as u128);
+        XStaking::mint(&who, (FIXED_TOTAL / 8 - 175_000_000_000_000) as u128);
         assert_eq!(
             XStaking::this_session_reward(),
             (INITIAL_REWARD / 8) as u128

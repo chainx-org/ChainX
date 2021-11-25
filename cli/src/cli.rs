@@ -74,10 +74,7 @@ pub struct RunCmd {
 
 impl Cli {
     pub fn try_init_logger(&self) -> sc_cli::Result<()> {
-        crate::logger::init(
-            &self.run.base.log_filters()?,
-            &self.run.logger
-        )?;
+        crate::logger::init(&self.run.base.log_filters()?, &self.run.logger)?;
 
         Ok(())
     }

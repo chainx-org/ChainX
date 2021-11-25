@@ -55,8 +55,8 @@ use self::{
     },
 };
 
-use sp_core::sp_std::str::FromStr;
 pub use pallet::*;
+use sp_core::sp_std::str::FromStr;
 
 // syntactic sugar for native log.
 #[macro_export]
@@ -105,7 +105,8 @@ pub mod pallet {
         #[pallet::weight(<T as Config>::WeightInfo::push_header())]
         pub fn push_header(origin: OriginFor<T>, header: Vec<u8>) -> DispatchResultWithPostInfo {
             let from = ensure_signed(origin)?;
-            let header: BtcHeader = deserialize(header.as_slice()).map_err(|_| Error::<T>::DeserializeErr)?;
+            let header: BtcHeader =
+                deserialize(header.as_slice()).map_err(|_| Error::<T>::DeserializeErr)?;
             log!(debug, "[push_header] from:{:?}, header:{:?}", from, header);
 
             Self::apply_push_header(header)?;
@@ -120,7 +121,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             raw_tx: Vec<u8>,
             relayed_info: BtcRelayedTxInfo,
-            prev_tx: Option<Vec<u8>>
+            prev_tx: Option<Vec<u8>>,
         ) -> DispatchResultWithPostInfo {
             let _from = ensure_signed(origin)?;
             let raw_tx = Self::deserialize_tx(raw_tx.as_slice())?;
@@ -130,7 +131,13 @@ pub mod pallet {
                 None
             };
             let relay_tx = relayed_info.into_relayed_tx(raw_tx);
-            log!(debug, "[push_transaction] from:{:?}, relay_tx:{:?}, prev_tx:{:?}", _from, relay_tx, prev_tx);
+            log!(
+                debug,
+                "[push_transaction] from:{:?}, relay_tx:{:?}, prev_tx:{:?}",
+                _from,
+                relay_tx,
+                prev_tx
+            );
 
             Self::apply_push_transaction(relay_tx, prev_tx)?;
 
@@ -141,13 +148,23 @@ pub mod pallet {
         /// The `tx` would have a sign for current creator or do not have sign. if creator do not sign
         /// for this transaction, he could do `sign_withdraw_tx` later.
         #[pallet::weight(<T as Config>::WeightInfo::create_withdraw_tx())]
-        pub fn create_withdraw_tx(origin: OriginFor<T>, withdrawal_id_list: Vec<u32>, tx: Vec<u8>) -> DispatchResult {
+        pub fn create_withdraw_tx(
+            origin: OriginFor<T>,
+            withdrawal_id_list: Vec<u32>,
+            tx: Vec<u8>,
+        ) -> DispatchResult {
             let from = ensure_signed(origin)?;
             // committer must be in the trustee list
             Self::ensure_trustee(&from)?;
 
             let tx = Self::deserialize_tx(tx.as_slice())?;
-            log!(debug, "[create_withdraw_tx] from:{:?}, withdrawal list:{:?}, tx:{:?}", from, withdrawal_id_list, tx);
+            log!(
+                debug,
+                "[create_withdraw_tx] from:{:?}, withdrawal list:{:?}, tx:{:?}",
+                from,
+                withdrawal_id_list,
+                tx
+            );
 
             Self::apply_create_withdraw(from, tx, withdrawal_id_list)?;
             Ok(())
@@ -155,7 +172,12 @@ pub mod pallet {
 
         /// Trustee create a proposal for a withdrawal list. `tx` is the proposal withdrawal transaction.
         #[pallet::weight(<T as Config>::WeightInfo::create_withdraw_tx())]
-        pub fn create_taproot_withdraw_tx(origin: OriginFor<T>, withdrawal_id_list: Vec<u32>, tx: Vec<u8>, spent_outputs: Vec<u8>) -> DispatchResult {
+        pub fn create_taproot_withdraw_tx(
+            origin: OriginFor<T>,
+            withdrawal_id_list: Vec<u32>,
+            tx: Vec<u8>,
+            spent_outputs: Vec<u8>,
+        ) -> DispatchResult {
             let from = ensure_signed(origin)?;
             // committer must be in the trustee list
             Self::ensure_trustee(&from)?;
@@ -181,7 +203,12 @@ pub mod pallet {
             } else {
                 None
             };
-            log!(debug, "[sign_withdraw_tx] from:{:?}, vote_tx:{:?}", from, tx);
+            log!(
+                debug,
+                "[sign_withdraw_tx] from:{:?}, vote_tx:{:?}",
+                from,
+                tx
+            );
 
             Self::apply_sig_withdraw(from, tx)?;
             Ok(())
@@ -207,8 +234,14 @@ pub mod pallet {
         /// deposit to an account id. if pass `None` to `who`, would just remove pendings, if pass
         /// Some, would deposit to this account id.
         #[pallet::weight(<T as Config>::WeightInfo::remove_pending())]
-        pub fn remove_pending(origin: OriginFor<T>, addr: BtcAddress, who: Option<T::AccountId>) -> DispatchResult {
-            T::TrusteeOrigin::try_origin(origin).map(|_| ()).or_else(ensure_root)?;
+        pub fn remove_pending(
+            origin: OriginFor<T>,
+            addr: BtcAddress,
+            who: Option<T::AccountId>,
+        ) -> DispatchResult {
+            T::TrusteeOrigin::try_origin(origin)
+                .map(|_| ())
+                .or_else(ensure_root)?;
 
             if let Some(w) = who {
                 remove_pending_deposit::<T>(&addr, &w);
@@ -236,7 +269,9 @@ pub mod pallet {
         /// transaction.)
         #[pallet::weight(<T as Config>::WeightInfo::force_replace_proposal_tx())]
         pub fn force_replace_proposal_tx(origin: OriginFor<T>, tx: Vec<u8>) -> DispatchResult {
-            T::TrusteeOrigin::try_origin(origin).map(|_| ()).or_else(ensure_root)?;
+            T::TrusteeOrigin::try_origin(origin)
+                .map(|_| ())
+                .or_else(ensure_root)?;
             let tx = Self::deserialize_tx(tx.as_slice())?;
             log!(debug, "[force_replace_proposal_tx] new_tx:{:?}", tx);
             Self::force_replace_withdraw_tx(tx)
@@ -244,21 +279,30 @@ pub mod pallet {
 
         /// Set bitcoin withdrawal fee
         #[pallet::weight(<T as Config>::WeightInfo::set_btc_withdrawal_fee())]
-        pub fn set_btc_withdrawal_fee(origin: OriginFor<T>, #[pallet::compact] fee: u64) -> DispatchResult {
-            T::TrusteeOrigin::try_origin(origin).map(|_| ()).or_else(ensure_root)?;
+        pub fn set_btc_withdrawal_fee(
+            origin: OriginFor<T>,
+            #[pallet::compact] fee: u64,
+        ) -> DispatchResult {
+            T::TrusteeOrigin::try_origin(origin)
+                .map(|_| ())
+                .or_else(ensure_root)?;
             BtcWithdrawalFee::<T>::put(fee);
             Ok(())
         }
 
         /// Set bitcoin deposit limit
         #[pallet::weight(<T as Config>::WeightInfo::set_btc_deposit_limit())]
-        pub fn set_btc_deposit_limit(origin: OriginFor<T>, #[pallet::compact] value: u64) -> DispatchResult {
-            T::TrusteeOrigin::try_origin(origin).map(|_| ()).or_else(ensure_root)?;
+        pub fn set_btc_deposit_limit(
+            origin: OriginFor<T>,
+            #[pallet::compact] value: u64,
+        ) -> DispatchResult {
+            T::TrusteeOrigin::try_origin(origin)
+                .map(|_| ())
+                .or_else(ensure_root)?;
             BtcMinDeposit::<T>::put(value);
             Ok(())
         }
     }
-
 
     /// Error for the XBridge Bitcoin module
     #[pallet::error]
@@ -341,8 +385,7 @@ pub mod pallet {
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
-    pub enum Event<T: Config>
-    {
+    pub enum Event<T: Config> {
         /// A Bitcoin header was validated and inserted. [btc_header_hash]
         HeaderInserted(H256),
         /// A Bitcoin transaction was processed. [tx_hash, block_hash, tx_state]
@@ -381,7 +424,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn block_hash_for)]
     pub(crate) type BlockHashFor<T: Config> =
-        StorageMap<_, Twox64Concat, u32,Vec<H256>, ValueQuery>;
+        StorageMap<_, Twox64Concat, u32, Vec<H256>, ValueQuery>;
 
     /// mark this blockhash is in mainchain
     #[pallet::storage]
@@ -437,13 +480,14 @@ pub mod pallet {
 
     #[pallet::type_value]
     pub fn DefaultForMinDeposit<T: Config>() -> u64 {
-        1 * 100000
+        100000
     }
 
     /// min deposit value limit, default is 10w sotashi(0.001 BTC)
     #[pallet::storage]
     #[pallet::getter(fn btc_min_deposit)]
-    pub(crate) type BtcMinDeposit<T: Config> = StorageValue<_, u64, ValueQuery, DefaultForMinDeposit<T>>;
+    pub(crate) type BtcMinDeposit<T: Config> =
+        StorageValue<_, u64, ValueQuery, DefaultForMinDeposit<T>>;
 
     /// max withdraw account count in bitcoin withdrawal transaction
     #[pallet::storage]
@@ -515,228 +559,242 @@ pub mod pallet {
             if !self.genesis_trustees.is_empty() {
                 T::TrusteeSessionProvider::genesis_trustee(
                     Pallet::<T>::chain(),
-                    &self.genesis_trustees);
+                    &self.genesis_trustees,
+                );
             }
         }
     }
 
-impl<T: Config> ChainT<BalanceOf<T>> for Pallet<T> {
-    const ASSET_ID: AssetId = xp_protocol::X_BTC;
+    impl<T: Config> ChainT<BalanceOf<T>> for Pallet<T> {
+        const ASSET_ID: AssetId = xp_protocol::X_BTC;
 
-    fn chain() -> Chain {
-        Chain::Bitcoin
-    }
+        fn chain() -> Chain {
+            Chain::Bitcoin
+        }
 
-    fn check_addr(addr: &[u8], _: &[u8]) -> DispatchResult {
-        // this addr is base58 addr
-        let address = Self::verify_btc_address(addr).map_err(|err| {
-            log!(error,
-                "[verify_btc_address] Verify failed, error:{:?}, source addr:{:?}",
-                err,
-                xpallet_support::try_addr(addr)
-            );
-            err
-        })?;
+        fn check_addr(addr: &[u8], _: &[u8]) -> DispatchResult {
+            // this addr is base58 addr
+            let address = Self::verify_btc_address(addr).map_err(|err| {
+                log!(
+                    error,
+                    "[verify_btc_address] Verify failed, error:{:?}, source addr:{:?}",
+                    err,
+                    xpallet_support::try_addr(addr)
+                );
+                err
+            })?;
 
-        match get_current_trustee_address_pair::<T>() {
-            Ok((hot_addr, cold_addr)) => {
-                // do not allow withdraw from trustee address
-                if address == hot_addr || address == cold_addr {
-                    return Err(Error::<T>::InvalidAddress.into());
+            match get_current_trustee_address_pair::<T>() {
+                Ok((hot_addr, cold_addr)) => {
+                    // do not allow withdraw from trustee address
+                    if address == hot_addr || address == cold_addr {
+                        return Err(Error::<T>::InvalidAddress.into());
+                    }
+                }
+                Err(err) => {
+                    log!(error, "[check_addr] Can not get trustee addr:{:?}", err);
                 }
             }
-            Err(err) => {
-                log!(error, "[check_addr] Can not get trustee addr:{:?}", err);
+
+            Ok(())
+        }
+
+        fn withdrawal_limit(
+            asset_id: &AssetId,
+        ) -> Result<WithdrawalLimit<BalanceOf<T>>, DispatchError> {
+            if *asset_id != Self::ASSET_ID {
+                return Err(xpallet_assets::Error::<T>::ActionNotAllowed.into());
             }
+            let fee = Self::btc_withdrawal_fee().saturated_into();
+            let limit = WithdrawalLimit::<BalanceOf<T>> {
+                minimal_withdrawal: fee * 3u32.saturated_into() / 2u32.saturated_into(),
+                fee,
+            };
+            Ok(limit)
+        }
+    }
+
+    impl<T: Config> Pallet<T> {
+        pub fn verify_btc_address(data: &[u8]) -> Result<Address, DispatchError> {
+            let result = Self::verify_bs58_address(data);
+            if result.is_ok() {
+                return result;
+            }
+            Self::verify_bech32_address(data)
         }
 
-        Ok(())
-    }
-
-    fn withdrawal_limit(
-        asset_id: &AssetId,
-    ) -> Result<WithdrawalLimit<BalanceOf<T>>, DispatchError> {
-        if *asset_id != Self::ASSET_ID {
-            return Err(xpallet_assets::Error::<T>::ActionNotAllowed.into());
+        pub fn verify_bs58_address(data: &[u8]) -> Result<Address, DispatchError> {
+            let r = bs58::decode(data)
+                .into_vec()
+                .map_err(|_| Error::<T>::InvalidBase58)?;
+            let addr = Address::from_layout(&r).map_err(|_| Error::<T>::InvalidAddr)?;
+            Ok(addr)
         }
-        let fee = Self::btc_withdrawal_fee().saturated_into();
-        let limit = WithdrawalLimit::<BalanceOf<T>> {
-            minimal_withdrawal: fee * 3u32.saturated_into() / 2u32.saturated_into(),
-            fee,
-        };
-        Ok(limit)
-    }
-}
 
-impl<T: Config> Pallet<T> {
-    pub fn verify_btc_address(data: &[u8]) -> Result<Address, DispatchError> {
-        let result = Self::verify_bs58_address(data);
-        if result.is_ok() {
-            return result;
+        pub fn verify_bech32_address(data: &[u8]) -> Result<Address, DispatchError> {
+            let addr = core::str::from_utf8(data).map_err(|_| Error::<T>::InvalidAddr)?;
+            Address::from_str(addr).map_err(|_| Error::<T>::InvalidAddr.into())
         }
-        Self::verify_bech32_address(data)
-    }
 
-    pub fn verify_bs58_address(data: &[u8]) -> Result<Address, DispatchError> {
-        let r = bs58::decode(data)
-            .into_vec()
-            .map_err(|_| Error::<T>::InvalidBase58)?;
-        let addr = Address::from_layout(&r).map_err(|_| Error::<T>::InvalidAddr)?;
-        Ok(addr)
-    }
-
-    pub fn verify_bech32_address(data: &[u8]) -> Result<Address, DispatchError> {
-        let addr = core::str::from_utf8(&data).map_err(|_| Error::<T>::InvalidAddr)?;
-        Address::from_str(addr).map_err(|_| Error::<T>::InvalidAddr.into())
-    }
-
-    /// Helper function for deserializing the slice of raw tx.
-    #[inline]
-    pub(crate) fn deserialize_tx(input: &[u8]) -> Result<Transaction, Error<T>> {
-        deserialize(Reader::new(input)).map_err(|_| Error::<T>::DeserializeErr)
-    }
-
-    #[inline]
-    pub(crate) fn deserialize_spent_outputs(input: &[u8]) -> Result<TransactionOutputArray, Error<T>> {
-        deserialize(Reader::new(input)).map_err(|_| Error::<T>::DeserializeErr)
-    }
-
-    pub(crate) fn apply_push_header(header: BtcHeader) -> DispatchResult {
-        // current should not exist
-        if Self::headers(&header.hash()).is_some() {
-            log!(error,
-                "[apply_push_header] The BTC header already exists, hash:{:?}",
-                header.hash()
-            );
-            return Err(Error::<T>::ExistingHeader.into());
+        /// Helper function for deserializing the slice of raw tx.
+        #[inline]
+        pub(crate) fn deserialize_tx(input: &[u8]) -> Result<Transaction, Error<T>> {
+            deserialize(Reader::new(input)).map_err(|_| Error::<T>::DeserializeErr)
         }
-        // prev header should exist, thus we reject orphan block
-        let prev_info = Self::headers(header.previous_header_hash).ok_or_else(|| {
-            log!(
-                error,
-                "[check_prev_and_convert] Can not find prev header, current header:{:?}",
-                header
-            );
-            Error::<T>::PrevHeaderNotExisted
-        })?;
 
-        // convert btc header to self header info
-        let header_info = BtcHeaderInfo {
-            header,
-            height: prev_info.height + 1,
-        };
-        // verify header
-        let header_verifier = header::HeaderVerifier::new::<T>(&header_info);
-        header_verifier.check::<T>()?;
+        #[inline]
+        pub(crate) fn deserialize_spent_outputs(
+            input: &[u8],
+        ) -> Result<TransactionOutputArray, Error<T>> {
+            deserialize(Reader::new(input)).map_err(|_| Error::<T>::DeserializeErr)
+        }
 
-        with_transaction_result(|| {
-            // insert into storage
-            let hash = header_info.header.hash();
-            // insert valid header into storage
-            Headers::<T>::insert(&hash, header_info.clone());
-            // storage height => block list (contains forked header hash)
-            BlockHashFor::<T>::mutate(header_info.height, |v| {
-                if !v.contains(&hash) {
-                    v.push(hash);
-                }
-            });
+        pub(crate) fn apply_push_header(header: BtcHeader) -> DispatchResult {
+            // current should not exist
+            if Self::headers(&header.hash()).is_some() {
+                log!(
+                    error,
+                    "[apply_push_header] The BTC header already exists, hash:{:?}",
+                    header.hash()
+                );
+                return Err(Error::<T>::ExistingHeader.into());
+            }
+            // prev header should exist, thus we reject orphan block
+            let prev_info = Self::headers(header.previous_header_hash).ok_or_else(|| {
+                log!(
+                    error,
+                    "[check_prev_and_convert] Can not find prev header, current header:{:?}",
+                    header
+                );
+                Error::<T>::PrevHeaderNotExisted
+            })?;
 
-            log!(debug,
+            // convert btc header to self header info
+            let header_info = BtcHeaderInfo {
+                header,
+                height: prev_info.height + 1,
+            };
+            // verify header
+            let header_verifier = header::HeaderVerifier::new::<T>(&header_info);
+            header_verifier.check::<T>()?;
+
+            with_transaction_result(|| {
+                // insert into storage
+                let hash = header_info.header.hash();
+                // insert valid header into storage
+                Headers::<T>::insert(&hash, header_info.clone());
+                // storage height => block list (contains forked header hash)
+                BlockHashFor::<T>::mutate(header_info.height, |v| {
+                    if !v.contains(&hash) {
+                        v.push(hash);
+                    }
+                });
+
+                log!(debug,
                 "[apply_push_header] Verify successfully, insert header to storage [height:{}, hash:{:?}, all hashes of the height:{:?}]",
                 header_info.height,
                 hash,
                 Self::block_hash_for(header_info.height)
             );
 
-            let best_index = Self::best_index();
+                let best_index = Self::best_index();
 
-            if header_info.height > best_index.height {
-                // note update_confirmed_header would mutate other storage depend on BlockHashFor
-                let confirmed_index = header::update_confirmed_header::<T>(&header_info);
-                log!(info,
-                    "[apply_push_header] Update new height:{}, hash:{:?}, confirm:{:?}",
-                    header_info.height, hash, confirmed_index
-                );
+                if header_info.height > best_index.height {
+                    // note update_confirmed_header would mutate other storage depend on BlockHashFor
+                    let confirmed_index = header::update_confirmed_header::<T>(&header_info);
+                    log!(
+                        info,
+                        "[apply_push_header] Update new height:{}, hash:{:?}, confirm:{:?}",
+                        header_info.height,
+                        hash,
+                        confirmed_index
+                    );
 
-                // new best index
-                let new_best_index = BtcHeaderIndex {
-                    hash,
-                    height: header_info.height,
+                    // new best index
+                    let new_best_index = BtcHeaderIndex {
+                        hash,
+                        height: header_info.height,
+                    };
+                    BestIndex::<T>::put(new_best_index);
+                } else {
+                    // forked chain
+                    log!(
+                        info,
+                        "[apply_push_header] Best index {} larger than this height {}",
+                        best_index.height,
+                        header_info.height
+                    );
+                    header::check_confirmed_header::<T>(&header_info)?;
                 };
-                BestIndex::<T>::put(new_best_index);
-            } else {
-                // forked chain
-                log!(info,
-                    "[apply_push_header] Best index {} larger than this height {}",
-                    best_index.height, header_info.height
+                Self::deposit_event(Event::<T>::HeaderInserted(hash));
+                Ok(())
+            })
+        }
+
+        pub(crate) fn apply_push_transaction(
+            tx: BtcRelayedTx,
+            prev_tx: Option<Transaction>,
+        ) -> DispatchResult {
+            let tx_hash = tx.raw.hash();
+            let block_hash = tx.block_hash;
+            let header_info = Pallet::<T>::headers(&tx.block_hash).ok_or_else(|| {
+                log!(
+                    error,
+                    "[apply_push_transaction] Tx's block header ({:?}) must exist before",
+                    block_hash
                 );
-                header::check_confirmed_header::<T>(&header_info)?;
-            };
-            Self::deposit_event(Event::<T>::HeaderInserted(hash));
-            Ok(())
-        })
-    }
+                "Tx's block header must already exist"
+            })?;
+            let merkle_root = header_info.header.merkle_root_hash;
+            // verify, check merkle proof
+            tx::validate_transaction::<T>(&tx, merkle_root, prev_tx.as_ref())?;
 
-    pub(crate) fn apply_push_transaction(tx: BtcRelayedTx, prev_tx: Option<Transaction>) -> DispatchResult {
-        let tx_hash = tx.raw.hash();
-        let block_hash = tx.block_hash;
-        let header_info = Pallet::<T>::headers(&tx.block_hash).ok_or_else(|| {
-            log!(error,
-                "[apply_push_transaction] Tx's block header ({:?}) must exist before",
-                block_hash
-            );
-            "Tx's block header must already exist"
-        })?;
-        let merkle_root = header_info.header.merkle_root_hash;
-        // verify, check merkle proof
-        tx::validate_transaction::<T>(&tx, merkle_root, prev_tx.as_ref())?;
-
-        // ensure the tx should belong to the main chain, means should submit main chain tx,
-        // e.g. a tx may be packed in main chain block, and forked chain block, only submit main chain tx
-        // could pass the verify.
-        ensure!(Self::main_chain(&tx.block_hash), Error::<T>::UnconfirmedTx);
-        // if ConfirmedIndex not set, due to confirm height not beyond genesis height
-        let confirmed = Self::confirmed_index().ok_or(Error::<T>::UnconfirmedTx)?;
-        let height = header_info.height;
-        if height > confirmed.height {
-            log!(error,
+            // ensure the tx should belong to the main chain, means should submit main chain tx,
+            // e.g. a tx may be packed in main chain block, and forked chain block, only submit main chain tx
+            // could pass the verify.
+            ensure!(Self::main_chain(&tx.block_hash), Error::<T>::UnconfirmedTx);
+            // if ConfirmedIndex not set, due to confirm height not beyond genesis height
+            let confirmed = Self::confirmed_index().ok_or(Error::<T>::UnconfirmedTx)?;
+            let height = header_info.height;
+            if height > confirmed.height {
+                log!(error,
                 "[apply_push_transaction] Receive an unconfirmed tx (height:{}, hash:{:?}), confirmed index (height:{}, hash:{:?})",
                 height, tx_hash, confirmed.height, confirmed.hash
             );
-            return Err(Error::<T>::UnconfirmedTx.into());
-        }
-        // check whether replayed tx has been processed, just process failed and not processed tx;
-        match Self::tx_state(&tx_hash) {
-            None => { /* do nothing */ }
-            Some(state) => {
-                if state.result == BtcTxResult::Success {
-                    log!(error,
+                return Err(Error::<T>::UnconfirmedTx.into());
+            }
+            // check whether replayed tx has been processed, just process failed and not processed tx;
+            match Self::tx_state(&tx_hash) {
+                None => { /* do nothing */ }
+                Some(state) => {
+                    if state.result == BtcTxResult::Success {
+                        log!(error,
                         "[apply_push_transaction] Reject processed tx (hash:{:?}, type:{:?}, result:{:?})",
                         tx_hash, state.tx_type, state.result
                     );
-                    return Err(Error::<T>::ReplayedTx.into());
+                        return Err(Error::<T>::ReplayedTx.into());
+                    }
                 }
             }
-        }
 
-        let network = Pallet::<T>::network_id();
-        let min_deposit = Pallet::<T>::btc_min_deposit();
-        let current_trustee_pair = get_current_trustee_address_pair::<T>()?;
-        let last_trustee_pair = get_last_trustee_address_pair::<T>().ok();
-        let state = tx::process_tx::<T>(
-            tx.raw,
-            prev_tx,
-            network,
-            min_deposit,
-            current_trustee_pair,
-            last_trustee_pair,
-        );
-        TxState::<T>::insert(&tx_hash, state);
-        Self::deposit_event(Event::<T>::TxProcessed(tx_hash, block_hash, state));
-        match state.result {
-            BtcTxResult::Success => Ok(()),
-            BtcTxResult::Failure => Err(Error::<T>::ProcessTxFailed.into()),
+            let network = Pallet::<T>::network_id();
+            let min_deposit = Pallet::<T>::btc_min_deposit();
+            let current_trustee_pair = get_current_trustee_address_pair::<T>()?;
+            let last_trustee_pair = get_last_trustee_address_pair::<T>().ok();
+            let state = tx::process_tx::<T>(
+                tx.raw,
+                prev_tx,
+                network,
+                min_deposit,
+                current_trustee_pair,
+                last_trustee_pair,
+            );
+            TxState::<T>::insert(&tx_hash, state);
+            Self::deposit_event(Event::<T>::TxProcessed(tx_hash, block_hash, state));
+            match state.result {
+                BtcTxResult::Success => Ok(()),
+                BtcTxResult::Failure => Err(Error::<T>::ProcessTxFailed.into()),
+            }
         }
     }
-}
 }

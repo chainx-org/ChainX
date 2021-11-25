@@ -71,10 +71,10 @@ mod tests {
     #[test]
     fn test_benchmarks() {
         ExtBuilder::default().build_default().execute_with(|| {
-            assert_ok!(test_benchmark_transfer::<Test>());
-            assert_ok!(test_benchmark_force_transfer::<Test>());
-            assert_ok!(test_benchmark_set_balance::<Test>());
-            assert_ok!(test_benchmark_set_asset_limit::<Test>());
+            assert_ok!(Pallet::<Test>::test_benchmark_transfer());
+            assert_ok!(Pallet::<Test>::test_benchmark_force_transfer());
+            assert_ok!(Pallet::<Test>::test_benchmark_set_balance());
+            assert_ok!(Pallet::<Test>::test_benchmark_set_asset_limit());
         });
     }
 }

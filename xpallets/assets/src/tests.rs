@@ -7,8 +7,9 @@ use frame_system::{EventRecord, Phase};
 
 use xp_protocol::X_BTC;
 
+pub use super::mock::{ExtBuilder, Test};
 use crate::{
-    mock::{Balance, Event, ExtBuilder, Origin, System, Test, XAssets, XAssetsErr},
+    mock::{Balance, Event, Origin, System, XAssets, XAssetsErr},
     AssetBalance, AssetErr, AssetInfo, AssetRestrictions, AssetType, Chain, Config,
     TotalAssetBalance,
 };
@@ -68,14 +69,9 @@ fn test_genesis() {
                 XAssets::destroy_usable(&abc_id, &1, 10),
                 XAssetsErr::ActionNotAllowed
             );
-            assert_ok!(XAssets::transfer(
-                Origin::signed(1),
-                999,
-                abc_id.into(),
-                50_u128.into(),
-            ));
+            assert_ok!(XAssets::transfer(Origin::signed(1), 999, abc_id, 50_u128,));
             assert_noop!(
-                XAssets::transfer(Origin::signed(999), 1, efd_id.into(), 50_u128.into(),),
+                XAssets::transfer(Origin::signed(999), 1, efd_id, 50_u128,),
                 XAssetsErr::ActionNotAllowed
             );
         });
@@ -86,12 +82,7 @@ fn test_normal_case() {
     ExtBuilder::default().build_and_execute(|| {
         assert_eq!(XAssets::total_issuance(&X_BTC), 100 + 200 + 300 + 400);
 
-        assert_ok!(XAssets::transfer(
-            Origin::signed(1),
-            999,
-            X_BTC.into(),
-            50_u128.into(),
-        ));
+        assert_ok!(XAssets::transfer(Origin::signed(1), 999, X_BTC, 50_u128,));
         assert_eq!(XAssets::usable_balance(&1, &X_BTC), 50);
         assert_eq!(XAssets::usable_balance(&999, &X_BTC), 50);
 
@@ -423,12 +414,7 @@ fn test_account_init() {
         }));
 
         // transfer token init
-        assert_ok!(XAssets::transfer(
-            Origin::signed(a),
-            id1.into(),
-            btc_id.into(),
-            25,
-        ));
+        assert_ok!(XAssets::transfer(Origin::signed(a), id1, btc_id, 25,));
         assert!(System::events().contains(&EventRecord {
             phase: Phase::Initialization,
             event: Event::System(frame_system::Event::<Test>::NewAccount(id1)),
@@ -458,20 +444,10 @@ fn test_transfer_not_init() {
         let new_id: u64 = 1000;
         let btc_id = X_BTC;
         XAssets::issue(&btc_id, &a, 50).unwrap();
-        assert_ok!(XAssets::transfer(
-            Origin::signed(a),
-            new_id.into(),
-            btc_id.into(),
-            25,
-        ));
+        assert_ok!(XAssets::transfer(Origin::signed(a), new_id, btc_id, 25,));
         check_only_one_new_account(new_id);
 
-        assert_ok!(XAssets::transfer(
-            Origin::signed(a),
-            new_id.into(),
-            btc_id.into(),
-            25,
-        ));
+        assert_ok!(XAssets::transfer(Origin::signed(a), new_id, btc_id, 25,));
         check_only_one_new_account(new_id);
 
         {
@@ -481,19 +457,9 @@ fn test_transfer_not_init() {
         check_only_one_new_account(new_id);
 
         assert_eq!(System::consumers(&new_id), 1);
-        assert_ok!(XAssets::transfer(
-            Origin::signed(new_id),
-            a.into(),
-            btc_id.into(),
-            50,
-        ));
+        assert_ok!(XAssets::transfer(Origin::signed(new_id), a, btc_id, 50,));
         assert_eq!(System::consumers(&new_id), 0);
-        assert_ok!(XAssets::transfer(
-            Origin::signed(a),
-            new_id.into(),
-            btc_id.into(),
-            50,
-        ));
+        assert_ok!(XAssets::transfer(Origin::signed(a), new_id, btc_id, 50,));
         check_only_one_new_account(new_id);
     })
 }
@@ -507,12 +473,12 @@ fn test_transfer_token() {
         // issue 50 to account 1
         XAssets::issue(&btc_id, &a, 50).unwrap();
         // transfer
-        XAssets::transfer(Origin::signed(a), b.into(), btc_id.into(), 25).unwrap();
+        XAssets::transfer(Origin::signed(a), b, btc_id, 25).unwrap();
         assert_eq!(XAssets::all_type_asset_balance(&a, &btc_id), 25);
         assert_eq!(XAssets::usable_balance(&b, &btc_id), 25);
 
         assert_noop!(
-            XAssets::transfer(Origin::signed(a), b.into(), btc_id.into(), 50,),
+            XAssets::transfer(Origin::signed(a), b, btc_id, 50,),
             XAssetsErr::InsufficientBalance
         );
     })
@@ -526,12 +492,7 @@ fn test_transfer_to_self() {
         // issue 50 to account 1
         XAssets::issue(&btc_id, &a, 50).unwrap();
         // transfer
-        assert_ok!(XAssets::transfer(
-            Origin::signed(a),
-            a.into(),
-            btc_id.into(),
-            25,
-        ));
+        assert_ok!(XAssets::transfer(Origin::signed(a), a, btc_id, 25,));
 
         assert_eq!(XAssets::all_type_asset_balance(&a, &btc_id), 50);
     })

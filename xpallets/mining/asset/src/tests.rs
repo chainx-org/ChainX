@@ -13,7 +13,7 @@ use super::*;
 use crate::mock::*;
 
 fn t_system_block_number_inc(number: BlockNumber) {
-    System::set_block_number((System::block_number() + number).into());
+    System::set_block_number(System::block_number() + number);
 }
 
 fn t_bond(who: AccountId, target: AccountId, value: Balance) -> DispatchResult {
@@ -109,7 +109,10 @@ fn t_start_session(session_index: SessionIndex) {
 #[test]
 fn on_register_should_work() {
     ExtBuilder::default().build_and_execute(|| {
-        assert_eq!(XMiningAsset::mining_previleged_assets(), Vec::<AssetId>::new());
+        assert_eq!(
+            XMiningAsset::mining_previleged_assets(),
+            Vec::<AssetId>::new()
+        );
 
         t_system_block_number_inc(1);
 
@@ -129,7 +132,10 @@ fn on_register_should_work() {
 #[test]
 fn mining_weights_should_work_when_moving_xbtc() {
     ExtBuilder::default().build_and_execute(|| {
-        assert_eq!(XMiningAsset::mining_previleged_assets(), Vec::<AssetId>::new());
+        assert_eq!(
+            XMiningAsset::mining_previleged_assets(),
+            Vec::<AssetId>::new()
+        );
 
         t_system_block_number_inc(1);
 
@@ -202,14 +208,14 @@ fn mining_weights_should_work_when_moving_xbtc() {
         assert_eq!(
             <AssetLedgers<Test>>::get(X_BTC),
             AssetLedger {
-                last_total_mining_weight: 100 + 300 * 1,
+                last_total_mining_weight: 100 + 300,
                 last_total_mining_weight_update: 5,
             }
         );
         assert_eq!(
             <MinerLedgers<Test>>::get(t_1, X_BTC),
             MinerLedger {
-                last_mining_weight: 0 + 100 * 2,
+                last_mining_weight: 100 * 2,
                 last_mining_weight_update: 5,
                 last_claim: None
             }
@@ -221,7 +227,7 @@ fn mining_weights_should_work_when_moving_xbtc() {
             t_xbtc_latest_total_weights(),
             vec![t_1, t_2]
                 .into_iter()
-                .map(|who| t_xbtc_latest_weight_of(who))
+                .map(t_xbtc_latest_weight_of)
                 .sum()
         );
     });
@@ -230,7 +236,10 @@ fn mining_weights_should_work_when_moving_xbtc() {
 #[test]
 fn sum_of_miner_weights_and_asset_total_weights_should_equal() {
     ExtBuilder::default().build_and_execute(|| {
-        assert_eq!(XMiningAsset::mining_previleged_assets(), Vec::<AssetId>::new());
+        assert_eq!(
+            XMiningAsset::mining_previleged_assets(),
+            Vec::<AssetId>::new()
+        );
 
         t_system_block_number_inc(1);
 
@@ -268,7 +277,7 @@ fn sum_of_miner_weights_and_asset_total_weights_should_equal() {
             t_xbtc_latest_total_weights(),
             vec![t_1, t_2, t_3]
                 .into_iter()
-                .map(|who| t_xbtc_latest_weight_of(who))
+                .map(t_xbtc_latest_weight_of)
                 .sum()
         );
     });

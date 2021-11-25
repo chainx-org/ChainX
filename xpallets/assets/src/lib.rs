@@ -639,7 +639,7 @@ impl<T: Config> Pallet<T> {
         type_: AssetType,
         value: BalanceOf<T>,
     ) -> Result<(), DispatchError> {
-        let current = Self::asset_typed_balance(&who, id, type_);
+        let current = Self::asset_typed_balance(who, id, type_);
 
         debug!(
             target: "runtime::assets",
@@ -663,7 +663,7 @@ impl<T: Config> Pallet<T> {
         type_: AssetType,
         value: BalanceOf<T>,
     ) -> Result<(), DispatchError> {
-        let current = Self::asset_typed_balance(&who, id, type_);
+        let current = Self::asset_typed_balance(who, id, type_);
 
         debug!(
             target: "runtime::assets",

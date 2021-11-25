@@ -32,7 +32,7 @@ fn b_put_order<T: Config>(
 ) -> DispatchResult {
     b_prepare_put_order::<T>(&user, pcx_value, btc_value)?;
     Pallet::<T>::put_order(
-        RawOrigin::Signed(user.clone()).into(),
+        RawOrigin::Signed(user).into(),
         PAIR_ID,
         OrderType::Limit,
         Side::Buy,
@@ -109,11 +109,11 @@ benchmarks! {
 
     update_trading_pair {
         let pair = CurrencyPair::new(EOS, ETH);
-        Pallet::<T>::add_trading_pair(RawOrigin::Root.into(), pair.clone(), 2, 1, 100u32.into(), true)?;
+        Pallet::<T>::add_trading_pair(RawOrigin::Root.into(), pair, 2, 1, 100u32.into(), true)?;
     }: _(RawOrigin::Root, PAIR_ID, 888, false)
     verify {
         assert_eq!(Pallet::<T>::trading_pair_of(PAIR_ID).unwrap().tick_decimals, 888);
-        assert_eq!(Pallet::<T>::trading_pair_of(PAIR_ID).unwrap().tradable, false);
+        assert!(!Pallet::<T>::trading_pair_of(PAIR_ID).unwrap().tradable);
     }
 }
 

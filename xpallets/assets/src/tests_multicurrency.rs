@@ -74,9 +74,9 @@ fn frozen_can_limit_liquidity() {
 #[test]
 fn can_reserve_is_correct() {
     ExtBuilder::default().build_and_execute(|| {
-        assert_eq!(XAssets::can_reserve(X_BTC, &ALICE, 0), true);
-        assert_eq!(XAssets::can_reserve(X_BTC, &ALICE, 101), false);
-        assert_eq!(XAssets::can_reserve(X_BTC, &ALICE, 100), true);
+        assert!(XAssets::can_reserve(X_BTC, &ALICE, 0));
+        assert!(!XAssets::can_reserve(X_BTC, &ALICE, 101));
+        assert!(XAssets::can_reserve(X_BTC, &ALICE, 100));
     });
 }
 

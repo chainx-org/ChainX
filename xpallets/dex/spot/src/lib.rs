@@ -546,7 +546,7 @@ impl<T: Config> Pallet<T> {
             Error::<T>::CancelOrderNotAllowed
         );
 
-        Self::apply_cancel_order(&who, pair_id, order_id)?;
+        Self::apply_cancel_order(who, pair_id, order_id)?;
 
         Ok(())
     }

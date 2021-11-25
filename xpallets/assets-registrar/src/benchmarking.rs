@@ -30,7 +30,7 @@ benchmarks! {
 
     deregister {
         let asset_info = b_asset_info_test_data::<T>();
-        Pallet::<T>::register(RawOrigin::Root.into(), ASSET_ID, asset_info.clone(), true, true)?;
+        Pallet::<T>::register(RawOrigin::Root.into(), ASSET_ID, asset_info, true, true)?;
     }: _(RawOrigin::Root, ASSET_ID)
     verify {
         assert!(!AssetOnline::<T>::get(ASSET_ID));
@@ -38,7 +38,7 @@ benchmarks! {
 
     recover {
         let asset_info = b_asset_info_test_data::<T>();
-        Pallet::<T>::register(RawOrigin::Root.into(), ASSET_ID, asset_info.clone(), true, true)?;
+        Pallet::<T>::register(RawOrigin::Root.into(), ASSET_ID, asset_info, true, true)?;
         Pallet::<T>::deregister(RawOrigin::Root.into(), ASSET_ID)?;
     }: _(RawOrigin::Root, ASSET_ID, true)
     verify {
@@ -56,7 +56,7 @@ benchmarks! {
         Some(b"new_desc".to_vec())
     )
     verify {
-        let mut new_asset_info = asset_info.clone();
+        let mut new_asset_info = asset_info;
         new_asset_info.set_token(b"new_token".to_vec());
         new_asset_info.set_token_name(b"new_token_name".to_vec());
         new_asset_info.set_desc(b"new_desc".to_vec());

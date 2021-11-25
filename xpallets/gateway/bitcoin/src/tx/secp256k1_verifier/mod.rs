@@ -17,7 +17,7 @@ mod runtime_interface {
         _script_pubkey: &Bytes,
         _index: usize,
     ) -> DispatchResult {
-        Err(Error::<T>::VerifySignFailed)?
+        Err(Error::<T>::VerifySignFailed.into())
     }
 }
 

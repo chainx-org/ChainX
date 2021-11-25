@@ -105,6 +105,7 @@ impl Config for Test {
 }
 
 pub struct ExtBuilder;
+
 impl Default for ExtBuilder {
     fn default() -> Self {
         Self
@@ -158,8 +159,7 @@ impl ExtBuilder {
         }
         .assimilate_storage(&mut storage);
 
-        let ext = sp_io::TestExternalities::new(storage);
-        ext
+        sp_io::TestExternalities::new(storage)
     }
     pub fn build_default(self) -> sp_io::TestExternalities {
         let btc_assets = btc();
@@ -170,13 +170,13 @@ impl ExtBuilder {
 
         self.build(assets, endowed)
     }
-    pub fn build_and_execute(self, test: impl FnOnce() -> ()) {
+    pub fn build_and_execute(self, test: impl FnOnce()) {
         let mut ext = self.build_default();
         ext.execute_with(|| System::set_block_number(1));
         ext.execute_with(test);
     }
 
-    pub fn build_no_endowed_and_execute(self, test: impl FnOnce() -> ()) {
+    pub fn build_no_endowed_and_execute(self, test: impl FnOnce()) {
         let btc_assets = btc();
         let assets = vec![(btc_assets.0, btc_assets.1, btc_assets.2, true, true)];
         let mut ext = self.build(assets, Default::default());

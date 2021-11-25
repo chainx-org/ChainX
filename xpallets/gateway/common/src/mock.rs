@@ -133,10 +133,9 @@ impl UnixTime for Timestamp {
             m.borrow().unwrap_or_else(|| {
                 use std::time::{SystemTime, UNIX_EPOCH};
                 let start = SystemTime::now();
-                let since_the_epoch = start
+                start
                     .duration_since(UNIX_EPOCH)
-                    .expect("Time went backwards");
-                since_the_epoch
+                    .expect("Time went backwards")
             })
         })
     }
@@ -263,8 +262,7 @@ impl ExtBuilder {
         }
         .assimilate_storage(&mut storage);
 
-        let ext = sp_io::TestExternalities::new(storage);
-        ext
+        sp_io::TestExternalities::new(storage)
     }
 }
 
@@ -293,31 +291,25 @@ fn trustees() -> Vec<(
             H256::repeat_byte(1).unchecked_into(),
             b"".to_vec(),
             hex::decode("02df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6")
-                .expect("hex decode failed")
-                .into(),
+                .expect("hex decode failed"),
             hex::decode("0386b58f51da9b37e59c40262153173bdb59d7e4e45b73994b99eec4d964ee7e88")
-                .expect("hex decode failed")
-                .into(),
+                .expect("hex decode failed"),
         ),
         (
             H256::repeat_byte(2).unchecked_into(),
             b"".to_vec(),
             hex::decode("0244d81efeb4171b1a8a433b87dd202117f94e44c909c49e42e77b69b5a6ce7d0d")
-                .expect("hex decode failed")
-                .into(),
+                .expect("hex decode failed"),
             hex::decode("02e4631e46255571122d6e11cda75d5d601d5eb2585e65e4e87fe9f68c7838a278")
-                .expect("hex decode failed")
-                .into(),
+                .expect("hex decode failed"),
         ),
         (
             H256::repeat_byte(3).unchecked_into(),
             b"".to_vec(),
             hex::decode("03a36339f413da869df12b1ab0def91749413a0dee87f0bfa85ba7196e6cdad102")
-                .expect("hex decode failed")
-                .into(),
+                .expect("hex decode failed"),
             hex::decode("0263d46c760d3e04883d4b433c9ce2bc32130acd9faad0192a2b375dbba9f865c3")
-                .expect("hex decode failed")
-                .into(),
+                .expect("hex decode failed"),
         ),
     ];
     let btc_config = TrusteeInfoConfig {

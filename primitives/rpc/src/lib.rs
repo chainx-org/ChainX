@@ -133,8 +133,8 @@ pub mod serde_hex {
         D: de::Deserializer<'de>,
     {
         let data = String::deserialize(deserializer)?;
-        let data = if data.starts_with("0x") {
-            &data[2..]
+        let data = if let Some(stripped) = data.strip_prefix("0x") {
+            stripped
         } else {
             &data[..]
         };

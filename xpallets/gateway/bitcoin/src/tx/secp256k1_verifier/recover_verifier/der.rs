@@ -250,7 +250,7 @@ impl<'a> Decoder<'a> {
 
         if !overflow {
             let mut b32 = [0u8; 32];
-            b32[32 - len..].copy_from_slice(&self.peek_slice(len)?);
+            b32[32 - len..].copy_from_slice(self.peek_slice(len)?);
             self.skip(len)?;
 
             overflow |= int.set_b32(&b32);

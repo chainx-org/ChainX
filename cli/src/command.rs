@@ -1,12 +1,15 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+#![allow(clippy::borrowed_box)]
 
 use std::net::SocketAddr;
 
 use sc_cli::{
-    ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
-    NetworkParams, Role, RuntimeVersion, SharedParams, SubstrateCli,
+    ChainSpec, CliConfiguration, DefaultConfigurationValues, Role, RuntimeVersion, SubstrateCli,
 };
-use sc_service::config::PrometheusConfig;
+use sc_service::{
+    config::{PrometheusConfig, TelemetryEndpoints},
+    BasePath, TransactionPoolOptions,
+};
 
 use chainx_service::{self as service, new_partial, IdentifyVariant};
 
@@ -31,33 +34,44 @@ impl DefaultConfigurationValues for Cli {
     }
 }
 
-impl CliConfiguration<Self> for Cli {
-    fn shared_params(&self) -> &SharedParams {
+impl<DCV> CliConfiguration<DCV> for Cli
+where
+    DCV: DefaultConfigurationValues,
+{
+    fn shared_params(&self) -> &sc_cli::SharedParams {
         self.run.base.shared_params()
     }
 
-    fn import_params(&self) -> Option<&ImportParams> {
+    fn import_params(&self) -> Option<&sc_cli::ImportParams> {
         self.run.base.import_params()
     }
 
-    fn keystore_params(&self) -> Option<&KeystoreParams> {
+    fn keystore_params(&self) -> Option<&sc_cli::KeystoreParams> {
         self.run.base.keystore_params()
     }
 
-    fn network_params(&self) -> Option<&NetworkParams> {
+    fn network_params(&self) -> Option<&sc_cli::NetworkParams> {
         self.run.base.network_params()
     }
 
-    fn role(&self, is_dev: bool) -> sc_cli::Result<sc_service::Role> {
+    fn offchain_worker_params(&self) -> Option<&sc_cli::OffchainWorkerParams> {
+        self.run.base.offchain_worker_params()
+    }
+
+    fn base_path(&self) -> sc_cli::Result<Option<BasePath>> {
+        self.run.base.base_path()
+    }
+
+    fn role(&self, is_dev: bool) -> sc_cli::Result<sc_cli::Role> {
         self.run.base.role(is_dev)
     }
 
-    fn transaction_pool(&self) -> sc_cli::Result<sc_service::config::TransactionPoolOptions> {
+    fn transaction_pool(&self) -> sc_cli::Result<TransactionPoolOptions> {
         self.run.base.transaction_pool()
     }
 
-    fn state_cache_child_ratio(&self) -> sc_cli::Result<Option<usize>> {
-        self.run.base.state_cache_child_ratio()
+    fn node_name(&self) -> sc_cli::Result<String> {
+        self.run.base.node_name()
     }
 
     fn rpc_http(&self, default_listen_port: u16) -> sc_cli::Result<Option<SocketAddr>> {
@@ -91,8 +105,11 @@ impl CliConfiguration<Self> for Cli {
         self.run.base.prometheus_config(default_listen_port)
     }
 
-    fn default_heap_pages(&self) -> sc_cli::Result<Option<u64>> {
-        self.run.base.default_heap_pages()
+    fn telemetry_endpoints(
+        &self,
+        chain_spec: &Box<dyn sc_cli::ChainSpec>,
+    ) -> sc_cli::Result<Option<TelemetryEndpoints>> {
+        self.run.base.telemetry_endpoints(chain_spec)
     }
 
     fn force_authoring(&self) -> sc_cli::Result<bool> {
@@ -103,16 +120,12 @@ impl CliConfiguration<Self> for Cli {
         self.run.base.disable_grandpa()
     }
 
+    fn dev_key_seed(&self, is_dev: bool) -> sc_cli::Result<Option<String>> {
+        self.run.base.dev_key_seed(is_dev)
+    }
+
     fn max_runtime_instances(&self) -> sc_cli::Result<Option<usize>> {
         self.run.base.max_runtime_instances()
-    }
-
-    fn announce_block(&self) -> sc_cli::Result<bool> {
-        self.run.base.announce_block()
-    }
-
-    fn init<C: SubstrateCli>(&self) -> sc_cli::Result<()> {
-        unreachable!("ChainX is never initialized; qed");
     }
 }
 
@@ -152,7 +165,10 @@ impl SubstrateCli for Cli {
 
     /// Create a runner for the command provided in argument. This will create a Configuration and
     /// a tokio runtime
-    fn create_runner<T: CliConfiguration>(&self, command: &T) -> sc_cli::Result<sc_cli::Runner<Self>> {
+    fn create_runner<T: CliConfiguration>(
+        &self,
+        command: &T,
+    ) -> sc_cli::Result<sc_cli::Runner<Self>> {
         // Workaround for https://github.com/paritytech/substrate/issues/6856
         // Remove this once the cli config file is supported in Substrate.
         let raw_cli_args = std::env::args().collect::<Vec<_>>();
@@ -256,16 +272,23 @@ pub fn run() -> sc_cli::Result<()> {
     // Workaround for https://github.com/paritytech/substrate/issues/6856
     // Remove this once the cli config file is supported in Substrate.
     let raw_cli_args = std::env::args().collect::<Vec<_>>();
-    let cli = Cli::from_iter(crate::config::preprocess_cli_args(raw_cli_args));
+    let cli = <Cli as SubstrateCli>::from_iter(crate::config::preprocess_cli_args(raw_cli_args));
 
     match &cli.subcommand {
         None => {
-            let runner = cli.create_runner(&cli.run.base)?;
+            let runner = cli.create_runner(&cli)?;
             let chain_spec = &runner.config().chain_spec;
             set_default_ss58_version(chain_spec);
 
             runner
                 .run_node_until_exit(|config| async move {
+                    let config = SubstrateCli::create_configuration::<Cli, Cli>(
+                        &cli,
+                        &cli,
+                        config.tokio_handle.clone(),
+                    )
+                    .map_err(|err| format!("chain argument error: {:?}", err))?;
+
                     match config.role {
                         Role::Light => service::build_light(config),
                         _ => service::build_full(config),
