@@ -1,6 +1,7 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 #![allow(unused)]
+
 use std::collections::BTreeMap;
 use std::convert::TryInto;
 
@@ -32,6 +33,7 @@ use crate::genesis::assets::{genesis_assets, init_assets, pcx, AssetParams};
 use crate::genesis::bitcoin::{btc_genesis_params, BtcGenesisParams, BtcTrusteeParams};
 
 use chainx_runtime as chainx;
+use chainx_runtime::constants::time::DAYS;
 use dev_runtime as dev;
 use malan_runtime as malan;
 
@@ -390,7 +392,11 @@ fn build_genesis(
             assets_restrictions,
             endowed: assets_endowed,
         },
-        x_gateway_common: dev::XGatewayCommonConfig { trustees },
+        x_gateway_common: dev::XGatewayCommonConfig {
+            trustees,
+            genesis_trustee_transition_duration: 30 * DAYS,
+            genesis_prospective_trust_members: Default::default(),
+        },
         x_gateway_bitcoin: dev::XGatewayBitcoinConfig {
             genesis_trustees: btc_genesis_trustees,
             network_id: bitcoin.network,

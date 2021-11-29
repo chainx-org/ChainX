@@ -37,6 +37,7 @@ pub trait WeightInfo {
     fn set_withdrawal_state() -> Weight;
     fn set_trustee_info_config() -> Weight;
     fn force_set_referral_binding() -> Weight;
+    fn change_trustee_transition_duration() -> Weight;
 }
 
 /// Weights for xpallet_gateway_common using the Substrate node and recommended hardware.
@@ -74,6 +75,9 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
     fn force_set_referral_binding() -> Weight {
         (30_667_000_u64).saturating_add(T::DbWeight::get().writes(1_u64))
     }
+    fn change_trustee_transition_duration() -> Weight {
+        (5_657_000_u64).saturating_add(T::DbWeight::get().writes(1_u64))
+    }
 }
 
 // For backwards compatibility and tests
@@ -109,5 +113,8 @@ impl WeightInfo for () {
     }
     fn force_set_referral_binding() -> Weight {
         (30_667_000_u64).saturating_add(RocksDbWeight::get().writes(1_u64))
+    }
+    fn change_trustee_transition_duration() -> Weight {
+        (5_657_000_u64).saturating_add(RocksDbWeight::get().writes(1_u64))
     }
 }

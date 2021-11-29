@@ -21,13 +21,15 @@ pub mod types;
 pub mod utils;
 pub mod weights;
 
+use frame_support::traits::{ChangeMembers, Get};
 use frame_support::{
     dispatch::{DispatchError, DispatchResult},
     ensure,
     log::{error, info},
+    weights::Weight,
 };
 use frame_system::{ensure_root, ensure_signed};
-use sp_runtime::traits::StaticLookup;
+use sp_runtime::traits::{StaticLookup, Zero};
 use sp_std::{collections::btree_map::BTreeMap, convert::TryFrom, prelude::*};
 
 use chainx_primitives::{AddrStr, AssetId, ChainAddress, Text};
@@ -36,7 +38,7 @@ use xpallet_assets::{AssetRestrictions, BalanceOf, Chain, ChainT, WithdrawalLimi
 use xpallet_gateway_records::{WithdrawalRecordId, WithdrawalState};
 use xpallet_support::traits::{MultisigAddressFor, Validator};
 
-use self::traits::TrusteeForChain;
+use self::traits::{TrusteeForChain, TrusteeSession};
 use self::types::{
     GenericTrusteeIntentionProps, GenericTrusteeSessionInfo, TrusteeInfoConfig,
     TrusteeIntentionProps,
@@ -51,7 +53,9 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + xpallet_gateway_records::Config {
+    pub trait Config:
+        frame_system::Config + xpallet_gateway_records::Config + pallet_elections_phragmen::Config
+    {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
         type Validator: Validator<Self::AccountId>;
@@ -65,13 +69,32 @@ pub mod pallet {
             trustees::bitcoin::BtcTrusteeType,
             trustees::bitcoin::BtcTrusteeAddrInfo,
         >;
+        type BitcoinTrusteeSessionProvider: TrusteeSession<
+            Self::AccountId,
+            trustees::bitcoin::BtcTrusteeAddrInfo,
+        >;
 
         type WeightInfo: WeightInfo;
     }
 
     #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
+    #[pallet::generate_store(pub (super) trait Store)]
     pub struct Pallet<T>(PhantomData<T>);
+
+    #[pallet::hooks]
+    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+        /// What to do at the end of each block.
+        ///
+        /// Checks if an trustee transition needs to happen or not.
+        fn on_initialize(n: T::BlockNumber) -> Weight {
+            let term_duration = Self::trustee_transition_duration();
+            if !term_duration.is_zero() && (n % term_duration).is_zero() {
+                Self::do_trustee_eletione()
+            } else {
+                0
+            }
+        }
+    }
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -81,7 +104,7 @@ pub mod pallet {
         /// WithdrawalRecord State: `Applying`
         ///
         /// NOTE: `ext` is for the compatibility purpose, e.g., EOS requires a memo when doing the transfer.
-        #[pallet::weight(<T as Config>::WeightInfo::withdraw())]
+        #[pallet::weight(< T as Config >::WeightInfo::withdraw())]
         pub fn withdraw(
             origin: OriginFor<T>,
             #[pallet::compact] asset_id: AssetId,
@@ -104,14 +127,14 @@ pub mod pallet {
         /// Cancel the withdrawal by the applicant.
         ///
         /// WithdrawalRecord State: `Applying` ==> `NormalCancel`
-        #[pallet::weight(<T as Config>::WeightInfo::cancel_withdrawal())]
+        #[pallet::weight(< T as Config >::WeightInfo::cancel_withdrawal())]
         pub fn cancel_withdrawal(origin: OriginFor<T>, id: WithdrawalRecordId) -> DispatchResult {
             let from = ensure_signed(origin)?;
             xpallet_gateway_records::Pallet::<T>::cancel_withdrawal(id, &from)
         }
 
         /// Setup the trustee.
-        #[pallet::weight(<T as Config>::WeightInfo::setup_trustee())]
+        #[pallet::weight(< T as Config >::WeightInfo::setup_trustee())]
         pub fn setup_trustee(
             origin: OriginFor<T>,
             chain: Chain,
@@ -125,7 +148,7 @@ pub mod pallet {
         }
 
         /// Transition the trustee session.
-        #[pallet::weight(<T as Config>::WeightInfo::transition_trustee_session(new_trustees.len() as u32))]
+        #[pallet::weight(< T as Config >::WeightInfo::transition_trustee_session(new_trustees.len() as u32))]
         pub fn transition_trustee_session(
             origin: OriginFor<T>,
             chain: Chain,
@@ -152,7 +175,7 @@ pub mod pallet {
         }
 
         /// Set the state of withdraw record by the trustees.
-        #[pallet::weight(<T as Config>::WeightInfo::set_withdrawal_state())]
+        #[pallet::weight(< T as Config >::WeightInfo::set_withdrawal_state())]
         pub fn set_withdrawal_state(
             origin: OriginFor<T>,
             #[pallet::compact] id: WithdrawalRecordId,
@@ -172,7 +195,7 @@ pub mod pallet {
         /// Set the config of trustee information.
         ///
         /// This is a root-only operation.
-        #[pallet::weight(<T as Config>::WeightInfo::set_trustee_info_config())]
+        #[pallet::weight(< T as Config >::WeightInfo::set_trustee_info_config())]
         pub fn set_trustee_info_config(
             origin: OriginFor<T>,
             chain: Chain,
@@ -186,7 +209,7 @@ pub mod pallet {
         /// Set the referral binding of corresponding chain and account.
         ///
         /// This is a root-only operation.
-        #[pallet::weight(<T as Config>::WeightInfo::force_set_referral_binding())]
+        #[pallet::weight(< T as Config >::WeightInfo::force_set_referral_binding())]
         pub fn force_set_referral_binding(
             origin: OriginFor<T>,
             chain: Chain,
@@ -199,10 +222,21 @@ pub mod pallet {
             Self::set_referral_binding(chain, who, referral);
             Ok(())
         }
+
+        /// Dangerous! Be careful to set TrusteeTransitionDuration
+        #[pallet::weight(< T as Config >::WeightInfo::change_trustee_transition_duration())]
+        pub fn change_trustee_transition_duration(
+            origin: OriginFor<T>,
+            duration: T::BlockNumber,
+        ) -> DispatchResult {
+            ensure_root(origin)?;
+            TrusteeTransitionDuration::<T>::put(duration);
+            Ok(())
+        }
     }
 
     #[pallet::event]
-    #[pallet::generate_deposit(pub(super) fn deposit_event)]
+    #[pallet::generate_deposit(pub (super) fn deposit_event)]
     pub enum Event<T: Config> {
         /// A (potential) trustee set the required properties. [who, chain, trustee_props]
         SetTrusteeProps(T::AccountId, Chain, GenericTrusteeIntentionProps),
@@ -308,6 +342,31 @@ pub mod pallet {
     pub type ReferralBindingOf<T: Config> =
         StorageDoubleMap<_, Blake2_128Concat, T::AccountId, Twox64Concat, Chain, T::AccountId>;
 
+    /// How long each trustee is kept. This defines the next block number at which an
+    /// trustee transition will happen. If set to zero, no trustee transition are ever triggered.
+    #[pallet::storage]
+    #[pallet::getter(fn trustee_transition_duration)]
+    pub type TrusteeTransitionDuration<T: Config> = StorageValue<_, T::BlockNumber, ValueQuery>;
+
+    /// Save the next trust members.
+    #[pallet::storage]
+    #[pallet::getter(fn prospective_trust_members)]
+    pub type ProspectiveTrustMembers<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
+
+    /// Members not participating in trust elections.
+    ///
+    /// The current trust members did not conduct multiple signings and put the members in the
+    /// little black room. Filter out the member in the next trust election
+    #[pallet::storage]
+    #[pallet::getter(fn little_black_house)]
+    pub type LittleblackHouse<T: Config> = StorageMap<
+        _,
+        Twox64Concat,
+        T::AccountId,
+        Vec<(T::AccountId, GenericTrusteeIntentionProps)>,
+        ValueQuery,
+    >;
+
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         pub trustees: Vec<(
@@ -315,6 +374,8 @@ pub mod pallet {
             TrusteeInfoConfig,
             Vec<(T::AccountId, Text, Vec<u8>, Vec<u8>)>,
         )>,
+        pub genesis_trustee_transition_duration: T::BlockNumber,
+        pub genesis_prospective_trust_members: Vec<T::AccountId>,
     }
 
     #[cfg(feature = "std")]
@@ -322,6 +383,8 @@ pub mod pallet {
         fn default() -> Self {
             Self {
                 trustees: Default::default(),
+                genesis_trustee_transition_duration: Default::default(),
+                genesis_prospective_trust_members: Default::default(),
             }
         }
     }
@@ -345,6 +408,8 @@ pub mod pallet {
                     }
                     TrusteeInfoConfigOf::<T>::insert(chain, info_config.clone());
                 }
+                TrusteeTransitionDuration::<T>::put(config.genesis_trustee_transition_duration);
+                ProspectiveTrustMembers::<T>::put(&config.genesis_prospective_trust_members);
             };
             extra_genesis_builder(self);
         }
@@ -387,6 +452,52 @@ impl<T: Config> Pallet<T> {
             return Err(Error::<T>::InvalidWithdrawal.into());
         }
         Ok(())
+    }
+
+    pub fn do_trustee_eletione() -> Weight {
+        // todo! Fix weight benchmark
+        if !Self::prospective_trust_members().is_empty() {
+            return 0;
+        }
+        let members = pallet_elections_phragmen::Pallet::<T>::members()
+            .iter()
+            .filter_map(|m| match LittleblackHouse::<T>::contains_key(&m.who) {
+                true => None,
+                false => Some(m.who.clone()),
+            })
+            .collect::<Vec<T::AccountId>>();
+        let runnersup = pallet_elections_phragmen::Pallet::<T>::runners_up()
+            .iter()
+            .filter_map(|m| match LittleblackHouse::<T>::contains_key(&m.who) {
+                true => None,
+                false => Some(m.who.clone()),
+            })
+            .collect::<Vec<T::AccountId>>();
+        let new_trustee_pool: Vec<T::AccountId> = [members, runnersup].concat();
+        let desired_members =
+            <T as pallet_elections_phragmen::Config>::DesiredMembers::get() as usize;
+
+        if new_trustee_pool.len() < desired_members {
+            return 0;
+        }
+
+        let new_trustee_candidate = new_trustee_pool[..desired_members].to_vec();
+        let mut new_trustee_candidate_sorted = new_trustee_candidate.clone();
+        new_trustee_candidate_sorted.sort();
+        match T::BitcoinTrusteeSessionProvider::current_trustee_session() {
+            Ok(info) => {
+                let old_trustee_candidate = info.trustee_list;
+                let mut old_trustee_candidate_sorted = old_trustee_candidate.clone();
+                old_trustee_candidate_sorted.sort();
+                let (incoming, outgoing) = <T as pallet_elections_phragmen::Config>::ChangeMembers::compute_members_diff_sorted(&old_trustee_candidate_sorted, &new_trustee_candidate_sorted);
+                if incoming.is_empty() && outgoing.is_empty() {
+                    return 0;
+                }
+                ProspectiveTrustMembers::<T>::put(new_trustee_candidate);
+                0
+            }
+            Err(_) => 0,
+        }
     }
 }
 

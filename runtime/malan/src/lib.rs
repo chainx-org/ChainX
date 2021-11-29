@@ -1000,6 +1000,7 @@ impl xpallet_gateway_common::Config for Runtime {
     type DetermineMultisigAddress = MultisigProvider;
     type Bitcoin = XGatewayBitcoin;
     type BitcoinTrustee = XGatewayBitcoin;
+    type BitcoinTrusteeSessionProvider = trustees::bitcoin::BtcTrusteeSessionManager<Runtime>;
     type WeightInfo = xpallet_gateway_common::weights::SubstrateWeight<Runtime>;
 }
 

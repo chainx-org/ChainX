@@ -9529,6 +9529,7 @@ dependencies = [
  "lazy_static",
  "light-bitcoin",
  "pallet-balances",
+ "pallet-elections-phragmen",
  "parity-scale-codec",
  "scale-info",
  "serde",
