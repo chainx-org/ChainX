@@ -89,7 +89,7 @@ pub mod pallet {
         fn on_initialize(n: T::BlockNumber) -> Weight {
             let term_duration = Self::trustee_transition_duration();
             if !term_duration.is_zero() && (n % term_duration).is_zero() {
-                Self::do_trustee_eletione()
+                Self::do_trustee_electione()
             } else {
                 0
             }
@@ -174,6 +174,44 @@ pub mod pallet {
             Self::transition_trustee_session_impl(chain, new_trustees)
         }
 
+        /// Move a current trust into a small black room.
+        ///
+        /// This is to allow for timely replacement in the event of a problem with a particular trust.
+        /// The trustee will be moved into the small black room.
+        ///
+        /// This is called by the trustee admin and root.
+        #[pallet::weight(0)]
+        pub fn move_trust_to_black_room(
+            origin: OriginFor<T>,
+            trustees: Option<Vec<T::AccountId>>,
+        ) -> DispatchResult {
+            match ensure_signed(origin.clone()) {
+                Ok(who) => {
+                    if who != Self::trustee_admin() {
+                        return Err(Error::<T>::NotTrusteeAdmin.into());
+                    }
+                }
+                Err(_) => {
+                    ensure_root(origin)?;
+                }
+            };
+
+            info!(
+                target: "runtime::gateway::common",
+                "[move_trust_to_black_room] Try to move a trust to black room, trustee:{:?}",
+                trustees
+            );
+
+            if let Some(trustees) = trustees {
+                for trustee in trustees {
+                    LittleBlackHouse::<T>::append(trustee);
+                }
+            }
+
+            Self::do_trustee_electione();
+            Ok(())
+        }
+
         /// Set the state of withdraw record by the trustees.
         #[pallet::weight(< T as Config >::WeightInfo::set_withdrawal_state())]
         pub fn set_withdrawal_state(
@@ -233,6 +271,22 @@ pub mod pallet {
             TrusteeTransitionDuration::<T>::put(duration);
             Ok(())
         }
+
+        /// Set the trustee admin.
+        ///
+        /// This is a root-only operation.
+        /// The trustee admin is the account who can change the trustee list.
+        #[pallet::weight(0)]
+        pub fn set_trustee_admin(
+            origin: OriginFor<T>,
+            admin: T::AccountId,
+            chain: Chain,
+        ) -> DispatchResult {
+            ensure_root(origin)?;
+            Self::trustee_intention_props_of(&admin, chain).ok_or(Error::<T>::NotRegistered)?;
+            TrusteeAdmin::<T>::put(admin);
+            Ok(())
+        }
     }
 
     #[pallet::event]
@@ -258,7 +312,7 @@ pub mod pallet {
         InvalidAboutLen,
         /// invalid multisig
         InvalidMultisig,
-        /// Unsupported chain
+        /// unsupported chain
         NotSupportedChain,
         /// existing duplicate account
         DuplicatedAccountId,
@@ -266,12 +320,18 @@ pub mod pallet {
         NotRegistered,
         /// just allow validator to register trustee
         NotValidator,
+        /// just allow trustee admin to remove trustee
+        NotTrusteeAdmin,
     }
 
     #[pallet::storage]
     #[pallet::getter(fn trustee_multisig_addr)]
     pub type TrusteeMultiSigAddr<T: Config> =
         StorageMap<_, Twox64Concat, Chain, T::AccountId, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn trustee_admin)]
+    pub type TrusteeAdmin<T: Config> = StorageValue<_, T::AccountId, ValueQuery>;
 
     /// Trustee info config of the corresponding chain.
     #[pallet::storage]
@@ -359,13 +419,7 @@ pub mod pallet {
     /// little black room. Filter out the member in the next trust election
     #[pallet::storage]
     #[pallet::getter(fn little_black_house)]
-    pub type LittleblackHouse<T: Config> = StorageMap<
-        _,
-        Twox64Concat,
-        T::AccountId,
-        Vec<(T::AccountId, GenericTrusteeIntentionProps)>,
-        ValueQuery,
-    >;
+    pub type LittleBlackHouse<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
@@ -454,21 +508,21 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
-    pub fn do_trustee_eletione() -> Weight {
+    pub fn do_trustee_electione() -> Weight {
         // todo! Fix weight benchmark
         if !Self::prospective_trust_members().is_empty() {
             return 0;
         }
         let members = pallet_elections_phragmen::Pallet::<T>::members()
             .iter()
-            .filter_map(|m| match LittleblackHouse::<T>::contains_key(&m.who) {
+            .filter_map(|m| match Self::little_black_house().contains(&m.who) {
                 true => None,
                 false => Some(m.who.clone()),
             })
             .collect::<Vec<T::AccountId>>();
         let runnersup = pallet_elections_phragmen::Pallet::<T>::runners_up()
             .iter()
-            .filter_map(|m| match LittleblackHouse::<T>::contains_key(&m.who) {
+            .filter_map(|m| match Self::little_black_house().contains(&m.who) {
                 true => None,
                 false => Some(m.who.clone()),
             })
