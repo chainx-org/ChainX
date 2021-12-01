@@ -19,7 +19,7 @@ pub trait TrusteeForChain<AccountId, TrusteeEntity: BytesLike, TrusteeAddress: B
     fn check_trustee_entity(raw_addr: &[u8]) -> Result<TrusteeEntity, DispatchError>;
 
     fn generate_trustee_session_info(
-        props: Vec<(AccountId, TrusteeIntentionProps<TrusteeEntity>)>,
+        props: Vec<(AccountId, TrusteeIntentionProps<AccountId, TrusteeEntity>)>,
         config: TrusteeInfoConfig,
     ) -> Result<TrusteeSessionInfo<AccountId, TrusteeAddress>, DispatchError>;
 }

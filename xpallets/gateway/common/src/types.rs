@@ -71,7 +71,8 @@ impl<AccountId, TrusteeAddress: BytesLike> TryFrom<GenericTrusteeSessionInfo<Acc
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct TrusteeIntentionProps<TrusteeEntity: BytesLike> {
+pub struct TrusteeIntentionProps<AccountId, TrusteeEntity: BytesLike> {
+    pub proxy_account: Option<AccountId>,
     #[cfg_attr(feature = "std", serde(with = "xp_rpc::serde_text"))]
     pub about: Text,
     pub hot_entity: TrusteeEntity,
@@ -82,13 +83,14 @@ pub struct TrusteeIntentionProps<TrusteeEntity: BytesLike> {
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct GenericTrusteeIntentionProps(pub TrusteeIntentionProps<Vec<u8>>);
+pub struct GenericTrusteeIntentionProps<AccountId>(pub TrusteeIntentionProps<AccountId, Vec<u8>>);
 
-impl<TrusteeEntity: BytesLike> From<TrusteeIntentionProps<TrusteeEntity>>
-    for GenericTrusteeIntentionProps
+impl<AccountId, TrusteeEntity: BytesLike> From<TrusteeIntentionProps<AccountId, TrusteeEntity>>
+    for GenericTrusteeIntentionProps<AccountId>
 {
-    fn from(props: TrusteeIntentionProps<TrusteeEntity>) -> Self {
+    fn from(props: TrusteeIntentionProps<AccountId, TrusteeEntity>) -> Self {
         GenericTrusteeIntentionProps(TrusteeIntentionProps {
+            proxy_account: props.proxy_account,
             about: props.about,
             hot_entity: props.hot_entity.into(),
             cold_entity: props.cold_entity.into(),
@@ -96,14 +98,15 @@ impl<TrusteeEntity: BytesLike> From<TrusteeIntentionProps<TrusteeEntity>>
     }
 }
 
-impl<TrusteeEntity: BytesLike> TryFrom<GenericTrusteeIntentionProps>
-    for TrusteeIntentionProps<TrusteeEntity>
+impl<AccountId, TrusteeEntity: BytesLike> TryFrom<GenericTrusteeIntentionProps<AccountId>>
+    for TrusteeIntentionProps<AccountId, TrusteeEntity>
 {
     // TODO, may use a better error
     type Error = ();
 
-    fn try_from(value: GenericTrusteeIntentionProps) -> Result<Self, Self::Error> {
-        Ok(TrusteeIntentionProps::<TrusteeEntity> {
+    fn try_from(value: GenericTrusteeIntentionProps<AccountId>) -> Result<Self, Self::Error> {
+        Ok(TrusteeIntentionProps::<AccountId, TrusteeEntity> {
+            proxy_account: value.0.proxy_account,
             about: value.0.about,
             hot_entity: TrusteeEntity::try_from(value.0.hot_entity).map_err(|_| ())?,
             cold_entity: TrusteeEntity::try_from(value.0.cold_entity).map_err(|_| ())?,

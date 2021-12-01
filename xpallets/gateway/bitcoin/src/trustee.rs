@@ -141,14 +141,17 @@ impl<T: Config> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo
     }
 
     fn generate_trustee_session_info(
-        props: Vec<(T::AccountId, TrusteeIntentionProps<BtcTrusteeType>)>,
+        props: Vec<(
+            T::AccountId,
+            TrusteeIntentionProps<T::AccountId, BtcTrusteeType>,
+        )>,
         config: TrusteeInfoConfig,
     ) -> Result<TrusteeSessionInfo<T::AccountId, BtcTrusteeAddrInfo>, DispatchError> {
         // judge all props has different pubkey
         // check
         let (trustees, props_info): (
             Vec<T::AccountId>,
-            Vec<TrusteeIntentionProps<BtcTrusteeType>>,
+            Vec<TrusteeIntentionProps<T::AccountId, BtcTrusteeType>>,
         ) = props.into_iter().unzip();
 
         let (hot_keys, cold_keys): (Vec<Public>, Vec<Public>) = props_info

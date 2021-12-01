@@ -1469,7 +1469,7 @@ impl_runtime_apis! {
             XGatewayCommon::trustee_multisigs()
         }
 
-        fn trustee_properties(chain: Chain, who: AccountId) -> Option<GenericTrusteeIntentionProps> {
+        fn trustee_properties(chain: Chain, who: AccountId) -> Option<GenericTrusteeIntentionProps<AccountId>> {
             XGatewayCommon::trustee_intention_props_of(who, chain)
         }
 

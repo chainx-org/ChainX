@@ -15,7 +15,7 @@ use crate::types::{TrusteeIntentionProps, TrusteeSessionInfo};
 
 pub type BtcAddress = Vec<u8>;
 pub type BtcTrusteeSessionInfo<AccountId> = TrusteeSessionInfo<AccountId, BtcTrusteeAddrInfo>;
-pub type BtcTrusteeIntentionProps = TrusteeIntentionProps<BtcTrusteeType>;
+pub type BtcTrusteeIntentionProps<AccountId> = TrusteeIntentionProps<AccountId, BtcTrusteeType>;
 pub type BtcTrusteeSessionManager<T> = TrusteeSessionManager<T, BtcTrusteeAddrInfo>;
 pub type BtcTrusteeMultisig<T> = TrusteeMultisigProvider<T, BtcTrusteeType>;
 

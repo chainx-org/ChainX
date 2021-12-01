@@ -34,7 +34,7 @@ sp_api::decl_runtime_apis! {
         /// Get all trustee multisig.
         fn trustee_multisigs() -> BTreeMap<Chain, AccountId>;
 
-        fn trustee_properties(chain: Chain, who: AccountId) -> Option<GenericTrusteeIntentionProps>;
+        fn trustee_properties(chain: Chain, who: AccountId) -> Option<GenericTrusteeIntentionProps<AccountId>>;
 
         fn trustee_session_info(chain: Chain) -> Option<GenericTrusteeSessionInfo<AccountId>>;
 

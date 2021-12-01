@@ -133,18 +133,25 @@ pub mod pallet {
             xpallet_gateway_records::Pallet::<T>::cancel_withdrawal(id, &from)
         }
 
-        /// Setup the trustee.
+        /// Setup the trustee info.
         #[pallet::weight(< T as Config >::WeightInfo::setup_trustee())]
         pub fn setup_trustee(
             origin: OriginFor<T>,
+            proxy_account: Option<T::AccountId>,
             chain: Chain,
             about: Text,
             hot_entity: Vec<u8>,
             cold_entity: Vec<u8>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            ensure!(T::Validator::is_validator(&who), Error::<T>::NotValidator);
-            Self::setup_trustee_impl(who, chain, about, hot_entity, cold_entity)
+            // make sure this person is a pre-selected trustee
+            // or the trustee is in little black house
+            ensure!(
+                Self::prospective_trust_members().contains(&who)
+                    || Self::little_black_house().contains(&who),
+                Error::<T>::NotTrusteePreselectedMember
+            );
+            Self::setup_trustee_impl(who, proxy_account, chain, about, hot_entity, cold_entity)
         }
 
         /// Transition the trustee session.
@@ -293,7 +300,11 @@ pub mod pallet {
     #[pallet::generate_deposit(pub (super) fn deposit_event)]
     pub enum Event<T: Config> {
         /// A (potential) trustee set the required properties. [who, chain, trustee_props]
-        SetTrusteeProps(T::AccountId, Chain, GenericTrusteeIntentionProps),
+        SetTrusteeProps(
+            T::AccountId,
+            Chain,
+            GenericTrusteeIntentionProps<T::AccountId>,
+        ),
         /// An account set its referral_account of some chain. [who, chain, referral_account]
         ReferralBinded(T::AccountId, Chain, T::AccountId),
         /// The trustee set of a chain was changed. [chain, session_number, session_info]
@@ -322,6 +333,8 @@ pub mod pallet {
         NotValidator,
         /// just allow trustee admin to remove trustee
         NotTrusteeAdmin,
+        /// just allow trust preselected members to set their trust information
+        NotTrusteePreselectedMember,
     }
 
     #[pallet::storage]
@@ -376,7 +389,7 @@ pub mod pallet {
         T::AccountId,
         Twox64Concat,
         Chain,
-        GenericTrusteeIntentionProps,
+        GenericTrusteeIntentionProps<T::AccountId>,
     >;
 
     /// The account of the corresponding chain and chain address.
@@ -452,6 +465,7 @@ pub mod pallet {
                     for (who, about, hot, cold) in trustee_infos.iter() {
                         Pallet::<T>::setup_trustee_impl(
                             who.clone(),
+                            None,
                             *chain,
                             about.clone(),
                             hot.clone(),
@@ -537,7 +551,7 @@ impl<T: Config> Pallet<T> {
 
         let new_trustee_candidate = new_trustee_pool[..desired_members].to_vec();
         let mut new_trustee_candidate_sorted = new_trustee_candidate.clone();
-        new_trustee_candidate_sorted.sort();
+        new_trustee_candidate_sorted.sort_unstable();
         match T::BitcoinTrusteeSessionProvider::current_trustee_session() {
             Ok(info) => {
                 let old_trustee_candidate = info.trustee_list;
@@ -568,6 +582,7 @@ pub fn is_valid_about<T: Config>(about: &[u8]) -> DispatchResult {
 impl<T: Config> Pallet<T> {
     pub fn setup_trustee_impl(
         who: T::AccountId,
+        proxy_account: Option<T::AccountId>,
         chain: Chain,
         about: Text,
         hot_entity: Vec<u8>,
@@ -584,13 +599,30 @@ impl<T: Config> Pallet<T> {
             _ => return Err(Error::<T>::NotSupportedChain.into()),
         };
 
-        let props = GenericTrusteeIntentionProps(TrusteeIntentionProps::<Vec<u8>> {
+        let proxy_account = if let Some(addr) = proxy_account {
+            Some(addr)
+        } else {
+            Some(who.clone())
+        };
+
+        let props = GenericTrusteeIntentionProps::<T::AccountId>(TrusteeIntentionProps::<
+            T::AccountId,
+            Vec<u8>,
+        > {
+            proxy_account,
             about,
             hot_entity: hot,
             cold_entity: cold,
         });
 
-        TrusteeIntentionPropertiesOf::<T>::insert(&who, chain, props.clone());
+        if TrusteeIntentionPropertiesOf::<T>::contains_key(&who, chain) {
+            if Self::little_black_house().contains(&who) {
+                LittleBlackHouse::<T>::mutate(|house| house.retain(|a| *a != who));
+            }
+            TrusteeIntentionPropertiesOf::<T>::mutate(&who, chain, |t| *t = Some(props.clone()));
+        } else {
+            TrusteeIntentionPropertiesOf::<T>::insert(&who, chain, props.clone());
+        }
         Self::deposit_event(Event::<T>::SetTrusteeProps(who, chain, props));
         Ok(())
     }
@@ -629,7 +661,7 @@ impl<T: Config> Pallet<T> {
                     .map(|(id, prop)| {
                         (
                             id,
-                            TrusteeIntentionProps::<_>::try_from(prop)
+                            TrusteeIntentionProps::<T::AccountId, _>::try_from(prop)
                                 .expect("must decode succss from storage data"),
                         )
                     })

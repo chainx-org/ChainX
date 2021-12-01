@@ -71,7 +71,7 @@ where
         &self,
         who: AccountId,
         at: Option<BlockHash>,
-    ) -> Result<BtcTrusteeIntentionProps>;
+    ) -> Result<BtcTrusteeIntentionProps<AccountId>>;
 
     /// Return bitcoin trustee for current session(e.g. trustee hot/cold address and else)
     #[rpc(name = "xgatewaycommon_bitcoinTrusteeSessionInfo")]
@@ -118,7 +118,7 @@ where
         chain: Chain,
         who: AccountId,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<GenericTrusteeIntentionProps> {
+    ) -> Result<GenericTrusteeIntentionProps<AccountId>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
@@ -269,9 +269,9 @@ where
         &self,
         who: AccountId,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<BtcTrusteeIntentionProps> {
+    ) -> Result<BtcTrusteeIntentionProps<AccountId>> {
         let props = self.generic_trustee_properties(Chain::Bitcoin, who, at)?;
-        BtcTrusteeIntentionProps::try_from(props).map_err(trustee_decode_error_into_rpc_err)
+        BtcTrusteeIntentionProps::<_>::try_from(props).map_err(trustee_decode_error_into_rpc_err)
     }
 
     fn btc_trustee_session_info(
