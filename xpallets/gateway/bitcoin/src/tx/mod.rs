@@ -1,6 +1,7 @@
 // Copyright 2019-2021 ChainX Project Authors. Licensed under GPL-3.0.
 #![allow(clippy::ptr_arg)]
 extern crate alloc;
+
 use alloc::string::ToString;
 
 mod secp256k1_verifier;
@@ -53,12 +54,18 @@ pub fn process_tx<T: Config>(
     let result = match meta_type {
         BtcTxMetaType::<_>::Deposit(deposit_info) => deposit::<T>(tx.hash(), deposit_info),
         BtcTxMetaType::<_>::Withdrawal => withdraw::<T>(tx),
-        BtcTxMetaType::HotAndCold | BtcTxMetaType::TrusteeTransition => BtcTxResult::Success,
+        BtcTxMetaType::TrusteeTransition => trustee_transition::<T>(),
+        BtcTxMetaType::HotAndCold => BtcTxResult::Success,
         // mark `Irrelevance` be `Failure` so that it could be replayed in the future
         BtcTxMetaType::<_>::Irrelevance => BtcTxResult::Failure,
     };
 
     BtcTxState { tx_type, result }
+}
+
+fn trustee_transition<T: Config>() -> BtcTxResult {
+    xpallet_gateway_common::TrusteeTransitionStatus::<T>::put(false);
+    BtcTxResult::Success
 }
 
 fn deposit<T: Config>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) -> BtcTxResult {

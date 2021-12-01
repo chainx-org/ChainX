@@ -395,7 +395,7 @@ fn build_genesis(
         x_gateway_common: dev::XGatewayCommonConfig {
             trustees,
             genesis_trustee_transition_duration: 30 * DAYS,
-            genesis_prospective_trust_members: Default::default(),
+            genesis_trustee_transition_status: false,
         },
         x_gateway_bitcoin: dev::XGatewayBitcoinConfig {
             genesis_trustees: btc_genesis_trustees,

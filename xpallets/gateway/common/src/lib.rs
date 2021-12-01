@@ -147,7 +147,7 @@ pub mod pallet {
             // make sure this person is a pre-selected trustee
             // or the trustee is in little black house
             ensure!(
-                Self::prospective_trust_members().contains(&who)
+                Self::generate_trustee_pool().contains(&who)
                     || Self::little_black_house().contains(&who),
                 Error::<T>::NotTrusteePreselectedMember
             );
@@ -421,10 +421,10 @@ pub mod pallet {
     #[pallet::getter(fn trustee_transition_duration)]
     pub type TrusteeTransitionDuration<T: Config> = StorageValue<_, T::BlockNumber, ValueQuery>;
 
-    /// Save the next trust members.
+    /// The status of the of the trustee transition
     #[pallet::storage]
-    #[pallet::getter(fn prospective_trust_members)]
-    pub type ProspectiveTrustMembers<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
+    #[pallet::getter(fn trustee_transition_status)]
+    pub type TrusteeTransitionStatus<T: Config> = StorageValue<_, bool, ValueQuery>;
 
     /// Members not participating in trust elections.
     ///
@@ -442,7 +442,7 @@ pub mod pallet {
             Vec<(T::AccountId, Text, Vec<u8>, Vec<u8>)>,
         )>,
         pub genesis_trustee_transition_duration: T::BlockNumber,
-        pub genesis_prospective_trust_members: Vec<T::AccountId>,
+        pub genesis_trustee_transition_status: bool,
     }
 
     #[cfg(feature = "std")]
@@ -451,7 +451,7 @@ pub mod pallet {
             Self {
                 trustees: Default::default(),
                 genesis_trustee_transition_duration: Default::default(),
-                genesis_prospective_trust_members: Default::default(),
+                genesis_trustee_transition_status: Default::default(),
             }
         }
     }
@@ -477,7 +477,7 @@ pub mod pallet {
                     TrusteeInfoConfigOf::<T>::insert(chain, info_config.clone());
                 }
                 TrusteeTransitionDuration::<T>::put(config.genesis_trustee_transition_duration);
-                ProspectiveTrustMembers::<T>::put(&config.genesis_prospective_trust_members);
+                TrusteeTransitionStatus::<T>::put(&config.genesis_trustee_transition_status);
             };
             extra_genesis_builder(self);
         }
@@ -522,29 +522,33 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
+    pub fn generate_trustee_pool() -> Vec<T::AccountId> {
+        let members = pallet_elections_phragmen::Pallet::<T>::members()
+            .iter()
+            .map(|m| m.who.clone())
+            .collect::<Vec<T::AccountId>>();
+        let runnersup = pallet_elections_phragmen::Pallet::<T>::runners_up()
+            .iter()
+            .map(|m| m.who.clone())
+            .collect::<Vec<T::AccountId>>();
+        [members, runnersup].concat()
+    }
+
     pub fn do_trustee_election() -> Weight {
         // todo! Fix weight benchmark
-        if !Self::prospective_trust_members().is_empty() {
+        if Self::trustee_transition_status() {
             return 0;
         }
         // todo! If the number of multi-signatures is 0, they will need to be placed in the small black house.
         let filter_members: Vec<T::AccountId> = Self::little_black_house();
 
-        let members = pallet_elections_phragmen::Pallet::<T>::members()
+        let new_trustee_pool: Vec<T::AccountId> = Self::generate_trustee_pool()
             .iter()
-            .filter_map(|m| match filter_members.contains(&m.who) {
+            .filter_map(|who| match filter_members.contains(&who) {
                 true => None,
-                false => Some(m.who.clone()),
+                false => Some(who.clone()),
             })
             .collect::<Vec<T::AccountId>>();
-        let runnersup = pallet_elections_phragmen::Pallet::<T>::runners_up()
-            .iter()
-            .filter_map(|m| match filter_members.contains(&m.who) {
-                true => None,
-                false => Some(m.who.clone()),
-            })
-            .collect::<Vec<T::AccountId>>();
-        let new_trustee_pool: Vec<T::AccountId> = [members, runnersup].concat();
 
         let remain_filter_members = filter_members
             .iter()
@@ -575,7 +579,12 @@ impl<T: Config> Pallet<T> {
                 if incoming.is_empty() && outgoing.is_empty() {
                     return 0;
                 }
-                ProspectiveTrustMembers::<T>::put(new_trustee_candidate);
+                if Self::transition_trustee_session_impl(Chain::Bitcoin, new_trustee_candidate)
+                    .is_err()
+                {
+                    return 0;
+                }
+                TrusteeTransitionStatus::<T>::put(true);
                 0
             }
             Err(_) => 0,

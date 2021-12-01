@@ -147,18 +147,23 @@ impl<T: Config> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo
         )>,
         config: TrusteeInfoConfig,
     ) -> Result<TrusteeSessionInfo<T::AccountId, BtcTrusteeAddrInfo>, DispatchError> {
-        // judge all props has different pubkey
-        // check
-        let (trustees, props_info): (
-            Vec<T::AccountId>,
-            Vec<TrusteeIntentionProps<T::AccountId, BtcTrusteeType>>,
-        ) = props.into_iter().unzip();
+        // If there is a proxy account, choose a proxy account
+        let mut trustees: Vec<T::AccountId> = vec![];
+        let mut props_info: Vec<TrusteeIntentionProps<T::AccountId, BtcTrusteeType>> = vec![];
+        for prop in props {
+            match prop.1.proxy_account.clone() {
+                None => trustees.push(prop.0),
+                Some(acc) => trustees.push(acc),
+            };
+            props_info.push(prop.1);
+        }
 
         let (hot_keys, cold_keys): (Vec<Public>, Vec<Public>) = props_info
             .into_iter()
             .map(|props| (props.hot_entity.0, props.cold_entity.0))
             .unzip();
 
+        // judge all props has different pubkey
         check_keys::<T>(&hot_keys)?;
         check_keys::<T>(&cold_keys)?;
 

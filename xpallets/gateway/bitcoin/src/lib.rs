@@ -84,7 +84,10 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config:
-        frame_system::Config + xpallet_assets::Config + xpallet_gateway_records::Config
+        frame_system::Config
+        + xpallet_assets::Config
+        + xpallet_gateway_records::Config
+        + xpallet_gateway_common::Config
     {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type UnixTime: UnixTime;

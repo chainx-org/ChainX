@@ -72,6 +72,7 @@ impl BtcTxTypeDetector {
 
         // detect X-BTC `Withdrawal`/`HotAndCold`/`TrusteeTransition` transaction
         if let Some(input_addr) = input_addr {
+            // todo! Fix check of amount
             let all_outputs_is_trustee = tx
                 .outputs
                 .iter()
