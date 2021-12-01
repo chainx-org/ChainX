@@ -89,7 +89,7 @@ pub mod pallet {
         fn on_initialize(n: T::BlockNumber) -> Weight {
             let term_duration = Self::trustee_transition_duration();
             if !term_duration.is_zero() && (n % term_duration).is_zero() {
-                Self::do_trustee_electione()
+                Self::do_trustee_election()
             } else {
                 0
             }
@@ -215,7 +215,7 @@ pub mod pallet {
                 }
             }
 
-            Self::do_trustee_electione();
+            Self::do_trustee_election();
             Ok(())
         }
 
@@ -522,26 +522,40 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
-    pub fn do_trustee_electione() -> Weight {
+    pub fn do_trustee_election() -> Weight {
         // todo! Fix weight benchmark
         if !Self::prospective_trust_members().is_empty() {
             return 0;
         }
+        // todo! If the number of multi-signatures is 0, they will need to be placed in the small black house.
+        let filter_members: Vec<T::AccountId> = Self::little_black_house();
+
         let members = pallet_elections_phragmen::Pallet::<T>::members()
             .iter()
-            .filter_map(|m| match Self::little_black_house().contains(&m.who) {
+            .filter_map(|m| match filter_members.contains(&m.who) {
                 true => None,
                 false => Some(m.who.clone()),
             })
             .collect::<Vec<T::AccountId>>();
         let runnersup = pallet_elections_phragmen::Pallet::<T>::runners_up()
             .iter()
-            .filter_map(|m| match Self::little_black_house().contains(&m.who) {
+            .filter_map(|m| match filter_members.contains(&m.who) {
                 true => None,
                 false => Some(m.who.clone()),
             })
             .collect::<Vec<T::AccountId>>();
         let new_trustee_pool: Vec<T::AccountId> = [members, runnersup].concat();
+
+        let remain_filter_members = filter_members
+            .iter()
+            .filter_map(|who| match new_trustee_pool.contains(who) {
+                true => Some(who.clone()),
+                false => None,
+            })
+            .collect::<Vec<_>>();
+
+        LittleBlackHouse::<T>::put(remain_filter_members);
+
         let desired_members =
             <T as pallet_elections_phragmen::Config>::DesiredMembers::get() as usize;
 
