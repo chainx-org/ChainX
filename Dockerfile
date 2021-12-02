@@ -4,7 +4,7 @@ LABEL description="The build stage for ChainX. We create the ChainX binary in th
 
 ARG PROFILE=release
 ARG APP=chainx
-ARG RUSTC_VERSION=nightly-2021-03-01
+ARG RUSTC_VERSION=nightly-2021-06-29
 
 WORKDIR /$APP
 
