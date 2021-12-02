@@ -88,7 +88,9 @@ pub use xpallet_gateway_bitcoin::{
 };
 pub use xpallet_gateway_common::{
     trustees,
-    types::{GenericTrusteeIntentionProps, GenericTrusteeSessionInfo, TrusteeInfoConfig},
+    types::{
+        GenericTrusteeIntentionProps, GenericTrusteeSessionInfo, ScriptInfo, TrusteeInfoConfig,
+    },
 };
 pub use xpallet_gateway_records::Withdrawal;
 pub use xpallet_mining_asset::MiningWeight;
@@ -1485,10 +1487,10 @@ impl_runtime_apis! {
             XGatewayCommon::trustee_session_info_of(chain, number)
         }
 
-        fn generate_trustee_session_info(chain: Chain, candidates: Vec<AccountId>) -> Result<GenericTrusteeSessionInfo<AccountId>, DispatchError> {
+        fn generate_trustee_session_info(chain: Chain, candidates: Vec<AccountId>) -> Result<(GenericTrusteeSessionInfo<AccountId>, ScriptInfo<AccountId>), DispatchError> {
             let info = XGatewayCommon::try_generate_session_info(chain, candidates)?;
             // check multisig address
-            let _ = XGatewayCommon::generate_multisig_addr(chain, &info)?;
+            let _ = XGatewayCommon::generate_multisig_addr(chain, &info.0)?;
             Ok(info)
         }
     }

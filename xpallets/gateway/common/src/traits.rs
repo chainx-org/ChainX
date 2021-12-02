@@ -6,7 +6,7 @@ use sp_std::{convert::TryFrom, prelude::Vec};
 use chainx_primitives::{AssetId, ReferralId};
 use xpallet_assets::Chain;
 
-use crate::types::{TrusteeInfoConfig, TrusteeIntentionProps, TrusteeSessionInfo};
+use crate::types::{ScriptInfo, TrusteeInfoConfig, TrusteeIntentionProps, TrusteeSessionInfo};
 
 pub trait BytesLike: Into<Vec<u8>> + TryFrom<Vec<u8>> {}
 impl<T: Into<Vec<u8>> + TryFrom<Vec<u8>>> BytesLike for T {}
@@ -21,7 +21,13 @@ pub trait TrusteeForChain<AccountId, TrusteeEntity: BytesLike, TrusteeAddress: B
     fn generate_trustee_session_info(
         props: Vec<(AccountId, TrusteeIntentionProps<AccountId, TrusteeEntity>)>,
         config: TrusteeInfoConfig,
-    ) -> Result<TrusteeSessionInfo<AccountId, TrusteeAddress>, DispatchError>;
+    ) -> Result<
+        (
+            TrusteeSessionInfo<AccountId, TrusteeAddress>,
+            ScriptInfo<AccountId>,
+        ),
+        DispatchError,
+    >;
 }
 
 pub trait TrusteeSession<AccountId, TrusteeAddress: BytesLike> {

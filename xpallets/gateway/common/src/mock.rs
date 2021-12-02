@@ -279,20 +279,32 @@ impl<T: xpallet_gateway_common::Config>
             TrusteeIntentionProps<T::AccountId, BtcTrusteeType>,
         )>,
         _: TrusteeInfoConfig,
-    ) -> Result<TrusteeSessionInfo<T::AccountId, BtcTrusteeAddrInfo>, DispatchError> {
+    ) -> Result<
+        (
+            TrusteeSessionInfo<T::AccountId, BtcTrusteeAddrInfo>,
+            ScriptInfo<T::AccountId>,
+        ),
+        DispatchError,
+    > {
         let len = props.len();
-        Ok(TrusteeSessionInfo {
-            trustee_list: props.into_iter().map(|(a, _)| a).collect::<_>(),
-            threshold: len as u16,
-            hot_address: BtcTrusteeAddrInfo {
-                addr: vec![],
-                redeem_script: vec![],
+        Ok((
+            TrusteeSessionInfo {
+                trustee_list: props.into_iter().map(|(a, _)| a).collect::<_>(),
+                threshold: len as u16,
+                hot_address: BtcTrusteeAddrInfo {
+                    addr: vec![],
+                    redeem_script: vec![],
+                },
+                cold_address: BtcTrusteeAddrInfo {
+                    addr: vec![],
+                    redeem_script: vec![],
+                },
             },
-            cold_address: BtcTrusteeAddrInfo {
-                addr: vec![],
-                redeem_script: vec![],
+            ScriptInfo {
+                agg_pubkeys: vec![],
+                personal_accounts: vec![],
             },
-        })
+        ))
     }
 }
 

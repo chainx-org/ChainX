@@ -29,14 +29,10 @@ use frame_support::{
     weights::Weight,
 };
 use frame_system::{ensure_root, ensure_signed};
-use light_bitcoin::mast::{compute_min_threshold, generate_combine_index};
-use light_bitcoin::script::{Builder, Opcode};
-use musig2::{KeyAgg, PublicKey};
 use sp_runtime::traits::{StaticLookup, Zero};
-use sp_std::{cmp::max, collections::btree_map::BTreeMap, convert::TryFrom, prelude::*};
+use sp_std::{collections::btree_map::BTreeMap, convert::TryFrom, prelude::*};
 
 use chainx_primitives::{AddrStr, AssetId, ChainAddress, Text};
-use utils::{two_thirds_unsafe, MAX_TAPROOT_NODES};
 use xp_runtime::Memo;
 use xpallet_assets::{AssetRestrictions, BalanceOf, Chain, ChainT, WithdrawalLimit};
 use xpallet_gateway_records::{WithdrawalRecordId, WithdrawalState};
@@ -48,6 +44,7 @@ use self::types::{
     TrusteeIntentionProps,
 };
 pub use self::weights::WeightInfo;
+use crate::types::ScriptInfo;
 pub use pallet::*;
 
 #[frame_support::pallet]
@@ -311,8 +308,13 @@ pub mod pallet {
         ),
         /// An account set its referral_account of some chain. [who, chain, referral_account]
         ReferralBinded(T::AccountId, Chain, T::AccountId),
-        /// The trustee set of a chain was changed. [chain, session_number, session_info]
-        TrusteeSetChanged(Chain, u32, GenericTrusteeSessionInfo<T::AccountId>),
+        /// The trustee set of a chain was changed. [chain, session_number, session_info, script_info]
+        TrusteeSetChanged(
+            Chain,
+            u32,
+            GenericTrusteeSessionInfo<T::AccountId>,
+            ScriptInfo<T::AccountId>,
+        ),
     }
 
     #[pallet::error]
@@ -555,8 +557,25 @@ impl<T: Config> Pallet<T> {
         if Self::trustee_transition_status() {
             return 0;
         }
-        // todo! If the number of multi-signatures is 0, they will need to be placed in the small black house.
-        let filter_members: Vec<T::AccountId> = Self::little_black_house();
+
+        // Current trust list
+        let old_trustee_candidate: Vec<T::AccountId> =
+            if let Some(info) = T::BitcoinTrusteeSessionProvider::current_trustee_session().ok() {
+                info.trustee_list
+            } else {
+                return 0;
+            };
+
+        let multi_count_0 = old_trustee_candidate
+            .iter()
+            .filter_map(|acc| match Self::trustee_sig_record(acc) {
+                0 => Some(acc.clone()),
+                _ => None,
+            })
+            .collect::<Vec<T::AccountId>>();
+
+        let filter_members: Vec<T::AccountId> =
+            [Self::little_black_house(), multi_count_0].concat();
 
         let new_trustee_pool: Vec<T::AccountId> = Self::generate_trustee_pool()
             .iter()
@@ -586,35 +605,25 @@ impl<T: Config> Pallet<T> {
         let new_trustee_candidate = new_trustee_pool[..desired_members].to_vec();
         let mut new_trustee_candidate_sorted = new_trustee_candidate.clone();
         new_trustee_candidate_sorted.sort_unstable();
-        match T::BitcoinTrusteeSessionProvider::current_trustee_session() {
-            Ok(info) => {
-                let old_trustee_candidate = info.trustee_list;
-                let mut old_trustee_candidate_sorted = old_trustee_candidate.clone();
-                old_trustee_candidate_sorted.sort();
-                let (incoming, outgoing) = <T as pallet_elections_phragmen::Config>::ChangeMembers::compute_members_diff_sorted(&old_trustee_candidate_sorted, &new_trustee_candidate_sorted);
-                if incoming.is_empty() && outgoing.is_empty() {
-                    return 0;
-                }
-                if Self::transition_trustee_session_impl(
-                    Chain::Bitcoin,
-                    new_trustee_candidate.clone(),
-                )
-                .is_err()
-                {
-                    return 0;
-                }
-                let sig_num = max(
-                    two_thirds_unsafe(new_trustee_candidate.len() as u32),
-                    compute_min_threshold(new_trustee_candidate.len(), MAX_TAPROOT_NODES) as u32,
-                );
-                if Self::update_aggpubkey_info(new_trustee_candidate, sig_num as usize).is_err() {
-                    return 0;
-                }
-                TrusteeTransitionStatus::<T>::put(true);
-                0
-            }
-            Err(_) => 0,
+
+        let mut old_trustee_candidate_sorted = old_trustee_candidate.clone();
+        old_trustee_candidate_sorted.sort();
+        let (incoming, outgoing) =
+            <T as pallet_elections_phragmen::Config>::ChangeMembers::compute_members_diff_sorted(
+                &old_trustee_candidate_sorted,
+                &new_trustee_candidate_sorted,
+            );
+        if incoming.is_empty() && outgoing.is_empty() {
+            return 0;
         }
+        if Self::transition_trustee_session_impl(Chain::Bitcoin, new_trustee_candidate.clone())
+            .is_err()
+        {
+            return 0;
+        }
+
+        TrusteeTransitionStatus::<T>::put(true);
+        0
     }
 }
 
@@ -679,7 +688,13 @@ impl<T: Config> Pallet<T> {
     pub fn try_generate_session_info(
         chain: Chain,
         new_trustees: Vec<T::AccountId>,
-    ) -> Result<GenericTrusteeSessionInfo<T::AccountId>, DispatchError> {
+    ) -> Result<
+        (
+            GenericTrusteeSessionInfo<T::AccountId>,
+            ScriptInfo<T::AccountId>,
+        ),
+        DispatchError,
+    > {
         let config = Self::trustee_info_config_of(chain);
         let has_duplicate =
             (1..new_trustees.len()).any(|i| new_trustees[i..].contains(&new_trustees[i - 1]));
@@ -717,7 +732,7 @@ impl<T: Config> Pallet<T> {
                     .collect();
                 let session_info = T::BitcoinTrustee::generate_trustee_session_info(props, config)?;
 
-                session_info.into()
+                (session_info.0.into(), session_info.1)
             }
             _ => return Err(Error::<T>::NotSupportedChain.into()),
         };
@@ -729,26 +744,49 @@ impl<T: Config> Pallet<T> {
         new_trustees: Vec<T::AccountId>,
     ) -> DispatchResult {
         let info = Self::try_generate_session_info(chain, new_trustees)?;
-        let multi_addr = Self::generate_multisig_addr(chain, &info)?;
+        let multi_addr = Self::generate_multisig_addr(chain, &info.0)?;
 
         let session_number = Self::trustee_session_info_len(chain);
         // FIXME: rethink about the overflow case.
         let next_number = session_number.checked_add(1).unwrap_or(0u32);
 
         TrusteeSessionInfoLen::<T>::insert(chain, next_number);
-        TrusteeSessionInfoOf::<T>::insert(chain, session_number, info.clone());
+        TrusteeSessionInfoOf::<T>::insert(chain, session_number, info.0.clone());
         TrusteeMultiSigAddr::<T>::insert(chain, multi_addr);
 
-        Self::deposit_event(Event::<T>::TrusteeSetChanged(chain, session_number, info));
+        for index in 0..info.1.agg_pubkeys.len() {
+            AggPubkeyInfo::<T>::insert(
+                &info.1.agg_pubkeys[index],
+                info.1.personal_accounts[index].clone(),
+            );
+        }
+
+        Self::deposit_event(Event::<T>::TrusteeSetChanged(
+            chain,
+            session_number,
+            info.0,
+            info.1,
+        ));
         Ok(())
     }
 
     pub fn generate_multisig_addr(
         chain: Chain,
-        info: &GenericTrusteeSessionInfo<T::AccountId>,
+        session_info: &GenericTrusteeSessionInfo<T::AccountId>,
     ) -> Result<T::AccountId, DispatchError> {
+        // If there is a proxy account, choose a proxy account
+        let mut acc_list: Vec<T::AccountId> = vec![];
+        for acc in session_info.0.trustee_list.iter() {
+            let acc = Self::trustee_intention_props_of(acc, chain)
+                .ok_or::<DispatchError>(Error::<T>::NotRegistered.into())?
+                .0
+                .proxy_account
+                .unwrap_or(acc.clone());
+            acc_list.push(acc);
+        }
+
         let multi_addr =
-            T::DetermineMultisigAddress::calc_multisig(&info.0.trustee_list, info.0.threshold);
+            T::DetermineMultisigAddress::calc_multisig(&acc_list, session_info.0.threshold);
 
         // Each chain must have a distinct multisig address,
         // duplicated multisig address is not allowed.
@@ -764,41 +802,6 @@ impl<T: Config> Pallet<T> {
     fn set_referral_binding(chain: Chain, who: T::AccountId, referral: T::AccountId) {
         ReferralBindingOf::<T>::insert(&who, &chain, referral.clone());
         Self::deposit_event(Event::<T>::ReferralBinded(who, chain, referral))
-    }
-
-    fn update_aggpubkey_info(
-        trustees: Vec<T::AccountId>,
-        threshold: usize,
-    ) -> Result<(), DispatchError> {
-        let hot_entities = trustees
-            .iter()
-            .filter_map(|account| Self::trustee_intention_props_of(&account, Chain::Bitcoin))
-            .map(|prop| prop.0.hot_entity)
-            .collect::<Vec<_>>();
-
-        let pks = hot_entities
-            .iter()
-            .map(|entity| PublicKey::parse_slice(&entity).map_err(|_| Error::<T>::InvalidPublicKey))
-            .collect::<Result<Vec<_>, _>>()?;
-
-        let all_indexes = generate_combine_index(pks.len(), threshold);
-        for indexes in all_indexes {
-            let mut temp_pks = vec![];
-            let mut temp_trustees = vec![];
-            for index in indexes {
-                temp_pks.push(pks[index].clone());
-                temp_trustees.push(trustees[index].clone());
-            }
-            let agg_pk = KeyAgg::key_aggregation_n(&temp_pks)
-                .map_err(|_| Error::<T>::InvalidPublicKey)?
-                .X_tilde;
-            let script = Builder::default()
-                .push_bytes(&agg_pk.x_coor().to_vec())
-                .push_opcode(Opcode::OP_CHECKSIG)
-                .into_script();
-            AggPubkeyInfo::<T>::insert(script.to_bytes().as_slice(), temp_trustees);
-        }
-        Ok(())
     }
 }
 

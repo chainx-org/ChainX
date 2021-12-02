@@ -3593,7 +3593,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=taproot#db60acb0829f3f6d628114056d76e299b0f3a9a7"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=taproot#af640cbd354a670c1a7c5470a5283db56a72c233"
 dependencies = [
  "light-bitcoin-chain",
  "light-bitcoin-crypto",
@@ -3608,7 +3608,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-chain"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=taproot#db60acb0829f3f6d628114056d76e299b0f3a9a7"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=taproot#af640cbd354a670c1a7c5470a5283db56a72c233"
 dependencies = [
  "hex",
  "light-bitcoin-crypto",
@@ -3622,7 +3622,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-crypto"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=taproot#db60acb0829f3f6d628114056d76e299b0f3a9a7"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=taproot#af640cbd354a670c1a7c5470a5283db56a72c233"
 dependencies = [
  "digest 0.9.0",
  "light-bitcoin-primitives",
@@ -3635,7 +3635,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-keys"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=taproot#db60acb0829f3f6d628114056d76e299b0f3a9a7"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=taproot#af640cbd354a670c1a7c5470a5283db56a72c233"
 dependencies = [
  "arrayref",
  "bitcoin-bech32",
@@ -3656,7 +3656,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-mast"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=taproot#db60acb0829f3f6d628114056d76e299b0f3a9a7"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=taproot#af640cbd354a670c1a7c5470a5283db56a72c233"
 dependencies = [
  "arrayref",
  "bitcoin-bech32",
@@ -3675,7 +3675,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-merkle"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=taproot#db60acb0829f3f6d628114056d76e299b0f3a9a7"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=taproot#af640cbd354a670c1a7c5470a5283db56a72c233"
 dependencies = [
  "light-bitcoin-chain",
  "light-bitcoin-primitives",
@@ -3687,7 +3687,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-primitives"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=taproot#db60acb0829f3f6d628114056d76e299b0f3a9a7"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=taproot#af640cbd354a670c1a7c5470a5283db56a72c233"
 dependencies = [
  "byteorder",
  "fixed-hash",
@@ -3702,7 +3702,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-script"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=taproot#db60acb0829f3f6d628114056d76e299b0f3a9a7"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=taproot#af640cbd354a670c1a7c5470a5283db56a72c233"
 dependencies = [
  "hex",
  "libsecp256k1 0.3.5",
@@ -3718,7 +3718,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-serialization"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=taproot#db60acb0829f3f6d628114056d76e299b0f3a9a7"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=taproot#af640cbd354a670c1a7c5470a5283db56a72c233"
 dependencies = [
  "light-bitcoin-primitives",
  "light-bitcoin-serialization-derive",
@@ -3727,7 +3727,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-serialization-derive"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=taproot#db60acb0829f3f6d628114056d76e299b0f3a9a7"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=taproot#af640cbd354a670c1a7c5470a5283db56a72c233"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -8541,7 +8541,7 @@ version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f559b464de2e2bdabcac6a210d12e9b5a5973c251e102c44c585c71d51bd78e"
 dependencies = [
- "cfg-if 1.0.0",
+ "cfg-if 0.1.10",
  "rand 0.8.4",
  "static_assertions",
 ]

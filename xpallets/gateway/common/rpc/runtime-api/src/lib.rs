@@ -15,7 +15,7 @@ pub use xp_runtime::Memo;
 pub use xpallet_assets::{Chain, WithdrawalLimit};
 pub use xpallet_gateway_common::{
     trustees,
-    types::{GenericTrusteeIntentionProps, GenericTrusteeSessionInfo},
+    types::{GenericTrusteeIntentionProps, GenericTrusteeSessionInfo, ScriptInfo},
 };
 
 sp_api::decl_runtime_apis! {
@@ -38,6 +38,6 @@ sp_api::decl_runtime_apis! {
 
         fn trustee_session_info(chain: Chain) -> Option<GenericTrusteeSessionInfo<AccountId>>;
 
-        fn generate_trustee_session_info(chain: Chain, Vec<AccountId>) -> Result<GenericTrusteeSessionInfo<AccountId>, DispatchError>;
+        fn generate_trustee_session_info(chain: Chain, Vec<AccountId>) -> Result<(GenericTrusteeSessionInfo<AccountId>, ScriptInfo<AccountId>), DispatchError>;
     }
 }

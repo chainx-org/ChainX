@@ -24,8 +24,8 @@ use xpallet_gateway_common_rpc_runtime_api::trustees::bitcoin::{
     BtcTrusteeIntentionProps, BtcTrusteeSessionInfo,
 };
 use xpallet_gateway_common_rpc_runtime_api::{
-    AssetId, Chain, GenericTrusteeIntentionProps, GenericTrusteeSessionInfo, WithdrawalLimit,
-    XGatewayCommonApi as XGatewayCommonRuntimeApi,
+    AssetId, Chain, GenericTrusteeIntentionProps, GenericTrusteeSessionInfo, ScriptInfo,
+    WithdrawalLimit, XGatewayCommonApi as XGatewayCommonRuntimeApi,
 };
 
 /// XGatewayCommon RPC methods.
@@ -151,7 +151,7 @@ where
         chain: Chain,
         candidates: Vec<AccountId>,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<GenericTrusteeSessionInfo<AccountId>> {
+    ) -> Result<(GenericTrusteeSessionInfo<AccountId>, ScriptInfo<AccountId>)> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
@@ -288,6 +288,6 @@ where
         at: Option<<Block as BlockT>::Hash>,
     ) -> Result<BtcTrusteeSessionInfo<AccountId>> {
         let info = self.generate_generic_trustee_session_info(Chain::Bitcoin, candidates, at)?;
-        BtcTrusteeSessionInfo::<_>::try_from(info).map_err(trustee_decode_error_into_rpc_err)
+        BtcTrusteeSessionInfo::<_>::try_from(info.0).map_err(trustee_decode_error_into_rpc_err)
     }
 }

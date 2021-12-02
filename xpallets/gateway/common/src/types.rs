@@ -32,6 +32,17 @@ pub struct TrusteeSessionInfo<AccountId, TrusteeAddress: BytesLike> {
     pub cold_address: TrusteeAddress,
 }
 
+/// Aggregate public key script and corresponding personal public key index.
+///
+/// Each aggregate public key corresponds to multiple accounts.
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
+pub struct ScriptInfo<AccountId> {
+    pub agg_pubkeys: Vec<Vec<u8>>,
+    pub personal_accounts: Vec<Vec<AccountId>>,
+}
+
 /// The generic trustee session info.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
