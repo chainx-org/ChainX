@@ -9528,6 +9528,7 @@ dependencies = [
  "hex",
  "lazy_static",
  "light-bitcoin",
+ "musig2",
  "pallet-balances",
  "pallet-elections-phragmen",
  "parity-scale-codec",

@@ -24,7 +24,10 @@ use chainx_primitives::AssetId;
 use xp_gateway_bitcoin::{BtcDepositInfo, BtcTxMetaType, BtcTxTypeDetector};
 use xp_gateway_common::AccountExtractor;
 use xpallet_assets::ChainT;
-use xpallet_gateway_common::traits::{AddressBinding, ReferralBinding};
+use xpallet_gateway_common::{
+    traits::{AddressBinding, ReferralBinding},
+    TrusteeSigRecord,
+};
 use xpallet_support::try_str;
 
 pub use self::validator::validate_transaction;
@@ -242,6 +245,18 @@ fn withdraw<T: Config>(tx: Transaction) -> BtcTxResult {
             // real withdraw value would reduce withdraw_fee
             total -=
                 (proposal.withdrawal_id_list.len() as u64 * btc_withdrawal_fee).saturated_into();
+            let input = &tx.inputs()[0];
+            let script = &input.script_witness[1];
+            let signed_trustees =
+                xpallet_gateway_common::Pallet::<T>::agg_pubkey_info(script.as_slice());
+            signed_trustees.into_iter().for_each(|trustee| {
+                if TrusteeSigRecord::<T>::contains_key(&trustee) {
+                    TrusteeSigRecord::<T>::mutate(&trustee, |record| *record += 1);
+                } else {
+                    TrusteeSigRecord::<T>::insert(trustee, 1);
+                }
+            });
+
             Pallet::<T>::deposit_event(Event::<T>::Withdrawn(
                 tx_hash,
                 proposal.withdrawal_id_list,

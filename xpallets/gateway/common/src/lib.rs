@@ -29,10 +29,14 @@ use frame_support::{
     weights::Weight,
 };
 use frame_system::{ensure_root, ensure_signed};
+use light_bitcoin::mast::{compute_min_threshold, generate_combine_index};
+use light_bitcoin::script::{Builder, Opcode};
+use musig2::{KeyAgg, PublicKey};
 use sp_runtime::traits::{StaticLookup, Zero};
-use sp_std::{collections::btree_map::BTreeMap, convert::TryFrom, prelude::*};
+use sp_std::{cmp::max, collections::btree_map::BTreeMap, convert::TryFrom, prelude::*};
 
 use chainx_primitives::{AddrStr, AssetId, ChainAddress, Text};
+use utils::{two_thirds_unsafe, MAX_TAPROOT_NODES};
 use xp_runtime::Memo;
 use xpallet_assets::{AssetRestrictions, BalanceOf, Chain, ChainT, WithdrawalLimit};
 use xpallet_gateway_records::{WithdrawalRecordId, WithdrawalState};
@@ -335,6 +339,8 @@ pub mod pallet {
         NotTrusteeAdmin,
         /// just allow trust preselected members to set their trust information
         NotTrusteePreselectedMember,
+        /// invalid public key
+        InvalidPublicKey,
     }
 
     #[pallet::storage]
@@ -345,6 +351,16 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn trustee_admin)]
     pub type TrusteeAdmin<T: Config> = StorageValue<_, T::AccountId, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn agg_pubkey_info)]
+    pub type AggPubkeyInfo<T: Config> =
+        StorageMap<_, Twox64Concat, Vec<u8>, Vec<T::AccountId>, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn trustee_sig_record)]
+    pub type TrusteeSigRecord<T: Config> =
+        StorageMap<_, Twox64Concat, T::AccountId, u32, ValueQuery>;
 
     /// Trustee info config of the corresponding chain.
     #[pallet::storage]
@@ -579,9 +595,19 @@ impl<T: Config> Pallet<T> {
                 if incoming.is_empty() && outgoing.is_empty() {
                     return 0;
                 }
-                if Self::transition_trustee_session_impl(Chain::Bitcoin, new_trustee_candidate)
-                    .is_err()
+                if Self::transition_trustee_session_impl(
+                    Chain::Bitcoin,
+                    new_trustee_candidate.clone(),
+                )
+                .is_err()
                 {
+                    return 0;
+                }
+                let sig_num = max(
+                    two_thirds_unsafe(new_trustee_candidate.len() as u32),
+                    compute_min_threshold(new_trustee_candidate.len(), MAX_TAPROOT_NODES) as u32,
+                );
+                if Self::update_aggpubkey_info(new_trustee_candidate, sig_num as usize).is_err() {
                     return 0;
                 }
                 TrusteeTransitionStatus::<T>::put(true);
@@ -738,6 +764,41 @@ impl<T: Config> Pallet<T> {
     fn set_referral_binding(chain: Chain, who: T::AccountId, referral: T::AccountId) {
         ReferralBindingOf::<T>::insert(&who, &chain, referral.clone());
         Self::deposit_event(Event::<T>::ReferralBinded(who, chain, referral))
+    }
+
+    fn update_aggpubkey_info(
+        trustees: Vec<T::AccountId>,
+        threshold: usize,
+    ) -> Result<(), DispatchError> {
+        let hot_entities = trustees
+            .iter()
+            .filter_map(|account| Self::trustee_intention_props_of(&account, Chain::Bitcoin))
+            .map(|prop| prop.0.hot_entity)
+            .collect::<Vec<_>>();
+
+        let pks = hot_entities
+            .iter()
+            .map(|entity| PublicKey::parse_slice(&entity).map_err(|_| Error::<T>::InvalidPublicKey))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let all_indexes = generate_combine_index(pks.len(), threshold);
+        for indexes in all_indexes {
+            let mut temp_pks = vec![];
+            let mut temp_trustees = vec![];
+            for index in indexes {
+                temp_pks.push(pks[index].clone());
+                temp_trustees.push(trustees[index].clone());
+            }
+            let agg_pk = KeyAgg::key_aggregation_n(&temp_pks)
+                .map_err(|_| Error::<T>::InvalidPublicKey)?
+                .X_tilde;
+            let script = Builder::default()
+                .push_bytes(&agg_pk.x_coor().to_vec())
+                .push_opcode(Opcode::OP_CHECKSIG)
+                .into_script();
+            AggPubkeyInfo::<T>::insert(script.to_bytes().as_slice(), temp_trustees);
+        }
+        Ok(())
     }
 }
 

@@ -28,7 +28,7 @@ use xpallet_gateway_common::{
     traits::{TrusteeForChain, TrusteeSession},
     trustees::bitcoin::{BtcTrusteeAddrInfo, BtcTrusteeType},
     types::{TrusteeInfoConfig, TrusteeIntentionProps, TrusteeSessionInfo},
-    utils::two_thirds_unsafe,
+    utils::{two_thirds_unsafe, MAX_TAPROOT_NODES},
 };
 
 use crate::tx::validator::parse_check_taproot_tx;
@@ -109,8 +109,6 @@ const EC_P: [u8; 32] = [
 ];
 
 const ZERO_P: [u8; 32] = [0; 32];
-
-const MAX_TAPROOT_NODES: u32 = 250;
 
 impl<T: Config> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo> for Pallet<T> {
     fn check_trustee_entity(raw_addr: &[u8]) -> Result<BtcTrusteeType, DispatchError> {
@@ -205,7 +203,7 @@ impl<T: Config> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo
 
         let sig_num = max(
             two_thirds_unsafe(trustees.len() as u32),
-            compute_min_threshold(trustees.len(), MAX_TAPROOT_NODES as usize) as u32,
+            compute_min_threshold(trustees.len(), MAX_TAPROOT_NODES) as u32,
         );
 
         // Set hot address for taproot threshold address
