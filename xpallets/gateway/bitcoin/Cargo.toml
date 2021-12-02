@@ -50,6 +50,7 @@ sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkad
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11" }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11" }
 pallet-multisig = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11" }
+pallet-elections-phragmen = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11" }
 xp-assets-registrar = { path = "../../../primitives/assets-registrar" }
 xpallet-assets-registrar = { path = "../../assets-registrar" }
 

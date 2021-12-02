@@ -115,7 +115,7 @@ benchmarks! {
                 .unwrap();
 
         assert!(Pallet::<T>::trustee_intention_props_of(caller.clone(), Chain::Bitcoin).is_none());
-    }: _(RawOrigin::Signed(caller.clone()), Chain::Bitcoin, b"about".to_vec(), hot, cold)
+    }: _(RawOrigin::Signed(caller.clone()), None, Chain::Bitcoin, b"about".to_vec(), hot, cold)
     verify {
         assert!(Pallet::<T>::trustee_intention_props_of(caller, Chain::Bitcoin).is_some());
     }
@@ -126,7 +126,7 @@ benchmarks! {
 
         let mut candidators = vec![];
         for (account, about, hot, cold) in new_trustees::<T>() {
-            Pallet::<T>::setup_trustee_impl(account.clone(), Chain::Bitcoin, about, hot, cold).unwrap();
+            Pallet::<T>::setup_trustee_impl(account.clone(), None, Chain::Bitcoin, about, hot, cold).unwrap();
             candidators.push(account);
         }
 

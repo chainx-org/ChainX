@@ -5,9 +5,8 @@ use std::{cell::RefCell, convert::TryFrom, time::Duration};
 use codec::{Decode, Encode};
 use frame_support::{
     parameter_types, sp_io,
-    traits::{GenesisBuild, UnixTime},
+    traits::{ChangeMembers, GenesisBuild, LockIdentifier, UnixTime},
 };
-use frame_system::EnsureSignedBy;
 use sp_core::{crypto::UncheckedInto, H256};
 use sp_io::hashing::blake2_256;
 use sp_runtime::{
@@ -25,8 +24,9 @@ use xpallet_support::traits::{MultisigAddressFor, Validator};
 use crate::{
     self as xpallet_gateway_common,
     traits::TrusteeForChain,
-    trustees::bitcoin::{BtcTrusteeAddrInfo, BtcTrusteeMultisig, BtcTrusteeType},
+    trustees::bitcoin::{BtcTrusteeAddrInfo, BtcTrusteeType},
     types::*,
+    Config,
 };
 
 pub(crate) type AccountId = AccountId32;
@@ -45,11 +45,11 @@ frame_support::construct_runtime!(
     {
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+        Elections: pallet_elections_phragmen::{Pallet, Call, Storage, Event<T>, Config<T>},
         XAssetsRegistrar: xpallet_assets_registrar::{Pallet, Call, Storage, Event<T>, Config},
         XAssets: xpallet_assets::{Pallet, Call, Storage, Event<T>, Config<T>},
         XGatewayRecords: xpallet_gateway_records::{Pallet, Call, Storage, Event<T>},
         XGatewayCommon: xpallet_gateway_common::{Pallet, Call, Storage, Event<T>, Config<T>},
-        XGatewayBitcoin: xpallet_gateway_bitcoin::{Pallet, Call, Storage, Event<T>, Config<T>},
     }
 );
 
@@ -100,6 +100,86 @@ impl pallet_balances::Config for Test {
 }
 
 parameter_types! {
+    pub const ElectionsPhragmenPalletId: LockIdentifier = *b"phrelect";
+}
+
+frame_support::parameter_types! {
+    pub static VotingBondBase: u64 = 2;
+    pub static VotingBondFactor: u64 = 0;
+    pub static CandidacyBond: u64 = 3;
+    pub static DesiredMembers: u32 = 2;
+    pub static DesiredRunnersUp: u32 = 0;
+    pub static TermDuration: u64 = 5;
+    pub static Members: Vec<u64> = vec![];
+    pub static Prime: Option<u64> = None;
+}
+
+pub struct TestChangeMembers;
+impl ChangeMembers<u64> for TestChangeMembers {
+    fn change_members_sorted(incoming: &[u64], outgoing: &[u64], new: &[u64]) {
+        // new, incoming, outgoing must be sorted.
+        let mut new_sorted = new.to_vec();
+        new_sorted.sort();
+        assert_eq!(new, &new_sorted[..]);
+
+        let mut incoming_sorted = incoming.to_vec();
+        incoming_sorted.sort();
+        assert_eq!(incoming, &incoming_sorted[..]);
+
+        let mut outgoing_sorted = outgoing.to_vec();
+        outgoing_sorted.sort();
+        assert_eq!(outgoing, &outgoing_sorted[..]);
+
+        // incoming and outgoing must be disjoint
+        for x in incoming.iter() {
+            assert!(outgoing.binary_search(x).is_err());
+        }
+
+        let mut old_plus_incoming = MEMBERS.with(|m| m.borrow().to_vec());
+        old_plus_incoming.extend_from_slice(incoming);
+        old_plus_incoming.sort();
+
+        let mut new_plus_outgoing = new.to_vec();
+        new_plus_outgoing.extend_from_slice(outgoing);
+        new_plus_outgoing.sort();
+
+        assert_eq!(
+            old_plus_incoming, new_plus_outgoing,
+            "change members call is incorrect!"
+        );
+
+        MEMBERS.with(|m| *m.borrow_mut() = new.to_vec());
+        PRIME.with(|p| *p.borrow_mut() = None);
+    }
+
+    fn set_prime(who: Option<u64>) {
+        PRIME.with(|p| *p.borrow_mut() = who);
+    }
+
+    fn get_prime() -> Option<u64> {
+        PRIME.with(|p| *p.borrow())
+    }
+}
+
+impl pallet_elections_phragmen::Config for Test {
+    type PalletId = ElectionsPhragmenPalletId;
+    type Event = ();
+    type Currency = Balances;
+    type CurrencyToVote = frame_support::traits::SaturatingCurrencyToVote;
+    type ChangeMembers = ();
+    type InitializeMembers = ();
+    type CandidacyBond = CandidacyBond;
+    type VotingBondBase = VotingBondBase;
+    type VotingBondFactor = VotingBondFactor;
+    type TermDuration = TermDuration;
+    type DesiredMembers = DesiredMembers;
+    type DesiredRunnersUp = DesiredRunnersUp;
+    type LoserCandidate = ();
+    type KickedMember = ();
+    type WeightInfo = ();
+}
+
+parameter_types! {
     pub const ChainXAssetId: AssetId = 0;
 }
 impl xpallet_assets_registrar::Config for Test {
@@ -140,15 +220,15 @@ impl UnixTime for Timestamp {
         })
     }
 }
-impl xpallet_gateway_bitcoin::Config for Test {
+
+impl Config for Test {
     type Event = ();
-    type UnixTime = Timestamp;
-    type AccountExtractor = ();
-    type TrusteeSessionProvider = ();
-    type TrusteeOrigin = EnsureSignedBy<BtcTrusteeMultisig<Test>, AccountId>;
-    type ReferralBinding = ();
-    type AddressBinding = ();
+    type Validator = AlwaysValidator;
+    type DetermineMultisigAddress = MultisigAddr;
+    type Bitcoin = MockBitcoin<Test>;
+    type BitcoinTrustee = MockBitcoin<Test>;
     type WeightInfo = ();
+    type BitcoinTrusteeSessionProvider = ();
 }
 
 pub struct MultisigAddr;
@@ -168,8 +248,8 @@ impl Validator<AccountId> for AlwaysValidator {
         None
     }
 }
-pub struct MockBitcoin<T: xpallet_gateway_bitcoin::Config>(sp_std::marker::PhantomData<T>);
-impl<T: xpallet_gateway_bitcoin::Config> ChainT<BalanceOf<T>> for MockBitcoin<T> {
+pub struct MockBitcoin<T: xpallet_gateway_common::Config>(sp_std::marker::PhantomData<T>);
+impl<T: xpallet_gateway_common::Config> ChainT<BalanceOf<T>> for MockBitcoin<T> {
     const ASSET_ID: u32 = X_BTC;
 
     fn chain() -> Chain {
@@ -181,10 +261,10 @@ impl<T: xpallet_gateway_bitcoin::Config> ChainT<BalanceOf<T>> for MockBitcoin<T>
     }
 
     fn withdrawal_limit(asset_id: &u32) -> Result<WithdrawalLimit<BalanceOf<T>>, DispatchError> {
-        xpallet_gateway_bitcoin::Pallet::<T>::withdrawal_limit(asset_id)
+        xpallet_gateway_common::Pallet::<T>::withdrawal_limit(asset_id)
     }
 }
-impl<T: xpallet_gateway_bitcoin::Config>
+impl<T: xpallet_gateway_common::Config>
     TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo> for MockBitcoin<T>
 {
     fn check_trustee_entity(raw_addr: &[u8]) -> Result<BtcTrusteeType, DispatchError> {
@@ -194,7 +274,10 @@ impl<T: xpallet_gateway_bitcoin::Config>
     }
 
     fn generate_trustee_session_info(
-        props: Vec<(T::AccountId, TrusteeIntentionProps<BtcTrusteeType>)>,
+        props: Vec<(
+            T::AccountId,
+            TrusteeIntentionProps<T::AccountId, BtcTrusteeType>,
+        )>,
         _: TrusteeInfoConfig,
     ) -> Result<TrusteeSessionInfo<T::AccountId, BtcTrusteeAddrInfo>, DispatchError> {
         let len = props.len();
@@ -211,14 +294,6 @@ impl<T: xpallet_gateway_bitcoin::Config>
             },
         })
     }
-}
-impl crate::Config for Test {
-    type Event = ();
-    type Validator = AlwaysValidator;
-    type DetermineMultisigAddress = MultisigAddr;
-    type Bitcoin = MockBitcoin<Test>;
-    type BitcoinTrustee = MockBitcoin<Test>;
-    type WeightInfo = ();
 }
 
 pub struct ExtBuilder;
@@ -259,6 +334,7 @@ impl ExtBuilder {
 
         let _ = crate::GenesisConfig::<Test> {
             trustees: trustees(),
+            ..Default::default()
         }
         .assimilate_storage(&mut storage);
 

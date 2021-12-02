@@ -7,7 +7,11 @@ use hex_literal::hex;
 
 #[cfg(feature = "std")]
 use frame_support::traits::GenesisBuild;
-use frame_support::{parameter_types, sp_io, traits::UnixTime, weights::Weight};
+use frame_support::{
+    parameter_types, sp_io,
+    traits::{LockIdentifier, UnixTime},
+    weights::Weight,
+};
 use frame_system::EnsureSignedBy;
 use sp_core::H256;
 use sp_keyring::sr25519;
@@ -54,6 +58,7 @@ frame_support::construct_runtime!(
     {
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+        Elections: pallet_elections_phragmen::{Pallet, Call, Storage, Event<T>, Config<T>},
         XAssetsRegistrar: xpallet_assets_registrar::{Pallet, Call, Storage, Event<T>, Config},
         XAssets: xpallet_assets::{Pallet, Call, Storage, Event<T>, Config<T>},
         XGatewayRecords: xpallet_gateway_records::{Pallet, Call, Storage, Event<T>},
@@ -112,6 +117,39 @@ impl pallet_balances::Config for Test {
     type MaxReserves = MaxReserves;
 }
 
+parameter_types! {
+    pub const ElectionsPhragmenPalletId: LockIdentifier = *b"phrelect";
+}
+
+frame_support::parameter_types! {
+    pub static VotingBondBase: u64 = 2;
+    pub static VotingBondFactor: u64 = 0;
+    pub static CandidacyBond: u64 = 3;
+    pub static DesiredMembers: u32 = 2;
+    pub static DesiredRunnersUp: u32 = 0;
+    pub static TermDuration: u64 = 5;
+    pub static Members: Vec<u64> = vec![];
+    pub static Prime: Option<u64> = None;
+}
+
+impl pallet_elections_phragmen::Config for Test {
+    type PalletId = ElectionsPhragmenPalletId;
+    type Event = ();
+    type Currency = Balances;
+    type CurrencyToVote = frame_support::traits::SaturatingCurrencyToVote;
+    type ChangeMembers = ();
+    type InitializeMembers = ();
+    type CandidacyBond = CandidacyBond;
+    type VotingBondBase = VotingBondBase;
+    type VotingBondFactor = VotingBondFactor;
+    type TermDuration = TermDuration;
+    type DesiredMembers = DesiredMembers;
+    type DesiredRunnersUp = DesiredRunnersUp;
+    type LoserCandidate = ();
+    type KickedMember = ();
+    type WeightInfo = ();
+}
+
 // assets
 parameter_types! {
     pub const ChainXAssetId: AssetId = 0;
@@ -146,6 +184,7 @@ impl xpallet_gateway_common::Config for Test {
     type Bitcoin = XGatewayBitcoin;
     type BitcoinTrustee = XGatewayBitcoin;
     type WeightInfo = ();
+    type BitcoinTrusteeSessionProvider = ();
 }
 
 thread_local! {
@@ -314,8 +353,12 @@ impl ExtBuilder {
             })
             .unwrap();
 
-        let _ = xpallet_gateway_common::GenesisConfig::<Test> { trustees: info }
-            .assimilate_storage(&mut storage);
+        let _ = xpallet_gateway_common::GenesisConfig::<Test> {
+            trustees: info,
+            genesis_trustee_transition_duration: Default::default(),
+            genesis_trustee_transition_status: Default::default(),
+        }
+        .assimilate_storage(&mut storage);
 
         let (genesis_info, genesis_hash, network_id) = load_mainnet_btc_genesis_header_info();
 

@@ -9495,6 +9495,7 @@ dependencies = [
  "light-bitcoin",
  "orml-utilities",
  "pallet-balances",
+ "pallet-elections-phragmen",
  "pallet-multisig",
  "pallet-timestamp",
  "parity-scale-codec",
