@@ -246,6 +246,9 @@ fn withdraw<T: Config>(tx: Transaction) -> BtcTxResult {
             total -=
                 (proposal.withdrawal_id_list.len() as u64 * btc_withdrawal_fee).saturated_into();
             let input = &tx.inputs()[0];
+            if input.script_witness.len() != 3 {
+                return BtcTxResult::Failure;
+            }
             let script = &input.script_witness[1];
             let signed_trustees =
                 xpallet_gateway_common::Pallet::<T>::agg_pubkey_info(script.as_slice());

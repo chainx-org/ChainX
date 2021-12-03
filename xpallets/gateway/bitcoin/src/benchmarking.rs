@@ -106,8 +106,8 @@ benchmarks! {
         prepare_headers::<T>(&caller);
         let (tx, info, prev_tx) = withdraw_tx();
         let tx_hash = tx.hash();
-        let tx_raw = serialization::serialize(&tx).into();
-        let prev_tx_raw = serialization::serialize(&prev_tx).into();
+        let tx_raw = serialization::serialize_with_flags(&tx, SERIALIZE_TRANSACTION_WITNESS).into();
+        let prev_tx_raw = serialization::serialize_with_flags(&prev_tx, SERIALIZE_TRANSACTION_WITNESS).into();
 
         XGatewayRecords::<T>::deposit(&caller, ASSET_ID, 100_000u32.into()).unwrap();
         XGatewayRecords::<T>::withdraw(&caller, ASSET_ID, 50_000u32.into(), b"tb1pexff2s7l58sthpyfrtx500ax234stcnt0gz2lr4kwe0ue95a2e0srxsc68".to_vec(), b"".to_vec().into()).unwrap();
