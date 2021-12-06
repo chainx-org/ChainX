@@ -24,10 +24,7 @@ use chainx_primitives::AssetId;
 use xp_gateway_bitcoin::{BtcDepositInfo, BtcTxMetaType, BtcTxTypeDetector};
 use xp_gateway_common::AccountExtractor;
 use xpallet_assets::ChainT;
-use xpallet_gateway_common::{
-    traits::{AddressBinding, ReferralBinding},
-    TrusteeSigRecord,
-};
+use xpallet_gateway_common::traits::{AddressBinding, ReferralBinding, TrusteeTransition};
 use xpallet_support::try_str;
 
 pub use self::validator::validate_transaction;
@@ -67,7 +64,7 @@ pub fn process_tx<T: Config>(
 }
 
 fn trustee_transition<T: Config>() -> BtcTxResult {
-    xpallet_gateway_common::TrusteeTransitionStatus::<T>::put(false);
+    T::TrusteeTransition::update_transition_status(false);
     BtcTxResult::Success
 }
 
@@ -250,15 +247,7 @@ fn withdraw<T: Config>(tx: Transaction) -> BtcTxResult {
                 return BtcTxResult::Failure;
             }
             let script = &input.script_witness[1];
-            let signed_trustees =
-                xpallet_gateway_common::Pallet::<T>::agg_pubkey_info(script.as_slice());
-            signed_trustees.into_iter().for_each(|trustee| {
-                if TrusteeSigRecord::<T>::contains_key(&trustee) {
-                    TrusteeSigRecord::<T>::mutate(&trustee, |record| *record += 1);
-                } else {
-                    TrusteeSigRecord::<T>::insert(trustee, 1);
-                }
-            });
+            T::TrusteeTransition::update_trustee_sig_record(script.as_slice());
 
             Pallet::<T>::deposit_event(Event::<T>::Withdrawn(
                 tx_hash,

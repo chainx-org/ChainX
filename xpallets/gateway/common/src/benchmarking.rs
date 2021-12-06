@@ -193,12 +193,11 @@ mod tests {
     #[test]
     fn test_benchmarks() {
         ExtBuilder::default().build().execute_with(|| {
-            // TODO: Fix XGatewayRecords fatal runtime error: stack overflow
-            // assert_ok!(Pallet::<Test>::test_benchmark_withdraw());
-            // assert_ok!(Pallet::<Test>::test_benchmark_cancel_withdrawal());
+            assert_ok!(Pallet::<Test>::test_benchmark_withdraw());
+            assert_ok!(Pallet::<Test>::test_benchmark_cancel_withdrawal());
             assert_ok!(Pallet::<Test>::test_benchmark_setup_trustee());
             assert_ok!(Pallet::<Test>::test_benchmark_transition_trustee_session());
-            // assert_ok!(Pallet::<Test>::test_benchmark_set_withdrawal_state());
+            assert_ok!(Pallet::<Test>::test_benchmark_set_withdrawal_state());
             assert_ok!(Pallet::<Test>::test_benchmark_set_trustee_info_config());
             assert_ok!(Pallet::<Test>::test_benchmark_force_set_referral_binding());
         });

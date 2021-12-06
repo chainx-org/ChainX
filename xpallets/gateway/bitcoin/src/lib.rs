@@ -39,7 +39,7 @@ use chainx_primitives::{AssetId, ReferralId};
 use xp_gateway_common::AccountExtractor;
 use xpallet_assets::{BalanceOf, Chain, ChainT, WithdrawalLimit};
 use xpallet_gateway_common::{
-    traits::{AddressBinding, ReferralBinding, TrusteeSession},
+    traits::{AddressBinding, ReferralBinding, TrusteeSession, TrusteeTransition},
     trustees::bitcoin::BtcTrusteeAddrInfo,
 };
 use xpallet_support::try_addr;
@@ -84,15 +84,13 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config:
-        frame_system::Config
-        + xpallet_assets::Config
-        + xpallet_gateway_records::Config
-        + xpallet_gateway_common::Config
+        frame_system::Config + xpallet_assets::Config + xpallet_gateway_records::Config
     {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type UnixTime: UnixTime;
         type AccountExtractor: AccountExtractor<Self::AccountId, ReferralId>;
         type TrusteeSessionProvider: TrusteeSession<Self::AccountId, BtcTrusteeAddrInfo>;
+        type TrusteeTransition: TrusteeTransition;
         type TrusteeOrigin: EnsureOrigin<Self::Origin, Success = Self::AccountId>;
         type ReferralBinding: ReferralBinding<Self::AccountId>;
         type AddressBinding: AddressBinding<Self::AccountId, BtcAddress>;

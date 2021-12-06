@@ -7,6 +7,7 @@ use frame_support::{
     parameter_types, sp_io,
     traits::{ChangeMembers, GenesisBuild, LockIdentifier, UnixTime},
 };
+use frame_system::EnsureSignedBy;
 use sp_core::{crypto::UncheckedInto, H256};
 use sp_io::hashing::blake2_256;
 use sp_runtime::{
@@ -24,9 +25,8 @@ use xpallet_support::traits::{MultisigAddressFor, Validator};
 use crate::{
     self as xpallet_gateway_common,
     traits::TrusteeForChain,
-    trustees::bitcoin::{BtcTrusteeAddrInfo, BtcTrusteeType},
+    trustees::bitcoin::{BtcTrusteeAddrInfo, BtcTrusteeMultisig, BtcTrusteeType},
     types::*,
-    Config,
 };
 
 pub(crate) type AccountId = AccountId32;
@@ -50,6 +50,7 @@ frame_support::construct_runtime!(
         XAssets: xpallet_assets::{Pallet, Call, Storage, Event<T>, Config<T>},
         XGatewayRecords: xpallet_gateway_records::{Pallet, Call, Storage, Event<T>},
         XGatewayCommon: xpallet_gateway_common::{Pallet, Call, Storage, Event<T>, Config<T>},
+        XGatewayBitcoin: xpallet_gateway_bitcoin::{Pallet, Call, Storage, Event<T>, Config<T>},
     }
 );
 
@@ -221,14 +222,16 @@ impl UnixTime for Timestamp {
     }
 }
 
-impl Config for Test {
+impl xpallet_gateway_bitcoin::Config for Test {
     type Event = ();
-    type Validator = AlwaysValidator;
-    type DetermineMultisigAddress = MultisigAddr;
-    type Bitcoin = MockBitcoin<Test>;
-    type BitcoinTrustee = MockBitcoin<Test>;
+    type UnixTime = Timestamp;
+    type AccountExtractor = ();
+    type TrusteeSessionProvider = ();
+    type TrusteeOrigin = EnsureSignedBy<BtcTrusteeMultisig<Test>, AccountId>;
+    type TrusteeTransition = ();
+    type ReferralBinding = ();
+    type AddressBinding = ();
     type WeightInfo = ();
-    type BitcoinTrusteeSessionProvider = ();
 }
 
 pub struct MultisigAddr;
@@ -248,8 +251,8 @@ impl Validator<AccountId> for AlwaysValidator {
         None
     }
 }
-pub struct MockBitcoin<T: xpallet_gateway_common::Config>(sp_std::marker::PhantomData<T>);
-impl<T: xpallet_gateway_common::Config> ChainT<BalanceOf<T>> for MockBitcoin<T> {
+pub struct MockBitcoin<T: xpallet_gateway_bitcoin::Config>(sp_std::marker::PhantomData<T>);
+impl<T: xpallet_gateway_bitcoin::Config> ChainT<BalanceOf<T>> for MockBitcoin<T> {
     const ASSET_ID: u32 = X_BTC;
 
     fn chain() -> Chain {
@@ -261,10 +264,10 @@ impl<T: xpallet_gateway_common::Config> ChainT<BalanceOf<T>> for MockBitcoin<T> 
     }
 
     fn withdrawal_limit(asset_id: &u32) -> Result<WithdrawalLimit<BalanceOf<T>>, DispatchError> {
-        xpallet_gateway_common::Pallet::<T>::withdrawal_limit(asset_id)
+        xpallet_gateway_bitcoin::Pallet::<T>::withdrawal_limit(asset_id)
     }
 }
-impl<T: xpallet_gateway_common::Config>
+impl<T: xpallet_gateway_bitcoin::Config>
     TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo> for MockBitcoin<T>
 {
     fn check_trustee_entity(raw_addr: &[u8]) -> Result<BtcTrusteeType, DispatchError> {
@@ -306,6 +309,16 @@ impl<T: xpallet_gateway_common::Config>
             },
         ))
     }
+}
+
+impl crate::Config for Test {
+    type Event = ();
+    type Validator = AlwaysValidator;
+    type DetermineMultisigAddress = MultisigAddr;
+    type Bitcoin = MockBitcoin<Test>;
+    type BitcoinTrustee = MockBitcoin<Test>;
+    type WeightInfo = ();
+    type BitcoinTrusteeSessionProvider = ();
 }
 
 pub struct ExtBuilder;

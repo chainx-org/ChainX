@@ -65,6 +65,17 @@ impl<AccountId, TrusteeAddress: BytesLike> TrusteeSession<AccountId, TrusteeAddr
     fn genesis_trustee(_: Chain, _: &[AccountId]) {}
 }
 
+pub trait TrusteeTransition {
+    fn update_transition_status(status: bool);
+    fn update_trustee_sig_record(script: &[u8]);
+}
+
+impl TrusteeTransition for () {
+    fn update_transition_status(_: bool) {}
+
+    fn update_trustee_sig_record(_: &[u8]) {}
+}
+
 pub trait ReferralBinding<AccountId> {
     fn update_binding(asset_id: &AssetId, who: &AccountId, referral_name: Option<ReferralId>);
     fn referral(asset_id: &AssetId, who: &AccountId) -> Option<AccountId>;

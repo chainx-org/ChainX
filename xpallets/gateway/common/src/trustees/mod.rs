@@ -12,8 +12,11 @@ use sp_std::{convert::TryFrom, marker::PhantomData, prelude::*};
 use xpallet_assets::Chain;
 use xpallet_support::traits::MultiSig;
 
-use crate::traits::{BytesLike, ChainProvider, TrusteeSession};
 use crate::types::TrusteeSessionInfo;
+use crate::{
+    traits::{BytesLike, ChainProvider, TrusteeSession, TrusteeTransition},
+    TrusteeSigRecord, TrusteeTransitionStatus,
+};
 use crate::{Config, Error, Pallet};
 
 pub struct TrusteeSessionManager<T: Config, TrusteeAddress>(
@@ -93,5 +96,22 @@ impl<T: Config, C: ChainProvider> MultiSig<T::AccountId> for TrusteeMultisigProv
 impl<T: Config, C: ChainProvider> SortedMembers<T::AccountId> for TrusteeMultisigProvider<T, C> {
     fn sorted_members() -> Vec<T::AccountId> {
         vec![Self::multisig()]
+    }
+}
+
+impl<T: Config> TrusteeTransition for Pallet<T> {
+    fn update_transition_status(status: bool) {
+        TrusteeTransitionStatus::<T>::put(status);
+    }
+
+    fn update_trustee_sig_record(script: &[u8]) {
+        let signed_trustees = Self::agg_pubkey_info(script);
+        signed_trustees.into_iter().for_each(|trustee| {
+            if TrusteeSigRecord::<T>::contains_key(&trustee) {
+                TrusteeSigRecord::<T>::mutate(&trustee, |record| *record += 1);
+            } else {
+                TrusteeSigRecord::<T>::insert(trustee, 1);
+            }
+        });
     }
 }
