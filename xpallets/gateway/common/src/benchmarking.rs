@@ -11,7 +11,10 @@ use chainx_primitives::AssetId;
 use xpallet_assets::{BalanceOf, Chain};
 use xpallet_gateway_records::{Pallet as XGatewayRecords, WithdrawalRecordId, WithdrawalState};
 
-use crate::{types::*, Call, Config, LittleBlackHouse, Pallet, TrusteeMultiSigAddr};
+use crate::{
+    types::*, Call, Config, LittleBlackHouse, Pallet, TrusteeIntentionPropertiesOf,
+    TrusteeMultiSigAddr, TrusteeSessionInfoLen, TrusteeSessionInfoOf,
+};
 
 const ASSET_ID: AssetId = xp_protocol::X_BTC;
 
@@ -63,6 +66,13 @@ fn new_trustees<T: Config>() -> Vec<(T::AccountId, Vec<u8>, Vec<u8>, Vec<u8>)> {
     ]
 }
 
+/// removes all the storage items to reverse any genesis state.
+fn clean<T: Config>() {
+    <LittleBlackHouse<T>>::kill();
+    <TrusteeSessionInfoLen<T>>::remove_all(None);
+    <TrusteeSessionInfoOf<T>>::remove_all(None);
+}
+
 benchmarks! {
     withdraw {
         let caller: T::AccountId = alice::<T>();
@@ -109,6 +119,8 @@ benchmarks! {
 
     setup_trustee {
         let caller: T::AccountId = alice::<T>();
+        clean::<T>();
+        <TrusteeIntentionPropertiesOf<T>>::remove(caller.clone(), Chain::Bitcoin);
         LittleBlackHouse::<T>::append(caller.clone());
         let hot = hex::decode("02df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6")
                 .unwrap();
@@ -123,6 +135,7 @@ benchmarks! {
 
     transition_trustee_session {
         let caller: T::AccountId = alice::<T>();
+        clean::<T>();
         TrusteeMultiSigAddr::<T>::insert(Chain::Bitcoin, caller.clone());
 
         let mut candidators = vec![];
@@ -182,6 +195,24 @@ benchmarks! {
     verify {
         assert_eq!(Pallet::<T>::referral_binding_of(&who, Chain::Bitcoin), Some(who));
     }
+
+    change_trustee_transition_duration {
+        let duration: T::BlockNumber = 100u32.into();
+    }: _(RawOrigin::Root, duration)
+    verify {
+        assert_eq!(Pallet::<T>::trustee_transition_duration(), duration);
+    }
+
+    set_trustee_admin {
+        let who: T::AccountId = alice::<T>();
+        for (account, about, hot, cold) in new_trustees::<T>() {
+            Pallet::<T>::setup_trustee_impl(account.clone(), None, Chain::Bitcoin, about, hot, cold).unwrap();
+        }
+        let chain = Chain::Bitcoin;
+    }: _(RawOrigin::Root, who.clone().into(), chain)
+    verify {
+        assert_eq!(Pallet::<T>::trustee_admin(), who);
+    }
 }
 
 #[cfg(test)]
@@ -200,6 +231,8 @@ mod tests {
             assert_ok!(Pallet::<Test>::test_benchmark_set_withdrawal_state());
             assert_ok!(Pallet::<Test>::test_benchmark_set_trustee_info_config());
             assert_ok!(Pallet::<Test>::test_benchmark_force_set_referral_binding());
+            assert_ok!(Pallet::<Test>::test_benchmark_change_trustee_transition_duration());
+            assert_ok!(Pallet::<Test>::test_benchmark_set_trustee_admin());
         });
     }
 }

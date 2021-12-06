@@ -74,5 +74,6 @@ std = [
   "xpallet-support/std",
   # light-bitcoin
   "light-bitcoin/std",
+  "pallet-elections-phragmen/std"
 ]
 runtime-benchmarks = ["hex", "sp-core", "frame-benchmarking"]

@@ -108,8 +108,8 @@ frame_support::parameter_types! {
     pub static VotingBondBase: u64 = 2;
     pub static VotingBondFactor: u64 = 0;
     pub static CandidacyBond: u64 = 3;
-    pub static DesiredMembers: u32 = 2;
-    pub static DesiredRunnersUp: u32 = 0;
+    pub static DesiredMembers: u32 = 11;
+    pub static DesiredRunnersUp: u32 = 7;
     pub static TermDuration: u64 = 5;
     pub static Members: Vec<u64> = vec![];
     pub static Prime: Option<u64> = None;

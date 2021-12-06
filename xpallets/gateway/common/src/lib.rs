@@ -156,7 +156,7 @@ pub mod pallet {
         }
 
         /// Transition the trustee session.
-        #[pallet::weight(< T as Config >::WeightInfo::transition_trustee_session(new_trustees.len() as u32))]
+        #[pallet::weight(< T as Config >::WeightInfo::transition_trustee_session())]
         pub fn transition_trustee_session(
             origin: OriginFor<T>,
             chain: Chain,
@@ -188,7 +188,10 @@ pub mod pallet {
         /// The trustee will be moved into the small black room.
         ///
         /// This is called by the trustee admin and root.
-        #[pallet::weight(0)]
+        /// # <weight>
+        /// Since this is a root call and will go into trustee election, we assume full block for now.
+        /// # </weight>
+        #[pallet::weight(T::BlockWeights::get().max_block)]
         pub fn move_trust_to_black_room(
             origin: OriginFor<T>,
             trustees: Option<Vec<T::AccountId>>,
@@ -284,14 +287,23 @@ pub mod pallet {
         ///
         /// This is a root-only operation.
         /// The trustee admin is the account who can change the trustee list.
-        #[pallet::weight(0)]
+        #[pallet::weight(< T as Config >::WeightInfo::set_trustee_admin())]
         pub fn set_trustee_admin(
             origin: OriginFor<T>,
             admin: T::AccountId,
             chain: Chain,
         ) -> DispatchResult {
             ensure_root(origin)?;
-            Self::trustee_intention_props_of(&admin, chain).ok_or(Error::<T>::NotRegistered)?;
+            Self::trustee_intention_props_of(&admin, chain).ok_or_else::<DispatchError, _>(
+                || {
+                    error!(
+                        target: "runtime::gateway::common",
+                        "[set_trustee_admin] admin {:?} has not in TrusteeIntentionPropertiesOf",
+                        admin
+                    );
+                    Error::<T>::NotRegistered.into()
+                },
+            )?;
             TrusteeAdmin::<T>::put(admin);
             Ok(())
         }
@@ -315,6 +327,12 @@ pub mod pallet {
             GenericTrusteeSessionInfo<T::AccountId>,
             ScriptInfo<T::AccountId>,
         ),
+        /// The last trust transition was not completed.
+        TrusteeTransitionNotCompleted,
+        /// The trust members was not changed.
+        TrusteeMembersNotChanged,
+        /// The trust transition was failed.
+        TrusteeTransitionFail,
     }
 
     #[pallet::error]
@@ -553,17 +571,17 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn do_trustee_election() -> Weight {
-        // todo! Fix weight benchmark
         if Self::trustee_transition_status() {
-            return 0;
+            Self::deposit_event(Event::TrusteeTransitionNotCompleted);
+            return T::DbWeight::get().reads(1);
         }
 
         // Current trust list
         let old_trustee_candidate: Vec<T::AccountId> =
-            if let Some(info) = T::BitcoinTrusteeSessionProvider::current_trustee_session().ok() {
+            if let Ok(info) = T::BitcoinTrusteeSessionProvider::current_trustee_session() {
                 info.trustee_list
             } else {
-                return 0;
+                vec![]
             };
 
         let multi_count_0 = old_trustee_candidate
@@ -579,7 +597,7 @@ impl<T: Config> Pallet<T> {
 
         let new_trustee_pool: Vec<T::AccountId> = Self::generate_trustee_pool()
             .iter()
-            .filter_map(|who| match filter_members.contains(&who) {
+            .filter_map(|who| match filter_members.contains(who) {
                 true => None,
                 false => Some(who.clone()),
             })
@@ -599,14 +617,17 @@ impl<T: Config> Pallet<T> {
             <T as pallet_elections_phragmen::Config>::DesiredMembers::get() as usize;
 
         if new_trustee_pool.len() < desired_members {
-            return 0;
+            Self::deposit_event(Event::TrusteeMembersNotChanged);
+            return 0u64
+                .saturating_add(T::DbWeight::get().writes(1))
+                .saturating_add(T::DbWeight::get().reads(7));
         }
 
         let new_trustee_candidate = new_trustee_pool[..desired_members].to_vec();
         let mut new_trustee_candidate_sorted = new_trustee_candidate.clone();
         new_trustee_candidate_sorted.sort_unstable();
 
-        let mut old_trustee_candidate_sorted = old_trustee_candidate.clone();
+        let mut old_trustee_candidate_sorted = old_trustee_candidate;
         old_trustee_candidate_sorted.sort();
         let (incoming, outgoing) =
             <T as pallet_elections_phragmen::Config>::ChangeMembers::compute_members_diff_sorted(
@@ -614,16 +635,24 @@ impl<T: Config> Pallet<T> {
                 &new_trustee_candidate_sorted,
             );
         if incoming.is_empty() && outgoing.is_empty() {
-            return 0;
+            Self::deposit_event(Event::TrusteeMembersNotChanged);
+            return 0u64
+                .saturating_add(T::DbWeight::get().writes(1))
+                .saturating_add(T::DbWeight::get().reads(7));
         }
-        if Self::transition_trustee_session_impl(Chain::Bitcoin, new_trustee_candidate.clone())
-            .is_err()
-        {
-            return 0;
+        if Self::transition_trustee_session_impl(Chain::Bitcoin, new_trustee_candidate).is_err() {
+            Self::deposit_event(Event::TrusteeTransitionFail);
+            return 0u64
+                .saturating_add(T::DbWeight::get().writes(1))
+                .saturating_add(T::DbWeight::get().reads(7))
+                .saturating_add(<T as Config>::WeightInfo::transition_trustee_session());
         }
 
         TrusteeTransitionStatus::<T>::put(true);
-        0
+
+        0u64.saturating_add(T::DbWeight::get().writes(2))
+            .saturating_add(T::DbWeight::get().reads(7))
+            .saturating_add(<T as Config>::WeightInfo::transition_trustee_session())
     }
 }
 
@@ -778,10 +807,17 @@ impl<T: Config> Pallet<T> {
         let mut acc_list: Vec<T::AccountId> = vec![];
         for acc in session_info.0.trustee_list.iter() {
             let acc = Self::trustee_intention_props_of(acc, chain)
-                .ok_or::<DispatchError>(Error::<T>::NotRegistered.into())?
+                .ok_or_else::<DispatchError, _>(|| {
+                    error!(
+                        target: "runtime::gateway::common",
+                        "[generate_multisig_addr] acc {:?} has not in TrusteeIntentionPropertiesOf",
+                        acc
+                    );
+                    Error::<T>::NotRegistered.into()
+                })?
                 .0
                 .proxy_account
-                .unwrap_or(acc.clone());
+                .unwrap_or_else(|| acc.clone());
             acc_list.push(acc);
         }
 
