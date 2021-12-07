@@ -7,7 +7,7 @@
 mod header;
 pub mod trustee;
 mod tx;
-mod types;
+pub mod types;
 pub mod weights;
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
