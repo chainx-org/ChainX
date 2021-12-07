@@ -937,6 +937,30 @@ impl pallet_proxy::Config for Runtime {
     type AnnouncementDepositFactor = AnnouncementDepositFactor;
 }
 
+parameter_types! {
+    pub const AssetDeposit: Balance = 0;
+    pub const ApprovalDeposit: Balance = 0;
+    pub const StringLimit: u32 = 50;
+    pub const MetadataDepositBase: Balance = 0;
+    pub const MetadataDepositPerByte: Balance = 0;
+}
+
+impl pallet_assets::Config<pallet_assets::Instance1> for Runtime {
+    type Event = Event;
+    type Balance = Balance;
+    type AssetId = AssetId;
+    type Currency = Balances;
+    type ForceOrigin = EnsureRoot<AccountId>;
+    type AssetDeposit = AssetDeposit;
+    type MetadataDepositBase = MetadataDepositBase;
+    type MetadataDepositPerByte = MetadataDepositPerByte;
+    type ApprovalDeposit = ApprovalDeposit;
+    type StringLimit = StringLimit;
+    type Freezer = ();
+    type Extra = ();
+    type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
+}
+
 impl pallet_sudo::Config for Runtime {
     type Event = Event;
     type Call = Call;
@@ -1150,6 +1174,7 @@ construct_runtime!(
 
         Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 38,
         Tips: pallet_tips::{Pallet, Call, Storage, Event<T>} = 39,
+        Assets: pallet_assets::<Instance1>::{Pallet, Call, Storage, Event<T>} = 40,
     }
 );
 
