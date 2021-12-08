@@ -7,6 +7,8 @@ use alloc::string::ToString;
 mod secp256k1_verifier;
 pub mod validator;
 
+use frame_support::traits::tokens::fungibles::Mutate;
+use frame_support::traits::Get;
 use frame_support::{
     dispatch::DispatchResult,
     log::{self, debug, error, info, warn},
@@ -20,18 +22,16 @@ use light_bitcoin::{
     primitives::{hash_rev, H256},
 };
 
-use chainx_primitives::AssetId;
-use xp_gateway_bitcoin::{BtcDepositInfo, BtcTxMetaType, BtcTxTypeDetector};
-use xp_gateway_common::AccountExtractor;
-use xpallet_assets::ChainT;
-use xpallet_gateway_common::traits::{AddressBinding, ReferralBinding, TrusteeTransition};
-use xpallet_support::try_str;
-
 pub use self::validator::validate_transaction;
 use crate::{
     types::{AccountInfo, BtcAddress, BtcDepositCache, BtcTxResult, BtcTxState},
-    BalanceOf, Config, Error, Event, Pallet, PendingDeposits, WithdrawalProposal,
+    Config, Error, Event, Pallet, PendingDeposits, WithdrawalProposal,
 };
+use xp_gateway_bitcoin::{BtcDepositInfo, BtcTxMetaType, BtcTxTypeDetector};
+use xp_gateway_common::AccountExtractor;
+use xpallet_gateway_common::traits::{AddressBinding, ReferralBinding, TrusteeTransition};
+use xpallet_gateway_records::ChainT;
+use xpallet_support::try_str;
 
 pub fn process_tx<T: Config>(
     tx: Transaction,
@@ -108,12 +108,8 @@ fn deposit<T: Config>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) ->
 
     match account_info {
         AccountInfo::<_>::Account((account, referral)) => {
-            T::ReferralBinding::update_binding(
-                &<Pallet<T> as ChainT<_>>::ASSET_ID,
-                &account,
-                referral,
-            );
-            match deposit_token::<T>(txid, &account, deposit_info.deposit_value) {
+            T::ReferralBinding::update_binding(&T::BtcAssetId::get(), &account, referral);
+            match deposit_token::<T>(txid, &account, (deposit_info.deposit_value as u32).into()) {
                 Ok(_) => {
                     info!(
                         target: "runtime::bitcoin",
@@ -141,13 +137,12 @@ fn deposit<T: Config>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) ->
     }
 }
 
-fn deposit_token<T: Config>(txid: H256, who: &T::AccountId, balance: u64) -> DispatchResult {
-    let id: AssetId = <Pallet<T> as ChainT<_>>::ASSET_ID;
+fn deposit_token<T: Config>(txid: H256, who: &T::AccountId, balance: T::Balance) -> DispatchResult {
+    let id = T::NativeAssetId::get();
 
-    let value: BalanceOf<T> = balance.saturated_into();
-    match <xpallet_gateway_records::Pallet<T>>::deposit(who, id, value) {
+    match pallet_assets::Pallet::<T>::mint_into(id, who, balance) {
         Ok(()) => {
-            Pallet::<T>::deposit_event(Event::<T>::Deposited(txid, who.clone(), value));
+            Pallet::<T>::deposit_event(Event::<T>::Deposited(txid, who.clone(), balance));
             Ok(())
         }
         Err(err) => {
@@ -166,7 +161,7 @@ pub fn remove_pending_deposit<T: Config>(input_address: &BtcAddress, who: &T::Ac
     let records = PendingDeposits::<T>::take(input_address);
     for record in records {
         // ignore error
-        let _ = deposit_token::<T>(record.txid, who, record.balance);
+        let _ = deposit_token::<T>(record.txid, who, (record.balance as u32).into());
         info!(
             target: "runtime::bitcoin",
             "[remove_pending_deposit] Use pending info to re-deposit, who:{:?}, balance:{}, cached_tx:{:?}",
@@ -215,13 +210,13 @@ fn withdraw<T: Config>(tx: Transaction) -> BtcTxResult {
         let tx_hash = tx.hash();
 
         if proposal_hash == tx_hash {
-            let mut total = BalanceOf::<T>::zero();
+            let mut total = T::Balance::zero();
             for number in proposal.withdrawal_id_list.iter() {
                 // just for event record
                 let withdraw_balance =
                     xpallet_gateway_records::Pallet::<T>::pending_withdrawals(number)
                         .map(|record| record.balance())
-                        .unwrap_or_else(BalanceOf::<T>::zero);
+                        .unwrap_or_else(T::Balance::zero);
                 total += withdraw_balance;
 
                 match xpallet_gateway_records::Pallet::<T>::finish_withdrawal(*number, None) {

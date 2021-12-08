@@ -7,12 +7,10 @@ use serde::{Deserialize, Serialize};
 use sp_runtime::RuntimeDebug;
 use sp_std::{convert::TryFrom, fmt, prelude::Vec};
 
-use xpallet_assets::Chain;
-
 use super::{TrusteeMultisigProvider, TrusteeSessionManager};
 use crate::traits::ChainProvider;
 use crate::types::{TrusteeIntentionProps, TrusteeSessionInfo};
-
+use xp_assets_registrar::Chain;
 pub type BtcAddress = Vec<u8>;
 pub type BtcTrusteeSessionInfo<AccountId> = TrusteeSessionInfo<AccountId, BtcTrusteeAddrInfo>;
 pub type BtcTrusteeIntentionProps<AccountId> = TrusteeIntentionProps<AccountId, BtcTrusteeType>;

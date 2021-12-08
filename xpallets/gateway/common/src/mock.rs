@@ -18,8 +18,6 @@ use sp_runtime::{
 
 use chainx_primitives::AssetId;
 pub use xp_protocol::{X_BTC, X_ETH};
-use xpallet_assets::{AssetRestrictions, BalanceOf, ChainT, WithdrawalLimit};
-use xpallet_assets_registrar::{AssetInfo, Chain};
 use xpallet_support::traits::{MultisigAddressFor, Validator};
 
 use crate::{

@@ -31,7 +31,6 @@ members = [
   "runtime/dev",
   "runtime/malan",
   "service",
-
   "xpallets/assets",
   "xpallets/assets/rpc",
   "xpallets/assets/rpc/runtime-api",

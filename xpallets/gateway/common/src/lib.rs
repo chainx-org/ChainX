@@ -32,12 +32,6 @@ use frame_system::{ensure_root, ensure_signed};
 use sp_runtime::traits::{StaticLookup, Zero};
 use sp_std::{collections::btree_map::BTreeMap, convert::TryFrom, prelude::*};
 
-use chainx_primitives::{AddrStr, AssetId, ChainAddress, Text};
-use xp_runtime::Memo;
-use xpallet_assets::{AssetRestrictions, BalanceOf, Chain, ChainT, WithdrawalLimit};
-use xpallet_gateway_records::{WithdrawalRecordId, WithdrawalState};
-use xpallet_support::traits::{MultisigAddressFor, Validator};
-
 use self::traits::{TrusteeForChain, TrusteeSession};
 use self::types::{
     GenericTrusteeIntentionProps, GenericTrusteeSessionInfo, TrusteeInfoConfig,
@@ -45,17 +39,26 @@ use self::types::{
 };
 pub use self::weights::WeightInfo;
 use crate::types::ScriptInfo;
+use chainx_primitives::{AddrStr, ChainAddress, Text};
 pub use pallet::*;
+use xp_assets_registrar::Chain;
+use xp_runtime::Memo;
+use xpallet_gateway_records::{ChainT, WithdrawalLimit, WithdrawalRecordId, WithdrawalState};
+use xpallet_support::traits::{MultisigAddressFor, Validator};
 
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
     use frame_support::pallet_prelude::*;
+    use frame_support::traits::fungibles::Inspect;
     use frame_system::pallet_prelude::*;
 
     #[pallet::config]
     pub trait Config:
-        frame_system::Config + xpallet_gateway_records::Config + pallet_elections_phragmen::Config
+        frame_system::Config
+        + xpallet_gateway_records::Config
+        + pallet_elections_phragmen::Config
+        + pallet_assets::Config
     {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
@@ -64,7 +67,7 @@ pub mod pallet {
         type DetermineMultisigAddress: MultisigAddressFor<Self::AccountId>;
 
         // for bitcoin
-        type Bitcoin: ChainT<BalanceOf<Self>>;
+        type Bitcoin: ChainT<Self::AssetId, Self::Balance>;
         type BitcoinTrustee: TrusteeForChain<
             Self::AccountId,
             trustees::bitcoin::BtcTrusteeType,
@@ -108,16 +111,18 @@ pub mod pallet {
         #[pallet::weight(< T as Config >::WeightInfo::withdraw())]
         pub fn withdraw(
             origin: OriginFor<T>,
-            #[pallet::compact] asset_id: AssetId,
-            #[pallet::compact] value: BalanceOf<T>,
+            #[pallet::compact] asset_id: T::AssetId,
+            #[pallet::compact] value: T::Balance,
             addr: AddrStr,
             ext: Memo,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
             ensure!(
-                xpallet_assets::Pallet::<T>::can_do(&asset_id, AssetRestrictions::WITHDRAW),
-                xpallet_assets::Error::<T>::ActionNotAllowed,
+                pallet_assets::Pallet::<T>::can_withdraw(asset_id, &who, value)
+                    .into_result()
+                    .is_ok(),
+                Error::<T>::InvalidWithdrawal,
             );
             Self::verify_withdrawal(asset_id, value, &addr, &ext)?;
 
@@ -523,9 +528,9 @@ pub mod pallet {
 // withdraw
 impl<T: Config> Pallet<T> {
     pub fn withdrawal_limit(
-        asset_id: &AssetId,
-    ) -> Result<WithdrawalLimit<BalanceOf<T>>, DispatchError> {
-        let chain = xpallet_assets_registrar::Pallet::<T>::chain_of(asset_id)?;
+        asset_id: &T::AssetId,
+    ) -> Result<WithdrawalLimit<T::Balance>, DispatchError> {
+        let chain = xpallet_gateway_records::Pallet::<T>::chain_of(asset_id)?;
         match chain {
             Chain::Bitcoin => T::Bitcoin::withdrawal_limit(asset_id),
             _ => Err(Error::<T>::NotSupportedChain.into()),
@@ -533,14 +538,14 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn verify_withdrawal(
-        asset_id: AssetId,
-        value: BalanceOf<T>,
+        asset_id: T::AssetId,
+        value: T::Balance,
         addr: &[u8],
         ext: &Memo,
     ) -> DispatchResult {
         ext.check_validity()?;
 
-        let chain = xpallet_assets_registrar::Pallet::<T>::chain_of(&asset_id)?;
+        let chain = xpallet_gateway_records::Pallet::<T>::chain_of(&asset_id)?;
         match chain {
             Chain::Bitcoin => {
                 // bitcoin do not need memo

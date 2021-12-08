@@ -23,8 +23,8 @@ use light_bitcoin::{
     script::{Builder, Opcode, Script},
 };
 
+use xp_assets_registrar::Chain;
 use xp_gateway_bitcoin::extract_output_addr;
-use xpallet_assets::Chain;
 use xpallet_gateway_common::{
     traits::{TrusteeForChain, TrusteeSession},
     trustees::bitcoin::{BtcTrusteeAddrInfo, BtcTrusteeType},

@@ -3,16 +3,19 @@
 use frame_support::log::{debug, error, info, warn};
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
-use chainx_primitives::{AssetId, ChainAddress, ReferralId};
-use xpallet_assets::Chain;
-use xpallet_support::{traits::Validator, try_addr, try_str};
-
 use crate::traits::{AddressBinding, ReferralBinding};
 use crate::{AddressBindingOf, BoundAddressOf, Config, Pallet};
+use chainx_primitives::{ChainAddress, ReferralId};
+use xp_assets_registrar::Chain;
+use xpallet_support::{traits::Validator, try_addr, try_str};
 
-impl<T: Config> ReferralBinding<T::AccountId> for Pallet<T> {
-    fn update_binding(assert_id: &AssetId, who: &T::AccountId, referral_name: Option<ReferralId>) {
-        let chain = match xpallet_assets_registrar::Pallet::<T>::chain_of(assert_id) {
+impl<T: Config> ReferralBinding<T::AccountId, T::AssetId> for Pallet<T> {
+    fn update_binding(
+        assert_id: &T::AssetId,
+        who: &T::AccountId,
+        referral_name: Option<ReferralId>,
+    ) {
+        let chain = match xpallet_gateway_records::Pallet::<T>::chain_of(assert_id) {
             Ok(chain) => chain,
             Err(err) => {
                 error!(
@@ -34,7 +37,7 @@ impl<T: Config> ReferralBinding<T::AccountId> for Pallet<T> {
                     Some(channel) => {
                         debug!(
                             target: "runtime::gateway::common",
-                            "[update_referral_binding] Already has referral binding:[assert id:{}, chain:{:?}, who:{:?}, referral:{:?}]",
+                            "[update_referral_binding] Already has referral binding:[assert id:{:?}, chain:{:?}, who:{:?}, referral:{:?}]",
                             assert_id, chain, who, channel
                         );
                     }
@@ -49,8 +52,8 @@ impl<T: Config> ReferralBinding<T::AccountId> for Pallet<T> {
         };
     }
 
-    fn referral(assert_id: &AssetId, who: &T::AccountId) -> Option<T::AccountId> {
-        let chain = xpallet_assets_registrar::Pallet::<T>::chain_of(assert_id).ok()?;
+    fn referral(assert_id: &T::AssetId, who: &T::AccountId) -> Option<T::AccountId> {
+        let chain = xpallet_gateway_records::Pallet::<T>::chain_of(assert_id).ok()?;
         Self::referral_binding_of(who, chain)
     }
 }

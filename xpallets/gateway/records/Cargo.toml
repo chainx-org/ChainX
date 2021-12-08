@@ -18,17 +18,18 @@ frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch =
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
 
+pallet-assets = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
+
 # Orml
 orml-utilities = { git = "https://github.com/chainx-org/ormls", branch = "main", default-features = false }
 
 # ChainX primitives
 chainx-primitives = { path = "../../../primitives", default-features = false }
+xp-assets-registrar = { path = "../../../primitives/assets-registrar", default-features = false }
 xp-protocol = { path = "../../../primitives/protocol", default-features = false }
 xp-runtime = { path = "../../../primitives/runtime", default-features = false }
 
 # ChainX pallets
-xpallet-assets = { path = "../../assets", default-features = false }
-xpallet-assets-registrar = { path = "../../assets-registrar", default-features = false }
 xpallet-support = { path = "../../support", default-features = false }
 
 [dev-dependencies]
@@ -48,15 +49,15 @@ std = [
     # Substrate pallets
     "frame-support/std",
     "frame-system/std",
+    "pallet-assets/std",
     # Orml
     "orml-utilities/std",
     # ChainX primitives
     "chainx-primitives/std",
+    "xp-assets-registrar/std",
     "xp-protocol/std",
     "xp-runtime/std",
     # ChainX pallets
-    "xpallet-assets/std",
-    "xpallet-assets-registrar/std",
     "xpallet-support/std",
 ]
 runtime-benchmarks = [

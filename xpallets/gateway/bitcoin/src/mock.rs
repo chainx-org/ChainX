@@ -24,8 +24,6 @@ use sp_runtime::{
 use chainx_primitives::AssetId;
 use xp_assets_registrar::Chain;
 pub use xp_protocol::{X_BTC, X_ETH};
-use xpallet_assets::AssetRestrictions;
-use xpallet_assets_registrar::AssetInfo;
 use xpallet_gateway_common::types::TrusteeInfoConfig;
 
 use light_bitcoin::{
@@ -59,8 +57,6 @@ frame_support::construct_runtime!(
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
         Elections: pallet_elections_phragmen::{Pallet, Call, Storage, Event<T>, Config<T>},
-        XAssetsRegistrar: xpallet_assets_registrar::{Pallet, Call, Storage, Event<T>, Config},
-        XAssets: xpallet_assets::{Pallet, Call, Storage, Event<T>, Config<T>},
         XGatewayRecords: xpallet_gateway_records::{Pallet, Call, Storage, Event<T>},
         XGatewayCommon: xpallet_gateway_common::{Pallet, Call, Storage, Event<T>, Config<T>},
         XGatewayBitcoin: xpallet_gateway_bitcoin::{Pallet, Call, Storage, Event<T>, Config<T>},
@@ -155,23 +151,6 @@ parameter_types! {
     pub const ChainXAssetId: AssetId = 0;
 }
 
-impl xpallet_assets_registrar::Config for Test {
-    type Event = ();
-    type NativeAssetId = ChainXAssetId;
-    type RegistrarHandler = ();
-    type WeightInfo = ();
-}
-
-impl xpallet_assets::Config for Test {
-    type Event = ();
-    type Currency = Balances;
-    type Amount = Amount;
-    type TreasuryAccount = ();
-    type OnCreatedAccount = frame_system::Provider<Test>;
-    type OnAssetChanged = ();
-    type WeightInfo = ();
-}
-
 impl xpallet_gateway_records::Config for Test {
     type Event = ();
     type WeightInfo = ();
@@ -224,21 +203,6 @@ impl Config for Test {
 
 pub type XGatewayBitcoinErr = Error<Test>;
 
-pub(crate) fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {
-    (
-        X_BTC,
-        AssetInfo::new::<Test>(
-            b"X-BTC".to_vec(),
-            b"X-BTC".to_vec(),
-            Chain::Bitcoin,
-            8,
-            b"ChainX's cross-chain Bitcoin".to_vec(),
-        )
-        .unwrap(),
-        AssetRestrictions::DESTROY_USABLE,
-    )
-}
-
 pub struct ExtBuilder;
 impl Default for ExtBuilder {
     fn default() -> Self {
@@ -254,30 +218,6 @@ impl ExtBuilder {
         let mut storage = frame_system::GenesisConfig::default()
             .build_storage::<Test>()
             .unwrap();
-
-        let btc_assets = btc();
-        let assets = vec![(btc_assets.0, btc_assets.1, btc_assets.2, true, true)];
-
-        let mut init_assets = vec![];
-        let mut assets_restrictions = vec![];
-        for (a, b, c, d, e) in assets {
-            init_assets.push((a, b, d, e));
-            assets_restrictions.push((a, c))
-        }
-
-        GenesisBuild::<Test>::assimilate_storage(
-            &xpallet_assets_registrar::GenesisConfig {
-                assets: init_assets,
-            },
-            &mut storage,
-        )
-        .unwrap();
-
-        let _ = xpallet_assets::GenesisConfig::<Test> {
-            assets_restrictions,
-            endowed: Default::default(),
-        }
-        .assimilate_storage(&mut storage);
 
         // let (genesis_info, genesis_hash, network_id) = load_mock_btc_genesis_header_info();
         let genesis_hash = btc_genesis.0.hash();
@@ -308,34 +248,6 @@ impl ExtBuilder {
         let mut storage = frame_system::GenesisConfig::default()
             .build_storage::<Test>()
             .unwrap();
-
-        let btc_assets = btc();
-        let assets = vec![(btc_assets.0, btc_assets.1, btc_assets.2, true, true)];
-        // let mut endowed = BTreeMap::new();
-        // let endowed_info = vec![(ALICE, 100), (BOB, 200), (CHARLIE, 300), (DAVE, 400)];
-        // endowed.insert(btc_assets.0, endowed_info.clone());
-        // endowed.insert(eth_assets.0, endowed_info);
-
-        let mut init_assets = vec![];
-        let mut assets_restrictions = vec![];
-        for (a, b, c, d, e) in assets {
-            init_assets.push((a, b, d, e));
-            assets_restrictions.push((a, c))
-        }
-
-        GenesisBuild::<Test>::assimilate_storage(
-            &xpallet_assets_registrar::GenesisConfig {
-                assets: init_assets,
-            },
-            &mut storage,
-        )
-        .unwrap();
-
-        let _ = xpallet_assets::GenesisConfig::<Test> {
-            assets_restrictions,
-            endowed: Default::default(),
-        }
-        .assimilate_storage(&mut storage);
 
         let info = trustees_info();
         let genesis_trustees = info

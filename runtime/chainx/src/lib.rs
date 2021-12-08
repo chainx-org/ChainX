@@ -958,7 +958,7 @@ impl pallet_assets::Config<pallet_assets::Instance1> for Runtime {
     type MetadataDepositPerByte = MetadataDepositPerByte;
     type ApprovalDeposit = ApprovalDeposit;
     type StringLimit = StringLimit;
-    type Freezer = ();
+    type Freezer = XGatewayRecords;
     type Extra = ();
     type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
 }
@@ -1029,6 +1029,7 @@ impl xpallet_gateway_common::Config for Runtime {
 
 impl xpallet_gateway_bitcoin::Config for Runtime {
     type Event = Event;
+    type Currency = Balances;
     type UnixTime = Timestamp;
     type AccountExtractor = xp_gateway_bitcoin::OpReturnExtractor;
     type TrusteeSessionProvider = trustees::bitcoin::BtcTrusteeSessionManager<Runtime>;
