@@ -61,3 +61,4 @@ runtime-benchmarks = [
     "frame-benchmarking",
     "xp-protocol",
 ]
+try-runtime = ["frame-support/try-runtime"]

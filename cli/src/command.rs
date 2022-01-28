@@ -351,5 +351,55 @@ pub fn run() -> sc_cli::Result<()> {
                 Ok(cmd.run(components.client, components.backend))
             })
         }
+        #[cfg(feature = "try-runtime")]
+        Some(Subcommand::TryRuntime(cmd)) => {
+            let runner = cli.create_runner(cmd)?;
+            let chain_spec = &runner.config().chain_spec;
+
+            if chain_spec.is_malan() {
+                return runner.async_run(|config| {
+                    let registry = config.prometheus_config.as_ref().map(|cfg| &cfg.registry);
+                    let task_manager =
+                        sc_service::TaskManager::new(config.tokio_handle.clone(), registry)
+                            .map_err(|e| {
+                                sc_cli::Error::Service(sc_service::Error::Prometheus(e))
+                            })?;
+                    Ok((
+                        cmd.run::<malan_runtime::Block, chainx_executor::MalanExecutor>(config),
+                        task_manager,
+                    ))
+                });
+            } else if chain_spec.is_dev() {
+                return runner.async_run(|config| {
+                    let registry = config.prometheus_config.as_ref().map(|cfg| &cfg.registry);
+                    let task_manager =
+                        sc_service::TaskManager::new(config.tokio_handle.clone(), registry)
+                            .map_err(|e| {
+                                sc_cli::Error::Service(sc_service::Error::Prometheus(e))
+                            })?;
+                    Ok((
+                        cmd.run::<dev_runtime::Block, chainx_executor::DevExecutor>(config),
+                        task_manager,
+                    ))
+                });
+            } else {
+                return runner.async_run(|config| {
+                    let registry = config.prometheus_config.as_ref().map(|cfg| &cfg.registry);
+                    let task_manager =
+                        sc_service::TaskManager::new(config.tokio_handle.clone(), registry)
+                            .map_err(|e| {
+                                sc_cli::Error::Service(sc_service::Error::Prometheus(e))
+                            })?;
+                    Ok((
+                        cmd.run::<chainx_runtime::Block, chainx_executor::ChainXExecutor>(config),
+                        task_manager,
+                    ))
+                });
+            }
+        }
+        #[cfg(not(feature = "try-runtime"))]
+        Some(Subcommand::TryRuntime) => Err("TryRuntime wasn't enabled when building the node. \
+            You can enable it with `--features try-runtime`."
+            .into()),
     }
 }

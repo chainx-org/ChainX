@@ -70,3 +70,4 @@ panic = "unwind"
 
 [features]
 runtime-benchmarks = ["cli/runtime-benchmarks"]
+try-runtime = ["cli/try-runtime"]

@@ -5,7 +5,7 @@ default: release
 
 .PHONY: all
 
-all: format build test
+all: format test benchmark try-runtime build
 
 pre-clippy: unset-override
 	@rustup component add clippy-preview
@@ -48,6 +48,9 @@ format: pre-format
 
 benchmark:
 	cargo test --release --no-run --features runtime-benchmarks
+
+try-runtime:
+	cargo check --release --features try-runtime
 
 clean:
 	@cargo clean
