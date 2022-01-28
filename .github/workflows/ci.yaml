@@ -10,112 +10,30 @@ env:
   RUSTUP_MAX_RETRIES: 10
 
 jobs:
-  rustfmt:
-    name: Rustfmt
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-        # NOTE: Do not forget to also update the toolchain in Dockerfile when updating the toolchain here.
-        toolchain: [nightly-2021-11-07]
-
+  Checks:
+    name: Fmt-Clippy-Test
+    runs-on: ubuntu-latest
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-    - name: Install Rust toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: ${{ matrix.toolchain }}
-        components: rustfmt
+      - uses: Swatinem/rust-cache@v1.3.0
 
-    - name: Format
-      run: cargo fmt -- --check
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly-2021-11-07
+          components: rustfmt, rust-src, clippy
+          target: wasm32-unknown-unknown
+          override: true
 
-  test:
-    name: Test
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-        toolchain: [nightly-2021-11-07]
+      - name: 1-Format
+        run: cargo fmt --all -- --check
 
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
+      - name: 2-Clippy
+        run: make clippy
 
-    - name: Install Rust toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: ${{ matrix.toolchain }}
-        target: wasm32-unknown-unknown
-        profile: minimal
-        override: true
+      - name: 3-Test
+        run: make test
 
-    - if: matrix.os == 'ubuntu-latest'
-      run: sudo chown -R $(whoami):$(id -ng) ~/.cargo/
-
-    - uses: actions/cache@v2
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          target
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-    - name: Test
-      run: cargo test --workspace -- --test-threads 1
-
-    - name: Compile
-      run: cargo test --no-run
-
-  clippy:
-    name: Clippy
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-        toolchain: [nightly-2021-11-07]
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
-
-    - name: Install Rust toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: ${{ matrix.toolchain }}
-        target: wasm32-unknown-unknown
-        profile: minimal
-        override: true
-        components: rust-src, clippy
-
-    - name: Clippy
-      run: cargo clippy
-
-  runtime_benchmarks:
-    name: Runtime Benchmarks
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-        toolchain: [nightly-2021-11-07]
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
-
-    - name: Install Rust toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: ${{ matrix.toolchain }}
-        target: wasm32-unknown-unknown
-        profile: minimal
-        override: true
-
-    - name: Runtime benchmarks
-      run: cargo test --no-run --features runtime-benchmarks
+      - name: 4-Benchmark
+        run: make benchmark
