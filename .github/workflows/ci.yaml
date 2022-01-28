@@ -1,6 +1,14 @@
-name: ci
+name: CI
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - master
+      - develop-2022
+  pull_request:
+    branches:
+      - master
+      - develop-2022
 
 env:
   CARGO_INCREMENTAL: 0
@@ -11,7 +19,7 @@ env:
 
 jobs:
   Checks:
-    name: Fmt-Clippy-Test
+    name: Fmt-Clippy-Test-Benchmark
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
