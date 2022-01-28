@@ -107,18 +107,11 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("chainx"),
     impl_name: create_runtime_str!("chainx-dev"),
     authoring_version: 1,
-    spec_version: 1,
+    spec_version: 12,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 1,
+    transaction_version: 3,
 };
-
-/// The BABE epoch configuration at genesis.
-pub const BABE_GENESIS_EPOCH_CONFIG: sp_consensus_babe::BabeEpochConfiguration =
-    sp_consensus_babe::BabeEpochConfiguration {
-        c: PRIMARY_PROBABILITY,
-        allowed_slots: sp_consensus_babe::AllowedSlots::PrimaryAndSecondaryPlainSlots,
-    };
 
 /// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]
@@ -129,11 +122,19 @@ pub fn native_version() -> NativeVersion {
     }
 }
 
+/// The BABE epoch configuration at genesis.
+pub const BABE_GENESIS_EPOCH_CONFIG: sp_consensus_babe::BabeEpochConfiguration =
+    sp_consensus_babe::BabeEpochConfiguration {
+        c: PRIMARY_PROBABILITY,
+        allowed_slots: sp_consensus_babe::AllowedSlots::PrimaryAndSecondaryPlainSlots,
+    };
+
 #[derive(Debug, Clone, Eq, PartialEq, codec::Encode, codec::Decode, TypeInfo)]
 pub struct BaseFilter;
 impl Contains<Call> for BaseFilter {
     fn contains(call: &Call) -> bool {
         use frame_support::dispatch::GetCallMetadata;
+
         if let Call::Currencies(_) = call {
             return false;
         }
@@ -185,7 +186,7 @@ parameter_types! {
         * MaximumBlockWeight::get();
     pub const MaximumBlockLength: u32 = 5 * 1024 * 1024;
     pub const Version: RuntimeVersion = VERSION;
-    pub const SS58Prefix: u8 = xp_protocol::TESTNET_ADDRESS_FORMAT_ID;
+    pub const SS58Prefix: u8 = xp_protocol::MAINNET_ADDRESS_FORMAT_ID;
 }
 
 const_assert!(
@@ -313,7 +314,7 @@ impl pallet_babe::Config for Runtime {
     )>>::IdentificationTuple;
 
     type HandleEquivocation =
-        pallet_babe::EquivocationHandler<Self::KeyOwnerIdentification, Offences, ReportLongevity>;
+    pallet_babe::EquivocationHandler<Self::KeyOwnerIdentification, Offences, ReportLongevity>;
 
     type WeightInfo = ();
     type DisabledValidators = Session;
@@ -324,7 +325,7 @@ impl pallet_grandpa::Config for Runtime {
     type Event = Event;
     type Call = Call;
     type KeyOwnerProof =
-        <Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(KeyTypeId, GrandpaId)>>::Proof;
+    <Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(KeyTypeId, GrandpaId)>>::Proof;
     type KeyOwnerIdentification = <Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(
         KeyTypeId,
         GrandpaId,
@@ -427,8 +428,8 @@ parameter_types! {
 impl pallet_im_online::Config for Runtime {
     type AuthorityId = ImOnlineId;
     type Event = Event;
-    type NextSessionRotation = Babe;
     type ValidatorSet = Self;
+    type NextSessionRotation = Babe;
     type ReportUnresponsiveness = Offences;
     type UnsignedPriority = ImOnlineUnsignedPriority;
     type WeightInfo = pallet_im_online::weights::SubstrateWeight<Runtime>;
@@ -465,8 +466,8 @@ impl pallet_session_historical::Config for Runtime {
 }
 
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
-where
-    Call: From<LocalCall>,
+    where
+        Call: From<LocalCall>,
 {
     fn create_transaction<C: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>>(
         call: Call,
@@ -517,8 +518,8 @@ impl frame_system::offchain::SigningTypes for Runtime {
 }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
-where
-    Call: From<C>,
+    where
+        Call: From<C>,
 {
     type Extrinsic = UncheckedExtrinsic;
     type OverarchingCall = Call;
@@ -554,11 +555,6 @@ impl pallet_multisig::Config for Runtime {
     type WeightInfo = pallet_multisig::weights::SubstrateWeight<Runtime>;
 }
 
-impl pallet_sudo::Config for Runtime {
-    type Event = Event;
-    type Call = Call;
-}
-
 parameter_types! {
     pub const LaunchPeriod: BlockNumber = 7 * DAYS;
     pub const VotingPeriod: BlockNumber = 7 * DAYS;
@@ -584,25 +580,25 @@ impl pallet_democracy::Config for Runtime {
     type MinimumDeposit = MinimumDeposit;
     /// A straight majority of the council can decide what their next motion is.
     type ExternalOrigin =
-        pallet_collective::EnsureProportionAtLeast<_1, _2, AccountId, CouncilCollective>;
+    pallet_collective::EnsureProportionAtLeast<_1, _2, AccountId, CouncilCollective>;
     /// A super-majority can have the next scheduled referendum be a straight majority-carries vote.
     type ExternalMajorityOrigin =
-        pallet_collective::EnsureProportionAtLeast<_3, _4, AccountId, CouncilCollective>;
+    pallet_collective::EnsureProportionAtLeast<_3, _4, AccountId, CouncilCollective>;
     /// A unanimous council can have the next scheduled referendum be a straight default-carries
     /// (NTB) vote.
     type ExternalDefaultOrigin =
-        pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, CouncilCollective>;
+    pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, CouncilCollective>;
     /// Two thirds of the technical committee can have an ExternalMajority/ExternalDefault vote
     /// be tabled immediately and with a shorter voting/enactment period.
     type FastTrackOrigin =
-        pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, TechnicalCollective>;
+    pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, TechnicalCollective>;
     type InstantOrigin =
-        pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, TechnicalCollective>;
+    pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, TechnicalCollective>;
     type InstantAllowed = InstantAllowed;
     type FastTrackVotingPeriod = FastTrackVotingPeriod;
     // To cancel a proposal which has been passed, 2/3 of the council must agree to it.
     type CancellationOrigin =
-        pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, CouncilCollective>;
+    pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, CouncilCollective>;
     // To cancel a proposal before it has been passed, the technical committee must be unanimous or
     // Root must agree.
     type CancelProposalOrigin = EnsureOneOf<
@@ -1035,8 +1031,9 @@ impl xpallet_support::traits::TreasuryAccount<AccountId> for SimpleTreasuryAccou
 }
 
 parameter_types! {
-    /// FIXME: replace this when the migration offset is determinated.
-    pub const MigrationSessionOffset: SessionIndex = 500;
+    // Total issuance is 7723350PCX by the end of ChainX 1.0.
+    // 210000 - (7723350 / 50) = 55533
+    pub const MigrationSessionOffset: SessionIndex = 55533;
     pub const MinimumReferralId: u32 = 2;
     pub const MaximumReferralId: u32 = 12;
 }
@@ -1051,7 +1048,7 @@ impl xpallet_mining_staking::Config for Runtime {
     type TreasuryAccount = SimpleTreasuryAccount;
     type AssetMining = XMiningAsset;
     type DetermineRewardPotAccount =
-        xpallet_mining_staking::SimpleValidatorRewardPotAccountDeterminer<Runtime>;
+    xpallet_mining_staking::SimpleValidatorRewardPotAccountDeterminer<Runtime>;
     type WeightInfo = xpallet_mining_staking::weights::SubstrateWeight<Runtime>;
 }
 
@@ -1069,13 +1066,18 @@ impl xpallet_mining_asset::Config for Runtime {
     type GatewayInterface = ReferralGetter;
     type TreasuryAccount = SimpleTreasuryAccount;
     type DetermineRewardPotAccount =
-        xpallet_mining_asset::SimpleAssetRewardPotAccountDeterminer<Runtime>;
+    xpallet_mining_asset::SimpleAssetRewardPotAccountDeterminer<Runtime>;
     type WeightInfo = xpallet_mining_asset::weights::SubstrateWeight<Runtime>;
 }
 
 impl xpallet_genesis_builder::Config for Runtime {}
 
 impl pallet_randomness_collective_flip::Config for Runtime {}
+
+impl pallet_sudo::Config for Runtime {
+    type Event = Event;
+    type Call = Call;
+}
 
 construct_runtime!(
     pub enum Runtime where
@@ -1084,74 +1086,75 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic
     {
         // Basic stuff.
-        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},
-        Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>},
+        System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
+        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 1,
+        Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 2,
 
         // Must be before session.
-        Babe: pallet_babe::{Pallet, Call, Storage, Config, ValidateUnsigned},
+        Babe: pallet_babe::{Pallet, Call, Storage, Config, ValidateUnsigned} = 3,
 
-        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
-        Indices: pallet_indices::{Pallet, Call, Storage, Config<T>, Event<T>},
-        Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-        TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
+        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 4,
+        Indices: pallet_indices::{Pallet, Call, Storage, Config<T>, Event<T>} = 5,
+        Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 6,
+        TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 7,
 
         // Consensus support.
-        Authorship: pallet_authorship::{Pallet, Call, Storage, Inherent},
-        Offences: pallet_offences::{Pallet, Storage, Event},
-        Historical: pallet_session_historical::{Pallet},
-        Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
-        Grandpa: pallet_grandpa::{Pallet, Call, Storage, Config, Event},
-        ImOnline: pallet_im_online::{Pallet, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
-        AuthorityDiscovery: pallet_authority_discovery::{Pallet, Config},
+        Authorship: pallet_authorship::{Pallet, Call, Storage, Inherent} = 8,
+        Offences: pallet_offences::{Pallet, Storage, Event} = 9,
+        Historical: pallet_session_historical::{Pallet} = 10,
+        Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 11,
+        Grandpa: pallet_grandpa::{Pallet, Call, Storage, Config, Event} = 12,
+        ImOnline: pallet_im_online::{Pallet, Call, Storage, Event<T>, ValidateUnsigned, Config<T>} = 13,
+        AuthorityDiscovery: pallet_authority_discovery::{Pallet, Config} = 14,
 
         // Governance stuff.
-        Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>},
-        Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
-        TechnicalCommittee: pallet_collective::<Instance2>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
-        Elections: pallet_elections_phragmen::{Pallet, Call, Storage, Event<T>, Config<T>},
-        TechnicalMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>},
-        Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>},
-        Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>},
-        Tips: pallet_tips::{Pallet, Call, Storage, Event<T>},
+        Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 15,
+        Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 16,
+        TechnicalCommittee: pallet_collective::<Instance2>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 17,
+        Elections: pallet_elections_phragmen::{Pallet, Call, Storage, Event<T>, Config<T>} = 18,
+        TechnicalMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>} = 19,
+        Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>} = 20,
 
-        Identity: pallet_identity::{Pallet, Call, Storage, Event<T>},
+        Identity: pallet_identity::{Pallet, Call, Storage, Event<T>} = 21,
 
-        Utility: pallet_utility::{Pallet, Call, Event},
-        Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>},
+        Utility: pallet_utility::{Pallet, Call, Event} = 22,
+        Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 23,
 
         // ChainX basics.
-        XSystem: xpallet_system::{Pallet, Call, Storage, Event<T>, Config},
-        XAssetsRegistrar: xpallet_assets_registrar::{Pallet, Call, Storage, Event<T>, Config},
-        XAssets: xpallet_assets::{Pallet, Call, Storage, Event<T>, Config<T>},
+        XSystem: xpallet_system::{Pallet, Call, Storage, Event<T>, Config} = 24,
+        XAssetsRegistrar: xpallet_assets_registrar::{Pallet, Call, Storage, Event<T>, Config} = 25,
+        XAssets: xpallet_assets::{Pallet, Call, Storage, Event<T>, Config<T>} = 26,
 
         // Mining, must be after XAssets.
-        XStaking: xpallet_mining_staking::{Pallet, Call, Storage, Event<T>, Config<T>},
-        XMiningAsset: xpallet_mining_asset::{Pallet, Call, Storage, Event<T>, Config<T>},
+        XStaking: xpallet_mining_staking::{Pallet, Call, Storage, Event<T>, Config<T>} = 27,
+        XMiningAsset: xpallet_mining_asset::{Pallet, Call, Storage, Event<T>, Config<T>} = 28,
 
         // Crypto gateway stuff.
-        XGatewayRecords: xpallet_gateway_records::{Pallet, Call, Storage, Event<T>},
-        XGatewayCommon: xpallet_gateway_common::{Pallet, Call, Storage, Event<T>, Config<T>},
-        XGatewayBitcoin: xpallet_gateway_bitcoin::{Pallet, Call, Storage, Event<T>, Config<T>},
+        XGatewayRecords: xpallet_gateway_records::{Pallet, Call, Storage, Event<T>} = 29,
+        XGatewayCommon: xpallet_gateway_common::{Pallet, Call, Storage, Event<T>, Config<T>} = 30,
+        XGatewayBitcoin: xpallet_gateway_bitcoin::{Pallet, Call, Storage, Event<T>, Config<T>} = 31,
 
         // DEX
-        XSpot: xpallet_dex_spot::{Pallet, Call, Storage, Event<T>, Config<T>},
+        XSpot: xpallet_dex_spot::{Pallet, Call, Storage, Event<T>, Config<T>} = 32,
 
-        XGenesisBuilder: xpallet_genesis_builder::{Pallet, Config<T>},
+        XGenesisBuilder: xpallet_genesis_builder::{Pallet, Config<T>} = 33,
 
         // orml
         // we retain Currencies Call for this call may be used in future, but we do not need this now,
         // so that we filter it in BaseFilter.
-        Currencies: orml_currencies::{Pallet, Call, Event<T>},
+        Currencies: orml_currencies::{Pallet, Call, Event<T>} = 34,
 
         // It might be possible to merge this module into pallet_transaction_payment in future, thus
         // we put it at the end for keeping the extrinsic ordering.
-        XTransactionFee: xpallet_transaction_fee::{Pallet, Event<T>},
+        XTransactionFee: xpallet_transaction_fee::{Pallet, Event<T>} = 35,
+
+        Proxy: pallet_proxy::{Pallet, Call, Storage, Event<T>} = 36,
+
+        Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 37,
+        Tips: pallet_tips::{Pallet, Call, Storage, Event<T>} = 38,
 
         // Put Sudo last so that the extrinsic ordering stays the same once it's removed.
-        Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
-
-        Proxy: pallet_proxy::{Pallet, Call, Storage, Event<T>},
+        Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 39,
     }
 );
 

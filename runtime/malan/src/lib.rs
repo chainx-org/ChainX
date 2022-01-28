@@ -107,10 +107,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("chainx"),
     impl_name: create_runtime_str!("chainx-malan"),
     authoring_version: 1,
-    spec_version: 2,
+    spec_version: 12,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 1,
+    transaction_version: 3,
 };
 
 /// The version information used to identify this runtime when compiled natively.
@@ -122,13 +122,21 @@ pub fn native_version() -> NativeVersion {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, codec::Encode, codec::Decode, scale_info::TypeInfo)]
+/// The BABE epoch configuration at genesis.
+pub const BABE_GENESIS_EPOCH_CONFIG: sp_consensus_babe::BabeEpochConfiguration =
+    sp_consensus_babe::BabeEpochConfiguration {
+        c: PRIMARY_PROBABILITY,
+        allowed_slots: sp_consensus_babe::AllowedSlots::PrimaryAndSecondaryPlainSlots,
+    };
+
+#[derive(Debug, Clone, Eq, PartialEq, codec::Encode, codec::Decode, TypeInfo)]
 pub struct BaseFilter;
 impl Contains<Call> for BaseFilter {
     fn contains(call: &Call) -> bool {
         use frame_support::dispatch::GetCallMetadata;
+
         if let Call::Currencies(_) = call {
-            return false; // forbidden Currencies call now
+            return false;
         }
 
         let metadata = call.get_call_metadata();
@@ -178,7 +186,7 @@ parameter_types! {
         * MaximumBlockWeight::get();
     pub const MaximumBlockLength: u32 = 5 * 1024 * 1024;
     pub const Version: RuntimeVersion = VERSION;
-    pub const SS58Prefix: u8 = xp_protocol::TESTNET_ADDRESS_FORMAT_ID;
+    pub const SS58Prefix: u8 = xp_protocol::MAINNET_ADDRESS_FORMAT_ID;
 }
 
 const_assert!(
@@ -306,7 +314,7 @@ impl pallet_babe::Config for Runtime {
     )>>::IdentificationTuple;
 
     type HandleEquivocation =
-        pallet_babe::EquivocationHandler<Self::KeyOwnerIdentification, Offences, ReportLongevity>;
+    pallet_babe::EquivocationHandler<Self::KeyOwnerIdentification, Offences, ReportLongevity>;
 
     type WeightInfo = ();
     type DisabledValidators = Session;
@@ -317,7 +325,7 @@ impl pallet_grandpa::Config for Runtime {
     type Event = Event;
     type Call = Call;
     type KeyOwnerProof =
-        <Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(KeyTypeId, GrandpaId)>>::Proof;
+    <Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(KeyTypeId, GrandpaId)>>::Proof;
     type KeyOwnerIdentification = <Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(
         KeyTypeId,
         GrandpaId,
@@ -458,8 +466,8 @@ impl pallet_session_historical::Config for Runtime {
 }
 
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
-where
-    Call: From<LocalCall>,
+    where
+        Call: From<LocalCall>,
 {
     fn create_transaction<C: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>>(
         call: Call,
@@ -510,8 +518,8 @@ impl frame_system::offchain::SigningTypes for Runtime {
 }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
-where
-    Call: From<C>,
+    where
+        Call: From<C>,
 {
     type Extrinsic = UncheckedExtrinsic;
     type OverarchingCall = Call;
@@ -572,25 +580,25 @@ impl pallet_democracy::Config for Runtime {
     type MinimumDeposit = MinimumDeposit;
     /// A straight majority of the council can decide what their next motion is.
     type ExternalOrigin =
-        pallet_collective::EnsureProportionAtLeast<_1, _2, AccountId, CouncilCollective>;
+    pallet_collective::EnsureProportionAtLeast<_1, _2, AccountId, CouncilCollective>;
     /// A super-majority can have the next scheduled referendum be a straight majority-carries vote.
     type ExternalMajorityOrigin =
-        pallet_collective::EnsureProportionAtLeast<_3, _4, AccountId, CouncilCollective>;
+    pallet_collective::EnsureProportionAtLeast<_3, _4, AccountId, CouncilCollective>;
     /// A unanimous council can have the next scheduled referendum be a straight default-carries
     /// (NTB) vote.
     type ExternalDefaultOrigin =
-        pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, CouncilCollective>;
+    pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, CouncilCollective>;
     /// Two thirds of the technical committee can have an ExternalMajority/ExternalDefault vote
     /// be tabled immediately and with a shorter voting/enactment period.
     type FastTrackOrigin =
-        pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, TechnicalCollective>;
+    pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, TechnicalCollective>;
     type InstantOrigin =
-        pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, TechnicalCollective>;
+    pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, TechnicalCollective>;
     type InstantAllowed = InstantAllowed;
     type FastTrackVotingPeriod = FastTrackVotingPeriod;
     // To cancel a proposal which has been passed, 2/3 of the council must agree to it.
     type CancellationOrigin =
-        pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, CouncilCollective>;
+    pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, CouncilCollective>;
     // To cancel a proposal before it has been passed, the technical committee must be unanimous or
     // Root must agree.
     type CancelProposalOrigin = EnsureOneOf<
@@ -935,11 +943,6 @@ impl pallet_proxy::Config for Runtime {
     type AnnouncementDepositFactor = AnnouncementDepositFactor;
 }
 
-impl pallet_sudo::Config for Runtime {
-    type Event = Event;
-    type Call = Call;
-}
-
 ///////////////////////////////////////////
 // orml
 ///////////////////////////////////////////
@@ -1045,7 +1048,7 @@ impl xpallet_mining_staking::Config for Runtime {
     type TreasuryAccount = SimpleTreasuryAccount;
     type AssetMining = XMiningAsset;
     type DetermineRewardPotAccount =
-        xpallet_mining_staking::SimpleValidatorRewardPotAccountDeterminer<Runtime>;
+    xpallet_mining_staking::SimpleValidatorRewardPotAccountDeterminer<Runtime>;
     type WeightInfo = xpallet_mining_staking::weights::SubstrateWeight<Runtime>;
 }
 
@@ -1063,13 +1066,18 @@ impl xpallet_mining_asset::Config for Runtime {
     type GatewayInterface = ReferralGetter;
     type TreasuryAccount = SimpleTreasuryAccount;
     type DetermineRewardPotAccount =
-        xpallet_mining_asset::SimpleAssetRewardPotAccountDeterminer<Runtime>;
+    xpallet_mining_asset::SimpleAssetRewardPotAccountDeterminer<Runtime>;
     type WeightInfo = xpallet_mining_asset::weights::SubstrateWeight<Runtime>;
 }
 
 impl xpallet_genesis_builder::Config for Runtime {}
 
 impl pallet_randomness_collective_flip::Config for Runtime {}
+
+impl pallet_sudo::Config for Runtime {
+    type Event = Event;
+    type Call = Call;
+}
 
 construct_runtime!(
     pub enum Runtime where
@@ -1140,12 +1148,13 @@ construct_runtime!(
         // we put it at the end for keeping the extrinsic ordering.
         XTransactionFee: xpallet_transaction_fee::{Pallet, Event<T>} = 35,
 
-        Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 36,
+        Proxy: pallet_proxy::{Pallet, Call, Storage, Event<T>} = 36,
 
-        Proxy: pallet_proxy::{Pallet, Call, Storage, Event<T>} = 37,
+        Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 37,
+        Tips: pallet_tips::{Pallet, Call, Storage, Event<T>} = 38,
 
-        Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 38,
-        Tips: pallet_tips::{Pallet, Call, Storage, Event<T>} = 39,
+        // Put Sudo last so that the extrinsic ordering stays the same once it's removed.
+        Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 39,
     }
 );
 
@@ -1272,7 +1281,6 @@ impl_runtime_apis! {
         fn next_epoch() -> sp_consensus_babe::Epoch {
             Babe::next_epoch()
         }
-
 
         fn generate_key_ownership_proof(
             _slot: sp_consensus_babe::Slot,
