@@ -27,10 +27,13 @@ build:
 release:
 	@cargo build --release #--features "${ENABLE_FEATURES}"
 
-test:
+test-opreturn:
+	cargo test --release -p xp-gateway-bitcoin --lib -- --test-threads 1
+
+test: test-opreturn
 	export LOG_LEVEL=DEBUG && \
 	export RUST_BACKTRACE=1 && \
-	cargo test --release --all -- --nocapture
+	cargo test --release --all --exclude xp-gateway-bitcoin -- --nocapture
 
 unset-override:
 	@# unset first in case of any previous overrides
@@ -42,6 +45,9 @@ pre-format: unset-override
 format: pre-format
 	@cargo fmt --all -- --check >/dev/null || \
 	cargo fmt --all
+
+benchmark:
+	cargo test --release --no-run --features runtime-benchmarks
 
 clean:
 	@cargo clean
