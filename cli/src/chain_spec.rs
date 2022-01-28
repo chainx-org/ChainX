@@ -103,19 +103,23 @@ pub fn authority_keys_from_seed(seed: &str) -> AuthorityKeysTuple {
 }
 
 pub fn pre_malan_authorities() -> AuthorityKeysTuple {
-
     // 5E4MThREbKErsna6rPDuRxFWe9hjcg6PV9BE99B3TB8J6Ufo
-    let account: AccountId = hex!["5833cec38892b33fadba17fe719f9bf89d6fd595e10c64c04b1dfac7bb5e1109"].into();
-    let referal: ReferralId =  b"Validator1".to_vec();
+    let account: AccountId =
+        hex!["5833cec38892b33fadba17fe719f9bf89d6fd595e10c64c04b1dfac7bb5e1109"].into();
+    let referal: ReferralId = b"Validator1".to_vec();
 
     // 5EkZWkS8vfkaqjEnR5dSXFvqL1w5KnmogysYawTyKqy953ZM
-    let babe: BabeId = hex!["76de32534484c8683d37f4ebc18b94f83f3646add3a986790111bd764451d40a"].unchecked_into();
+    let babe: BabeId =
+        hex!["76de32534484c8683d37f4ebc18b94f83f3646add3a986790111bd764451d40a"].unchecked_into();
     // 5FaK685niWdJe3dFbV9MdFLZBEoADBkzvah3ePQ44ZqXVj6Y
-    let grandpa: GrandpaId = hex!["9b496b2073b6d3ab37d1b50e8b37b0bff1c62751e2dbc637a3cdaf8535e6b1e3"].unchecked_into();
+    let grandpa: GrandpaId =
+        hex!["9b496b2073b6d3ab37d1b50e8b37b0bff1c62751e2dbc637a3cdaf8535e6b1e3"].unchecked_into();
     // 5E4QZUuwmhZHjz6n9spLzt1BPN3qRAcFpTtAGnf66xHfptJr
-    let imonlie: ImOnlineId = hex!["583e3e07179a25c17f879c79b26cd22c6ce0158c65fcf4ff6a256b80791d9e0a"].unchecked_into();
+    let imonlie: ImOnlineId =
+        hex!["583e3e07179a25c17f879c79b26cd22c6ce0158c65fcf4ff6a256b80791d9e0a"].unchecked_into();
     // 5HdTCBVrSBxCQp4V2VPoTiM3m6Gnw9kWjxnTgAab7NW3VXaj
-    let auth: AuthorityDiscoveryId = hex!["f626e754de6eda69535466986201cac54378edbf18a29a98728d128c157c8501"].unchecked_into();
+    let auth: AuthorityDiscoveryId =
+        hex!["f626e754de6eda69535466986201cac54378edbf18a29a98728d128c157c8501"].unchecked_into();
 
     ((account, referal), babe, grandpa, imonlie, auth)
 }
@@ -508,14 +512,13 @@ pub fn pre_malan_config() -> Result<MalanChainSpec, String> {
         build_genesis!(
             malan_runtime,
             wasm_binary,
-            vec![
-                pre_malan_authorities()
-            ],
+            vec![pre_malan_authorities()],
             hex!("74276b30236e3ffc822c0e5ec0ac8b02933dac11fcefc88733c8a61cdaa45a59").into(),
             genesis_assets(),
-            endowed![
-                (hex!("74276b30236e3ffc822c0e5ec0ac8b02933dac11fcefc88733c8a61cdaa45a59"), endowed_balance),
-            ],
+            endowed![(
+                hex!("74276b30236e3ffc822c0e5ec0ac8b02933dac11fcefc88733c8a61cdaa45a59"),
+                endowed_balance
+            ),],
             btc_genesis_params(include_str!("res/btc_genesis_params_testnet.json")),
             crate::genesis::bitcoin::local_testnet_trustees(),
         )

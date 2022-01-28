@@ -10,9 +10,7 @@ use sc_service::{
     config::{PrometheusConfig, TelemetryEndpoints},
     BasePath, TransactionPoolOptions,
 };
-use sp_core::crypto::{
-    set_default_ss58_version, Ss58AddressFormat::ChainXAccount
-};
+use sp_core::crypto::{set_default_ss58_version, Ss58AddressFormat::ChainXAccount};
 
 use chainx_service::{self as service, new_partial, IdentifyVariant};
 

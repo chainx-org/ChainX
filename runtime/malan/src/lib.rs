@@ -314,7 +314,7 @@ impl pallet_babe::Config for Runtime {
     )>>::IdentificationTuple;
 
     type HandleEquivocation =
-    pallet_babe::EquivocationHandler<Self::KeyOwnerIdentification, Offences, ReportLongevity>;
+        pallet_babe::EquivocationHandler<Self::KeyOwnerIdentification, Offences, ReportLongevity>;
 
     type WeightInfo = ();
     type DisabledValidators = Session;
@@ -325,7 +325,7 @@ impl pallet_grandpa::Config for Runtime {
     type Event = Event;
     type Call = Call;
     type KeyOwnerProof =
-    <Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(KeyTypeId, GrandpaId)>>::Proof;
+        <Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(KeyTypeId, GrandpaId)>>::Proof;
     type KeyOwnerIdentification = <Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(
         KeyTypeId,
         GrandpaId,
@@ -466,8 +466,8 @@ impl pallet_session_historical::Config for Runtime {
 }
 
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
-    where
-        Call: From<LocalCall>,
+where
+    Call: From<LocalCall>,
 {
     fn create_transaction<C: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>>(
         call: Call,
@@ -518,8 +518,8 @@ impl frame_system::offchain::SigningTypes for Runtime {
 }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
-    where
-        Call: From<C>,
+where
+    Call: From<C>,
 {
     type Extrinsic = UncheckedExtrinsic;
     type OverarchingCall = Call;
@@ -580,25 +580,25 @@ impl pallet_democracy::Config for Runtime {
     type MinimumDeposit = MinimumDeposit;
     /// A straight majority of the council can decide what their next motion is.
     type ExternalOrigin =
-    pallet_collective::EnsureProportionAtLeast<_1, _2, AccountId, CouncilCollective>;
+        pallet_collective::EnsureProportionAtLeast<_1, _2, AccountId, CouncilCollective>;
     /// A super-majority can have the next scheduled referendum be a straight majority-carries vote.
     type ExternalMajorityOrigin =
-    pallet_collective::EnsureProportionAtLeast<_3, _4, AccountId, CouncilCollective>;
+        pallet_collective::EnsureProportionAtLeast<_3, _4, AccountId, CouncilCollective>;
     /// A unanimous council can have the next scheduled referendum be a straight default-carries
     /// (NTB) vote.
     type ExternalDefaultOrigin =
-    pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, CouncilCollective>;
+        pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, CouncilCollective>;
     /// Two thirds of the technical committee can have an ExternalMajority/ExternalDefault vote
     /// be tabled immediately and with a shorter voting/enactment period.
     type FastTrackOrigin =
-    pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, TechnicalCollective>;
+        pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, TechnicalCollective>;
     type InstantOrigin =
-    pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, TechnicalCollective>;
+        pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, TechnicalCollective>;
     type InstantAllowed = InstantAllowed;
     type FastTrackVotingPeriod = FastTrackVotingPeriod;
     // To cancel a proposal which has been passed, 2/3 of the council must agree to it.
     type CancellationOrigin =
-    pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, CouncilCollective>;
+        pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, CouncilCollective>;
     // To cancel a proposal before it has been passed, the technical committee must be unanimous or
     // Root must agree.
     type CancelProposalOrigin = EnsureOneOf<
@@ -1048,7 +1048,7 @@ impl xpallet_mining_staking::Config for Runtime {
     type TreasuryAccount = SimpleTreasuryAccount;
     type AssetMining = XMiningAsset;
     type DetermineRewardPotAccount =
-    xpallet_mining_staking::SimpleValidatorRewardPotAccountDeterminer<Runtime>;
+        xpallet_mining_staking::SimpleValidatorRewardPotAccountDeterminer<Runtime>;
     type WeightInfo = xpallet_mining_staking::weights::SubstrateWeight<Runtime>;
 }
 
@@ -1066,7 +1066,7 @@ impl xpallet_mining_asset::Config for Runtime {
     type GatewayInterface = ReferralGetter;
     type TreasuryAccount = SimpleTreasuryAccount;
     type DetermineRewardPotAccount =
-    xpallet_mining_asset::SimpleAssetRewardPotAccountDeterminer<Runtime>;
+        xpallet_mining_asset::SimpleAssetRewardPotAccountDeterminer<Runtime>;
     type WeightInfo = xpallet_mining_asset::weights::SubstrateWeight<Runtime>;
 }
 
