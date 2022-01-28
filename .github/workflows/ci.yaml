@@ -18,7 +18,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         # NOTE: Do not forget to also update the toolchain in Dockerfile when updating the toolchain here.
-        toolchain: [nightly-2021-06-29]
+        toolchain: [nightly-2021-11-07]
 
     steps:
     - name: Checkout repository
@@ -40,7 +40,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        toolchain: [nightly-2021-06-29]
+        toolchain: [nightly-2021-11-07]
 
     steps:
     - name: Checkout repository
@@ -78,7 +78,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        toolchain: [nightly-2021-06-29]
+        toolchain: [nightly-2021-11-07]
 
     steps:
     - name: Checkout repository
@@ -103,7 +103,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        toolchain: [nightly-2021-06-29]
+        toolchain: [nightly-2021-11-07]
 
     steps:
     - name: Checkout repository
