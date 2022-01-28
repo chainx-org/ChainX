@@ -483,8 +483,8 @@ pub fn local_testnet_config() -> Result<DevChainSpec, String> {
         )
     };
     Ok(DevChainSpec::from_genesis(
-        "Local Testnet",
-        "local_testnet",
+        "ChainX Local Testnet",
+        "dev",
         ChainType::Local,
         constructor,
         vec![],
@@ -525,7 +525,7 @@ pub fn pre_malan_config() -> Result<MalanChainSpec, String> {
     };
     Ok(MalanChainSpec::from_genesis(
         "ChainX Malan Testnet",
-        "chainx",
+        "chainx malan",
         ChainType::Live,
         constructor,
         vec![],
