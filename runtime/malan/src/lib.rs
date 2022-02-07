@@ -1072,8 +1072,6 @@ impl xpallet_mining_asset::Config for Runtime {
 
 impl xpallet_genesis_builder::Config for Runtime {}
 
-impl pallet_randomness_collective_flip::Config for Runtime {}
-
 impl pallet_sudo::Config for Runtime {
     type Event = Event;
     type Call = Call;
@@ -1087,7 +1085,6 @@ construct_runtime!(
     {
         // Basic stuff.
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
-        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 1,
         Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 2,
 
         // Must be before session.

@@ -98,9 +98,11 @@ pub use xpallet_mining_staking::VoteWeight;
 pub mod constants;
 /// Implementations of some helper traits passed into runtime modules as associated types.
 pub mod impls;
+mod migrations;
 
 use self::constants::{currency::*, time::*};
 use self::impls::{ChargeExtraFee, DealWithFees, SlowAdjustingFeeUpdate};
+use self::migrations::*;
 
 /// This runtime version.
 pub const VERSION: RuntimeVersion = RuntimeVersion {
@@ -1072,8 +1074,6 @@ impl xpallet_mining_asset::Config for Runtime {
 
 impl xpallet_genesis_builder::Config for Runtime {}
 
-impl pallet_randomness_collective_flip::Config for Runtime {}
-
 impl pallet_sudo::Config for Runtime {
     type Event = Event;
     type Call = Call;
@@ -1087,7 +1087,6 @@ construct_runtime!(
     {
         // Basic stuff.
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
-        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 1,
         Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 2,
 
         // Must be before session.
@@ -1193,6 +1192,7 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPallets,
+    RemoveCollectiveFlip
 >;
 
 impl_runtime_apis! {

@@ -52,7 +52,6 @@ pallet-membership = { git = "https://github.com/paritytech/substrate", branch = 
 pallet-multisig = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
 pallet-offences = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
 pallet-proxy = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
-pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
 pallet-scheduler = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
 pallet-session = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false, features = ["historical"] }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
@@ -147,7 +146,6 @@ std = [
   "pallet-multisig/std",
   "pallet-offences/std",
   "pallet-proxy/std",
-  "pallet-randomness-collective-flip/std",
   "pallet-scheduler/std",
   "pallet-session/std",
   "pallet-timestamp/std",
@@ -227,7 +225,6 @@ try-runtime = [
   "pallet-multisig/try-runtime",
   "pallet-offences/try-runtime",
   "pallet-proxy/try-runtime",
-  "pallet-randomness-collective-flip/try-runtime",
   "pallet-scheduler/try-runtime",
   "pallet-session/try-runtime",
   "pallet-timestamp/try-runtime",
