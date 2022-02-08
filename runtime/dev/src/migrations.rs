@@ -64,3 +64,13 @@ impl frame_support::traits::OnRuntimeUpgrade for BabeEpochConfigMigrations {
         )
     }
 }
+
+pub struct GrandpaStoragePrefixMigration;
+impl frame_support::traits::OnRuntimeUpgrade for GrandpaStoragePrefixMigration {
+    fn on_runtime_upgrade() -> frame_support::weights::Weight {
+        use frame_support::traits::PalletInfo;
+        let name = <Runtime as frame_system::Config>::PalletInfo::name::<Grandpa>()
+            .expect("grandpa is part of pallets in construct_runtime, so it has a name; qed");
+        pallet_grandpa::migrations::v4::migrate::<Runtime, &str>(name)
+    }
+}

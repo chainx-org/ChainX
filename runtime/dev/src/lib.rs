@@ -1207,6 +1207,7 @@ pub type Executive = frame_executive::Executive<
         PhragmenElectionDepositRuntimeUpgrade,
         SystemToDualRefCount,
         BabeEpochConfigMigrations,
+        GrandpaStoragePrefixMigration,
     ),
 >;
 
