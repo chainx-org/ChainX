@@ -38,3 +38,21 @@ impl frame_support::traits::OnRuntimeUpgrade for PhragmenElectionDepositRuntimeU
         )
     }
 }
+
+impl pallet_babe::migrations::BabePalletPrefix for Runtime {
+    fn pallet_prefix() -> &'static str {
+        "Babe"
+    }
+}
+
+pub struct BabeEpochConfigMigrations;
+impl frame_support::traits::OnRuntimeUpgrade for BabeEpochConfigMigrations {
+    fn on_runtime_upgrade() -> frame_support::weights::Weight {
+        pallet_babe::migrations::add_epoch_configuration::<Runtime>(
+            sp_consensus_babe::BabeEpochConfiguration {
+                allowed_slots: PrimaryAndSecondaryPlainSlots,
+                ..BABE_GENESIS_EPOCH_CONFIG
+            },
+        )
+    }
+}

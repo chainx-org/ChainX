@@ -46,6 +46,7 @@ use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthority
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 use pallet_session::historical as pallet_session_historical;
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
+use sp_consensus_babe::AllowedSlots::PrimaryAndSecondaryPlainSlots;
 
 use chainx_runtime_common::{BlockLength, BlockWeights};
 use xpallet_dex_spot::{Depth, FullPairInfo, RpcOrder, TradingPairId};
@@ -125,10 +126,18 @@ pub fn native_version() -> NativeVersion {
 }
 
 /// The BABE epoch configuration at genesis.
+/// The existing chain is running with PrimaryAndSecondaryPlainSlots,
+/// you should keep returning the same thing in BabeApi::configuration()
+/// as you were doing before.
+///
+/// Edit: it's okay to change this here as BabeApi::configuration()
+/// is only used on genesis, so this change won't have any effect on
+/// the existing chains. But maybe it makes it more clear if you still
+/// keep the original value.
 pub const BABE_GENESIS_EPOCH_CONFIG: sp_consensus_babe::BabeEpochConfiguration =
     sp_consensus_babe::BabeEpochConfiguration {
         c: PRIMARY_PROBABILITY,
-        allowed_slots: sp_consensus_babe::AllowedSlots::PrimaryAndSecondaryPlainSlots,
+        allowed_slots: PrimaryAndSecondaryPlainSlots,
     };
 
 #[derive(Debug, Clone, Eq, PartialEq, codec::Encode, codec::Decode, TypeInfo)]
@@ -1196,6 +1205,7 @@ pub type Executive = frame_executive::Executive<
         RemoveCollectiveFlip,
         MigratePalletVersionToStorageVersion,
         PhragmenElectionDepositRuntimeUpgrade,
+        BabeEpochConfigMigrations,
     ),
 >;
 
@@ -1267,10 +1277,10 @@ impl_runtime_apis! {
             sp_consensus_babe::BabeGenesisConfiguration {
                 slot_duration: Babe::slot_duration(),
                 epoch_length: EpochDuration::get(),
-                c: PRIMARY_PROBABILITY,
+                c: BABE_GENESIS_EPOCH_CONFIG.c,
                 genesis_authorities: Babe::authorities().to_vec(),
                 randomness: Babe::randomness(),
-                allowed_slots: sp_consensus_babe::AllowedSlots::PrimaryAndSecondaryVRFSlots,
+                allowed_slots: BABE_GENESIS_EPOCH_CONFIG.allowed_slots,
             }
         }
 
