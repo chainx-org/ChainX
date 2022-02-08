@@ -1192,7 +1192,11 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPallets,
-    (RemoveCollectiveFlip, PhragmenElectionDepositRuntimeUpgrade),
+    (
+        RemoveCollectiveFlip,
+        MigratePalletVersionToStorageVersion,
+        PhragmenElectionDepositRuntimeUpgrade,
+    ),
 >;
 
 impl_runtime_apis! {

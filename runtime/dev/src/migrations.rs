@@ -10,6 +10,16 @@ impl frame_support::traits::OnRuntimeUpgrade for RemoveCollectiveFlip {
     }
 }
 
+/// Migrate from `PalletVersion` to the new `StorageVersion`
+pub struct MigratePalletVersionToStorageVersion;
+impl frame_support::traits::OnRuntimeUpgrade for MigratePalletVersionToStorageVersion {
+    fn on_runtime_upgrade() -> frame_support::weights::Weight {
+        frame_support::migrations::migrate_from_pallet_version_to_storage_version::<
+            AllPalletsWithSystem,
+        >(&RocksDbWeight::get())
+    }
+}
+
 // 10 PCX
 const OLD_CANDIDACY_BOND: Balance = 1000 * DOLLARS;
 // 10 mPCX
