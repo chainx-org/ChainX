@@ -1205,6 +1205,7 @@ pub type Executive = frame_executive::Executive<
         RemoveCollectiveFlip,
         MigratePalletVersionToStorageVersion,
         PhragmenElectionDepositRuntimeUpgrade,
+        SystemToDualRefCount,
         BabeEpochConfigMigrations,
     ),
 >;
