@@ -217,3 +217,14 @@ impl frame_support::traits::OnRuntimeUpgrade for BountiesPrefixMigration {
         Ok(())
     }
 }
+
+/// Migrate from 'PhragmenElection' to the new prefix 'Elections'
+pub struct ElectionsPrefixMigration;
+impl frame_support::traits::OnRuntimeUpgrade for ElectionsPrefixMigration {
+    fn on_runtime_upgrade() -> frame_support::weights::Weight {
+        use frame_support::traits::PalletInfo;
+        let name = <Runtime as frame_system::Config>::PalletInfo::name::<Elections>()
+            .expect("Elections is part of runtime, so it has a name; qed");
+        pallet_elections_phragmen::migrations::v4::migrate::<Runtime, _>(name)
+    }
+}
