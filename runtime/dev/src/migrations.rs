@@ -162,4 +162,25 @@ impl frame_support::traits::OnRuntimeUpgrade for TechnicalMembershipStoragePrefi
     }
 }
 
+const TIPS_OLD_PREFIX: &str = "Treasury";
+/// Migrate pallet-tips from `Treasury` to the new pallet prefix `Tips`
+pub struct MigrateTipsPalletPrefix;
+impl frame_support::traits::OnRuntimeUpgrade for MigrateTipsPalletPrefix {
+    fn on_runtime_upgrade() -> frame_support::weights::Weight {
+        pallet_tips::migrations::v4::migrate::<Runtime, Tips, _>(TIPS_OLD_PREFIX)
+    }
+
+    #[cfg(feature = "try-runtime")]
+    fn pre_upgrade() -> Result<(), &'static str> {
+        pallet_tips::migrations::v4::pre_migrate::<Runtime, Tips, _>(TIPS_OLD_PREFIX);
+        Ok(())
+    }
+
+    #[cfg(feature = "try-runtime")]
+    fn post_upgrade() -> Result<(), &'static str> {
+        pallet_tips::migrations::v4::post_migrate::<Runtime, Tips, _>(TIPS_OLD_PREFIX);
+        Ok(())
+    }
+}
+
 
