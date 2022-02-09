@@ -183,4 +183,37 @@ impl frame_support::traits::OnRuntimeUpgrade for MigrateTipsPalletPrefix {
     }
 }
 
+const BOUNTIES_OLD_PREFIX: &str = "Treasury";
+/// Migrate from 'Treasury' to the new prefix 'Bounties'
+pub struct BountiesPrefixMigration;
+impl frame_support::traits::OnRuntimeUpgrade for BountiesPrefixMigration {
+    fn on_runtime_upgrade() -> frame_support::weights::Weight {
+        use frame_support::traits::PalletInfo;
+        let name = <Runtime as frame_system::Config>::PalletInfo::name::<Bounties>()
+            .expect("Bounties is part of runtime, so it has a name; qed");
+        pallet_bounties::migrations::v4::migrate::<Runtime, Bounties, _>(BOUNTIES_OLD_PREFIX, name)
+    }
+    #[cfg(feature = "try-runtime")]
+    fn pre_upgrade() -> Result<(), &'static str> {
+        use frame_support::traits::PalletInfo;
+        let name = <Runtime as frame_system::Config>::PalletInfo::name::<Bounties>()
+            .expect("Bounties is part of runtime, so it has a name; qed");
+        pallet_bounties::migrations::v4::pre_migration::<Runtime, Bounties, _>(
+            BOUNTIES_OLD_PREFIX,
+            name,
+        );
+        Ok(())
+    }
 
+    #[cfg(feature = "try-runtime")]
+    fn post_upgrade() -> Result<(), &'static str> {
+        use frame_support::traits::PalletInfo;
+        let name = <Runtime as frame_system::Config>::PalletInfo::name::<Bounties>()
+            .expect("Bounties is part of runtime, so it has a name; qed");
+        pallet_bounties::migrations::v4::post_migration::<Runtime, Bounties, _>(
+            BOUNTIES_OLD_PREFIX,
+            name,
+        );
+        Ok(())
+    }
+}

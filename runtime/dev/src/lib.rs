@@ -1212,6 +1212,7 @@ pub type Executive = frame_executive::Executive<
         TechnicalCommitteeStoragePrefixMigration,
         TechnicalMembershipStoragePrefixMigration,
         MigrateTipsPalletPrefix,
+        BountiesPrefixMigration,
     ),
 >;
 
