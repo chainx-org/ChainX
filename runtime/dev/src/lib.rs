@@ -1208,6 +1208,7 @@ pub type Executive = frame_executive::Executive<
         SystemToDualRefCount,
         BabeEpochConfigMigrations,
         GrandpaStoragePrefixMigration,
+        CouncilStoragePrefixMigration,
     ),
 >;
 

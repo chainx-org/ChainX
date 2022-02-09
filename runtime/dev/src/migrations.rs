@@ -74,3 +74,24 @@ impl frame_support::traits::OnRuntimeUpgrade for GrandpaStoragePrefixMigration {
         pallet_grandpa::migrations::v4::migrate::<Runtime, &str>(name)
     }
 }
+
+const COUNCIL_OLD_PREFIX: &str = "Instance1Collective";
+/// Migrate from `Instance1Collective` to the new pallet prefix `Council`
+pub struct CouncilStoragePrefixMigration;
+impl frame_support::traits::OnRuntimeUpgrade for CouncilStoragePrefixMigration {
+    fn on_runtime_upgrade() -> frame_support::weights::Weight {
+        pallet_collective::migrations::v4::migrate::<Runtime, Council, _>(COUNCIL_OLD_PREFIX)
+    }
+
+    #[cfg(feature = "try-runtime")]
+    fn pre_upgrade() -> Result<(), &'static str> {
+        pallet_collective::migrations::v4::pre_migrate::<Council, _>(COUNCIL_OLD_PREFIX);
+        Ok(())
+    }
+
+    #[cfg(feature = "try-runtime")]
+    fn post_upgrade() -> Result<(), &'static str> {
+        pallet_collective::migrations::v4::post_migrate::<Council, _>(COUNCIL_OLD_PREFIX);
+        Ok(())
+    }
+}
