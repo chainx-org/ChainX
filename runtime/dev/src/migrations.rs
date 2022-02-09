@@ -95,3 +95,32 @@ impl frame_support::traits::OnRuntimeUpgrade for CouncilStoragePrefixMigration {
         Ok(())
     }
 }
+
+const TECHNICAL_COMMITTEE_OLD_PREFIX: &str = "Instance2Collective";
+/// Migrate from `Instance2Collective` to the new pallet prefix `TechnicalCommittee`
+pub struct TechnicalCommitteeStoragePrefixMigration;
+impl frame_support::traits::OnRuntimeUpgrade for TechnicalCommitteeStoragePrefixMigration {
+    fn on_runtime_upgrade() -> frame_support::weights::Weight {
+        pallet_collective::migrations::v4::migrate::<Runtime, TechnicalCommittee, _>(
+            TECHNICAL_COMMITTEE_OLD_PREFIX,
+        )
+    }
+
+    #[cfg(feature = "try-runtime")]
+    fn pre_upgrade() -> Result<(), &'static str> {
+        pallet_collective::migrations::v4::pre_migrate::<TechnicalCommittee, _>(
+            TECHNICAL_COMMITTEE_OLD_PREFIX,
+        );
+        Ok(())
+    }
+
+    #[cfg(feature = "try-runtime")]
+    fn post_upgrade() -> Result<(), &'static str> {
+        pallet_collective::migrations::v4::post_migrate::<TechnicalCommittee, _>(
+            TECHNICAL_COMMITTEE_OLD_PREFIX,
+        );
+        Ok(())
+    }
+}
+
+

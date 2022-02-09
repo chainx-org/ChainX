@@ -1209,6 +1209,7 @@ pub type Executive = frame_executive::Executive<
         BabeEpochConfigMigrations,
         GrandpaStoragePrefixMigration,
         CouncilStoragePrefixMigration,
+        TechnicalCommitteeStoragePrefixMigration,
     ),
 >;
 
