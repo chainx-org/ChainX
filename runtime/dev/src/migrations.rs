@@ -123,4 +123,43 @@ impl frame_support::traits::OnRuntimeUpgrade for TechnicalCommitteeStoragePrefix
     }
 }
 
+const TECHNICAL_MEMBERSHIP_OLD_PREFIX: &str = "Instance1Membership";
+/// Migrate from `Instance1Membership` to the new pallet prefix `TechnicalMembership`
+pub struct TechnicalMembershipStoragePrefixMigration;
+impl frame_support::traits::OnRuntimeUpgrade for TechnicalMembershipStoragePrefixMigration {
+    fn on_runtime_upgrade() -> frame_support::weights::Weight {
+        use frame_support::traits::PalletInfo;
+        let name = <Runtime as frame_system::Config>::PalletInfo::name::<TechnicalMembership>()
+            .expect("TechnicalMembership is part of runtime, so it has a name; qed");
+        pallet_membership::migrations::v4::migrate::<Runtime, TechnicalMembership, _>(
+            TECHNICAL_MEMBERSHIP_OLD_PREFIX,
+            name,
+        )
+    }
+
+    #[cfg(feature = "try-runtime")]
+    fn pre_upgrade() -> Result<(), &'static str> {
+        use frame_support::traits::PalletInfo;
+        let name = <Runtime as frame_system::Config>::PalletInfo::name::<TechnicalMembership>()
+            .expect("TechnicalMembership is part of runtime, so it has a name; qed");
+        pallet_membership::migrations::v4::pre_migrate::<TechnicalMembership, _>(
+            TECHNICAL_MEMBERSHIP_OLD_PREFIX,
+            name,
+        );
+        Ok(())
+    }
+
+    #[cfg(feature = "try-runtime")]
+    fn post_upgrade() -> Result<(), &'static str> {
+        use frame_support::traits::PalletInfo;
+        let name = <Runtime as frame_system::Config>::PalletInfo::name::<TechnicalMembership>()
+            .expect("TechnicalMembership is part of runtime, so it has a name; qed");
+        pallet_membership::migrations::v4::post_migrate::<TechnicalMembership, _>(
+            TECHNICAL_MEMBERSHIP_OLD_PREFIX,
+            name,
+        );
+        Ok(())
+    }
+}
+
 
