@@ -27,7 +27,7 @@ use xpallet_assets::Chain;
 use xpallet_gateway_common::{
     traits::{TrusteeForChain, TrusteeSession},
     trustees::bitcoin::{BtcTrusteeAddrInfo, BtcTrusteeType},
-    types::{TrusteeInfoConfig, TrusteeIntentionProps, TrusteeSessionInfo},
+    types::{ScriptInfo, TrusteeInfoConfig, TrusteeIntentionProps, TrusteeSessionInfo},
     utils::two_thirds_unsafe,
 };
 
@@ -40,7 +40,7 @@ use crate::{
 };
 
 pub fn current_trustee_session<T: Config>(
-) -> Result<TrusteeSessionInfo<T::AccountId, BtcTrusteeAddrInfo>, DispatchError> {
+) -> Result<TrusteeSessionInfo<T::AccountId, T::BlockNumber, BtcTrusteeAddrInfo>, DispatchError> {
     T::TrusteeSessionProvider::current_trustee_session()
 }
 
@@ -112,15 +112,19 @@ const ZERO_P: [u8; 32] = [0; 32];
 
 const MAX_TAPROOT_NODES: u32 = 250;
 
-impl<T: Config> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo> for Pallet<T> {
+impl<T: Config> TrusteeForChain<T::AccountId, T::BlockNumber, BtcTrusteeType, BtcTrusteeAddrInfo>
+    for Pallet<T>
+{
     fn check_trustee_entity(raw_addr: &[u8]) -> Result<BtcTrusteeType, DispatchError> {
         let trustee_type = BtcTrusteeType::try_from(raw_addr.to_vec())
             .map_err(|_| Error::<T>::InvalidPublicKey)?;
         let public = trustee_type.0;
-        if let Public::Normal(_) = public {
-            log!(error, "Disallow Normal Public for bitcoin now");
-            return Err(Error::<T>::InvalidPublicKey.into());
-        }
+        let public: musig2::PublicKey = public
+            .try_into()
+            .map_err(|_| Error::<T>::InvalidPublicKey)?;
+
+        let raw_addr = public.serialize_compressed();
+        let public = Public::from_slice(&raw_addr).map_err(|_| Error::<T>::InvalidPublicKey)?;
 
         if 2 != raw_addr[0] && 3 != raw_addr[0] {
             log!(error, "Not Compressed Public(prefix not 2|3)");
@@ -141,14 +145,21 @@ impl<T: Config> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo
     }
 
     fn generate_trustee_session_info(
-        props: Vec<(T::AccountId, TrusteeIntentionProps<BtcTrusteeType>)>,
+        props: Vec<(
+            T::AccountId,
+            TrusteeIntentionProps<T::AccountId, BtcTrusteeType>,
+        )>,
         config: TrusteeInfoConfig,
-    ) -> Result<TrusteeSessionInfo<T::AccountId, BtcTrusteeAddrInfo>, DispatchError> {
-        // judge all props has different pubkey
-        // check
+    ) -> Result<
+        (
+            TrusteeSessionInfo<T::AccountId, T::BlockNumber, BtcTrusteeAddrInfo>,
+            ScriptInfo<T::AccountId>,
+        ),
+        DispatchError,
+    > {
         let (trustees, props_info): (
             Vec<T::AccountId>,
-            Vec<TrusteeIntentionProps<BtcTrusteeType>>,
+            Vec<TrusteeIntentionProps<T::AccountId, BtcTrusteeType>>,
         ) = props.into_iter().unzip();
 
         let (hot_keys, cold_keys): (Vec<Public>, Vec<Public>) = props_info
@@ -156,6 +167,7 @@ impl<T: Config> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo
             .map(|props| (props.hot_entity.0, props.cold_entity.0))
             .unzip();
 
+        // judge all props has different pubkey
         check_keys::<T>(&hot_keys)?;
         check_keys::<T>(&cold_keys)?;
 
@@ -197,36 +209,63 @@ impl<T: Config> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo
 
         let sig_num = max(
             two_thirds_unsafe(trustees.len() as u32),
-            compute_min_threshold(trustees.len(), MAX_TAPROOT_NODES as usize) as u32,
+            compute_min_threshold(trustees.len() as u32, MAX_TAPROOT_NODES) as u32,
         );
 
         // Set hot address for taproot threshold address
-        let pks = hot_keys
+        let hot_pks = hot_keys
             .into_iter()
             .map(|k| k.try_into().map_err(|_| Error::<T>::InvalidPublicKey))
             .collect::<Result<Vec<_>, Error<T>>>()?;
 
-        let threshold_addr: Address = Mast::new(pks, sig_num as usize)
-            .map_err(|_| Error::<T>::InvalidAddress)?
+        let hot_mast = Mast::new(hot_pks, sig_num).map_err(|_| Error::<T>::InvalidAddress)?;
+
+        let hot_threshold_addr: Address = hot_mast
             .generate_address(&Pallet::<T>::network_id().to_string())
             .map_err(|_| Error::<T>::InvalidAddress)?
             .parse()
             .map_err(|_| Error::<T>::InvalidAddress)?;
 
+        // Set cold address for taproot threshold address
+        let cold_pks = cold_keys
+            .into_iter()
+            .map(|k| k.try_into().map_err(|_| Error::<T>::InvalidPublicKey))
+            .collect::<Result<Vec<_>, Error<T>>>()?;
+
+        let cold_mast = Mast::new(cold_pks, sig_num).map_err(|_| Error::<T>::InvalidAddress)?;
+
+        let cold_threshold_addr: Address = cold_mast
+            .generate_address(&Pallet::<T>::network_id().to_string())
+            .map_err(|_| Error::<T>::InvalidAddress)?
+            .parse()
+            .map_err(|_| Error::<T>::InvalidAddress)?;
+
+        // Aggregate public key script and corresponding personal public key index
+        let mut agg_pubkeys: Vec<Vec<u8>> = vec![];
+        let mut personal_accounts: Vec<Vec<T::AccountId>> = vec![];
+        for (i, p) in hot_mast.pubkeys.iter().enumerate() {
+            let script: Bytes = Builder::default()
+                .push_bytes(&p.x_coor().to_vec())
+                .push_opcode(Opcode::OP_CHECKSIG)
+                .into_script()
+                .into();
+            let mut accounts = vec![];
+            for index in hot_mast.indexs[i].iter() {
+                accounts.push(trustees[(index - 1) as usize].clone())
+            }
+            agg_pubkeys.push(script.into());
+            personal_accounts.push(accounts);
+        }
+        // TODO：consider remove redeem_script
         let hot_trustee_addr_info: BtcTrusteeAddrInfo = BtcTrusteeAddrInfo {
-            addr: threshold_addr.to_string().into_bytes(),
+            addr: hot_threshold_addr.to_string().into_bytes(),
             redeem_script: vec![],
         };
 
-        let cold_trustee_addr_info: BtcTrusteeAddrInfo =
-            create_multi_address::<T>(&cold_keys, sig_num).ok_or_else(|| {
-                log!(
-                    error,
-                    "[generate_trustee_session_info] Create cold_addr error, cold_keys:{:?}",
-                    cold_keys
-                );
-                Error::<T>::GenerateMultisigFailed
-            })?;
+        let cold_trustee_addr_info: BtcTrusteeAddrInfo = BtcTrusteeAddrInfo {
+            addr: cold_threshold_addr.to_string().into_bytes(),
+            redeem_script: vec![],
+        };
 
         log!(
             info,
@@ -235,20 +274,46 @@ impl<T: Config> TrusteeForChain<T::AccountId, BtcTrusteeType, BtcTrusteeAddrInfo
             cold_trustee_addr_info,
             trustees
         );
-
-        Ok(TrusteeSessionInfo {
-            trustee_list: trustees,
-            threshold: sig_num as u16,
-            hot_address: hot_trustee_addr_info,
-            cold_address: cold_trustee_addr_info,
-        })
+        let start_height = frame_system::Pallet::<T>::block_number();
+        let trustee_num = trustees.len();
+        Ok((
+            TrusteeSessionInfo {
+                trustee_list: trustees
+                    .into_iter()
+                    .zip(vec![0u64; trustee_num])
+                    .collect::<Vec<_>>(),
+                multi_account: None,
+                start_height: Some(start_height),
+                threshold: sig_num as u16,
+                hot_address: hot_trustee_addr_info,
+                cold_address: cold_trustee_addr_info,
+                end_height: None,
+            },
+            ScriptInfo {
+                agg_pubkeys,
+                personal_accounts,
+            },
+        ))
     }
 }
 
 impl<T: Config> Pallet<T> {
+    /// TODO: consider remove relayer
+    pub fn ensure_relayer(who: &T::AccountId) -> bool {
+        &T::RelayerInfo::current_relayer() == who
+    }
+
     pub fn ensure_trustee(who: &T::AccountId) -> DispatchResult {
+        if current_proxy_account::<T>()?.iter().any(|n| n == who) {
+            return Ok(());
+        }
+
         let trustee_session_info = current_trustee_session::<T>()?;
-        if trustee_session_info.trustee_list.iter().any(|n| n == who) {
+        if trustee_session_info
+            .trustee_list
+            .iter()
+            .any(|n| &n.0 == who)
+        {
             Ok(())
         } else {
             log!(

@@ -31,12 +31,13 @@ use sp_runtime::traits::StaticLookup;
 use sp_std::{collections::btree_map::BTreeMap, convert::TryFrom, prelude::*};
 
 use chainx_primitives::{AddrStr, AssetId, ChainAddress, Text};
+use types::ScriptInfo;
 use xp_runtime::Memo;
 use xpallet_assets::{AssetRestrictions, BalanceOf, Chain, ChainT, WithdrawalLimit};
 use xpallet_gateway_records::{WithdrawalRecordId, WithdrawalState};
 use xpallet_support::traits::{MultisigAddressFor, Validator};
 
-use self::traits::TrusteeForChain;
+use self::traits::{TrusteeForChain, TrusteeSession};
 use self::types::{
     GenericTrusteeIntentionProps, GenericTrusteeSessionInfo, TrusteeInfoConfig,
     TrusteeIntentionProps,
@@ -51,7 +52,9 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + xpallet_gateway_records::Config {
+    pub trait Config:
+        frame_system::Config + pallet_elections_phragmen::Config + xpallet_gateway_records::Config
+    {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
         type Validator: Validator<Self::AccountId>;
@@ -62,7 +65,13 @@ pub mod pallet {
         type Bitcoin: ChainT<BalanceOf<Self>>;
         type BitcoinTrustee: TrusteeForChain<
             Self::AccountId,
+            Self::BlockNumber,
             trustees::bitcoin::BtcTrusteeType,
+            trustees::bitcoin::BtcTrusteeAddrInfo,
+        >;
+        type BitcoinTrusteeSessionProvider: TrusteeSession<
+            Self::AccountId,
+            Self::BlockNumber,
             trustees::bitcoin::BtcTrusteeAddrInfo,
         >;
 
@@ -110,18 +119,53 @@ pub mod pallet {
             xpallet_gateway_records::Pallet::<T>::cancel_withdrawal(id, &from)
         }
 
-        /// Setup the trustee.
-        #[pallet::weight(<T as Config>::WeightInfo::setup_trustee())]
+        /// Setup the trustee info.
+        ///
+        /// The hot and cold public keys of the current trustee cannot be replaced at will. If they
+        /// are randomly replaced, the hot and cold public keys of the current trustee before the
+        /// replacement will be lost, resulting in the inability to reconstruct the `Mast` tree and
+        /// generate the corresponding control block.
+        ///
+        /// There are two solutions:
+        /// - the first is to record the hot and cold public keys for each
+        /// trustee renewal, and the trustee can update the hot and cold public keys at will.
+        /// - The second is to move these trusts into the `lttle_black_house` when it is necessary
+        /// to update the hot and cold public keys of trusts, and renew the trustee.
+        /// After the renewal of the trustee is completed, the hot and cold public keys can be
+        /// updated.
+        ///
+        /// The second option is currently selected. `The time when the second option
+        /// allows the hot and cold public keys to be updated is that the member is not in the
+        /// current trustee and is not in a state of renewal of the trustee`.
+        /// The advantage of the second scheme is that there is no need to change the storage
+        /// structure and record the hot and cold public keys of previous trusts.
+        /// The disadvantage is that the update of the hot and cold public keys requires the
+        /// participation of the admin account and the user cannot update the hot and cold public
+        /// keys at will.
+        #[pallet::weight(< T as Config >::WeightInfo::setup_trustee())]
         pub fn setup_trustee(
             origin: OriginFor<T>,
+            proxy_account: Option<T::AccountId>,
             chain: Chain,
             about: Text,
             hot_entity: Vec<u8>,
             cold_entity: Vec<u8>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            ensure!(T::Validator::is_validator(&who), Error::<T>::NotValidator);
-            Self::setup_trustee_impl(who, chain, about, hot_entity, cold_entity)
+            // make sure this person is a pre-selected trustee
+            // or the trustee is in little black house
+            ensure!(
+                Self::generate_trustee_pool().contains(&who)
+                    || Self::little_black_house().contains(&who),
+                Error::<T>::NotTrusteePreselectedMember
+            );
+
+            ensure!(
+                Self::ensure_not_current_trustee(&who) && !Self::trustee_transition_status(),
+                Error::<T>::ExistCurrentTrustee
+            );
+
+            Self::setup_trustee_impl(who, proxy_account, chain, about, hot_entity, cold_entity)
         }
 
         /// Transition the trustee session.
@@ -202,14 +246,31 @@ pub mod pallet {
     }
 
     #[pallet::event]
-    #[pallet::generate_deposit(pub(super) fn deposit_event)]
+    #[pallet::generate_deposit(pub (super) fn deposit_event)]
     pub enum Event<T: Config> {
         /// A (potential) trustee set the required properties. [who, chain, trustee_props]
-        SetTrusteeProps(T::AccountId, Chain, GenericTrusteeIntentionProps),
+        SetTrusteeProps(
+            T::AccountId,
+            Chain,
+            GenericTrusteeIntentionProps<T::AccountId>,
+        ),
         /// An account set its referral_account of some chain. [who, chain, referral_account]
         ReferralBinded(T::AccountId, Chain, T::AccountId),
-        /// The trustee set of a chain was changed. [chain, session_number, session_info]
-        TrusteeSetChanged(Chain, u32, GenericTrusteeSessionInfo<T::AccountId>),
+        /// The trustee set of a chain was changed. [chain, session_number, session_info, script_info]
+        TrusteeSetChanged(
+            Chain,
+            u32,
+            GenericTrusteeSessionInfo<T::AccountId, T::BlockNumber>,
+            u32,
+        ),
+        /// Treasury transfer to trustee. [source, target, chain, session_number, reward_total]
+        TransferTrusteeReward(T::AccountId, T::AccountId, Chain, u32, BalanceOf<T>),
+        /// Asset reward to trustee multi_account. [target, asset_id, reward_total]
+        TransferAssetReward(T::AccountId, AssetId, BalanceOf<T>),
+        /// The native asset of trustee multi_account is assigned. [who, multi_account, session_number, total_reward]
+        AllocNativeReward(T::AccountId, T::AccountId, u32, BalanceOf<T>),
+        /// The not native asset of trustee multi_account is assigned. [who, multi_account, session_number, asset_id, total_reward]
+        AllocNotNativeReward(T::AccountId, T::AccountId, u32, AssetId, BalanceOf<T>),
     }
 
     #[pallet::error]
@@ -224,7 +285,7 @@ pub mod pallet {
         InvalidAboutLen,
         /// invalid multisig
         InvalidMultisig,
-        /// Unsupported chain
+        /// unsupported chain
         NotSupportedChain,
         /// existing duplicate account
         DuplicatedAccountId,
@@ -232,6 +293,36 @@ pub mod pallet {
         NotRegistered,
         /// just allow validator to register trustee
         NotValidator,
+        /// just allow trustee admin to remove trustee
+        NotTrusteeAdmin,
+        /// just allow trustee preselected members to set their trustee information
+        NotTrusteePreselectedMember,
+        /// invalid public key
+        InvalidPublicKey,
+        /// invalid relayer
+        InvalidRelayer,
+        /// invalid session number
+        InvalidSessionNum,
+        /// invalid trustee history member
+        InvalidTrusteeHisMember,
+        /// invalid multi account
+        InvalidMultiAccount,
+        /// the reward of multi account is zero
+        MultiAccountRewardZero,
+        /// invalid trustee weight
+        InvalidTrusteeWeight,
+        /// invalid trustee start height
+        InvalidTrusteeStartHeight,
+        /// invalid trustee end height
+        InvalidTrusteeEndHeight,
+        /// not multi signature count
+        NotMultiSigCount,
+        /// the last trustee transition was not completed.
+        LastTransitionNotCompleted,
+        /// the trustee members was not enough.
+        TrusteeMembersNotEnough,
+        /// exist in current trustee
+        ExistCurrentTrustee,
     }
 
     #[pallet::storage]
@@ -239,16 +330,39 @@ pub mod pallet {
     pub type TrusteeMultiSigAddr<T: Config> =
         StorageMap<_, Twox64Concat, Chain, T::AccountId, ValueQuery>;
 
+    #[pallet::storage]
+    #[pallet::getter(fn trustee_admin)]
+    pub type TrusteeAdmin<T: Config> = StorageValue<_, T::AccountId, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn trustee_admin_multiply)]
+    pub type TrusteeAdminMultiply<T: Config> =
+        StorageValue<_, u64, ValueQuery, DefaultForTrusteeAdminMultiply>;
+
+    #[pallet::type_value]
+    pub fn DefaultForTrusteeAdminMultiply() -> u64 {
+        11
+    }
+
+    #[pallet::storage]
+    #[pallet::getter(fn relayer)]
+    pub type Relayer<T: Config> = StorageValue<_, T::AccountId, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn agg_pubkey_info)]
+    pub type AggPubkeyInfo<T: Config> =
+        StorageMap<_, Twox64Concat, Vec<u8>, Vec<T::AccountId>, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn trustee_sig_record)]
+    pub type TrusteeSigRecord<T: Config> =
+        StorageMap<_, Twox64Concat, T::AccountId, u64, ValueQuery>;
+
     /// Trustee info config of the corresponding chain.
     #[pallet::storage]
     #[pallet::getter(fn trustee_info_config_of)]
     pub type TrusteeInfoConfigOf<T: Config> =
         StorageMap<_, Twox64Concat, Chain, TrusteeInfoConfig, ValueQuery>;
-
-    #[pallet::type_value]
-    pub fn DefaultForTrusteeSessionInfoLen() -> u32 {
-        0
-    }
 
     /// Next Trustee session info number of the chain.
     ///
@@ -261,7 +375,15 @@ pub mod pallet {
     pub type TrusteeSessionInfoLen<T: Config> =
         StorageMap<_, Twox64Concat, Chain, u32, ValueQuery, DefaultForTrusteeSessionInfoLen>;
 
+    #[pallet::type_value]
+    pub fn DefaultForTrusteeSessionInfoLen() -> u32 {
+        0
+    }
+
     /// Trustee session info of the corresponding chain and number.
+    ///
+    /// NOTE: storage changed
+    /// TODO: storage migration
     #[pallet::storage]
     #[pallet::getter(fn trustee_session_info_of)]
     pub type TrusteeSessionInfoOf<T: Config> = StorageDoubleMap<
@@ -270,10 +392,13 @@ pub mod pallet {
         Chain,
         Twox64Concat,
         u32,
-        GenericTrusteeSessionInfo<T::AccountId>,
+        GenericTrusteeSessionInfo<T::AccountId, T::BlockNumber>,
     >;
 
     /// Trustee intention properties of the corresponding account and chain.
+    ///
+    /// NOTE: storage changed
+    /// TODO: storage migration
     #[pallet::storage]
     #[pallet::getter(fn trustee_intention_props_of)]
     pub type TrusteeIntentionPropertiesOf<T: Config> = StorageDoubleMap<
@@ -282,7 +407,7 @@ pub mod pallet {
         T::AccountId,
         Twox64Concat,
         Chain,
-        GenericTrusteeIntentionProps,
+        GenericTrusteeIntentionProps<T::AccountId>,
     >;
 
     /// The account of the corresponding chain and chain address.
@@ -307,6 +432,31 @@ pub mod pallet {
     #[pallet::getter(fn referral_binding_of)]
     pub type ReferralBindingOf<T: Config> =
         StorageDoubleMap<_, Blake2_128Concat, T::AccountId, Twox64Concat, Chain, T::AccountId>;
+
+    /// How long each trustee is kept. This defines the next block number at which an
+    /// trustee transition will happen. If set to zero, no trustee transition are ever triggered.
+    #[pallet::storage]
+    #[pallet::getter(fn trustee_transition_duration)]
+    pub type TrusteeTransitionDuration<T: Config> = StorageValue<_, T::BlockNumber, ValueQuery>;
+
+    /// The status of the of the trustee transition
+    #[pallet::storage]
+    #[pallet::getter(fn trustee_transition_status)]
+    pub type TrusteeTransitionStatus<T: Config> = StorageValue<_, bool, ValueQuery>;
+
+    /// Members not participating in trustee elections.
+    ///
+    /// The current trustee members did not conduct multiple signings and put the members in the
+    /// little black room. Filter out the member in the next trustee election
+    #[pallet::storage]
+    #[pallet::getter(fn little_black_house)]
+    pub type LittleBlackHouse<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
+
+    /// When the trust exchange begins, the total cross-chain assets of a certain AssetId
+    #[pallet::storage]
+    #[pallet::getter(fn pre_total_supply)]
+    pub type PreTotalSupply<T: Config> =
+        StorageMap<_, Twox64Concat, AssetId, BalanceOf<T>, ValueQuery>;
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
@@ -335,6 +485,7 @@ pub mod pallet {
                     for (who, about, hot, cold) in trustee_infos.iter() {
                         Pallet::<T>::setup_trustee_impl(
                             who.clone(),
+                            None,
                             *chain,
                             about.clone(),
                             hot.clone(),
@@ -401,8 +552,17 @@ pub fn is_valid_about<T: Config>(about: &[u8]) -> DispatchResult {
 
 // trustees
 impl<T: Config> Pallet<T> {
+    pub fn ensure_not_current_trustee(who: &T::AccountId) -> bool {
+        if let Ok(info) = T::BitcoinTrusteeSessionProvider::current_trustee_session() {
+            !info.trustee_list.into_iter().any(|n| &n.0 == who)
+        } else {
+            true
+        }
+    }
+
     pub fn setup_trustee_impl(
         who: T::AccountId,
+        proxy_account: Option<T::AccountId>,
         chain: Chain,
         about: Text,
         hot_entity: Vec<u8>,
@@ -419,21 +579,61 @@ impl<T: Config> Pallet<T> {
             _ => return Err(Error::<T>::NotSupportedChain.into()),
         };
 
-        let props = GenericTrusteeIntentionProps(TrusteeIntentionProps::<Vec<u8>> {
+        let proxy_account = if let Some(addr) = proxy_account {
+            Some(addr)
+        } else {
+            Some(who.clone())
+        };
+
+        let props = GenericTrusteeIntentionProps::<T::AccountId>(TrusteeIntentionProps::<
+            T::AccountId,
+            Vec<u8>,
+        > {
+            proxy_account,
             about,
             hot_entity: hot,
             cold_entity: cold,
         });
 
-        TrusteeIntentionPropertiesOf::<T>::insert(&who, chain, props.clone());
+        if TrusteeIntentionPropertiesOf::<T>::contains_key(&who, chain) {
+            TrusteeIntentionPropertiesOf::<T>::mutate(&who, chain, |t| *t = Some(props.clone()));
+        } else {
+            TrusteeIntentionPropertiesOf::<T>::insert(&who, chain, props.clone());
+        }
         Self::deposit_event(Event::<T>::SetTrusteeProps(who, chain, props));
         Ok(())
+    }
+
+    pub fn generate_trustee_pool() -> Vec<T::AccountId> {
+        let members = {
+            let mut members = pallet_elections_phragmen::Pallet::<T>::members();
+            members.sort_unstable_by(|a, b| b.stake.cmp(&a.stake));
+            members
+                .iter()
+                .map(|m| m.who.clone())
+                .collect::<Vec<T::AccountId>>()
+        };
+        let runners_up = {
+            let mut runners_up = pallet_elections_phragmen::Pallet::<T>::runners_up();
+            runners_up.sort_unstable_by(|a, b| b.stake.cmp(&a.stake));
+            runners_up
+                .iter()
+                .map(|m| m.who.clone())
+                .collect::<Vec<T::AccountId>>()
+        };
+        [members, runners_up].concat()
     }
 
     pub fn try_generate_session_info(
         chain: Chain,
         new_trustees: Vec<T::AccountId>,
-    ) -> Result<GenericTrusteeSessionInfo<T::AccountId>, DispatchError> {
+    ) -> Result<
+        (
+            GenericTrusteeSessionInfo<T::AccountId, T::BlockNumber>,
+            ScriptInfo<T::AccountId>,
+        ),
+        DispatchError,
+    > {
         let config = Self::trustee_info_config_of(chain);
         let has_duplicate =
             (1..new_trustees.len()).any(|i| new_trustees[i..].contains(&new_trustees[i - 1]));
@@ -464,14 +664,14 @@ impl<T: Config> Pallet<T> {
                     .map(|(id, prop)| {
                         (
                             id,
-                            TrusteeIntentionProps::<_>::try_from(prop)
+                            TrusteeIntentionProps::<T::AccountId, _>::try_from(prop)
                                 .expect("must decode succss from storage data"),
                         )
                     })
                     .collect();
                 let session_info = T::BitcoinTrustee::generate_trustee_session_info(props, config)?;
 
-                session_info.into()
+                (session_info.0.into(), session_info.1)
             }
             _ => return Err(Error::<T>::NotSupportedChain.into()),
         };
@@ -482,27 +682,60 @@ impl<T: Config> Pallet<T> {
         chain: Chain,
         new_trustees: Vec<T::AccountId>,
     ) -> DispatchResult {
-        let info = Self::try_generate_session_info(chain, new_trustees)?;
-        let multi_addr = Self::generate_multisig_addr(chain, &info)?;
+        let mut info = Self::try_generate_session_info(chain, new_trustees)?;
+        let multi_addr = Self::generate_multisig_addr(chain, &info.0)?;
 
-        let session_number = Self::trustee_session_info_len(chain);
-        // FIXME: rethink about the overflow case.
-        let next_number = session_number.checked_add(1).unwrap_or(0u32);
+        let session_number = Self::trustee_session_info_len(chain)
+            .checked_add(1)
+            .unwrap_or(0u32);
 
-        TrusteeSessionInfoLen::<T>::insert(chain, next_number);
-        TrusteeSessionInfoOf::<T>::insert(chain, session_number, info.clone());
+        TrusteeSessionInfoLen::<T>::insert(chain, session_number);
+        info.0 .0.multi_account = Some(multi_addr.clone());
+        TrusteeSessionInfoOf::<T>::insert(chain, session_number, info.0.clone());
         TrusteeMultiSigAddr::<T>::insert(chain, multi_addr);
+        // Remove the information of the previous aggregate public key，Withdrawal is prohibited at this time.
+        AggPubkeyInfo::<T>::remove_all(None);
+        for index in 0..info.1.agg_pubkeys.len() {
+            AggPubkeyInfo::<T>::insert(
+                &info.1.agg_pubkeys[index],
+                info.1.personal_accounts[index].clone(),
+            );
+        }
+        TrusteeAdmin::<T>::kill();
 
-        Self::deposit_event(Event::<T>::TrusteeSetChanged(chain, session_number, info));
+        Self::deposit_event(Event::<T>::TrusteeSetChanged(
+            chain,
+            session_number,
+            info.0,
+            info.1.agg_pubkeys.len() as u32,
+        ));
         Ok(())
     }
 
     pub fn generate_multisig_addr(
         chain: Chain,
-        info: &GenericTrusteeSessionInfo<T::AccountId>,
+        session_info: &GenericTrusteeSessionInfo<T::AccountId, T::BlockNumber>,
     ) -> Result<T::AccountId, DispatchError> {
+        // If there is a proxy account, choose a proxy account
+        let mut acc_list: Vec<T::AccountId> = vec![];
+        for acc in session_info.0.trustee_list.iter() {
+            let acc = Self::trustee_intention_props_of(&acc.0, chain)
+                .ok_or_else::<DispatchError, _>(|| {
+                    error!(
+                        target: "runtime::gateway::common",
+                        "[generate_multisig_addr] acc {:?} has not in TrusteeIntentionPropertiesOf",
+                        acc.0
+                    );
+                    Error::<T>::NotRegistered.into()
+                })?
+                .0
+                .proxy_account
+                .unwrap_or_else(|| acc.0.clone());
+            acc_list.push(acc);
+        }
+
         let multi_addr =
-            T::DetermineMultisigAddress::calc_multisig(&info.0.trustee_list, info.0.threshold);
+            T::DetermineMultisigAddress::calc_multisig(&acc_list, session_info.0.threshold);
 
         // Each chain must have a distinct multisig address,
         // duplicated multisig address is not allowed.

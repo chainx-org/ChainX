@@ -89,7 +89,11 @@ pub mod pallet {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type UnixTime: UnixTime;
         type AccountExtractor: AccountExtractor<Self::AccountId, ReferralId>;
-        type TrusteeSessionProvider: TrusteeSession<Self::AccountId, BtcTrusteeAddrInfo>;
+        type TrusteeSessionProvider: TrusteeSession<
+            Self::AccountId,
+            Self::BlockNumber,
+            BtcTrusteeAddrInfo,
+        >;
         type TrusteeOrigin: EnsureOrigin<Self::Origin, Success = Self::AccountId>;
         type ReferralBinding: ReferralBinding<Self::AccountId>;
         type AddressBinding: AddressBinding<Self::AccountId, BtcAddress>;

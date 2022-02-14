@@ -40,6 +40,7 @@ xpallet-support = { path = "../../support", default-features = false }
 
 # light-bitcoin
 light-bitcoin = { git = "https://github.com/chainx-org/light-bitcoin", branch = "taproot", default-features = false }
+musig2 = { git = "https://github.com/chainx-org/Musig2", branch = "lib", default-features = false }
 
 [dev-dependencies]
 hex = "0.4"
@@ -84,6 +85,7 @@ std = [
     "xpallet-support/std",
     # light-bitcoin
     "light-bitcoin/std",
+    "musig2/std",
 ]
 runtime-benchmarks = ["frame-benchmarking"]
 ss58check = ["xp-gateway-common/ss58check"]

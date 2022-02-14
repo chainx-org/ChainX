@@ -7,15 +7,18 @@ use serde::{Deserialize, Serialize};
 use sp_runtime::RuntimeDebug;
 use sp_std::{convert::TryFrom, fmt, prelude::Vec};
 
-use xpallet_assets::Chain;
-
 use super::{TrusteeMultisigProvider, TrusteeSessionManager};
-use crate::traits::ChainProvider;
-use crate::types::{TrusteeIntentionProps, TrusteeSessionInfo};
+use crate::{
+    traits::{ChainProvider, RelayerInfo},
+    types::{TrusteeIntentionProps, TrusteeSessionInfo},
+    {Config, Pallet},
+};
+use xp_assets_registrar::Chain;
 
 pub type BtcAddress = Vec<u8>;
-pub type BtcTrusteeSessionInfo<AccountId> = TrusteeSessionInfo<AccountId, BtcTrusteeAddrInfo>;
-pub type BtcTrusteeIntentionProps = TrusteeIntentionProps<BtcTrusteeType>;
+pub type BtcTrusteeSessionInfo<AccountId, BlockNumber> =
+    TrusteeSessionInfo<AccountId, BlockNumber, BtcTrusteeAddrInfo>;
+pub type BtcTrusteeIntentionProps<AccountId> = TrusteeIntentionProps<AccountId, BtcTrusteeType>;
 pub type BtcTrusteeSessionManager<T> = TrusteeSessionManager<T, BtcTrusteeAddrInfo>;
 pub type BtcTrusteeMultisig<T> = TrusteeMultisigProvider<T, BtcTrusteeType>;
 
@@ -104,6 +107,12 @@ impl TryFrom<Vec<u8>> for BtcTrusteeType {
 impl ChainProvider for BtcTrusteeType {
     fn chain() -> Chain {
         Chain::Bitcoin
+    }
+}
+
+impl<T: Config> RelayerInfo<T::AccountId> for Pallet<T> {
+    fn current_relayer() -> T::AccountId {
+        Self::relayer()
     }
 }
 
