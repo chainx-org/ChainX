@@ -8,8 +8,8 @@ pub(crate) mod balances {
     use crate::Config;
 
     // Set PCX free balance.
-    pub fn initialize<T: Config>(free_balances: &[FreeBalanceInfo<T::AccountId, BalanceOf<T>>]) {
-        let set_free_balance = |who: &T::AccountId, free: &BalanceOf<T>| {
+    pub fn initialize<T: Config>(free_balances: &[FreeBalanceInfo<T::AccountId, T::Balance>]) {
+        let set_free_balance = |who: &T::AccountId, free: &T::Balance| {
             T::AccountStore::insert(
                 who,
                 AccountData {
@@ -19,7 +19,7 @@ pub(crate) mod balances {
             )
         };
 
-        let mut total_issuance = BalanceOf<T>::default();
+        let mut total_issuance = T::Balance::default();
 
         for FreeBalanceInfo { who, free } in free_balances {
             let _ = set_free_balance(who, free);

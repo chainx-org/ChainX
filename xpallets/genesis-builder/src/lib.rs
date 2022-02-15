@@ -40,7 +40,7 @@ pub mod pallet {
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
-        pub params: AllParams<T::AccountId, BalanceOf<T>, AssetBalanceOf<T>, StakingBalanceOf<T>>,
+        pub params: AllParams<T::AccountId, T::Balance, AssetBalanceOf<T>, StakingBalanceOf<T>>,
         pub initial_authorities: Vec<Vec<u8>>,
     }
 
