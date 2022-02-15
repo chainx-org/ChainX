@@ -21,19 +21,21 @@ sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false, optional = true }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
+
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
+pallet-assets = { path = "../../assets", default-features = false }
 
 # Orml
 orml-utilities = { git = "https://github.com/chainx-org/ormls", branch = "main", default-features = false }
 
 # ChainX primitives
-chainx-primitives = { path = "../../../primitives", default-features = false }
+sherpax-primitives = { path = "../../../primitives", default-features = false }
+xp-assets-registrar = { path = "../../../primitives/assets-registrar", default-features = false }
 xp-gateway-bitcoin = { path = "../../../primitives/gateway/bitcoin", default-features = false }
 xp-gateway-common = { path = "../../../primitives/gateway/common", default-features = false }
 xp-protocol = { path = "../../../primitives/protocol", default-features = false }
 
 # ChainX pallets
-xpallet-assets = { path = "../../assets", default-features = false }
 xpallet-gateway-common = { path = "../common", default-features = false }
 xpallet-gateway-records = { path = "../records", default-features = false }
 xpallet-support = { path = "../../support", default-features = false }
@@ -51,8 +53,8 @@ sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkad
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11" }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11" }
 pallet-multisig = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11" }
+pallet-elections-phragmen = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11" }
 xp-assets-registrar = { path = "../../../primitives/assets-registrar" }
-xpallet-assets-registrar = { path = "../../assets-registrar" }
 
 [features]
 default = ["std"]
@@ -74,12 +76,12 @@ std = [
     # Orml
     "orml-utilities/std",
     # ChainX primitives
-    "chainx-primitives/std",
+    "sherpax-primitives/std",
+    "xp-assets-registrar/std",
     "xp-gateway-bitcoin/std",
     "xp-gateway-common/std",
     "xp-protocol/std",
     # ChainX pallets
-    "xpallet-assets/std",
     "xpallet-gateway-common/std",
     "xpallet-gateway-records/std",
     "xpallet-support/std",

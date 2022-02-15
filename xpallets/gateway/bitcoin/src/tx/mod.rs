@@ -1,6 +1,7 @@
 // Copyright 2019-2021 ChainX Project Authors. Licensed under GPL-3.0.
 #![allow(clippy::ptr_arg)]
 extern crate alloc;
+
 use alloc::string::ToString;
 
 mod secp256k1_verifier;
@@ -9,6 +10,7 @@ pub mod validator;
 use frame_support::{
     dispatch::DispatchResult,
     log::{self, debug, error, info, warn},
+    traits::{tokens::fungibles::Mutate, Get},
 };
 use sp_runtime::{traits::Zero, SaturatedConversion};
 use sp_std::prelude::*;
@@ -19,18 +21,16 @@ use light_bitcoin::{
     primitives::{hash_rev, H256},
 };
 
-use chainx_primitives::AssetId;
-use xp_gateway_bitcoin::{BtcDepositInfo, BtcTxMetaType, BtcTxTypeDetector};
-use xp_gateway_common::AccountExtractor;
-use xpallet_assets::ChainT;
-use xpallet_gateway_common::traits::{AddressBinding, ReferralBinding};
-use xpallet_support::try_str;
-
 pub use self::validator::validate_transaction;
 use crate::{
     types::{AccountInfo, BtcAddress, BtcDepositCache, BtcTxResult, BtcTxState},
-    BalanceOf, Config, Error, Event, Pallet, PendingDeposits, WithdrawalProposal,
+    Config, Error, Event, Pallet, PendingDeposits, WithdrawalProposal,
 };
+use xp_gateway_bitcoin::{BtcDepositInfo, BtcTxMetaType, BtcTxTypeDetector};
+use xp_gateway_common::AccountExtractor;
+use xpallet_gateway_common::traits::{AddressBinding, ReferralBinding, TrusteeInfoUpdate};
+use xpallet_gateway_records::ChainT;
+use xpallet_support::try_str;
 
 pub fn process_tx<T: Config>(
     tx: Transaction,
@@ -53,12 +53,21 @@ pub fn process_tx<T: Config>(
     let result = match meta_type {
         BtcTxMetaType::<_>::Deposit(deposit_info) => deposit::<T>(tx.hash(), deposit_info),
         BtcTxMetaType::<_>::Withdrawal => withdraw::<T>(tx),
-        BtcTxMetaType::HotAndCold | BtcTxMetaType::TrusteeTransition => BtcTxResult::Success,
+        BtcTxMetaType::TrusteeTransition => trustee_transition::<T>(tx),
+        BtcTxMetaType::HotAndCold => BtcTxResult::Success,
         // mark `Irrelevance` be `Failure` so that it could be replayed in the future
         BtcTxMetaType::<_>::Irrelevance => BtcTxResult::Failure,
     };
 
     BtcTxState { tx_type, result }
+}
+
+fn trustee_transition<T: Config>(tx: Transaction) -> BtcTxResult {
+    let amount = tx.outputs().iter().map(|output| output.value).sum::<u64>();
+
+    T::TrusteeInfoUpdate::update_transition_status(false, Some(amount));
+
+    BtcTxResult::Success
 }
 
 fn deposit<T: Config>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) -> BtcTxResult {
@@ -101,12 +110,8 @@ fn deposit<T: Config>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) ->
 
     match account_info {
         AccountInfo::<_>::Account((account, referral)) => {
-            T::ReferralBinding::update_binding(
-                &<Pallet<T> as ChainT<_>>::ASSET_ID,
-                &account,
-                referral,
-            );
-            match deposit_token::<T>(txid, &account, deposit_info.deposit_value) {
+            T::ReferralBinding::update_binding(&T::BtcAssetId::get(), &account, referral);
+            match deposit_token::<T>(txid, &account, deposit_info.deposit_value.saturated_into()) {
                 Ok(_) => {
                     info!(
                         target: "runtime::bitcoin",
@@ -134,13 +139,12 @@ fn deposit<T: Config>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) ->
     }
 }
 
-fn deposit_token<T: Config>(txid: H256, who: &T::AccountId, balance: u64) -> DispatchResult {
-    let id: AssetId = <Pallet<T> as ChainT<_>>::ASSET_ID;
+fn deposit_token<T: Config>(txid: H256, who: &T::AccountId, balance: T::Balance) -> DispatchResult {
+    let asset_id = T::BtcAssetId::get();
 
-    let value: BalanceOf<T> = balance.saturated_into();
-    match <xpallet_gateway_records::Pallet<T>>::deposit(who, id, value) {
+    match pallet_assets::Pallet::<T>::mint_into(asset_id, who, balance) {
         Ok(()) => {
-            Pallet::<T>::deposit_event(Event::<T>::Deposited(txid, who.clone(), value));
+            Pallet::<T>::deposit_event(Event::<T>::Deposited(txid, who.clone(), balance));
             Ok(())
         }
         Err(err) => {
@@ -159,7 +163,7 @@ pub fn remove_pending_deposit<T: Config>(input_address: &BtcAddress, who: &T::Ac
     let records = PendingDeposits::<T>::take(input_address);
     for record in records {
         // ignore error
-        let _ = deposit_token::<T>(record.txid, who, record.balance);
+        let _ = deposit_token::<T>(record.txid, who, record.balance.saturated_into());
         info!(
             target: "runtime::bitcoin",
             "[remove_pending_deposit] Use pending info to re-deposit, who:{:?}, balance:{}, cached_tx:{:?}",
@@ -208,13 +212,25 @@ fn withdraw<T: Config>(tx: Transaction) -> BtcTxResult {
         let tx_hash = tx.hash();
 
         if proposal_hash == tx_hash {
-            let mut total = BalanceOf::<T>::zero();
+            // Check if the transaction is normal witness
+            let input = &tx.inputs()[0];
+            if input.script_witness.len() != 3 {
+                error!(
+                    target: "runtime::bitcoin",
+                    "[withdraw] Withdraw tx {:?} is not normal witness, proposal:{:?}",
+                    tx,
+                    proposal
+                );
+                return BtcTxResult::Failure;
+            }
+
+            let mut total = T::Balance::zero();
             for number in proposal.withdrawal_id_list.iter() {
                 // just for event record
                 let withdraw_balance =
                     xpallet_gateway_records::Pallet::<T>::pending_withdrawals(number)
                         .map(|record| record.balance())
-                        .unwrap_or_else(BalanceOf::<T>::zero);
+                        .unwrap_or_else(T::Balance::zero);
                 total += withdraw_balance;
 
                 match xpallet_gateway_records::Pallet::<T>::finish_withdrawal(*number, None) {
@@ -231,10 +247,17 @@ fn withdraw<T: Config>(tx: Transaction) -> BtcTxResult {
                 }
             }
 
+            // Record trustee signature
+            T::TrusteeInfoUpdate::update_trustee_sig_record(
+                input.script_witness[1].as_slice(),
+                tx.outputs.iter().map(|info| info.value).sum(),
+            );
+
             let btc_withdrawal_fee = Pallet::<T>::btc_withdrawal_fee();
             // real withdraw value would reduce withdraw_fee
             total -=
                 (proposal.withdrawal_id_list.len() as u64 * btc_withdrawal_fee).saturated_into();
+
             Pallet::<T>::deposit_event(Event::<T>::Withdrawn(
                 tx_hash,
                 proposal.withdrawal_id_list,
@@ -270,6 +293,7 @@ fn withdraw<T: Config>(tx: Transaction) -> BtcTxResult {
 }
 
 /// Returns Ok if `tx1` and `tx2` are the same transaction.
+#[allow(dead_code)]
 pub fn ensure_identical<T: Config>(tx1: &Transaction, tx2: &Transaction) -> DispatchResult {
     if tx1.version == tx2.version
         && tx1.outputs == tx2.outputs

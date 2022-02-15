@@ -1,5 +1,5 @@
 [package]
-name = "xpallet-gateway-common-rpc"
+name = "xpallet-gateway-bitcoin-rpc"
 version = "3.0.0"
 authors = ["The ChainX Authors"]
 edition = "2018"
@@ -24,4 +24,4 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 xp-rpc = { path = "../../../../primitives/rpc" }
 
 # ChainX pallets api
-xpallet-gateway-common-rpc-runtime-api = { path = "./runtime-api" }
+xpallet-gateway-bitcoin-rpc-runtime-api = { path = "./runtime-api" }

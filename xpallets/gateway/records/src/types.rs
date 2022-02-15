@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use sp_runtime::RuntimeDebug;
 
-use chainx_primitives::{AddrStr, AssetId};
+use sherpax_primitives::AddrStr;
 use xp_runtime::Memo;
 
 /// The id of withdrawal record (u32 is enough).
@@ -42,7 +42,7 @@ impl Default for WithdrawalState {
 
 /// WithdrawalRecord for withdrawal
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub struct WithdrawalRecord<AccountId, Balance, BlockNumber> {
+pub struct WithdrawalRecord<AccountId, AssetId, Balance, BlockNumber> {
     asset_id: AssetId,
     applicant: AccountId,
     balance: Balance,
@@ -51,9 +51,11 @@ pub struct WithdrawalRecord<AccountId, Balance, BlockNumber> {
     height: BlockNumber,
 }
 
-impl<AccountId, Balance, BlockNumber> WithdrawalRecord<AccountId, Balance, BlockNumber>
+impl<AccountId, AssetId, Balance, BlockNumber>
+    WithdrawalRecord<AccountId, AssetId, Balance, BlockNumber>
 where
     AccountId: Codec + Clone,
+    AssetId: Codec + Copy + Clone,
     Balance: Codec + Copy + Clone,
     BlockNumber: Codec + Copy + Clone,
 {
@@ -95,7 +97,7 @@ where
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, TypeInfo)]
-pub struct Withdrawal<AccountId, Balance, BlockNumber> {
+pub struct Withdrawal<AccountId, AssetId, Balance, BlockNumber> {
     pub asset_id: AssetId,
     pub applicant: AccountId,
     pub balance: Balance,
@@ -105,9 +107,11 @@ pub struct Withdrawal<AccountId, Balance, BlockNumber> {
     pub state: WithdrawalState,
 }
 
-impl<AccountId, Balance, BlockNumber> Withdrawal<AccountId, Balance, BlockNumber> {
+impl<AccountId, AssetId, Balance, BlockNumber>
+    Withdrawal<AccountId, AssetId, Balance, BlockNumber>
+{
     pub fn new(
-        record: WithdrawalRecord<AccountId, Balance, BlockNumber>,
+        record: WithdrawalRecord<AccountId, AssetId, Balance, BlockNumber>,
         state: WithdrawalState,
     ) -> Self {
         Self {
@@ -120,4 +124,12 @@ impl<AccountId, Balance, BlockNumber> Withdrawal<AccountId, Balance, BlockNumber
             state,
         }
     }
+}
+
+#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug, TypeInfo)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
+pub struct WithdrawalLimit<Balance> {
+    pub minimal_withdrawal: Balance,
+    pub fee: Balance,
 }

@@ -1,5 +1,5 @@
 [package]
-name = "xpallet-gateway-common-rpc-runtime-api"
+name = "xpallet-gateway-bitcoin-rpc-runtime-api"
 version = "3.0.0"
 authors = ["The ChainX Authors"]
 edition = "2018"
@@ -21,8 +21,7 @@ xp-assets-registrar = { path = "../../../../../primitives/assets-registrar", def
 xp-runtime = { path = "../../../../../primitives/runtime", default-features = false }
 
 # ChainX pallets
-xpallet-gateway-common = { path = "../../", default-features = false }
-xpallet-gateway-records = { path = "../../../records", default-features = false }
+xpallet-gateway-bitcoin = { path = "../../", default-features = false }
 
 [features]
 default = ["std"]
@@ -37,6 +36,5 @@ std = [
     "xp-assets-registrar/std",
     "xp-runtime/std",
     # ChainX pallets
-    "xpallet-gateway-common/std",
-    "xpallet-gateway-records/std",
+    "xpallet-gateway-bitcoin/std"
 ]

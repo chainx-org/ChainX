@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use sp_runtime::RuntimeDebug;
 use sp_std::{convert::TryFrom, prelude::Vec};
 
-use chainx_primitives::Text;
+use sherpax_primitives::Text;
 
 use crate::traits::BytesLike;
 

@@ -10,8 +10,8 @@ use frame_system::RawOrigin;
 fn test_normal() {
     ExtBuilder::default().build_and_execute(|| {
         // deposit
-        assert_ok!(XGatewayRecords::deposit(&ALICE, X_BTC, 100));
-        assert_eq!(XAssets::usable_balance(&ALICE, &X_BTC), 100 + 100);
+        assert_ok!(XGatewayRecords::deposit(&ALICE, X_BTC, 500));
+        assert_eq!(Assets::balance(X_BTC, ALICE), 500);
 
         // withdraw
         assert_ok!(XGatewayRecords::withdraw(
@@ -21,6 +21,8 @@ fn test_normal() {
             b"addr".to_vec(),
             b"ext".to_vec().into()
         ));
+        // lock asset
+        assert_eq!(Locks::<Test>::get(ALICE, X_BTC), Some(50));
 
         let numbers = XGatewayRecords::withdrawals_list_by_chain(Chain::Bitcoin)
             .into_iter()
@@ -32,21 +34,22 @@ fn test_normal() {
             &numbers,
             Chain::Bitcoin
         ));
+
         for i in numbers {
             assert_ok!(XGatewayRecords::finish_withdrawal(i, None));
         }
-        assert_eq!(XAssets::usable_balance(&ALICE, &X_BTC), 50 + 100);
+
+        assert_eq!(Assets::balance(X_BTC, ALICE), 500 - 50);
     })
 }
-
 #[test]
 fn test_normal2() {
     ExtBuilder::default().build_and_execute(|| {
         // deposit
-        assert_ok!(XGatewayRecords::deposit(&ALICE, X_BTC, 100));
-        assert_eq!(XAssets::usable_balance(&ALICE, &X_BTC), 100 + 100);
+        assert_ok!(XGatewayRecords::deposit(&ALICE, X_BTC, 500));
+        assert_eq!(Assets::balance(X_BTC, ALICE), 500);
         assert_ok!(XGatewayRecords::deposit(&ALICE, X_ETH, 500));
-        assert_eq!(XAssets::usable_balance(&ALICE, &X_ETH), 500 + 100);
+        assert_eq!(Assets::balance(X_ETH, ALICE), 500);
 
         // withdraw
         assert_ok!(XGatewayRecords::withdraw(
@@ -109,28 +112,23 @@ fn test_normal2() {
             Some(Chain::Ethereum)
         ));
 
-        assert_eq!(XAssets::usable_balance(&ALICE, &X_BTC), 50 + 100);
-        assert_eq!(
-            XAssets::usable_balance(&ALICE, &X_ETH),
-            500 + 100 - 50 - 100
-        );
+        assert_eq!(Assets::balance(X_BTC, ALICE), 500 - 50);
+        assert_eq!(Assets::balance(X_ETH, ALICE), 500 - 50 - 100);
     })
 }
 
 #[test]
-fn test_withdrawal_more_then_usable() {
+fn test_withdrawal_more_than_usable() {
     ExtBuilder::default().build_and_execute(|| {
-        assert_ok!(XGatewayRecords::deposit(&ALICE, X_BTC, 10));
-
         assert_noop!(
             XGatewayRecords::withdraw(
                 &ALICE,
                 X_BTC,
-                100 + 50,
+                (100 + 50) as u128,
                 b"addr".to_vec(),
                 b"ext".to_vec().into()
             ),
-            xpallet_assets::Error::<Test>::InsufficientBalance
+            pallet_assets::Error::<Test>::BalanceLow
         );
     })
 }
@@ -138,7 +136,7 @@ fn test_withdrawal_more_then_usable() {
 #[test]
 fn test_withdrawal_force_set_state() {
     ExtBuilder::default().build_and_execute(|| {
-        assert_ok!(XGatewayRecords::deposit(&ALICE, X_BTC, 10));
+        assert_ok!(XGatewayRecords::deposit(&ALICE, X_BTC, 100));
         // applying
         assert_ok!(XGatewayRecords::withdraw(
             &ALICE,
@@ -147,14 +145,15 @@ fn test_withdrawal_force_set_state() {
             b"addr".to_vec(),
             b"ext".to_vec().into()
         ));
-        assert_eq!(XAssets::usable_balance(&ALICE, &X_BTC), 100);
+        assert_eq!(Locks::<Test>::get(ALICE, X_BTC), Some(10));
         // ignore processing state, force release locked balance
         assert_ok!(XGatewayRecords::set_withdrawal_state(
             RawOrigin::Root.into(),
             0,
             WithdrawalState::RootCancel
         ));
-        assert_eq!(XAssets::usable_balance(&ALICE, &X_BTC), 100 + 10);
+
+        assert_eq!(Locks::<Test>::get(ALICE, X_BTC), None);
         // change to processing
         assert_ok!(XGatewayRecords::withdraw(
             &ALICE,
@@ -187,22 +186,14 @@ fn test_withdrawal_force_set_state() {
 }
 
 #[test]
-fn test_withdrawal_chainx() {
+fn test_lock_unlock() {
     ExtBuilder::default().build_and_execute(|| {
-        assert_noop!(
-            XGatewayRecords::deposit(&ALICE, ChainXAssetId::get(), 10),
-            xpallet_assets::Error::<Test>::DenyNativeAsset
-        );
+        assert_ok!(XGatewayRecords::deposit(&ALICE, X_BTC, 100));
 
-        assert_noop!(
-            XGatewayRecords::withdraw(
-                &ALICE,
-                ChainXAssetId::get(),
-                50,
-                b"addr".to_vec(),
-                b"ext".to_vec().into()
-            ),
-            xpallet_assets::Error::<Test>::DenyNativeAsset
-        );
+        assert_ok!(Pallet::<Test>::lock(&ALICE, X_BTC, 10));
+        assert_eq!(Locks::<Test>::get(ALICE, X_BTC), Some(10));
+
+        assert_ok!(Pallet::<Test>::unlock(&ALICE, X_BTC, 5));
+        assert_eq!(Locks::<Test>::get(ALICE, X_BTC), Some(5));
     })
 }

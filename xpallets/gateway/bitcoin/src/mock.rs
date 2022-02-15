@@ -7,8 +7,12 @@ use hex_literal::hex;
 
 #[cfg(feature = "std")]
 use frame_support::traits::GenesisBuild;
-use frame_support::{parameter_types, sp_io, traits::UnixTime, weights::Weight};
-use frame_system::EnsureSignedBy;
+use frame_support::{
+    parameter_types, sp_io,
+    traits::{LockIdentifier, UnixTime},
+    weights::Weight,
+};
+use frame_system::{EnsureRoot, EnsureSigned, EnsureSignedBy};
 use sp_core::H256;
 use sp_keyring::sr25519;
 use sp_runtime::{
@@ -17,12 +21,10 @@ use sp_runtime::{
     AccountId32, Perbill,
 };
 
-use chainx_primitives::AssetId;
+use sherpax_primitives::AssetId;
 use xp_assets_registrar::Chain;
 pub use xp_protocol::{X_BTC, X_ETH};
-use xpallet_assets::AssetRestrictions;
-use xpallet_assets_registrar::AssetInfo;
-use xpallet_gateway_common::types::TrusteeInfoConfig;
+use xpallet_gateway_common::{trustees, types::TrusteeInfoConfig};
 
 use light_bitcoin::{
     chain::BlockHeader as BtcHeader,
@@ -41,7 +43,6 @@ use crate::{
 pub(crate) type AccountId = AccountId32;
 pub(crate) type BlockNumber = u64;
 pub(crate) type Balance = u128;
-pub(crate) type Amount = i128;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -54,8 +55,8 @@ frame_support::construct_runtime!(
     {
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-        XAssetsRegistrar: xpallet_assets_registrar::{Pallet, Call, Storage, Event<T>, Config},
-        XAssets: xpallet_assets::{Pallet, Call, Storage, Event<T>, Config<T>},
+        Elections: pallet_elections_phragmen::{Pallet, Call, Storage, Event<T>, Config<T>},
+        Assets: pallet_assets::{Pallet, Call, Storage, Event<T>},
         XGatewayRecords: xpallet_gateway_records::{Pallet, Call, Storage, Event<T>},
         XGatewayCommon: xpallet_gateway_common::{Pallet, Call, Storage, Event<T>, Config<T>},
         XGatewayBitcoin: xpallet_gateway_bitcoin::{Pallet, Call, Storage, Event<T>, Config<T>},
@@ -101,41 +102,82 @@ parameter_types! {
     pub const MaxReserves: u32 = 50;
 }
 impl pallet_balances::Config for Test {
-    type MaxLocks = ();
     type Balance = Balance;
     type DustRemoval = ();
     type Event = ();
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
     type WeightInfo = ();
-    type ReserveIdentifier = [u8; 8];
+    type MaxLocks = ();
     type MaxReserves = MaxReserves;
+    type ReserveIdentifier = [u8; 8];
+}
+
+parameter_types! {
+    pub const ElectionsPhragmenPalletId: LockIdentifier = *b"phrelect";
+}
+
+frame_support::parameter_types! {
+    pub static VotingBondBase: u64 = 2;
+    pub static VotingBondFactor: u64 = 0;
+    pub static CandidacyBond: u64 = 3;
+    pub static DesiredMembers: u32 = 2;
+    pub static DesiredRunnersUp: u32 = 0;
+    pub static TermDuration: u64 = 5;
+    pub static Members: Vec<u64> = vec![];
+    pub static Prime: Option<u64> = None;
+}
+
+impl pallet_elections_phragmen::Config for Test {
+    type Event = ();
+    type PalletId = ElectionsPhragmenPalletId;
+    type Currency = Balances;
+    type ChangeMembers = ();
+    type InitializeMembers = ();
+    type CurrencyToVote = frame_support::traits::SaturatingCurrencyToVote;
+    type CandidacyBond = CandidacyBond;
+    type VotingBondBase = VotingBondBase;
+    type VotingBondFactor = VotingBondFactor;
+    type LoserCandidate = ();
+    type KickedMember = ();
+    type DesiredMembers = DesiredMembers;
+    type DesiredRunnersUp = DesiredRunnersUp;
+    type TermDuration = TermDuration;
+    type WeightInfo = ();
+}
+parameter_types! {
+    pub const AssetDeposit: Balance = 1;
+    pub const ApprovalDeposit: Balance = 1;
+    pub const StringLimit: u32 = 50;
+    pub const MetadataDepositBase: Balance = 1;
+    pub const MetadataDepositPerByte: Balance = 1;
+}
+
+impl pallet_assets::Config for Test {
+    type Event = ();
+    type Balance = Balance;
+    type AssetId = AssetId;
+    type Currency = Balances;
+    type ForceOrigin = EnsureRoot<AccountId>;
+    type AssetDeposit = AssetDeposit;
+    type MetadataDepositBase = MetadataDepositBase;
+    type MetadataDepositPerByte = MetadataDepositPerByte;
+    type ApprovalDeposit = ApprovalDeposit;
+    type StringLimit = StringLimit;
+    type Freezer = XGatewayRecords;
+    type Extra = ();
+    type WeightInfo = pallet_assets::weights::SubstrateWeight<Test>;
 }
 
 // assets
 parameter_types! {
-    pub const ChainXAssetId: AssetId = 0;
-}
-
-impl xpallet_assets_registrar::Config for Test {
-    type Event = ();
-    type NativeAssetId = ChainXAssetId;
-    type RegistrarHandler = ();
-    type WeightInfo = ();
-}
-
-impl xpallet_assets::Config for Test {
-    type Event = ();
-    type Currency = Balances;
-    type Amount = Amount;
-    type TreasuryAccount = ();
-    type OnCreatedAccount = frame_system::Provider<Test>;
-    type OnAssetChanged = ();
-    type WeightInfo = ();
+    pub const BtcAssetId: AssetId = 1;
 }
 
 impl xpallet_gateway_records::Config for Test {
     type Event = ();
+    type Currency = Balances;
+    type BtcAssetId = BtcAssetId;
     type WeightInfo = ();
 }
 
@@ -143,8 +185,11 @@ impl xpallet_gateway_common::Config for Test {
     type Event = ();
     type Validator = ();
     type DetermineMultisigAddress = ();
+    type CouncilOrigin = EnsureSigned<AccountId>;
     type Bitcoin = XGatewayBitcoin;
     type BitcoinTrustee = XGatewayBitcoin;
+    type BitcoinTrusteeSessionProvider = trustees::bitcoin::BtcTrusteeSessionManager<Test>;
+    type BitcoinTotalSupply = XGatewayBitcoin;
     type WeightInfo = ();
 }
 
@@ -173,31 +218,18 @@ impl Config for Test {
     type AccountExtractor = xp_gateway_bitcoin::OpReturnExtractor;
     type TrusteeSessionProvider =
         xpallet_gateway_common::trustees::bitcoin::BtcTrusteeSessionManager<Test>;
+    type TrusteeInfoUpdate = XGatewayCommon;
     type TrusteeOrigin = EnsureSignedBy<
         xpallet_gateway_common::trustees::bitcoin::BtcTrusteeMultisig<Test>,
         AccountId,
     >;
+    type RelayerInfo = XGatewayCommon;
     type ReferralBinding = XGatewayCommon;
     type AddressBinding = XGatewayCommon;
     type WeightInfo = ();
 }
 
 pub type XGatewayBitcoinErr = Error<Test>;
-
-pub(crate) fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {
-    (
-        X_BTC,
-        AssetInfo::new::<Test>(
-            b"X-BTC".to_vec(),
-            b"X-BTC".to_vec(),
-            Chain::Bitcoin,
-            8,
-            b"ChainX's cross-chain Bitcoin".to_vec(),
-        )
-        .unwrap(),
-        AssetRestrictions::DESTROY_USABLE,
-    )
-}
 
 pub struct ExtBuilder;
 impl Default for ExtBuilder {
@@ -214,30 +246,6 @@ impl ExtBuilder {
         let mut storage = frame_system::GenesisConfig::default()
             .build_storage::<Test>()
             .unwrap();
-
-        let btc_assets = btc();
-        let assets = vec![(btc_assets.0, btc_assets.1, btc_assets.2, true, true)];
-
-        let mut init_assets = vec![];
-        let mut assets_restrictions = vec![];
-        for (a, b, c, d, e) in assets {
-            init_assets.push((a, b, d, e));
-            assets_restrictions.push((a, c))
-        }
-
-        GenesisBuild::<Test>::assimilate_storage(
-            &xpallet_assets_registrar::GenesisConfig {
-                assets: init_assets,
-            },
-            &mut storage,
-        )
-        .unwrap();
-
-        let _ = xpallet_assets::GenesisConfig::<Test> {
-            assets_restrictions,
-            endowed: Default::default(),
-        }
-        .assimilate_storage(&mut storage);
 
         // let (genesis_info, genesis_hash, network_id) = load_mock_btc_genesis_header_info();
         let genesis_hash = btc_genesis.0.hash();
@@ -269,34 +277,6 @@ impl ExtBuilder {
             .build_storage::<Test>()
             .unwrap();
 
-        let btc_assets = btc();
-        let assets = vec![(btc_assets.0, btc_assets.1, btc_assets.2, true, true)];
-        // let mut endowed = BTreeMap::new();
-        // let endowed_info = vec![(ALICE, 100), (BOB, 200), (CHARLIE, 300), (DAVE, 400)];
-        // endowed.insert(btc_assets.0, endowed_info.clone());
-        // endowed.insert(eth_assets.0, endowed_info);
-
-        let mut init_assets = vec![];
-        let mut assets_restrictions = vec![];
-        for (a, b, c, d, e) in assets {
-            init_assets.push((a, b, d, e));
-            assets_restrictions.push((a, c))
-        }
-
-        GenesisBuild::<Test>::assimilate_storage(
-            &xpallet_assets_registrar::GenesisConfig {
-                assets: init_assets,
-            },
-            &mut storage,
-        )
-        .unwrap();
-
-        let _ = xpallet_assets::GenesisConfig::<Test> {
-            assets_restrictions,
-            endowed: Default::default(),
-        }
-        .assimilate_storage(&mut storage);
-
         let info = trustees_info();
         let genesis_trustees = info
             .iter()
@@ -314,8 +294,13 @@ impl ExtBuilder {
             })
             .unwrap();
 
-        let _ = xpallet_gateway_common::GenesisConfig::<Test> { trustees: info }
-            .assimilate_storage(&mut storage);
+        let _ = xpallet_gateway_common::GenesisConfig::<Test> {
+            trustees: info,
+            genesis_trustee_transition_duration: Default::default(),
+            genesis_trustee_transition_status: Default::default(),
+            ..Default::default()
+        }
+        .assimilate_storage(&mut storage);
 
         let (genesis_info, genesis_hash, network_id) = load_mainnet_btc_genesis_header_info();
 
@@ -335,6 +320,31 @@ impl ExtBuilder {
             confirmation_number: 4,
             btc_withdrawal_fee: 0,
             max_withdrawal_count: 100,
+        }
+        .assimilate_storage(&mut storage);
+
+        let _ = xpallet_gateway_records::GenesisConfig::<Test> {
+            initial_asset_chain: vec![(X_BTC, Chain::Bitcoin), (X_ETH, Chain::Ethereum)],
+        }
+        .assimilate_storage(&mut storage);
+
+        let _ = pallet_assets::GenesisConfig::<Test> {
+            assets: vec![(X_BTC, alice(), true, 1), (X_ETH, alice(), true, 1)],
+            metadata: vec![
+                (
+                    X_BTC,
+                    "XBTC".to_string().into_bytes(),
+                    "XBTC".to_string().into_bytes(),
+                    8,
+                ),
+                (
+                    X_ETH,
+                    "XETH".to_string().into_bytes(),
+                    "XETH".to_string().into_bytes(),
+                    18,
+                ),
+            ],
+            accounts: vec![],
         }
         .assimilate_storage(&mut storage);
 

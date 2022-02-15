@@ -51,35 +51,6 @@ impl Signature {
     }
 }
 
-pub fn verify_sig_impl<T: Config>(
-    sig: &Bytes,
-    pubkey: &Bytes,
-    tx: &Transaction,
-    script_pubkey: &Bytes,
-    index: usize,
-) -> DispatchResult {
-    let tx_signer: TransactionInputSigner = tx.clone().into();
-    // TODO WARNNING!!! when support WitnessV0, the `input_amount` must set value
-    let checker = TransactionSignatureChecker::<T> {
-        input_index: index,
-        input_amount: 0,
-        signer: tx_signer,
-        _marker: Default::default(),
-    };
-    let sighashtype = 1; // Sighsh all
-    let signature = Signature::parse_der_lax(sig).map_err(|_| Error::<T>::ConstructBadSign)?;
-    let pubkey = Public::try_from(pubkey.as_slice()).map_err(|_| Error::<T>::InvalidPublicKey)?;
-
-    let script_code: Script = script_pubkey.clone().into();
-    checker.check_signature(
-        &signature,
-        &pubkey,
-        &script_code,
-        sighashtype,
-        SignatureVersion::Base,
-    )
-}
-
 pub struct TransactionSignatureChecker<T: Config> {
     pub signer: TransactionInputSigner,
     pub input_index: usize,

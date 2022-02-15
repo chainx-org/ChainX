@@ -2,23 +2,23 @@
 
 pub mod bitcoin;
 
+use frame_support::traits::fungibles::Mutate;
 use frame_support::{
     dispatch::DispatchError,
     log::{error, warn},
+    pallet_prelude::Get,
     traits::SortedMembers,
 };
-use sp_runtime::traits::{CheckedDiv, Saturating, Zero};
-use sp_runtime::SaturatedConversion;
+use sp_runtime::traits::Zero;
 use sp_std::{convert::TryFrom, marker::PhantomData, prelude::*};
 use xp_assets_registrar::Chain;
-use xpallet_assets::BalanceOf;
 use xpallet_support::traits::MultiSig;
 
 use crate::{
     traits::{BytesLike, ChainProvider, TrusteeInfoUpdate, TrusteeSession},
     types::TrusteeSessionInfo,
-    Config, Error, Event, Pallet, PreTotalSupply, TrusteeSessionInfoOf, TrusteeSigRecord,
-    TrusteeTransitionStatus,
+    CheckedDiv, Config, Error, Event, Pallet, PreTotalSupply, SaturatedConversion, Saturating,
+    TrusteeSessionInfoOf, TrusteeSigRecord, TrusteeTransitionStatus,
 };
 
 pub struct TrusteeSessionManager<T: Config, TrusteeAddress>(
@@ -143,30 +143,29 @@ impl<T: Config> TrusteeInfoUpdate for Pallet<T> {
                             trustee.0.trustee_list[i].1 =
                                 Self::trustee_sig_record(&trustee.0.trustee_list[i].0);
                         }
-                        let total_apply = Self::pre_total_supply(1);
-
-                        let reward_amount = trans_amount
+                        let total_apply: T::Balance = Self::pre_total_supply(T::BtcAssetId::get());
+                        let reward_amount: T::Balance = trans_amount
                             .unwrap_or(0u64)
-                            .saturated_into::<BalanceOf<T>>()
+                            .saturated_into::<T::Balance>()
                             .saturating_sub(total_apply)
                             .max(0u64.saturated_into())
                             .saturating_mul(6u64.saturated_into())
-                            .checked_div(&10u64.saturated_into::<BalanceOf<T>>())
+                            .checked_div(&10u64.saturated_into::<T::Balance>())
                             .unwrap_or_else(|| 0u64.saturated_into());
 
                         if let Some(multi_account) = trustee.0.multi_account.clone() {
                             if !reward_amount.is_zero() {
-                                match xpallet_assets::Pallet::<T>::issue(
-                                    &1_u32,
+                                match pallet_assets::Pallet::<T>::mint_into(
+                                    T::BtcAssetId::get(),
                                     &multi_account,
                                     reward_amount,
                                 ) {
                                     Ok(()) => {
-                                        PreTotalSupply::<T>::remove(1);
+                                        PreTotalSupply::<T>::remove(T::BtcAssetId::get());
                                         Pallet::<T>::deposit_event(
                                             Event::<T>::TransferAssetReward(
                                                 multi_account,
-                                                1,
+                                                T::BtcAssetId::get(),
                                                 reward_amount,
                                             ),
                                         );
@@ -198,8 +197,7 @@ impl<T: Config> TrusteeInfoUpdate for Pallet<T> {
             let amount = if trustee == Self::trustee_admin() {
                 withdraw_amount
                     .saturating_mul(Self::trustee_admin_multiply())
-                    .checked_div(10)
-                    .unwrap_or(0)
+                    .saturating_div(10)
             } else {
                 withdraw_amount
             };

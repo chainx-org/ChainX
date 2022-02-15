@@ -3,16 +3,19 @@
 use frame_support::dispatch::DispatchError;
 use sp_std::{convert::TryFrom, prelude::Vec};
 
-use chainx_primitives::{AssetId, ReferralId};
-use xpallet_assets::Chain;
-
 use crate::types::{ScriptInfo, TrusteeInfoConfig, TrusteeIntentionProps, TrusteeSessionInfo};
+use sherpax_primitives::ReferralId;
+use xp_assets_registrar::Chain;
 
 pub trait BytesLike: Into<Vec<u8>> + TryFrom<Vec<u8>> {}
 impl<T: Into<Vec<u8>> + TryFrom<Vec<u8>>> BytesLike for T {}
 
 pub trait ChainProvider {
     fn chain() -> Chain;
+}
+
+pub trait TotalSupply<Balance> {
+    fn total_supply() -> Balance;
 }
 
 pub trait TrusteeForChain<
@@ -109,12 +112,12 @@ impl<AccountId: Default> RelayerInfo<AccountId> for () {
     }
 }
 
-pub trait ReferralBinding<AccountId> {
+pub trait ReferralBinding<AccountId, AssetId> {
     fn update_binding(asset_id: &AssetId, who: &AccountId, referral_name: Option<ReferralId>);
     fn referral(asset_id: &AssetId, who: &AccountId) -> Option<AccountId>;
 }
 
-impl<AccountId> ReferralBinding<AccountId> for () {
+impl<AccountId, AssetId> ReferralBinding<AccountId, AssetId> for () {
     fn update_binding(_: &AssetId, _: &AccountId, _: Option<ReferralId>) {}
     fn referral(_: &AssetId, _: &AccountId) -> Option<AccountId> {
         None
