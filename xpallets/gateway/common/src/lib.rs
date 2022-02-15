@@ -25,7 +25,7 @@ use frame_support::{
     dispatch::{DispatchError, DispatchResult},
     ensure,
     log::{error, info},
-    traits::{fungibles, ChangeMembers, Currency, ExistenceRequirement, Get},
+    traits::{ChangeMembers, Currency, ExistenceRequirement, Get},
 };
 use frame_system::{ensure_root, ensure_signed};
 use sp_runtime::{
@@ -33,6 +33,7 @@ use sp_runtime::{
     SaturatedConversion,
 };
 use sp_std::{collections::btree_map::BTreeMap, convert::TryFrom, prelude::*};
+use xpallet_assets::{AssetRestrictions, BalanceOf, Chain, ChainT, WithdrawalLimit};
 
 use self::traits::{TotalSupply, TrusteeForChain, TrusteeInfoUpdate, TrusteeSession};
 use self::types::{
@@ -41,13 +42,10 @@ use self::types::{
 };
 pub use self::weights::WeightInfo;
 use crate::trustees::bitcoin::BtcTrusteeAddrInfo;
+use chainx_primitives::{AddrStr, AssetId, ChainAddress, Text};
 pub use pallet::*;
-use chainx_primitives::{AddrStr, ChainAddress, Text};
-use xp_assets_registrar::Chain;
 use xp_runtime::Memo;
-use xpallet_gateway_records::{
-    ChainT, Withdrawal, WithdrawalLimit, WithdrawalRecordId, WithdrawalState,
-};
+use xpallet_gateway_records::{Withdrawal, WithdrawalRecordId, WithdrawalState};
 use xpallet_support::traits::{MultisigAddressFor, Validator};
 
 type Balanceof<T> =
@@ -58,7 +56,7 @@ type Balanceof<T> =
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use frame_support::{pallet_prelude::*, traits::fungibles::Inspect};
+    use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
 
     #[pallet::config]
@@ -66,7 +64,7 @@ pub mod pallet {
         frame_system::Config
         + xpallet_gateway_records::Config
         + pallet_elections_phragmen::Config
-        + xpallet-assets::Config
+        + xpallet_assets::Config
     {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
@@ -77,7 +75,7 @@ pub mod pallet {
         type CouncilOrigin: EnsureOrigin<Self::Origin>;
 
         // for bitcoin
-        type Bitcoin: ChainT<AssetId, Self::Balance>;
+        type Bitcoin: ChainT<BalanceOf<Self>>;
         type BitcoinTrustee: TrusteeForChain<
             Self::AccountId,
             Self::BlockNumber,
@@ -89,7 +87,7 @@ pub mod pallet {
             Self::BlockNumber,
             trustees::bitcoin::BtcTrusteeAddrInfo,
         >;
-        type BitcoinTotalSupply: TotalSupply<Self::Balance>;
+        type BitcoinTotalSupply: TotalSupply<BalanceOf<Self>>;
 
         type WeightInfo: WeightInfo;
     }
@@ -117,10 +115,8 @@ pub mod pallet {
             let who = ensure_signed(origin)?;
 
             ensure!(
-                xpallet-assets::Pallet::<T>::can_withdraw(asset_id, &who, value)
-                    .into_result()
-                    .is_ok(),
-                Error::<T>::InvalidWithdrawal,
+                xpallet_assets::Pallet::<T>::can_do(&asset_id, AssetRestrictions::WITHDRAW),
+                xpallet_assets::Error::<T>::ActionNotAllowed,
             );
             Self::verify_withdrawal(asset_id, value, &addr, &ext)?;
 
@@ -1297,14 +1293,15 @@ impl<T: Config> Pallet<T> {
         asset_id: AssetId,
         trustee_info: &TrusteeSessionInfo<T::AccountId, T::BlockNumber, BtcTrusteeAddrInfo>,
     ) -> Result<BalanceOf<T>, DispatchError> {
-        let total_reward = xpallet-assets::Pallet::<T>::balance(asset_id, from);
+        xpallet_assets::Pallet::<T>::ensure_not_native_asset(&asset_id)?;
+        let total_reward = xpallet_assets::Pallet::<T>::usable_balance(from, &asset_id);
         if total_reward.is_zero() {
-            return Ok(BalanceOf<T>::zero());
+            return Ok(BalanceOf::<T>::zero());
         }
         let reward_info = Self::compute_reward(total_reward, trustee_info)?;
         for (acc, amount) in reward_info.rewards.iter() {
-            <xpallet-assets::Pallet<T> as fungibles::Transfer<T::AccountId>>::transfer(
-                asset_id, from, acc, *amount, false,
+            xpallet_assets::Pallet::<T>::move_usable_balance(
+                &asset_id, from, acc, *amount,
             )
             .map_err(|e| {
                 error!(
@@ -1312,7 +1309,7 @@ impl<T: Config> Pallet<T> {
                     "[apply_claim_trustee_reward] error {:?}, sum_balance:{:?}, asset_id: {:?},reward_info:{:?}.",
                     e, total_reward, asset_id, reward_info.clone()
                 );
-                e
+                xpallet_assets::Error::<T>::InsufficientBalance
             })?;
         }
         Ok(total_reward)

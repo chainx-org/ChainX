@@ -125,11 +125,3 @@ impl<AccountId, AssetId, Balance, BlockNumber>
         }
     }
 }
-
-#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug, TypeInfo)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct WithdrawalLimit<Balance> {
-    pub minimal_withdrawal: Balance,
-    pub fee: Balance,
-}

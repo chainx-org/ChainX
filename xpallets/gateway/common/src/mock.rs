@@ -23,12 +23,10 @@ use sp_runtime::{
 };
 
 use chainx_primitives::AssetId;
-use xp_assets_registrar::Chain;
 pub use xp_protocol::{X_BTC, X_ETH};
 use xpallet_gateway_bitcoin::trustee::check_keys;
-use xpallet_gateway_records::{ChainT, WithdrawalLimit};
 use xpallet_support::traits::{MultisigAddressFor, Validator};
-
+use xpallet_assets::{AssetRestrictions, BalanceOf, Chain, ChainT, WithdrawalLimit};
 use crate::traits::TotalSupply;
 use crate::utils::{two_thirds_unsafe, MAX_TAPROOT_NODES};
 use crate::{
@@ -199,7 +197,7 @@ parameter_types! {
     pub const MetadataDepositPerByte: Balance = 1;
 }
 
-impl xpallet-assets::Config for Test {
+impl xpallet_assets::Config for Test {
     type Event = ();
     type Balance = Balance;
     type AssetId = AssetId;
@@ -276,7 +274,7 @@ impl Validator<AccountId> for AlwaysValidator {
     }
 }
 pub struct MockBitcoin<T: xpallet_gateway_bitcoin::Config>(sp_std::marker::PhantomData<T>);
-impl<T: xpallet_gateway_bitcoin::Config> ChainT<AssetId, BalanceOf<T>> for MockBitcoin<T> {
+impl<T: xpallet_gateway_bitcoin::Config> ChainT<BalanceOf<T>> for MockBitcoin<T> {
     fn chain() -> Chain {
         Chain::Bitcoin
     }

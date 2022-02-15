@@ -1,24 +1,6 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
-use frame_support::dispatch::{DispatchError, DispatchResult};
-use xp_assets_registrar::Chain;
-
-use crate::types::WithdrawalLimit;
-
-pub trait ChainT<AssetId, Balance: Default> {
-    /// ASSET should be the native Asset for this chain.
-    /// e.g.
-    ///     if ChainT for Bitcoin, then ASSET is X_BTC
-    ///     if ChainT for Ethereum, then ASSET is X_ETH
-    ///     if ChainT for Polkadot, then ASSET is X_DOT
-    fn chain() -> Chain;
-    fn check_addr(_addr: &[u8], _ext: &[u8]) -> DispatchResult {
-        Ok(())
-    }
-    fn withdrawal_limit(_asset_id: &AssetId) -> Result<WithdrawalLimit<Balance>, DispatchError> {
-        Ok(WithdrawalLimit::default())
-    }
-}
+use frame_support::dispatch::DispatchResult;
 
 /// Hooks for doing stuff when the assets are minted/moved/destroyed.
 pub trait OnAssetChanged<AssetId, AccountId, Balance> {

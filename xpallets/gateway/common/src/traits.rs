@@ -4,7 +4,7 @@ use frame_support::dispatch::DispatchError;
 use sp_std::{convert::TryFrom, prelude::Vec};
 
 use crate::types::{ScriptInfo, TrusteeInfoConfig, TrusteeIntentionProps, TrusteeSessionInfo};
-use chainx_primitives::ReferralId;
+use chainx_primitives::{AssetId, ReferralId};
 use xp_assets_registrar::Chain;
 
 pub trait BytesLike: Into<Vec<u8>> + TryFrom<Vec<u8>> {}
@@ -112,12 +112,12 @@ impl<AccountId: Default> RelayerInfo<AccountId> for () {
     }
 }
 
-pub trait ReferralBinding<AccountId, AssetId> {
+pub trait ReferralBinding<AccountId> {
     fn update_binding(asset_id: &AssetId, who: &AccountId, referral_name: Option<ReferralId>);
     fn referral(asset_id: &AssetId, who: &AccountId) -> Option<AccountId>;
 }
 
-impl<AccountId, AssetId> ReferralBinding<AccountId, AssetId> for () {
+impl<AccountId> ReferralBinding<AccountId> for () {
     fn update_binding(_: &AssetId, _: &AccountId, _: Option<ReferralId>) {}
     fn referral(_: &AssetId, _: &AccountId) -> Option<AccountId> {
         None

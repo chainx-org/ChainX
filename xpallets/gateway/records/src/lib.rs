@@ -25,10 +25,8 @@ use sp_runtime::traits::{CheckedSub, StaticLookup};
 
 use orml_utilities::with_transaction_result;
 
-pub use self::traits::{ChainT, OnAssetChanged};
-pub use self::types::{
-    Withdrawal, WithdrawalLimit, WithdrawalRecord, WithdrawalRecordId, WithdrawalState,
-};
+pub use self::traits::OnAssetChanged;
+pub use self::types::{Withdrawal, WithdrawalRecord, WithdrawalRecordId, WithdrawalState};
 pub use self::weights::WeightInfo;
 use chainx_primitives::{AddrStr, AssetId};
 use xp_runtime::Memo;

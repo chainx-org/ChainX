@@ -5,11 +5,11 @@ use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
 use crate::traits::{AddressBinding, ReferralBinding};
 use crate::{AddressBindingOf, BoundAddressOf, Config, Pallet};
-use chainx_primitives::{ChainAddress, ReferralId};
+use chainx_primitives::{AssetId, ChainAddress, ReferralId};
 use xp_assets_registrar::Chain;
 use xpallet_support::{traits::Validator, try_addr, try_str};
 
-impl<T: Config> ReferralBinding<T::AccountId, AssetId> for Pallet<T> {
+impl<T: Config> ReferralBinding<T::AccountId> for Pallet<T> {
     fn update_binding(assert_id: &AssetId, who: &T::AccountId, referral_name: Option<ReferralId>) {
         let chain = match xpallet_gateway_records::Pallet::<T>::chain_of(assert_id) {
             Ok(chain) => chain,

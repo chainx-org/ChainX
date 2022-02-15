@@ -2,7 +2,6 @@
 
 pub mod bitcoin;
 
-use frame_support::traits::fungibles::Mutate;
 use frame_support::{
     dispatch::DispatchError,
     log::{error, warn},
@@ -12,6 +11,7 @@ use frame_support::{
 use sp_runtime::traits::Zero;
 use sp_std::{convert::TryFrom, marker::PhantomData, prelude::*};
 use xp_assets_registrar::Chain;
+use xpallet_assets::BalanceOf;
 use xpallet_support::traits::MultiSig;
 
 use crate::{
@@ -156,12 +156,11 @@ impl<T: Config> TrusteeInfoUpdate for Pallet<T> {
 
                         if let Some(multi_account) = trustee.0.multi_account.clone() {
                             if !reward_amount.is_zero() {
-                                match xpallet
-                                    - assets::Pallet::<T>::mint_into(
-                                        T::BtcAssetId::get(),
-                                        &multi_account,
-                                        reward_amount,
-                                    ) {
+                                match xpallet_assets::Pallet::<T>::issue(
+                                    &T::BtcAssetId::get(),
+                                    &multi_account,
+                                    reward_amount,
+                                ) {
                                     Ok(()) => {
                                         PreTotalSupply::<T>::remove(T::BtcAssetId::get());
                                         Pallet::<T>::deposit_event(
@@ -197,9 +196,7 @@ impl<T: Config> TrusteeInfoUpdate for Pallet<T> {
         let signed_trustees = Self::agg_pubkey_info(script);
         signed_trustees.into_iter().for_each(|trustee| {
             let amount = if trustee == Self::trustee_admin() {
-                withdraw_amount
-                    .saturating_mul(Self::trustee_admin_multiply())
-                    .saturating_div(10)
+                withdraw_amount.saturating_mul(Self::trustee_admin_multiply()) / 10
             } else {
                 withdraw_amount
             };

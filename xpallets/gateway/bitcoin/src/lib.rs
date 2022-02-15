@@ -528,7 +528,7 @@ pub mod pallet {
         }
     }
 
-    impl<T: Config> ChainT<AssetId, BalanceOf<T>> for Pallet<T> {
+    impl<T: Config> ChainT<BalanceOf<T>> for Pallet<T> {
         fn chain() -> Chain {
             Chain::Bitcoin
         }
