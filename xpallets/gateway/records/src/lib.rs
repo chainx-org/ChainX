@@ -9,8 +9,7 @@ mod benchmarking;
 mod mock;
 #[cfg(test)]
 mod tests;
-pub mod traits;
-pub mod types;
+mod types;
 pub mod weights;
 
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
@@ -25,17 +24,16 @@ use sp_runtime::traits::StaticLookup;
 
 use orml_utilities::with_transaction_result;
 
-pub use self::traits::OnAssetChanged;
-pub use self::types::{Withdrawal, WithdrawalRecord, WithdrawalRecordId, WithdrawalState};
-pub use self::weights::WeightInfo;
 use chainx_primitives::{AddrStr, AssetId};
 use xp_runtime::Memo;
 use xpallet_assets::{AssetType, BalanceOf, Chain};
 use xpallet_support::try_addr;
 
+pub use self::types::{Withdrawal, WithdrawalRecord, WithdrawalRecordId, WithdrawalState};
+pub use self::weights::WeightInfo;
+
 pub type WithdrawalRecordOf<T> = WithdrawalRecord<
     <T as frame_system::Config>::AccountId,
-    AssetId,
     BalanceOf<T>,
     <T as frame_system::Config>::BlockNumber,
 >;
@@ -52,10 +50,6 @@ pub mod pallet {
     pub trait Config: frame_system::Config + xpallet_assets::Config {
         /// The overarching event type.
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
-
-        #[pallet::constant]
-        /// The btc asset id.
-        type BtcAssetId: Get<AssetId>;
 
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
@@ -159,10 +153,6 @@ pub mod pallet {
         InvalidState,
         /// Meet unexpected chain
         UnexpectedChain,
-        /// Invalid asset id
-        InvalidAssetId,
-        /// Insufficient locked assets
-        InsufficientLockedAssets,
     }
 
     #[pallet::type_value]
@@ -187,43 +177,11 @@ pub mod pallet {
     #[pallet::getter(fn state_of)]
     pub(crate) type WithdrawalStateOf<T: Config> =
         StorageMap<_, Twox64Concat, WithdrawalRecordId, WithdrawalState>;
-
-    /// Asset info of each asset.
-    #[pallet::storage]
-    #[pallet::getter(fn asset_chain_of)]
-    pub type AssetChainOf<T: Config> = StorageMap<_, Twox64Concat, AssetId, Chain>;
-
-    #[pallet::genesis_config]
-    pub struct GenesisConfig {
-        /// The initial asset chain.
-        pub initial_asset_chain: Vec<(AssetId, Chain)>,
-    }
-
-    #[cfg(feature = "std")]
-    impl Default for GenesisConfig {
-        fn default() -> Self {
-            Self {
-                initial_asset_chain: Default::default(),
-            }
-        }
-    }
-
-    #[pallet::genesis_build]
-    impl<T: Config> GenesisBuild<T> for GenesisConfig {
-        fn build(&self) {
-            let extra_genesis_builder: fn(&Self) = |config| {
-                for (asset_id, chain) in config.initial_asset_chain.iter() {
-                    AssetChainOf::<T>::insert(*asset_id, chain);
-                }
-            };
-            extra_genesis_builder(self);
-        }
-    }
 }
 
 impl<T: Config> Pallet<T> {
     fn ensure_asset_belongs_to_chain(asset_id: AssetId, expected_chain: Chain) -> DispatchResult {
-        let asset_chain = Self::chain_of(&asset_id)?;
+        let asset_chain = xpallet_assets_registrar::Pallet::<T>::chain_of(&asset_id)?;
         ensure!(asset_chain == expected_chain, Error::<T>::UnexpectedChain);
         Ok(())
     }
@@ -259,7 +217,7 @@ impl<T: Config> Pallet<T> {
 
         info!(
             target: "runtime::gateway::records",
-            "[deposit] who:{:?}, id:{:?}, balance:{:?}",
+            "[deposit] who:{:?}, id:{}, balance:{:?}",
             who, asset_id, balance
         );
 
@@ -280,12 +238,13 @@ impl<T: Config> Pallet<T> {
         addr: AddrStr,
         ext: Memo,
     ) -> DispatchResult {
+        xpallet_assets::Pallet::<T>::ensure_not_native_asset(&asset_id)?;
         Self::ensure_withdrawal_available_balance(who, asset_id, balance)?;
 
         let id = Self::id();
         info!(
             target: "runtime::gateway::records",
-            "[apply_withdrawal] id:{:?}, who:{:?}, asset id:{:?}, balance:{:?}, addr:{:?}, memo:{}",
+            "[apply_withdrawal] id:{}, who:{:?}, asset id:{}, balance:{:?}, addr:{:?}, memo:{}",
             id,
             who,
             asset_id,
@@ -326,7 +285,7 @@ impl<T: Config> Pallet<T> {
         if curr_state != WithdrawalState::Applying {
             error!(
                 target: "runtime::gateway::records",
-                "[process_withdrawal] id:{:?}, current withdrawal state ({:?}) must be `Applying`",
+                "[process_withdrawal] id:{}, current withdrawal state ({:?}) must be `Applying`",
                 id, curr_state
             );
             return Err(Error::<T>::NotApplyingState.into());
@@ -362,7 +321,7 @@ impl<T: Config> Pallet<T> {
         if curr_state != WithdrawalState::Processing {
             error!(
                 target: "runtime::gateway::records",
-                "[recover_withdrawal] id:{:?}, current withdrawal state ({:?}) must be `Processing`",
+                "[recover_withdrawal] id:{}, current withdrawal state ({:?}) must be `Processing`",
                 id, curr_state
             );
             return Err(Error::<T>::NotProcessingState.into());
@@ -380,7 +339,7 @@ impl<T: Config> Pallet<T> {
         if record.applicant() != who {
             error!(
                 target: "runtime::gateway::records",
-                "[cancel_withdrawal] id:{:?}, account {:?} is not the applicant {:?}",
+                "[cancel_withdrawal] id:{}, account {:?} is not the applicant {:?}",
                 id,
                 who,
                 record.applicant()
@@ -400,7 +359,7 @@ impl<T: Config> Pallet<T> {
         if curr_state != WithdrawalState::Applying {
             error!(
                 target: "runtime::gateway::records",
-                "[cancel_withdrawal] id:{:?}, current withdrawal state ({:?}) must be `Applying`",
+                "[cancel_withdrawal] id:{}, current withdrawal state ({:?}) must be `Applying`",
                 id, curr_state
             );
             return Err(Error::<T>::NotApplyingState.into());
@@ -450,7 +409,7 @@ impl<T: Config> Pallet<T> {
         if curr_state != WithdrawalState::Processing {
             error!(
                 target: "runtime::gateway::records",
-                "[finish_withdrawal] id:{:?}, current withdrawal state ({:?}) must be `Processing`",
+                "[finish_withdrawal] id:{}, current withdrawal state ({:?}) must be `Processing`",
                 id, curr_state
             );
             return Err(Error::<T>::NotProcessingState.into());
@@ -534,7 +493,7 @@ impl<T: Config> Pallet<T> {
         if state != WithdrawalState::Processing {
             error!(
                 target: "runtime::gateway::records",
-                "[set_withdrawal_state_by_trustees] id:{:?}, current withdrawal state ({:?}) must be `Processing`",
+                "[set_withdrawal_state_by_trustees] id:{}, current withdrawal state ({:?}) must be `Processing`",
                 id, state
             );
             return Err(Error::<T>::NotProcessingState.into());
@@ -545,7 +504,7 @@ impl<T: Config> Pallet<T> {
             _ => {
                 error!(
                     target: "runtime::gateway::records",
-                    "[set_withdrawal_state_by_trustees] id:{:?}, new withdrawal state ({:?}) must be `RootFinish` or `RootCancel`",
+                    "[set_withdrawal_state_by_trustees] id:{}, new withdrawal state ({:?}) must be `RootFinish` or `RootCancel`",
                     id, new_state
                 );
                 return Err(Error::<T>::InvalidState.into());
@@ -588,8 +547,7 @@ impl<T: Config> Pallet<T> {
 
 impl<T: Config> Pallet<T> {
     pub fn withdrawal_list(
-    ) -> BTreeMap<WithdrawalRecordId, Withdrawal<T::AccountId, AssetId, BalanceOf<T>, T::BlockNumber>>
-    {
+    ) -> BTreeMap<WithdrawalRecordId, Withdrawal<T::AccountId, BalanceOf<T>, T::BlockNumber>> {
         PendingWithdrawals::<T>::iter()
             .map(|(id, record)| {
                 (
@@ -602,8 +560,7 @@ impl<T: Config> Pallet<T> {
 
     pub fn withdrawals_list_by_chain(
         chain: Chain,
-    ) -> BTreeMap<WithdrawalRecordId, Withdrawal<T::AccountId, AssetId, BalanceOf<T>, T::BlockNumber>>
-    {
+    ) -> BTreeMap<WithdrawalRecordId, Withdrawal<T::AccountId, BalanceOf<T>, T::BlockNumber>> {
         Self::withdrawal_list()
             .into_iter()
             .filter(|(_, withdrawal)| {
@@ -614,10 +571,5 @@ impl<T: Config> Pallet<T> {
 
     pub fn withdrawal_state_insert(id: WithdrawalRecordId, state: WithdrawalState) {
         WithdrawalStateOf::<T>::insert(id, state)
-    }
-
-    /// Returns the chain of given asset `asset_id`.
-    pub fn chain_of(asset_id: &AssetId) -> Result<Chain, DispatchError> {
-        Self::asset_chain_of(asset_id).ok_or_else(|| Error::<T>::InvalidAssetId.into())
     }
 }

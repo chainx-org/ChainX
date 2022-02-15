@@ -5,12 +5,12 @@ pub mod bitcoin;
 use frame_support::{
     dispatch::DispatchError,
     log::{error, warn},
-    pallet_prelude::Get,
     traits::SortedMembers,
 };
 use sp_runtime::traits::Zero;
 use sp_std::{convert::TryFrom, marker::PhantomData, prelude::*};
 use xp_assets_registrar::Chain;
+use xp_protocol::X_BTC;
 use xpallet_assets::BalanceOf;
 use xpallet_support::traits::MultiSig;
 
@@ -143,8 +143,7 @@ impl<T: Config> TrusteeInfoUpdate for Pallet<T> {
                             trustee.0.trustee_list[i].1 =
                                 Self::trustee_sig_record(&trustee.0.trustee_list[i].0);
                         }
-                        let total_apply: BalanceOf<T> =
-                            Self::pre_total_supply(T::BtcAssetId::get());
+                        let total_apply: BalanceOf<T> = Self::pre_total_supply(X_BTC);
                         let reward_amount: BalanceOf<T> = trans_amount
                             .unwrap_or(0u64)
                             .saturated_into::<BalanceOf<T>>()
@@ -157,16 +156,16 @@ impl<T: Config> TrusteeInfoUpdate for Pallet<T> {
                         if let Some(multi_account) = trustee.0.multi_account.clone() {
                             if !reward_amount.is_zero() {
                                 match xpallet_assets::Pallet::<T>::issue(
-                                    &T::BtcAssetId::get(),
+                                    &X_BTC,
                                     &multi_account,
                                     reward_amount,
                                 ) {
                                     Ok(()) => {
-                                        PreTotalSupply::<T>::remove(T::BtcAssetId::get());
+                                        PreTotalSupply::<T>::remove(X_BTC);
                                         Pallet::<T>::deposit_event(
                                             Event::<T>::TransferAssetReward(
                                                 multi_account,
-                                                T::BtcAssetId::get(),
+                                                X_BTC,
                                                 reward_amount,
                                             ),
                                         );

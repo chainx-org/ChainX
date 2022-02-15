@@ -38,7 +38,6 @@ use xpallet_gateway_common::{
     traits::{AddressBinding, ReferralBinding, TrusteeInfoUpdate, TrusteeSession},
     trustees::bitcoin::BtcTrusteeAddrInfo,
 };
-use xpallet_gateway_records::{ChainT, WithdrawalLimit};
 use xpallet_support::try_addr;
 
 pub use self::types::{BtcAddress, BtcParams, BtcTxVerifier, BtcWithdrawalProposal};
@@ -70,8 +69,11 @@ macro_rules! log {
 pub mod pallet {
     use sp_std::marker::PhantomData;
 
+    use chainx_primitives::AssetId;
     use frame_support::{dispatch::DispatchResult, pallet_prelude::*, traits::UnixTime};
     use frame_system::pallet_prelude::*;
+    use xp_protocol::X_BTC;
+    use xpallet_assets::{BalanceOf, ChainT, WithdrawalLimit};
     use xpallet_gateway_common::traits::{RelayerInfo, TotalSupply};
 
     use super::*;
@@ -95,7 +97,7 @@ pub mod pallet {
         type TrusteeInfoUpdate: TrusteeInfoUpdate;
         type TrusteeOrigin: EnsureOrigin<Self::Origin, Success = Self::AccountId>;
         type RelayerInfo: RelayerInfo<Self::AccountId>;
-        type ReferralBinding: ReferralBinding<Self::AccountId, AssetId>;
+        type ReferralBinding: ReferralBinding<Self::AccountId>;
         type AddressBinding: AddressBinding<Self::AccountId, BtcAddress>;
         type WeightInfo: WeightInfo;
     }
@@ -529,6 +531,8 @@ pub mod pallet {
     }
 
     impl<T: Config> ChainT<BalanceOf<T>> for Pallet<T> {
+        const ASSET_ID: AssetId = xp_protocol::X_BTC;
+
         fn chain() -> Chain {
             Chain::Bitcoin
         }
@@ -563,8 +567,8 @@ pub mod pallet {
         fn withdrawal_limit(
             asset_id: &AssetId,
         ) -> Result<WithdrawalLimit<BalanceOf<T>>, DispatchError> {
-            if *asset_id != T::BtcAssetId::get() {
-                return Err(xpallet_assets::Error::<T>::Unknown.into());
+            if *asset_id != X_BTC {
+                return Err(xpallet_assets::Error::<T>::InvalidAsset.into());
             }
             let fee = Self::btc_withdrawal_fee().saturated_into();
             let limit = WithdrawalLimit::<BalanceOf<T>> {
@@ -587,8 +591,8 @@ pub mod pallet {
                 .sum::<u64>()
                 .saturated_into();
 
-            let asset_id = T::BtcAssetId::get();
-            let asset_supply = xpallet_assets::Pallet::<T>::total_supply(asset_id);
+            let asset_id = X_BTC;
+            let asset_supply = xpallet_assets::Pallet::<T>::total_issuance(&asset_id);
             asset_supply + pending_deposits
         }
     }

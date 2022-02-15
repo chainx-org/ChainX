@@ -9552,6 +9552,7 @@ dependencies = [
  "xp-rpc",
  "xp-runtime",
  "xpallet-assets",
+ "xpallet-assets-registrar",
  "xpallet-gateway-bitcoin",
  "xpallet-gateway-records",
  "xpallet-support",
@@ -9637,7 +9638,7 @@ dependencies = [
  "parity-scale-codec",
  "sp-api",
  "sp-std",
- "xp-assets-registrar",
+ "xpallet-assets",
  "xpallet-gateway-records",
 ]
 

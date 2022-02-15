@@ -24,12 +24,12 @@ fn create_default_asset<T: Config>(who: T::AccountId) {
     let miner = T::Lookup::unlookup(who);
     let _ = xpallet_assets::Pallet::<T>::force_create(
         RawOrigin::Root.into(),
-        T::BtcAssetId::get(),
+        X_BTC,
         miner,
         true,
         1u32.into(),
     );
-    xpallet_gateway_records::AssetChainOf::<T>::insert(T::BtcAssetId::get(), Chain::Bitcoin);
+    xpallet_gateway_records::AssetChainOf::<T>::insert(X_BTC, Chain::Bitcoin);
 }
 
 fn generate_blocks_63290_63310() -> BTreeMap<u32, BlockHeader> {
@@ -118,8 +118,8 @@ benchmarks! {
         let amount: BalanceOf<T> = 1_000_000_000u32.into();
         let withdrawal = 550000u32.into();
 
-        XGatewayRecords::<T>::deposit(&caller, T::BtcAssetId::get(), amount).unwrap();
-        XGatewayRecords::<T>::withdraw(&caller, T::BtcAssetId::get(), withdrawal, b"tb1pexff2s7l58sthpyfrtx500ax234stcnt0gz2lr4kwe0ue95a2e0srxsc68".to_vec(), b"".to_vec().into()).unwrap();
+        XGatewayRecords::<T>::deposit(&caller, X_BTC, amount).unwrap();
+        XGatewayRecords::<T>::withdraw(&caller, X_BTC, withdrawal, b"tb1pexff2s7l58sthpyfrtx500ax234stcnt0gz2lr4kwe0ue95a2e0srxsc68".to_vec(), b"".to_vec().into()).unwrap();
 
         XGatewayRecords::<T>::withdrawal_state_insert(0, WithdrawalState::Processing);
 
@@ -161,8 +161,8 @@ benchmarks! {
         #[cfg(feature = "runtime-benchmarks")]
         let withdrawal: BalanceOf<T> = 550000u32.into();
 
-        XGatewayRecords::<T>::deposit(&caller, T::BtcAssetId::get(), amount).unwrap();
-        XGatewayRecords::<T>::withdraw(&caller, T::BtcAssetId::get(), withdrawal, b"tb1pexff2s7l58sthpyfrtx500ax234stcnt0gz2lr4kwe0ue95a2e0srxsc68".to_vec(), b"".to_vec().into()).unwrap();
+        XGatewayRecords::<T>::deposit(&caller, X_BTC, amount).unwrap();
+        XGatewayRecords::<T>::withdraw(&caller, X_BTC, withdrawal, b"tb1pexff2s7l58sthpyfrtx500ax234stcnt0gz2lr4kwe0ue95a2e0srxsc68".to_vec(), b"".to_vec().into()).unwrap();
 
         XGatewayRecords::<T>::withdrawal_state_insert(0, WithdrawalState::Applying);
 

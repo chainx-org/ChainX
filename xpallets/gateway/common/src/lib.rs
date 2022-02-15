@@ -44,14 +44,10 @@ pub use self::weights::WeightInfo;
 use crate::trustees::bitcoin::BtcTrusteeAddrInfo;
 use chainx_primitives::{AddrStr, AssetId, ChainAddress, Text};
 pub use pallet::*;
+use xp_protocol::X_BTC;
 use xp_runtime::Memo;
 use xpallet_gateway_records::{Withdrawal, WithdrawalRecordId, WithdrawalState};
 use xpallet_support::traits::{MultisigAddressFor, Validator};
-
-type Balanceof<T> =
-    <<T as xpallet_gateway_records::Config>::Currency as frame_support::traits::Currency<
-        <T as frame_system::Config>::AccountId,
-    >>::Balance;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -468,7 +464,7 @@ pub mod pallet {
         pub fn tranfer_trustee_reward(
             origin: OriginFor<T>,
             session_num: i32,
-            amount: Balanceof<T>,
+            amount: BalanceOf<T>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
             let session_num: u32 = if session_num < 0 {
@@ -531,11 +527,11 @@ pub mod pallet {
             u32,
         ),
         /// Treasury transfer to trustee. [source, target, chain, session_number, reward_total]
-        TransferTrusteeReward(T::AccountId, T::AccountId, Chain, u32, Balanceof<T>),
+        TransferTrusteeReward(T::AccountId, T::AccountId, Chain, u32, BalanceOf<T>),
         /// Asset reward to trustee multi_account. [target, asset_id, reward_total]
         TransferAssetReward(T::AccountId, AssetId, BalanceOf<T>),
         /// The native asset of trustee multi_account is assigned. [who, multi_account, session_number, total_reward]
-        AllocNativeReward(T::AccountId, T::AccountId, u32, Balanceof<T>),
+        AllocNativeReward(T::AccountId, T::AccountId, u32, BalanceOf<T>),
         /// The not native asset of trustee multi_account is assigned. [who, multi_account, session_number, asset_id, total_reward]
         AllocNotNativeReward(T::AccountId, T::AccountId, u32, AssetId, BalanceOf<T>),
     }
@@ -777,7 +773,7 @@ impl<T: Config> Pallet<T> {
     pub fn withdrawal_limit(
         asset_id: &AssetId,
     ) -> Result<WithdrawalLimit<BalanceOf<T>>, DispatchError> {
-        let chain = xpallet_gateway_records::Pallet::<T>::chain_of(asset_id)?;
+        let chain = xpallet_assets_registrar::Pallet::<T>::chain_of(asset_id)?;
         match chain {
             Chain::Bitcoin => T::Bitcoin::withdrawal_limit(asset_id),
             _ => Err(Error::<T>::NotSupportedChain.into()),
@@ -790,7 +786,7 @@ impl<T: Config> Pallet<T> {
         BTreeMap<
             WithdrawalRecordId,
             (
-                Withdrawal<T::AccountId, AssetId, BalanceOf<T>, T::BlockNumber>,
+                Withdrawal<T::AccountId, BalanceOf<T>, T::BlockNumber>,
                 WithdrawalLimit<BalanceOf<T>>,
             ),
         >,
@@ -800,7 +796,7 @@ impl<T: Config> Pallet<T> {
         let result: BTreeMap<
             WithdrawalRecordId,
             (
-                Withdrawal<T::AccountId, AssetId, BalanceOf<T>, T::BlockNumber>,
+                Withdrawal<T::AccountId, BalanceOf<T>, T::BlockNumber>,
                 WithdrawalLimit<BalanceOf<T>>,
             ),
         > = xpallet_gateway_records::PendingWithdrawals::<T>::iter()
@@ -833,7 +829,7 @@ impl<T: Config> Pallet<T> {
     ) -> DispatchResult {
         ext.check_validity()?;
 
-        let chain = xpallet_gateway_records::Pallet::<T>::chain_of(&asset_id)?;
+        let chain = xpallet_assets_registrar::Pallet::<T>::chain_of(&asset_id)?;
         match chain {
             Chain::Bitcoin => {
                 // bitcoin do not need memo
@@ -934,7 +930,7 @@ impl<T: Config> Pallet<T> {
         if Self::trustee_session_info_len(Chain::Bitcoin) != 1 {
             TrusteeTransitionStatus::<T>::put(true);
             let total_supply = T::BitcoinTotalSupply::total_supply();
-            PreTotalSupply::<T>::insert(T::BtcAssetId::get(), total_supply);
+            PreTotalSupply::<T>::insert(X_BTC, total_supply);
         }
         Ok(())
     }
@@ -1178,7 +1174,7 @@ impl<T: Config> Pallet<T> {
         who: &T::AccountId,
         session_num: u32,
         trustee_info: &TrusteeSessionInfo<T::AccountId, T::BlockNumber, BtcTrusteeAddrInfo>,
-        amount: Balanceof<T>,
+        amount: BalanceOf<T>,
     ) -> DispatchResult {
         let multi_account = trustee_info
             .multi_account
@@ -1206,7 +1202,7 @@ impl<T: Config> Pallet<T> {
             Error::<T>::NotMultiSigCount
         );
 
-        <T as xpallet_gateway_records::Config>::Currency::transfer(
+        <T as xpallet_assets::Config>::Currency::transfer(
             who,
             &multi_account,
             amount,
@@ -1263,14 +1259,14 @@ impl<T: Config> Pallet<T> {
     fn alloc_native_reward(
         from: &T::AccountId,
         trustee_info: &TrusteeSessionInfo<T::AccountId, T::BlockNumber, BtcTrusteeAddrInfo>,
-    ) -> Result<Balanceof<T>, DispatchError> {
-        let total_reward = <T as xpallet_gateway_records::Config>::Currency::free_balance(from);
+    ) -> Result<BalanceOf<T>, DispatchError> {
+        let total_reward = <T as xpallet_assets::Config>::Currency::free_balance(from);
         if total_reward.is_zero() {
-            return Ok(Balanceof::<T>::zero());
+            return Ok(BalanceOf::<T>::zero());
         }
         let reward_info = Self::compute_reward(total_reward, trustee_info)?;
         for (acc, amount) in reward_info.rewards.iter() {
-            <T as xpallet_gateway_records::Config>::Currency::transfer(
+            <T as xpallet_assets::Config>::Currency::transfer(
                 from,
                 acc,
                 *amount,
@@ -1344,14 +1340,14 @@ impl<T: Config> Pallet<T> {
             Err(e) => return Err(e),
         }
 
-        match Self::alloc_not_native_reward(&multi_account, T::BtcAssetId::get(), trustee_info) {
+        match Self::alloc_not_native_reward(&multi_account, X_BTC, trustee_info) {
             Ok(total_btc_reward) => {
                 if !total_btc_reward.is_zero() {
                     Self::deposit_event(Event::<T>::AllocNotNativeReward(
                         who.clone(),
                         multi_account,
                         session_num,
-                        T::BtcAssetId::get(),
+                        X_BTC,
                         total_btc_reward,
                     ));
                 }

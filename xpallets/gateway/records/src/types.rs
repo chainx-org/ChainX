@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use sp_runtime::RuntimeDebug;
 
-use chainx_primitives::AddrStr;
+use chainx_primitives::{AddrStr, AssetId};
 use xp_runtime::Memo;
 
 /// The id of withdrawal record (u32 is enough).
@@ -42,7 +42,7 @@ impl Default for WithdrawalState {
 
 /// WithdrawalRecord for withdrawal
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub struct WithdrawalRecord<AccountId, AssetId, Balance, BlockNumber> {
+pub struct WithdrawalRecord<AccountId, Balance, BlockNumber> {
     asset_id: AssetId,
     applicant: AccountId,
     balance: Balance,
@@ -51,11 +51,9 @@ pub struct WithdrawalRecord<AccountId, AssetId, Balance, BlockNumber> {
     height: BlockNumber,
 }
 
-impl<AccountId, AssetId, Balance, BlockNumber>
-    WithdrawalRecord<AccountId, AssetId, Balance, BlockNumber>
+impl<AccountId, Balance, BlockNumber> WithdrawalRecord<AccountId, Balance, BlockNumber>
 where
     AccountId: Codec + Clone,
-    AssetId: Codec + Copy + Clone,
     Balance: Codec + Copy + Clone,
     BlockNumber: Codec + Copy + Clone,
 {
@@ -97,7 +95,7 @@ where
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, TypeInfo)]
-pub struct Withdrawal<AccountId, AssetId, Balance, BlockNumber> {
+pub struct Withdrawal<AccountId, Balance, BlockNumber> {
     pub asset_id: AssetId,
     pub applicant: AccountId,
     pub balance: Balance,
@@ -107,11 +105,9 @@ pub struct Withdrawal<AccountId, AssetId, Balance, BlockNumber> {
     pub state: WithdrawalState,
 }
 
-impl<AccountId, AssetId, Balance, BlockNumber>
-    Withdrawal<AccountId, AssetId, Balance, BlockNumber>
-{
+impl<AccountId, Balance, BlockNumber> Withdrawal<AccountId, Balance, BlockNumber> {
     pub fn new(
-        record: WithdrawalRecord<AccountId, AssetId, Balance, BlockNumber>,
+        record: WithdrawalRecord<AccountId, Balance, BlockNumber>,
         state: WithdrawalState,
     ) -> Self {
         Self {

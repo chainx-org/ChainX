@@ -88,7 +88,6 @@ impl pallet_balances::Config for Test {
 // assets
 parameter_types! {
     pub const ChainXAssetId: AssetId = 0;
-    pub const XBTCAssetId: AssetId = 1;
 }
 
 impl xpallet_assets_registrar::Config for Test {
@@ -111,7 +110,6 @@ impl xpallet_assets::Config for Test {
 impl Config for Test {
     type Event = ();
     type WeightInfo = ();
-    type BtcAssetId = XBTCAssetId;
 }
 
 pub type XRecordsErr = Error<Test>;
