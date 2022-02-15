@@ -42,7 +42,7 @@ impl frame_support::traits::OnRuntimeUpgrade for PhragmenElectionDepositRuntimeU
 pub struct SystemToTripleRefCount;
 impl frame_support::traits::OnRuntimeUpgrade for SystemToTripleRefCount {
     fn on_runtime_upgrade() -> frame_support::weights::Weight {
-        frame_system::migrations::migrate_to_dual_ref_count::<Runtime>()
+        frame_system::migrations::migrate_from_unique_to_triple_ref_count::<Runtime>()
     }
 }
 
