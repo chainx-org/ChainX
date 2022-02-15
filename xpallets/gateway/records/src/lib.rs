@@ -13,7 +13,7 @@ pub mod traits;
 pub mod types;
 pub mod weights;
 
-use sp_std::{cmp::Ordering, collections::btree_map::BTreeMap, prelude::*};
+use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
 use frame_support::{
     dispatch::{DispatchError, DispatchResult},
@@ -21,7 +21,7 @@ use frame_support::{
     log::{error, info},
 };
 use frame_system::ensure_root;
-use sp_runtime::traits::{CheckedSub, StaticLookup};
+use sp_runtime::traits::StaticLookup;
 
 use orml_utilities::with_transaction_result;
 
@@ -30,7 +30,7 @@ pub use self::types::{Withdrawal, WithdrawalRecord, WithdrawalRecordId, Withdraw
 pub use self::weights::WeightInfo;
 use chainx_primitives::{AddrStr, AssetId};
 use xp_runtime::Memo;
-use xpallet_assets::{BalanceOf, Chain};
+use xpallet_assets::{AssetType, BalanceOf, Chain};
 use xpallet_support::try_addr;
 
 pub type WithdrawalRecordOf<T> = WithdrawalRecord<
@@ -45,20 +45,13 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use frame_support::{
-        pallet_prelude::*,
-        traits::{LockableCurrency, ReservableCurrency},
-    };
+    use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
 
     #[pallet::config]
     pub trait Config: frame_system::Config + xpallet_assets::Config {
         /// The overarching event type.
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
-
-        /// Operate currency
-        type Currency: ReservableCurrency<Self::AccountId>
-            + LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
 
         #[pallet::constant]
         /// The btc asset id.
@@ -133,29 +126,6 @@ pub mod pallet {
             }
             Ok(())
         }
-
-        /// Set locked assets of given account.
-        ///
-        /// This is a root-only operation.
-        #[pallet::weight(<T as Config>::WeightInfo::set_locked_assets())]
-        pub fn set_locked_assets(
-            origin: OriginFor<T>,
-            who: T::AccountId,
-            asset_id: AssetId,
-            locked_balance: BalanceOf<T>,
-        ) -> DispatchResult {
-            ensure_root(origin)?;
-            if Locks::<T>::contains_key(who.clone(), asset_id) {
-                Locks::<T>::mutate(who, asset_id, |balance| match balance {
-                    Some(amount) => *amount = locked_balance,
-                    None => *balance = Some(locked_balance),
-                });
-            } else {
-                Locks::<T>::insert(who, asset_id, locked_balance);
-            }
-
-            Ok(())
-        }
     }
 
     #[pallet::event]
@@ -222,13 +192,6 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn asset_chain_of)]
     pub type AssetChainOf<T: Config> = StorageMap<_, Twox64Concat, AssetId, Chain>;
-
-    /// Any liquidity locks of a token type under an account.
-    /// NOTE: Should only be accessed when setting, changing and freeing a lock.
-    #[pallet::storage]
-    #[pallet::getter(fn locks)]
-    pub type Locks<T: Config> =
-        StorageDoubleMap<_, Blake2_128Concat, T::AccountId, Twox64Concat, AssetId, BalanceOf<T>>;
 
     #[pallet::genesis_config]
     pub struct GenesisConfig {
@@ -592,32 +555,28 @@ impl<T: Config> Pallet<T> {
     }
 
     fn lock(who: &T::AccountId, asset_id: AssetId, value: BalanceOf<T>) -> DispatchResult {
-        if Locks::<T>::contains_key(who, asset_id) {
-            Locks::<T>::mutate(who, asset_id, |balance| match balance {
-                Some(amount) => *amount += value,
-                None => *balance = Some(value),
-            });
-        } else {
-            Locks::<T>::insert(who, asset_id, value);
-        }
+        xpallet_assets::Pallet::<T>::move_balance(
+            &asset_id,
+            who,
+            AssetType::Usable,
+            who,
+            AssetType::ReservedWithdrawal,
+            value,
+        )
+        .map_err::<xpallet_assets::Error<T>, _>(Into::into)?;
         Ok(())
     }
 
     fn unlock(who: &T::AccountId, asset_id: AssetId, value: BalanceOf<T>) -> DispatchResult {
-        Locks::<T>::try_mutate_exists(who, asset_id, |amount| match amount {
-            None => Err(Error::<T>::InsufficientLockedAssets),
-            Some(acc) => match (*acc).cmp(&value) {
-                Ordering::Less => Err(Error::<T>::InsufficientLockedAssets),
-                Ordering::Equal => {
-                    *amount = None;
-                    Ok(())
-                }
-                Ordering::Greater => {
-                    *amount = acc.checked_sub(&value);
-                    Ok(())
-                }
-            },
-        })?;
+        xpallet_assets::Pallet::<T>::move_balance(
+            &asset_id,
+            who,
+            AssetType::ReservedWithdrawal,
+            who,
+            AssetType::Usable,
+            value,
+        )
+        .map_err::<xpallet_assets::Error<T>, _>(Into::into)?;
         Ok(())
     }
 

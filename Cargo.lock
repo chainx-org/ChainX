@@ -9606,10 +9606,10 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "xp-assets-registrar",
  "xp-protocol",
  "xp-runtime",
  "xpallet-assets",
+ "xpallet-assets-registrar",
  "xpallet-support",
 ]
 
