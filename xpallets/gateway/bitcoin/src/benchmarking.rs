@@ -2,13 +2,13 @@
 
 use codec::{Decode, Encode};
 use frame_benchmarking::{benchmarks, whitelisted_caller};
-use frame_support::traits::Get;
 use frame_system::RawOrigin;
-use sp_runtime::{traits::StaticLookup, AccountId32};
+use sp_runtime::AccountId32;
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
-use xp_assets_registrar::Chain;
 use xp_gateway_bitcoin::BtcTxType;
+use xp_protocol::X_BTC;
+use xpallet_assets::BalanceOf;
 use xpallet_gateway_records::{Pallet as XGatewayRecords, WithdrawalState};
 
 use light_bitcoin::{
@@ -19,18 +19,6 @@ use light_bitcoin::{
 };
 
 use crate::{types::*, Call, Config, Pallet, PendingDeposits, TxState, WithdrawalProposal};
-
-fn create_default_asset<T: Config>(who: T::AccountId) {
-    let miner = T::Lookup::unlookup(who);
-    let _ = xpallet_assets::Pallet::<T>::force_create(
-        RawOrigin::Root.into(),
-        X_BTC,
-        miner,
-        true,
-        1u32.into(),
-    );
-    xpallet_gateway_records::AssetChainOf::<T>::insert(X_BTC, Chain::Bitcoin);
-}
 
 fn generate_blocks_63290_63310() -> BTreeMap<u32, BlockHeader> {
     let bytes = include_bytes!("./res/headers-63290-63310.raw");
@@ -108,7 +96,6 @@ benchmarks! {
         let l = 1024 * 1024 * 500; // 500KB length
 
         let caller: T::AccountId = alice::<T>();
-        create_default_asset::<T>(caller.clone());
         prepare_headers::<T>(&caller);
         let (tx, info, prev_tx) = withdraw_tx();
         let tx_hash = tx.hash();
@@ -146,9 +133,7 @@ benchmarks! {
     create_taproot_withdraw_tx {
         let n = 100;                // 100 withdrawal count
         let l = 1024 * 1024 * 500;  // 500KB length
-
         let caller = alice::<T>();
-        create_default_asset::<T>(caller.clone());
 
         let (tx, info, prev_tx) = withdraw_tx();
         let tx_hash = tx.hash();

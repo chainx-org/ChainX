@@ -9,7 +9,7 @@ use frame_support::{
     parameter_types, sp_io,
     traits::{ChangeMembers, GenesisBuild, LockIdentifier, UnixTime},
 };
-use frame_system::{EnsureRoot, EnsureSigned, EnsureSignedBy};
+use frame_system::{EnsureSigned, EnsureSignedBy};
 use light_bitcoin::keys::{Address, Public};
 use light_bitcoin::mast::{compute_min_threshold, Mast};
 use light_bitcoin::script::{Builder, Bytes, Opcode};
@@ -22,11 +22,6 @@ use sp_runtime::{
     AccountId32, DispatchError, DispatchResult,
 };
 
-use chainx_primitives::AssetId;
-pub use xp_protocol::{X_BTC, X_ETH};
-use xpallet_gateway_bitcoin::trustee::check_keys;
-use xpallet_support::traits::{MultisigAddressFor, Validator};
-use xpallet_assets::{AssetRestrictions, BalanceOf, Chain, ChainT, WithdrawalLimit};
 use crate::traits::TotalSupply;
 use crate::utils::{two_thirds_unsafe, MAX_TAPROOT_NODES};
 use crate::{
@@ -39,10 +34,16 @@ use crate::{
     types::*,
     SaturatedConversion,
 };
+use chainx_primitives::AssetId;
+pub use xp_protocol::{X_BTC, X_ETH};
+use xpallet_assets::{AssetInfo, AssetRestrictions, BalanceOf, Chain, ChainT, WithdrawalLimit};
+use xpallet_gateway_bitcoin::trustee::check_keys;
+use xpallet_support::traits::{MultisigAddressFor, Validator};
 
 pub(crate) type AccountId = AccountId32;
 pub(crate) type BlockNumber = u64;
 pub(crate) type Balance = u128;
+pub(crate) type Amount = i128;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -56,8 +57,9 @@ frame_support::construct_runtime!(
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
         Elections: pallet_elections_phragmen::{Pallet, Call, Storage, Event<T>, Config<T>},
-        Assets: xpallet-assets::{Pallet, Call, Storage, Event<T>},
-        XGatewayRecords: xpallet_gateway_records::{Pallet, Call, Storage, Event<T>, Config<T>},
+        XAssetsRegistrar: xpallet_assets_registrar::{Pallet, Call, Storage, Event<T>, Config},
+        XAssets: xpallet_assets::{Pallet, Call, Storage, Event<T>, Config<T>},
+        XGatewayRecords: xpallet_gateway_records::{Pallet, Call, Storage, Event<T>},
         XGatewayCommon: xpallet_gateway_common::{Pallet, Call, Storage, Event<T>, Config<T>},
         XGatewayBitcoin: xpallet_gateway_bitcoin::{Pallet, Call, Storage, Event<T>, Config<T>},
     }
@@ -197,20 +199,25 @@ parameter_types! {
     pub const MetadataDepositPerByte: Balance = 1;
 }
 
+parameter_types! {
+    pub const ChainXAssetId: AssetId = 0;
+}
+
+impl xpallet_assets_registrar::Config for Test {
+    type Event = ();
+    type NativeAssetId = ChainXAssetId;
+    type RegistrarHandler = ();
+    type WeightInfo = ();
+}
+
 impl xpallet_assets::Config for Test {
     type Event = ();
-    type Balance = Balance;
-    type AssetId = AssetId;
     type Currency = Balances;
-    type ForceOrigin = EnsureRoot<AccountId>;
-    type AssetDeposit = AssetDeposit;
-    type MetadataDepositBase = MetadataDepositBase;
-    type MetadataDepositPerByte = MetadataDepositPerByte;
-    type ApprovalDeposit = ApprovalDeposit;
-    type StringLimit = StringLimit;
-    type Freezer = XGatewayRecords;
-    type Extra = ();
-    type WeightInfo = xpallet-assets::weights::SubstrateWeight<Test>;
+    type Amount = Amount;
+    type TreasuryAccount = ();
+    type OnCreatedAccount = frame_system::Provider<Test>;
+    type OnAssetChanged = ();
+    type WeightInfo = ();
 }
 
 // assets
@@ -220,9 +227,7 @@ parameter_types! {
 
 impl xpallet_gateway_records::Config for Test {
     type Event = ();
-    type Currency = Balances;
     type WeightInfo = ();
-    type BtcAssetId = BtcAssetId;
 }
 
 thread_local! {
@@ -275,6 +280,8 @@ impl Validator<AccountId> for AlwaysValidator {
 }
 pub struct MockBitcoin<T: xpallet_gateway_bitcoin::Config>(sp_std::marker::PhantomData<T>);
 impl<T: xpallet_gateway_bitcoin::Config> ChainT<BalanceOf<T>> for MockBitcoin<T> {
+    const ASSET_ID: u32 = X_BTC;
+
     fn chain() -> Chain {
         Chain::Bitcoin
     }
@@ -467,6 +474,21 @@ impl crate::Config for Test {
     type WeightInfo = ();
 }
 
+fn btc() -> (AssetId, AssetInfo, AssetRestrictions) {
+    (
+        X_BTC,
+        AssetInfo::new::<Test>(
+            b"X-BTC".to_vec(),
+            b"X-BTC".to_vec(),
+            Chain::Bitcoin,
+            8,
+            b"ChainX's cross-chain Bitcoin".to_vec(),
+        )
+        .unwrap(),
+        AssetRestrictions::DESTROY_USABLE,
+    )
+}
+
 pub fn alice() -> AccountId32 {
     sr25519::Keyring::Alice.to_account_id()
 }
@@ -492,26 +514,33 @@ impl ExtBuilder {
             .build_storage::<Test>()
             .unwrap();
 
+        let btc_assets = btc();
+        let assets = vec![(btc_assets.0, btc_assets.1, btc_assets.2, true, true)];
+
+        let mut init_assets = vec![];
+        let mut assets_restrictions = vec![];
+        for (a, b, c, d, e) in assets {
+            init_assets.push((a, b, d, e));
+            assets_restrictions.push((a, c))
+        }
+
+        GenesisBuild::<Test>::assimilate_storage(
+            &xpallet_assets_registrar::GenesisConfig {
+                assets: init_assets,
+            },
+            &mut storage,
+        )
+        .unwrap();
+
+        let _ = xpallet_assets::GenesisConfig::<Test> {
+            assets_restrictions,
+            endowed: Default::default(),
+        }
+        .assimilate_storage(&mut storage);
+
         let _ = crate::GenesisConfig::<Test> {
             trustees: trustees(),
             ..Default::default()
-        }
-        .assimilate_storage(&mut storage);
-
-        let _ = xpallet_gateway_records::GenesisConfig::<Test> {
-            initial_asset_chain: vec![(X_BTC, Chain::Bitcoin)],
-        }
-        .assimilate_storage(&mut storage);
-
-        let _ = xpallet-assets::GenesisConfig::<Test> {
-            assets: vec![(X_BTC, Default::default(), true, 1)],
-            metadata: vec![(
-                X_BTC,
-                "XBTC".to_string().into_bytes(),
-                "XBTC".to_string().into_bytes(),
-                8,
-            )],
-            accounts: vec![],
         }
         .assimilate_storage(&mut storage);
 

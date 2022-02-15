@@ -17,13 +17,18 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+use frame_support::{dispatch::DispatchResult, pallet_prelude::*, traits::UnixTime};
+use frame_system::pallet_prelude::*;
+use sp_core::sp_std::str::FromStr;
 use sp_runtime::SaturatedConversion;
+use sp_std::marker::PhantomData;
 use sp_std::prelude::*;
 
 use orml_utilities::with_transaction_result;
 
 #[cfg(feature = "std")]
 pub use light_bitcoin::primitives::h256_rev;
+
 pub use light_bitcoin::{
     chain::{BlockHeader as BtcHeader, Transaction, TransactionOutputArray},
     keys::{Address, DisplayLayout, Network as BtcNetwork},
@@ -31,28 +36,31 @@ pub use light_bitcoin::{
     serialization::{deserialize, Reader},
 };
 
-use chainx_primitives::ReferralId;
+use chainx_primitives::{AssetId, ReferralId};
 use xp_assets_registrar::Chain;
 use xp_gateway_common::AccountExtractor;
+use xp_protocol::X_BTC;
+use xpallet_assets::{BalanceOf, ChainT, WithdrawalLimit};
 use xpallet_gateway_common::{
-    traits::{AddressBinding, ReferralBinding, TrusteeInfoUpdate, TrusteeSession},
+    traits::{
+        AddressBinding, ReferralBinding, RelayerInfo, TotalSupply, TrusteeInfoUpdate,
+        TrusteeSession,
+    },
     trustees::bitcoin::BtcTrusteeAddrInfo,
 };
 use xpallet_support::try_addr;
 
-pub use self::types::{BtcAddress, BtcParams, BtcTxVerifier, BtcWithdrawalProposal};
 pub use self::weights::WeightInfo;
 use self::{
     trustee::{get_current_trustee_address_pair, get_last_trustee_address_pair},
     tx::remove_pending_deposit,
     types::{
-        BtcDepositCache, BtcHeaderIndex, BtcHeaderInfo, BtcRelayedTx, BtcRelayedTxInfo,
-        BtcTxResult, BtcTxState,
+        BtcAddress, BtcDepositCache, BtcHeaderIndex, BtcHeaderInfo, BtcParams, BtcRelayedTx,
+        BtcRelayedTxInfo, BtcTxResult, BtcTxState, BtcTxVerifier, BtcWithdrawalProposal,
     },
 };
 
 pub use pallet::*;
-use sp_core::sp_std::str::FromStr;
 
 // syntactic sugar for native log.
 #[macro_export]
@@ -67,15 +75,6 @@ macro_rules! log {
 
 #[frame_support::pallet]
 pub mod pallet {
-    use sp_std::marker::PhantomData;
-
-    use chainx_primitives::AssetId;
-    use frame_support::{dispatch::DispatchResult, pallet_prelude::*, traits::UnixTime};
-    use frame_system::pallet_prelude::*;
-    use xp_protocol::X_BTC;
-    use xpallet_assets::{BalanceOf, ChainT, WithdrawalLimit};
-    use xpallet_gateway_common::traits::{RelayerInfo, TotalSupply};
-
     use super::*;
 
     #[pallet::pallet]

@@ -2,34 +2,23 @@
 
 use codec::{Decode, Encode};
 use frame_benchmarking::benchmarks;
-use frame_support::traits::{Currency, Get};
+use frame_support::traits::Currency;
 use frame_system::RawOrigin;
 use sp_core::crypto::AccountId32;
 #[cfg(feature = "runtime-benchmarks")]
 use sp_runtime::traits::CheckedDiv;
-use sp_runtime::traits::StaticLookup;
 use sp_std::prelude::*;
 
 use xp_assets_registrar::Chain;
+use xp_protocol::X_BTC;
+use xpallet_assets::BalanceOf;
 use xpallet_gateway_records::{Pallet as XGatewayRecords, WithdrawalRecordId, WithdrawalState};
 
 use crate::{
-    traits::TrusteeSession, types::*, Balanceof, Call, Config, LittleBlackHouse, Pallet,
+    traits::TrusteeSession, types::*, Call, Config, LittleBlackHouse, Pallet,
     TrusteeIntentionPropertiesOf, TrusteeMultiSigAddr, TrusteeSessionInfoLen, TrusteeSessionInfoOf,
 };
 
-fn create_default_asset<T: Config>(who: T::AccountId) {
-    let miner = T::Lookup::unlookup(who);
-    let _ = xpallet
-        - assets::Pallet::<T>::force_create(
-            RawOrigin::Root.into(),
-            X_BTC,
-            miner,
-            true,
-            1u32.into(),
-        );
-    xpallet_gateway_records::AssetChainOf::<T>::insert(X_BTC, Chain::Bitcoin);
-}
 #[cfg(feature = "runtime-benchmarks")]
 fn update_trustee_info<T: Config>(session_num: u32) {
     TrusteeSessionInfoOf::<T>::mutate(Chain::Bitcoin, session_num, |info| match info {
@@ -114,7 +103,6 @@ fn clean<T: Config>() {
 benchmarks! {
     withdraw {
         let caller: T::AccountId = alice::<T>();
-        create_default_asset::<T>(caller.clone());
         let amount: BalanceOf<T> = 1_000_000_000u32.into();
         XGatewayRecords::<T>::deposit(&caller, X_BTC, amount).unwrap();
         let withdrawal = 100_000_000u32.into();
@@ -131,7 +119,6 @@ benchmarks! {
 
     cancel_withdrawal {
         let caller: T::AccountId = alice::<T>();
-        create_default_asset::<T>(caller.clone());
         let amount: BalanceOf<T> = 1_000_000_000_u32.into();
         XGatewayRecords::<T>::deposit(&caller, X_BTC, amount).unwrap();
 
@@ -195,7 +182,6 @@ benchmarks! {
 
     set_withdrawal_state {
         let caller: T::AccountId = alice::<T>();
-        create_default_asset::<T>(caller.clone());
         TrusteeMultiSigAddr::<T>::insert(Chain::Bitcoin, caller.clone());
 
         let amount: BalanceOf<T> = 1_000_000_000u32.into();
@@ -286,14 +272,14 @@ benchmarks! {
         assert_eq!(Pallet::<T>::transition_trustee_session_impl(Chain::Bitcoin, candidators), Ok(()));
         assert_eq!(Pallet::<T>::trustee_session_info_len(Chain::Bitcoin), 2);
         assert!(Pallet::<T>::trustee_session_info_of(Chain::Bitcoin, 2).is_some());
-        let reward: Balanceof<T> = 100_000_000u32.into();
+        let reward: BalanceOf<T> = 100_000_000u32.into();
         let session_num = 1;
         #[cfg(not(feature = "runtime-benchmarks"))]
         <T as xpallet_assets::Config>::Currency::deposit_creating(&caller, reward);
         #[cfg(feature = "runtime-benchmarks")]
         update_trustee_info::<T>(session_num);
         #[cfg(feature = "runtime-benchmarks")]
-        let reward: Balanceof<T> = <T as xpallet_assets::Config>::Currency::free_balance(&caller).checked_div(&2u32.into()).unwrap();
+        let reward: BalanceOf<T> = <T as xpallet_assets::Config>::Currency::free_balance(&caller).checked_div(&2u32.into()).unwrap();
     }: _(RawOrigin::Signed(caller.clone()), session_num as i32, reward)
     verify {
         #[cfg(not(feature = "runtime-benchmarks"))]
@@ -325,12 +311,12 @@ benchmarks! {
         assert_eq!(Pallet::<T>::transition_trustee_session_impl(Chain::Bitcoin, candidators), Ok(()));
         assert_eq!(Pallet::<T>::trustee_session_info_len(Chain::Bitcoin), 2);
         assert!(Pallet::<T>::trustee_session_info_of(Chain::Bitcoin, 2).is_some());
-        let reward: Balanceof<T> = 100_000_000u32.into();
+        let reward: BalanceOf<T> = 100_000_000u32.into();
         let session_num = 1;
         #[cfg(feature = "runtime-benchmarks")]
         update_trustee_info::<T>(session_num);
         #[cfg(feature = "runtime-benchmarks")]
-        let reward: Balanceof<T> = <T as xpallet_assets::Config>::Currency::free_balance(&caller).checked_div(&2u32.into()).unwrap();
+        let reward: BalanceOf<T> = <T as xpallet_assets::Config>::Currency::free_balance(&caller).checked_div(&2u32.into()).unwrap();
         let multi_account = <T as crate::Config>::BitcoinTrusteeSessionProvider::trustee_session(session_num).unwrap().multi_account.unwrap();
         <T as xpallet_assets::Config>::Currency::deposit_creating(&multi_account, reward);
     }: _(RawOrigin::Signed(caller.clone()), session_num as i32)

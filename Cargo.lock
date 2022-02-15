@@ -9518,6 +9518,7 @@ dependencies = [
  "xp-gateway-common",
  "xp-protocol",
  "xpallet-assets",
+ "xpallet-assets-registrar",
  "xpallet-gateway-common",
  "xpallet-gateway-records",
  "xpallet-support",

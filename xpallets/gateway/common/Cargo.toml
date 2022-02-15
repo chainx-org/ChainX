@@ -21,8 +21,7 @@ frame-support = { git = "https://github.com/paritytech/substrate", branch = "pol
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
 
 pallet-elections-phragmen = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
-xpallet-assets = { path = "../../assets", default-features = false }
-xpallet-assets-registrar = { path = "../../assets-registrar", default-features = false }
+
 
 # ChainX primitives
 chainx-primitives = { path = "../../../primitives", default-features = false }
@@ -32,8 +31,10 @@ xp-rpc = { path = "../../../primitives/rpc", optional = true }
 xp-runtime = { path = "../../../primitives/runtime", default-features = false }
 
 # ChainX pallets
-xpallet-gateway-records = { path = "../records", default-features = false }
+xpallet-assets = { path = "../../assets", default-features = false }
 xpallet-support = { path = "../../support", default-features = false }
+xpallet-assets-registrar = { path = "../../assets-registrar", default-features = false }
+xpallet-gateway-records = { path = "../records", default-features = false }
 
 # light-bitcoin
 light-bitcoin = { git = "https://github.com/chainx-org/light-bitcoin", branch = "taproot", default-features = false }
@@ -64,6 +65,7 @@ std = [
   # Substrate pallets
   "frame-support/std",
   "frame-system/std",
+  "pallet-elections-phragmen/std",
   # ChainX primitives
   "chainx-primitives/std",
   "xp-assets-registrar/std",
@@ -71,12 +73,11 @@ std = [
   "xp-rpc",
   "xp-runtime/std",
   # ChainX pallets
+  "xpallet-assets/std",
+  "xpallet-assets-registrar/std",
   "xpallet-gateway-records/std",
   "xpallet-support/std",
   # light-bitcoin
   "light-bitcoin/std",
-  "xpallet-assets/std",
-  "xpallet-assets-registrar/std",
-  "pallet-elections-phragmen/std"
 ]
 runtime-benchmarks = ["hex", "sp-core", "frame-benchmarking"]
