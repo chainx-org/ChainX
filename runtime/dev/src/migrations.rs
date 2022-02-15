@@ -227,7 +227,6 @@ impl frame_support::traits::OnRuntimeUpgrade for ElectionsPrefixMigration {
     }
 }
 
-
 use frame_support::{traits::OnRuntimeUpgrade, weights::Weight};
 pub struct CustomOnRuntimeUpgrades;
 impl OnRuntimeUpgrade for CustomOnRuntimeUpgrades {
@@ -275,13 +274,15 @@ impl OnRuntimeUpgrade for CustomOnRuntimeUpgrades {
         // 8. TechnicalCommitteeStoragePrefixMigration
         frame_support::log::info!("🔍️ TechnicalCommitteeStoragePrefixMigration start");
         frame_support::traits::StorageVersion::new(0).put::<TechnicalCommittee>();
-        weight += <TechnicalCommitteeStoragePrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
+        weight +=
+            <TechnicalCommitteeStoragePrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
         frame_support::log::info!("🚀 TechnicalCommitteeStoragePrefixMigration end");
 
         // 9. TechnicalMembershipStoragePrefixMigration
         frame_support::log::info!("🔍️ TechnicalMembershipStoragePrefixMigration start");
         frame_support::traits::StorageVersion::new(0).put::<TechnicalMembership>();
-        weight += <TechnicalMembershipStoragePrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
+        weight +=
+            <TechnicalMembershipStoragePrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
         frame_support::log::info!("🚀 TechnicalMembershipStoragePrefixMigration end");
 
         // 10. CouncilStoragePrefixMigration
