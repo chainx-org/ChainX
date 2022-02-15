@@ -19,7 +19,6 @@ use frame_support::{
     dispatch::{DispatchError, DispatchResult},
     ensure,
     log::{error, info},
-    traits::fungibles::{Inspect, Mutate},
 };
 use frame_system::ensure_root;
 use sp_runtime::traits::{CheckedSub, StaticLookup};
@@ -31,16 +30,15 @@ pub use self::types::{
     Withdrawal, WithdrawalLimit, WithdrawalRecord, WithdrawalRecordId, WithdrawalState,
 };
 pub use self::weights::WeightInfo;
-use pallet_assets::FrozenBalance;
-use sherpax_primitives::AddrStr;
-use xp_assets_registrar::Chain;
+use chainx_primitives::{AddrStr, AssetId};
 use xp_runtime::Memo;
+use xpallet_assets::{BalanceOf, Chain};
 use xpallet_support::try_addr;
 
 pub type WithdrawalRecordOf<T> = WithdrawalRecord<
     <T as frame_system::Config>::AccountId,
-    <T as pallet_assets::Config>::AssetId,
-    <T as pallet_assets::Config>::Balance,
+    AssetId,
+    BalanceOf<T>,
     <T as frame_system::Config>::BlockNumber,
 >;
 
@@ -56,7 +54,7 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + pallet_assets::Config {
+    pub trait Config: frame_system::Config + xpallet_assets::Config {
         /// The overarching event type.
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
@@ -66,7 +64,7 @@ pub mod pallet {
 
         #[pallet::constant]
         /// The btc asset id.
-        type BtcAssetId: Get<Self::AssetId>;
+        type BtcAssetId: Get<AssetId>;
 
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
@@ -85,8 +83,8 @@ pub mod pallet {
         pub fn root_deposit(
             origin: OriginFor<T>,
             who: <T::Lookup as StaticLookup>::Source,
-            #[pallet::compact] asset_id: T::AssetId,
-            #[pallet::compact] balance: T::Balance,
+            #[pallet::compact] asset_id: AssetId,
+            #[pallet::compact] balance: BalanceOf<T>,
         ) -> DispatchResult {
             ensure_root(origin)?;
             let who = T::Lookup::lookup(who)?;
@@ -100,8 +98,8 @@ pub mod pallet {
         pub fn root_withdraw(
             origin: OriginFor<T>,
             who: <T::Lookup as StaticLookup>::Source,
-            #[pallet::compact] asset_id: T::AssetId,
-            #[pallet::compact] balance: T::Balance,
+            #[pallet::compact] asset_id: AssetId,
+            #[pallet::compact] balance: BalanceOf<T>,
             addr: AddrStr,
             memo: Memo,
         ) -> DispatchResult {
@@ -145,8 +143,8 @@ pub mod pallet {
         pub fn set_locked_assets(
             origin: OriginFor<T>,
             who: T::AccountId,
-            asset_id: T::AssetId,
-            locked_balance: T::Balance,
+            asset_id: AssetId,
+            locked_balance: BalanceOf<T>,
         ) -> DispatchResult {
             ensure_root(origin)?;
             if Locks::<T>::contains_key(who.clone(), asset_id) {
@@ -166,7 +164,7 @@ pub mod pallet {
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T: Config> {
         /// An account deposited some asset. [who, asset_id, amount]
-        Deposited(T::AccountId, T::AssetId, T::Balance),
+        Deposited(T::AccountId, AssetId, BalanceOf<T>),
         /// A withdrawal application was created. [withdrawal_id, record_info]
         WithdrawalCreated(WithdrawalRecordId, WithdrawalRecordOf<T>),
         /// A withdrawal proposal was processed. [withdrawal_id]
@@ -225,23 +223,23 @@ pub mod pallet {
     /// Asset info of each asset.
     #[pallet::storage]
     #[pallet::getter(fn asset_chain_of)]
-    pub type AssetChainOf<T: Config> = StorageMap<_, Twox64Concat, T::AssetId, Chain>;
+    pub type AssetChainOf<T: Config> = StorageMap<_, Twox64Concat, AssetId, Chain>;
 
     /// Any liquidity locks of a token type under an account.
     /// NOTE: Should only be accessed when setting, changing and freeing a lock.
     #[pallet::storage]
     #[pallet::getter(fn locks)]
     pub type Locks<T: Config> =
-        StorageDoubleMap<_, Blake2_128Concat, T::AccountId, Twox64Concat, T::AssetId, T::Balance>;
+        StorageDoubleMap<_, Blake2_128Concat, T::AccountId, Twox64Concat, AssetId, BalanceOf<T>>;
 
     #[pallet::genesis_config]
-    pub struct GenesisConfig<T: Config> {
+    pub struct GenesisConfig {
         /// The initial asset chain.
-        pub initial_asset_chain: Vec<(T::AssetId, Chain)>,
+        pub initial_asset_chain: Vec<(AssetId, Chain)>,
     }
 
     #[cfg(feature = "std")]
-    impl<T: Config> Default for GenesisConfig<T> {
+    impl Default for GenesisConfig {
         fn default() -> Self {
             Self {
                 initial_asset_chain: Default::default(),
@@ -250,7 +248,7 @@ pub mod pallet {
     }
 
     #[pallet::genesis_build]
-    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+    impl<T: Config> GenesisBuild<T> for GenesisConfig {
         fn build(&self) {
             let extra_genesis_builder: fn(&Self) = |config| {
                 for (asset_id, chain) in config.initial_asset_chain.iter() {
@@ -263,10 +261,7 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
-    fn ensure_asset_belongs_to_chain(
-        asset_id: T::AssetId,
-        expected_chain: Chain,
-    ) -> DispatchResult {
+    fn ensure_asset_belongs_to_chain(asset_id: AssetId, expected_chain: Chain) -> DispatchResult {
         let asset_chain = Self::chain_of(&asset_id)?;
         ensure!(asset_chain == expected_chain, Error::<T>::UnexpectedChain);
         Ok(())
@@ -274,13 +269,15 @@ impl<T: Config> Pallet<T> {
 
     fn ensure_withdrawal_available_balance(
         who: &T::AccountId,
-        asset_id: T::AssetId,
-        value: T::Balance,
+        asset_id: AssetId,
+        value: BalanceOf<T>,
     ) -> DispatchResult {
-        match pallet_assets::Pallet::<T>::can_withdraw(asset_id, who, value).into_result() {
-            Ok(_) => Ok(()),
-            _ => Err(pallet_assets::Error::<T>::BalanceLow.into()),
-        }
+        let available = xpallet_assets::Pallet::<T>::usable_balance(who, &asset_id);
+        ensure!(
+            available >= value,
+            xpallet_assets::Error::<T>::InsufficientBalance
+        );
+        Ok(())
     }
 
     fn ensure_withdrawal_records_exists(
@@ -296,17 +293,16 @@ impl<T: Config> Pallet<T> {
     /// Deposit asset.
     ///
     /// NOTE: this function has included deposit_init and deposit_finish (not wait for block confirm)
-    pub fn deposit(
-        who: &T::AccountId,
-        asset_id: T::AssetId,
-        balance: T::Balance,
-    ) -> DispatchResult {
+    pub fn deposit(who: &T::AccountId, asset_id: AssetId, balance: BalanceOf<T>) -> DispatchResult {
+        xpallet_assets::Pallet::<T>::ensure_not_native_asset(&asset_id)?;
+
         info!(
             target: "runtime::gateway::records",
             "[deposit] who:{:?}, id:{:?}, balance:{:?}",
             who, asset_id, balance
         );
-        pallet_assets::Pallet::<T>::mint_into(asset_id, who, balance)?;
+
+        xpallet_assets::Pallet::<T>::issue(&asset_id, who, balance)?;
         Self::deposit_event(Event::<T>::Deposited(who.clone(), asset_id, balance));
         Ok(())
     }
@@ -318,8 +314,8 @@ impl<T: Config> Pallet<T> {
     /// NOTE: this function has included withdrawal_init and withdrawal_locking.
     pub fn withdraw(
         who: &T::AccountId,
-        asset_id: T::AssetId,
-        balance: T::Balance,
+        asset_id: AssetId,
+        balance: BalanceOf<T>,
         addr: AddrStr,
         ext: Memo,
     ) -> DispatchResult {
@@ -597,7 +593,7 @@ impl<T: Config> Pallet<T> {
         Self::set_withdrawal_state(frame_system::RawOrigin::Root.into(), id, new_state)
     }
 
-    fn lock(who: &T::AccountId, asset_id: T::AssetId, value: T::Balance) -> DispatchResult {
+    fn lock(who: &T::AccountId, asset_id: AssetId, value: BalanceOf<T>) -> DispatchResult {
         if Locks::<T>::contains_key(who, asset_id) {
             Locks::<T>::mutate(who, asset_id, |balance| match balance {
                 Some(amount) => *amount += value,
@@ -609,7 +605,7 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
-    fn unlock(who: &T::AccountId, asset_id: T::AssetId, value: T::Balance) -> DispatchResult {
+    fn unlock(who: &T::AccountId, asset_id: AssetId, value: BalanceOf<T>) -> DispatchResult {
         Locks::<T>::try_mutate_exists(who, asset_id, |amount| match amount {
             None => Err(Error::<T>::InsufficientLockedAssets),
             Some(acc) => match (*acc).cmp(&value) {
@@ -627,18 +623,16 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
-    fn destroy(who: &T::AccountId, asset_id: T::AssetId, value: T::Balance) -> DispatchResult {
-        Self::unlock(who, asset_id, value)?;
-        pallet_assets::Pallet::<T>::burn_from(asset_id, who, value)?;
+    fn destroy(who: &T::AccountId, asset_id: AssetId, value: BalanceOf<T>) -> DispatchResult {
+        xpallet_assets::Pallet::<T>::destroy_reserved_withdrawal(&asset_id, who, value)?;
         Ok(())
     }
 }
 
 impl<T: Config> Pallet<T> {
-    pub fn withdrawal_list() -> BTreeMap<
-        WithdrawalRecordId,
-        Withdrawal<T::AccountId, T::AssetId, T::Balance, T::BlockNumber>,
-    > {
+    pub fn withdrawal_list(
+    ) -> BTreeMap<WithdrawalRecordId, Withdrawal<T::AccountId, AssetId, BalanceOf<T>, T::BlockNumber>>
+    {
         PendingWithdrawals::<T>::iter()
             .map(|(id, record)| {
                 (
@@ -651,10 +645,8 @@ impl<T: Config> Pallet<T> {
 
     pub fn withdrawals_list_by_chain(
         chain: Chain,
-    ) -> BTreeMap<
-        WithdrawalRecordId,
-        Withdrawal<T::AccountId, T::AssetId, T::Balance, T::BlockNumber>,
-    > {
+    ) -> BTreeMap<WithdrawalRecordId, Withdrawal<T::AccountId, AssetId, BalanceOf<T>, T::BlockNumber>>
+    {
         Self::withdrawal_list()
             .into_iter()
             .filter(|(_, withdrawal)| {
@@ -668,15 +660,7 @@ impl<T: Config> Pallet<T> {
     }
 
     /// Returns the chain of given asset `asset_id`.
-    pub fn chain_of(asset_id: &T::AssetId) -> Result<Chain, DispatchError> {
+    pub fn chain_of(asset_id: &AssetId) -> Result<Chain, DispatchError> {
         Self::asset_chain_of(asset_id).ok_or_else(|| Error::<T>::InvalidAssetId.into())
     }
-}
-
-impl<T: Config> FrozenBalance<T::AssetId, T::AccountId, T::Balance> for Pallet<T> {
-    fn frozen_balance(asset: T::AssetId, who: &T::AccountId) -> Option<T::Balance> {
-        Self::locks(who, asset)
-    }
-
-    fn died(_asset: T::AssetId, _who: &T::AccountId) {}
 }

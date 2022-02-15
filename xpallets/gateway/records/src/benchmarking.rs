@@ -9,7 +9,7 @@ use crate::Pallet as XGatewayRecords;
 
 fn create_default_asset<T: Config>(who: T::AccountId) {
     let miner = T::Lookup::unlookup(who);
-    let _ = pallet_assets::Pallet::<T>::force_create(
+    let _ = xpallet_assets::Pallet::<T>::force_create(
         RawOrigin::Root.into(),
         T::BtcAssetId::get(),
         miner,
@@ -19,7 +19,7 @@ fn create_default_asset<T: Config>(who: T::AccountId) {
     AssetChainOf::<T>::insert(T::BtcAssetId::get(), Chain::Bitcoin);
 }
 
-fn deposit<T: Config>(who: T::AccountId, amount: T::Balance) {
+fn deposit<T: Config>(who: T::AccountId, amount: BalanceOf<T>) {
     let receiver_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(who);
     // root_deposit
     let _ = XGatewayRecords::<T>::root_deposit(
@@ -30,7 +30,7 @@ fn deposit<T: Config>(who: T::AccountId, amount: T::Balance) {
     );
 }
 
-fn deposit_and_withdraw<T: Config>(who: T::AccountId, amount: T::Balance) {
+fn deposit_and_withdraw<T: Config>(who: T::AccountId, amount: BalanceOf<T>) {
     deposit::<T>(who.clone(), amount);
     let withdrawal = amount - 500u32.into();
     let addr = b"3LFSUKkP26hun42J1Dy6RATsbgmBJb27NF".to_vec();
@@ -55,17 +55,17 @@ benchmarks! {
     root_deposit {
         let receiver: T::AccountId = whitelisted_caller();
         let receiver_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(receiver.clone());
-        let amount: T::Balance = 1000u32.into();
+        let amount: BalanceOf<T> = 1000u32.into();
     }: _(RawOrigin::Root, receiver_lookup, T::BtcAssetId::get(), amount)
     verify {
-        assert_eq!(pallet_assets::Pallet::<T>::balance(T::BtcAssetId::get(), receiver), amount);
+        assert_eq!(xpallet_assets::Pallet::<T>::balance(T::BtcAssetId::get(), receiver), amount);
     }
 
     root_withdraw {
         let receiver: T::AccountId = whitelisted_caller();
         create_default_asset::<T>(receiver.clone());
         let receiver_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(receiver.clone());
-        let amount: T::Balance = 1000u32.into();
+        let amount: BalanceOf<T> = 1000u32.into();
         deposit::<T>(receiver, amount);
         let withdrawal = amount - 500u32.into();
         let addr = b"3LFSUKkP26hun42J1Dy6RATsbgmBJb27NF".to_vec();
@@ -80,7 +80,7 @@ benchmarks! {
         let receiver: T::AccountId = whitelisted_caller();
         create_default_asset::<T>(receiver.clone());
         let receiver_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(receiver.clone());
-        let amount: T::Balance = 1000u32.into();
+        let amount: BalanceOf<T> = 1000u32.into();
         deposit_and_withdraw::<T>(receiver, amount);
         let state = WithdrawalState::RootFinish;
     }: _(RawOrigin::Root, 0, state)
@@ -93,7 +93,7 @@ benchmarks! {
         let receiver: T::AccountId = whitelisted_caller();
         create_default_asset::<T>(receiver.clone());
         let receiver_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(receiver.clone());
-        let amount: T::Balance = 1000u32.into();
+        let amount: BalanceOf<T> = 1000u32.into();
         deposit_and_withdraw::<T>(receiver, amount);
         let state = WithdrawalState::RootFinish;
     }: _(RawOrigin::Root, vec![(0, state)])
@@ -104,7 +104,7 @@ benchmarks! {
     set_locked_assets {
         let receiver: T::AccountId = whitelisted_caller();
         create_default_asset::<T>(receiver.clone());
-        let amount: T::Balance = 1000u32.into();
+        let amount: BalanceOf<T> = 1000u32.into();
     }: _(RawOrigin::Root, receiver.clone(), T::BtcAssetId::get(), amount.clone())
     verify {
         assert_eq!(XGatewayRecords::<T>::locks(receiver, T::BtcAssetId::get()), Some(amount));

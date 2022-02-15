@@ -128,7 +128,7 @@ fn test_withdrawal_more_than_usable() {
                 b"addr".to_vec(),
                 b"ext".to_vec().into()
             ),
-            pallet_assets::Error::<Test>::BalanceLow
+            xpallet_assets::Error::<Test>::BalanceLow
         );
     })
 }

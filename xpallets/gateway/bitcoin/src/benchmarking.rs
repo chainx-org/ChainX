@@ -22,7 +22,7 @@ use crate::{types::*, Call, Config, Pallet, PendingDeposits, TxState, Withdrawal
 
 fn create_default_asset<T: Config>(who: T::AccountId) {
     let miner = T::Lookup::unlookup(who);
-    let _ = pallet_assets::Pallet::<T>::force_create(
+    let _ = xpallet_assets::Pallet::<T>::force_create(
         RawOrigin::Root.into(),
         T::BtcAssetId::get(),
         miner,
@@ -115,7 +115,7 @@ benchmarks! {
         let tx_raw = serialization::serialize_with_flags(&tx, SERIALIZE_TRANSACTION_WITNESS).into();
         let prev_tx_raw = serialization::serialize_with_flags(&prev_tx, SERIALIZE_TRANSACTION_WITNESS).into();
 
-        let amount: T::Balance = 1_000_000_000u32.into();
+        let amount: BalanceOf<T> = 1_000_000_000u32.into();
         let withdrawal = 550000u32.into();
 
         XGatewayRecords::<T>::deposit(&caller, T::BtcAssetId::get(), amount).unwrap();
@@ -154,12 +154,12 @@ benchmarks! {
         let tx_hash = tx.hash();
         let tx_raw: Vec<u8> = serialization::serialize_with_flags(&tx, SERIALIZE_TRANSACTION_WITNESS).into();
 
-        let amount: T::Balance = 1_000_000_000u32.into();
+        let amount: BalanceOf<T> = 1_000_000_000u32.into();
 
-        let withdrawal: T::Balance = 50000u32.into();
+        let withdrawal: BalanceOf<T> = 50000u32.into();
 
         #[cfg(feature = "runtime-benchmarks")]
-        let withdrawal: T::Balance = 550000u32.into();
+        let withdrawal: BalanceOf<T> = 550000u32.into();
 
         XGatewayRecords::<T>::deposit(&caller, T::BtcAssetId::get(), amount).unwrap();
         XGatewayRecords::<T>::withdraw(&caller, T::BtcAssetId::get(), withdrawal, b"tb1pexff2s7l58sthpyfrtx500ax234stcnt0gz2lr4kwe0ue95a2e0srxsc68".to_vec(), b"".to_vec().into()).unwrap();
@@ -212,7 +212,7 @@ benchmarks! {
     }: _(RawOrigin::Root, addr.clone(), Some(receiver))
     verify {
         assert!(Pallet::<T>::pending_deposits(&addr).is_empty());
-        // assert_eq!(XAssets::<T>::usable_balance(&receiver, &T::AssetId::default()), (100000000u32 + 200000000u32 + 300000000u32).into());
+        // assert_eq!(XAssets::<T>::usable_balance(&receiver, &AssetId::default()), (100000000u32 + 200000000u32 + 300000000u32).into());
     }
 
     remove_proposal {

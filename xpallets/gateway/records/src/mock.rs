@@ -8,7 +8,7 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 
-use sherpax_primitives::AssetId;
+use chainx_primitives::AssetId;
 
 pub use xp_protocol::{X_BTC, X_ETH};
 
@@ -30,7 +30,7 @@ frame_support::construct_runtime!(
     {
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-        Assets: pallet_assets::{Pallet, Call, Storage, Event<T>},
+        Assets: xpallet_assets::{Pallet, Call, Storage, Event<T>},
         XGatewayRecords: xpallet_gateway_records::{Pallet, Call, Storage, Event<T>},
     }
 );
@@ -90,7 +90,7 @@ parameter_types! {
     pub const MetadataDepositPerByte: Balance = 1;
 }
 
-impl pallet_assets::Config for Test {
+impl xpallet_assets::Config for Test {
     type Event = ();
     type Balance = Balance;
     type AssetId = AssetId;
@@ -103,7 +103,7 @@ impl pallet_assets::Config for Test {
     type StringLimit = StringLimit;
     type Freezer = XGatewayRecords;
     type Extra = ();
-    type WeightInfo = pallet_assets::weights::SubstrateWeight<Test>;
+    type WeightInfo = xpallet_assets::weights::SubstrateWeight<Test>;
 }
 
 // assets
@@ -138,7 +138,7 @@ impl ExtBuilder {
             initial_asset_chain: vec![(X_BTC, Chain::Bitcoin), (X_ETH, Chain::Ethereum)],
         }
         .assimilate_storage(&mut storage);
-        let _ = pallet_assets::GenesisConfig::<Test> {
+        let _ = xpallet_assets::GenesisConfig::<Test> {
             assets: vec![(X_BTC, ALICE, true, 1), (X_ETH, ALICE, true, 1)],
             metadata: vec![
                 (

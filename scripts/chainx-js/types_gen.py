@@ -189,8 +189,8 @@ def triage():
 
 
 #  The parser may not work in such cases:
-#  ..: 'Positive(T::Balance)',
-#  ..: 'Negative(T::Balance)',
+#  ..: 'Positive(BalanceOf<T>)',
+#  ..: 'Negative(BalanceOf<T>)',
 #  ..: 'Handicap<<T as Trait>::Price>',
 def is_suspicious(s):
     return ':' in s or '<' in s

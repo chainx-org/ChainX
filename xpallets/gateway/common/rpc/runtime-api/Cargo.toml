@@ -16,7 +16,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
 
 # ChainX primitives
-sherpax-primitives = { path = "../../../../../primitives", default-features = false }
+chainx-primitives = { path = "../../../../../primitives", default-features = false }
 xp-assets-registrar = { path = "../../../../../primitives/assets-registrar", default-features = false }
 xp-runtime = { path = "../../../../../primitives/runtime", default-features = false }
 
@@ -33,7 +33,7 @@ std = [
     "sp-runtime/std",
     "sp-std/std",
     # ChainX primitives
-    "sherpax-primitives/std",
+    "chainx-primitives/std",
     "xp-assets-registrar/std",
     "xp-runtime/std",
     # ChainX pallets

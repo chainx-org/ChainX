@@ -9501,6 +9501,7 @@ dependencies = [
  "musig2",
  "orml-utilities",
  "pallet-balances",
+ "pallet-elections-phragmen",
  "pallet-multisig",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -9517,7 +9518,6 @@ dependencies = [
  "xp-gateway-common",
  "xp-protocol",
  "xpallet-assets",
- "xpallet-assets-registrar",
  "xpallet-gateway-common",
  "xpallet-gateway-records",
  "xpallet-support",
@@ -9534,6 +9534,7 @@ dependencies = [
  "hex",
  "lazy_static",
  "light-bitcoin",
+ "musig2",
  "pallet-balances",
  "pallet-elections-phragmen",
  "parity-scale-codec",
@@ -9542,6 +9543,7 @@ dependencies = [
  "serde_json",
  "sp-core",
  "sp-io",
+ "sp-keyring",
  "sp-runtime",
  "sp-std",
  "xp-assets-registrar",
@@ -9550,7 +9552,6 @@ dependencies = [
  "xp-rpc",
  "xp-runtime",
  "xpallet-assets",
- "xpallet-assets-registrar",
  "xpallet-gateway-bitcoin",
  "xpallet-gateway-records",
  "xpallet-support",
@@ -9565,6 +9566,7 @@ dependencies = [
  "jsonrpc-core-client",
  "jsonrpc-derive",
  "parity-scale-codec",
+ "serde",
  "sp-api",
  "sp-blockchain",
  "sp-runtime",
@@ -9581,9 +9583,10 @@ dependencies = [
  "sp-api",
  "sp-runtime",
  "sp-std",
+ "xp-assets-registrar",
  "xp-runtime",
- "xpallet-assets",
  "xpallet-gateway-common",
+ "xpallet-gateway-records",
 ]
 
 [[package]]
@@ -9603,10 +9606,10 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "xp-assets-registrar",
  "xp-protocol",
  "xp-runtime",
  "xpallet-assets",
- "xpallet-assets-registrar",
  "xpallet-support",
 ]
 
@@ -9634,7 +9637,7 @@ dependencies = [
  "parity-scale-codec",
  "sp-api",
  "sp-std",
- "xpallet-assets",
+ "xp-assets-registrar",
  "xpallet-gateway-records",
 ]
 

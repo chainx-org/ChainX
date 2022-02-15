@@ -9,7 +9,7 @@ use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
 use sp_runtime::DispatchError;
 
-pub use sherpax_primitives::{AddrStr, AssetId, ChainAddress};
+pub use chainx_primitives::{AddrStr, AssetId, ChainAddress};
 pub use xp_assets_registrar::Chain;
 pub use xp_runtime::Memo;
 

@@ -23,13 +23,13 @@ frame-support = { git = "https://github.com/paritytech/substrate", branch = "pol
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
 
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
-pallet-assets = { path = "../../assets", default-features = false }
+xpallet-assets = { path = "../../assets", default-features = false }
 
 # Orml
 orml-utilities = { git = "https://github.com/chainx-org/ormls", branch = "main", default-features = false }
 
 # ChainX primitives
-sherpax-primitives = { path = "../../../primitives", default-features = false }
+chainx-primitives = { path = "../../../primitives", default-features = false }
 xp-assets-registrar = { path = "../../../primitives/assets-registrar", default-features = false }
 xp-gateway-bitcoin = { path = "../../../primitives/gateway/bitcoin", default-features = false }
 xp-gateway-common = { path = "../../../primitives/gateway/common", default-features = false }
@@ -76,7 +76,7 @@ std = [
     # Orml
     "orml-utilities/std",
     # ChainX primitives
-    "sherpax-primitives/std",
+    "chainx-primitives/std",
     "xp-assets-registrar/std",
     "xp-gateway-bitcoin/std",
     "xp-gateway-common/std",

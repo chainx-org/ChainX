@@ -20,13 +20,14 @@ use crate::{
 
 fn create_default_asset<T: Config>(who: T::AccountId) {
     let miner = T::Lookup::unlookup(who);
-    let _ = pallet_assets::Pallet::<T>::force_create(
-        RawOrigin::Root.into(),
-        T::BtcAssetId::get(),
-        miner,
-        true,
-        1u32.into(),
-    );
+    let _ = xpallet
+        - assets::Pallet::<T>::force_create(
+            RawOrigin::Root.into(),
+            T::BtcAssetId::get(),
+            miner,
+            true,
+            1u32.into(),
+        );
     xpallet_gateway_records::AssetChainOf::<T>::insert(T::BtcAssetId::get(), Chain::Bitcoin);
 }
 #[cfg(feature = "runtime-benchmarks")]
@@ -114,7 +115,7 @@ benchmarks! {
     withdraw {
         let caller: T::AccountId = alice::<T>();
         create_default_asset::<T>(caller.clone());
-        let amount: T::Balance = 1_000_000_000u32.into();
+        let amount: BalanceOf<T> = 1_000_000_000u32.into();
         XGatewayRecords::<T>::deposit(&caller, T::BtcAssetId::get(), amount).unwrap();
         let withdrawal = 100_000_000u32.into();
         let addr = b"3PgYgJA6h5xPEc3HbnZrUZWkpRxuCZVyEP".to_vec();
@@ -131,7 +132,7 @@ benchmarks! {
     cancel_withdrawal {
         let caller: T::AccountId = alice::<T>();
         create_default_asset::<T>(caller.clone());
-        let amount: T::Balance = 1_000_000_000_u32.into();
+        let amount: BalanceOf<T> = 1_000_000_000_u32.into();
         XGatewayRecords::<T>::deposit(&caller, T::BtcAssetId::get(), amount).unwrap();
 
         let withdrawal = 100_000_000u32.into();
@@ -197,7 +198,7 @@ benchmarks! {
         create_default_asset::<T>(caller.clone());
         TrusteeMultiSigAddr::<T>::insert(Chain::Bitcoin, caller.clone());
 
-        let amount: T::Balance = 1_000_000_000u32.into();
+        let amount: BalanceOf<T> = 1_000_000_000u32.into();
         XGatewayRecords::<T>::deposit(&caller, T::BtcAssetId::get(), amount).unwrap();
         let withdrawal = 100_000_000u32.into();
         let addr = b"3PgYgJA6h5xPEc3HbnZrUZWkpRxuCZVyEP".to_vec();

@@ -22,7 +22,7 @@ use sp_runtime::{
     AccountId32, DispatchError, DispatchResult,
 };
 
-use sherpax_primitives::AssetId;
+use chainx_primitives::AssetId;
 use xp_assets_registrar::Chain;
 pub use xp_protocol::{X_BTC, X_ETH};
 use xpallet_gateway_bitcoin::trustee::check_keys;
@@ -58,7 +58,7 @@ frame_support::construct_runtime!(
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
         Elections: pallet_elections_phragmen::{Pallet, Call, Storage, Event<T>, Config<T>},
-        Assets: pallet_assets::{Pallet, Call, Storage, Event<T>},
+        Assets: xpallet-assets::{Pallet, Call, Storage, Event<T>},
         XGatewayRecords: xpallet_gateway_records::{Pallet, Call, Storage, Event<T>, Config<T>},
         XGatewayCommon: xpallet_gateway_common::{Pallet, Call, Storage, Event<T>, Config<T>},
         XGatewayBitcoin: xpallet_gateway_bitcoin::{Pallet, Call, Storage, Event<T>, Config<T>},
@@ -199,7 +199,7 @@ parameter_types! {
     pub const MetadataDepositPerByte: Balance = 1;
 }
 
-impl pallet_assets::Config for Test {
+impl xpallet-assets::Config for Test {
     type Event = ();
     type Balance = Balance;
     type AssetId = AssetId;
@@ -212,7 +212,7 @@ impl pallet_assets::Config for Test {
     type StringLimit = StringLimit;
     type Freezer = XGatewayRecords;
     type Extra = ();
-    type WeightInfo = pallet_assets::weights::SubstrateWeight<Test>;
+    type WeightInfo = xpallet-assets::weights::SubstrateWeight<Test>;
 }
 
 // assets
@@ -276,7 +276,7 @@ impl Validator<AccountId> for AlwaysValidator {
     }
 }
 pub struct MockBitcoin<T: xpallet_gateway_bitcoin::Config>(sp_std::marker::PhantomData<T>);
-impl<T: xpallet_gateway_bitcoin::Config> ChainT<T::AssetId, T::Balance> for MockBitcoin<T> {
+impl<T: xpallet_gateway_bitcoin::Config> ChainT<AssetId, BalanceOf<T>> for MockBitcoin<T> {
     fn chain() -> Chain {
         Chain::Bitcoin
     }
@@ -286,14 +286,14 @@ impl<T: xpallet_gateway_bitcoin::Config> ChainT<T::AssetId, T::Balance> for Mock
     }
 
     fn withdrawal_limit(
-        asset_id: &T::AssetId,
-    ) -> Result<WithdrawalLimit<T::Balance>, DispatchError> {
+        asset_id: &AssetId,
+    ) -> Result<WithdrawalLimit<BalanceOf<T>>, DispatchError> {
         xpallet_gateway_bitcoin::Pallet::<T>::withdrawal_limit(asset_id)
     }
 }
 
-impl<T: xpallet_gateway_bitcoin::Config> TotalSupply<T::Balance> for MockBitcoin<T> {
-    fn total_supply() -> T::Balance {
+impl<T: xpallet_gateway_bitcoin::Config> TotalSupply<BalanceOf<T>> for MockBitcoin<T> {
+    fn total_supply() -> BalanceOf<T> {
         Default::default()
     }
 }
@@ -505,7 +505,7 @@ impl ExtBuilder {
         }
         .assimilate_storage(&mut storage);
 
-        let _ = pallet_assets::GenesisConfig::<Test> {
+        let _ = xpallet-assets::GenesisConfig::<Test> {
             assets: vec![(X_BTC, Default::default(), true, 1)],
             metadata: vec![(
                 X_BTC,

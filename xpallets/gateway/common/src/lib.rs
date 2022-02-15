@@ -42,7 +42,7 @@ use self::types::{
 pub use self::weights::WeightInfo;
 use crate::trustees::bitcoin::BtcTrusteeAddrInfo;
 pub use pallet::*;
-use sherpax_primitives::{AddrStr, ChainAddress, Text};
+use chainx_primitives::{AddrStr, ChainAddress, Text};
 use xp_assets_registrar::Chain;
 use xp_runtime::Memo;
 use xpallet_gateway_records::{
@@ -66,7 +66,7 @@ pub mod pallet {
         frame_system::Config
         + xpallet_gateway_records::Config
         + pallet_elections_phragmen::Config
-        + pallet_assets::Config
+        + xpallet-assets::Config
     {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
@@ -77,7 +77,7 @@ pub mod pallet {
         type CouncilOrigin: EnsureOrigin<Self::Origin>;
 
         // for bitcoin
-        type Bitcoin: ChainT<Self::AssetId, Self::Balance>;
+        type Bitcoin: ChainT<AssetId, Self::Balance>;
         type BitcoinTrustee: TrusteeForChain<
             Self::AccountId,
             Self::BlockNumber,
@@ -109,15 +109,15 @@ pub mod pallet {
         #[pallet::weight(< T as Config >::WeightInfo::withdraw())]
         pub fn withdraw(
             origin: OriginFor<T>,
-            #[pallet::compact] asset_id: T::AssetId,
-            #[pallet::compact] value: T::Balance,
+            #[pallet::compact] asset_id: AssetId,
+            #[pallet::compact] value: BalanceOf<T>,
             addr: AddrStr,
             ext: Memo,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
             ensure!(
-                pallet_assets::Pallet::<T>::can_withdraw(asset_id, &who, value)
+                xpallet-assets::Pallet::<T>::can_withdraw(asset_id, &who, value)
                     .into_result()
                     .is_ok(),
                 Error::<T>::InvalidWithdrawal,
@@ -537,11 +537,11 @@ pub mod pallet {
         /// Treasury transfer to trustee. [source, target, chain, session_number, reward_total]
         TransferTrusteeReward(T::AccountId, T::AccountId, Chain, u32, Balanceof<T>),
         /// Asset reward to trustee multi_account. [target, asset_id, reward_total]
-        TransferAssetReward(T::AccountId, T::AssetId, T::Balance),
+        TransferAssetReward(T::AccountId, AssetId, BalanceOf<T>),
         /// The native asset of trustee multi_account is assigned. [who, multi_account, session_number, total_reward]
         AllocNativeReward(T::AccountId, T::AccountId, u32, Balanceof<T>),
         /// The not native asset of trustee multi_account is assigned. [who, multi_account, session_number, asset_id, total_reward]
-        AllocNotNativeReward(T::AccountId, T::AccountId, u32, T::AssetId, T::Balance),
+        AllocNotNativeReward(T::AccountId, T::AccountId, u32, AssetId, BalanceOf<T>),
     }
 
     #[pallet::error]
@@ -721,7 +721,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn pre_total_supply)]
     pub type PreTotalSupply<T: Config> =
-        StorageMap<_, Twox64Concat, T::AssetId, T::Balance, ValueQuery>;
+        StorageMap<_, Twox64Concat, AssetId, BalanceOf<T>, ValueQuery>;
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
@@ -779,8 +779,8 @@ pub mod pallet {
 // withdraw
 impl<T: Config> Pallet<T> {
     pub fn withdrawal_limit(
-        asset_id: &T::AssetId,
-    ) -> Result<WithdrawalLimit<T::Balance>, DispatchError> {
+        asset_id: &AssetId,
+    ) -> Result<WithdrawalLimit<BalanceOf<T>>, DispatchError> {
         let chain = xpallet_gateway_records::Pallet::<T>::chain_of(asset_id)?;
         match chain {
             Chain::Bitcoin => T::Bitcoin::withdrawal_limit(asset_id),
@@ -789,13 +789,13 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn withdrawal_list_with_fee_info(
-        asset_id: &T::AssetId,
+        asset_id: &AssetId,
     ) -> Result<
         BTreeMap<
             WithdrawalRecordId,
             (
-                Withdrawal<T::AccountId, T::AssetId, T::Balance, T::BlockNumber>,
-                WithdrawalLimit<T::Balance>,
+                Withdrawal<T::AccountId, AssetId, BalanceOf<T>, T::BlockNumber>,
+                WithdrawalLimit<BalanceOf<T>>,
             ),
         >,
         DispatchError,
@@ -804,8 +804,8 @@ impl<T: Config> Pallet<T> {
         let result: BTreeMap<
             WithdrawalRecordId,
             (
-                Withdrawal<T::AccountId, T::AssetId, T::Balance, T::BlockNumber>,
-                WithdrawalLimit<T::Balance>,
+                Withdrawal<T::AccountId, AssetId, BalanceOf<T>, T::BlockNumber>,
+                WithdrawalLimit<BalanceOf<T>>,
             ),
         > = xpallet_gateway_records::PendingWithdrawals::<T>::iter()
             .map(|(id, record)| {
@@ -830,8 +830,8 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn verify_withdrawal(
-        asset_id: T::AssetId,
-        value: T::Balance,
+        asset_id: AssetId,
+        value: BalanceOf<T>,
         addr: &[u8],
         ext: &Memo,
     ) -> DispatchResult {
@@ -1294,16 +1294,16 @@ impl<T: Config> Pallet<T> {
 
     fn alloc_not_native_reward(
         from: &T::AccountId,
-        asset_id: T::AssetId,
+        asset_id: AssetId,
         trustee_info: &TrusteeSessionInfo<T::AccountId, T::BlockNumber, BtcTrusteeAddrInfo>,
-    ) -> Result<T::Balance, DispatchError> {
-        let total_reward = pallet_assets::Pallet::<T>::balance(asset_id, from);
+    ) -> Result<BalanceOf<T>, DispatchError> {
+        let total_reward = xpallet-assets::Pallet::<T>::balance(asset_id, from);
         if total_reward.is_zero() {
-            return Ok(T::Balance::zero());
+            return Ok(BalanceOf<T>::zero());
         }
         let reward_info = Self::compute_reward(total_reward, trustee_info)?;
         for (acc, amount) in reward_info.rewards.iter() {
-            <pallet_assets::Pallet<T> as fungibles::Transfer<T::AccountId>>::transfer(
+            <xpallet-assets::Pallet<T> as fungibles::Transfer<T::AccountId>>::transfer(
                 asset_id, from, acc, *amount, false,
             )
             .map_err(|e| {

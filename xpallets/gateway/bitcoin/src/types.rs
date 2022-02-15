@@ -15,7 +15,7 @@ use light_bitcoin::{
     primitives::{Compact, H256},
 };
 
-use sherpax_primitives::ReferralId;
+use chainx_primitives::ReferralId;
 use xp_gateway_bitcoin::BtcTxType;
 
 /// BtcAddress is an bitcoin address encoded in base58

@@ -31,7 +31,7 @@ pub use light_bitcoin::{
     serialization::{deserialize, Reader},
 };
 
-use sherpax_primitives::ReferralId;
+use chainx_primitives::ReferralId;
 use xp_assets_registrar::Chain;
 use xp_gateway_common::AccountExtractor;
 use xpallet_gateway_common::{
@@ -82,7 +82,7 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config:
-        frame_system::Config + pallet_assets::Config + xpallet_gateway_records::Config
+        frame_system::Config + xpallet_assets::Config + xpallet_gateway_records::Config
     {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type UnixTime: UnixTime;
@@ -95,7 +95,7 @@ pub mod pallet {
         type TrusteeInfoUpdate: TrusteeInfoUpdate;
         type TrusteeOrigin: EnsureOrigin<Self::Origin, Success = Self::AccountId>;
         type RelayerInfo: RelayerInfo<Self::AccountId>;
-        type ReferralBinding: ReferralBinding<Self::AccountId, Self::AssetId>;
+        type ReferralBinding: ReferralBinding<Self::AccountId, AssetId>;
         type AddressBinding: AddressBinding<Self::AccountId, BtcAddress>;
         type WeightInfo: WeightInfo;
     }
@@ -354,13 +354,13 @@ pub mod pallet {
         /// A Bitcoin transaction was processed. [tx_hash, block_hash, tx_state]
         TxProcessed(H256, H256, BtcTxState),
         /// An account deposited some token. [tx_hash, who, amount]
-        Deposited(H256, T::AccountId, T::Balance),
+        Deposited(H256, T::AccountId, BalanceOf<T>),
         /// A list of withdrawal applications were processed successfully. [tx_hash, withdrawal_ids, total_withdrawn]
-        Withdrawn(H256, Vec<u32>, T::Balance),
+        Withdrawn(H256, Vec<u32>, BalanceOf<T>),
         /// A new record of unclaimed deposit. [tx_hash, btc_address]
         UnclaimedDeposit(H256, BtcAddress),
         /// A unclaimed deposit record was removed. [depositor, deposit_amount, tx_hash, btc_address]
-        PendingDepositRemoved(T::AccountId, T::Balance, H256, BtcAddress),
+        PendingDepositRemoved(T::AccountId, BalanceOf<T>, H256, BtcAddress),
         /// A new withdrawal proposal was created. [proposer, withdrawal_ids]
         WithdrawalProposalCreated(T::AccountId, Vec<u32>),
         /// A trustee voted/vetoed a withdrawal proposal. [trustee, vote_status]
@@ -528,7 +528,7 @@ pub mod pallet {
         }
     }
 
-    impl<T: Config> ChainT<T::AssetId, T::Balance> for Pallet<T> {
+    impl<T: Config> ChainT<AssetId, BalanceOf<T>> for Pallet<T> {
         fn chain() -> Chain {
             Chain::Bitcoin
         }
@@ -561,13 +561,13 @@ pub mod pallet {
         }
 
         fn withdrawal_limit(
-            asset_id: &T::AssetId,
-        ) -> Result<WithdrawalLimit<T::Balance>, DispatchError> {
+            asset_id: &AssetId,
+        ) -> Result<WithdrawalLimit<BalanceOf<T>>, DispatchError> {
             if *asset_id != T::BtcAssetId::get() {
-                return Err(pallet_assets::Error::<T>::Unknown.into());
+                return Err(xpallet_assets::Error::<T>::Unknown.into());
             }
             let fee = Self::btc_withdrawal_fee().saturated_into();
-            let limit = WithdrawalLimit::<T::Balance> {
+            let limit = WithdrawalLimit::<BalanceOf<T>> {
                 minimal_withdrawal: fee * 3u32.saturated_into() / 2u32.saturated_into(),
                 fee,
             };
@@ -575,9 +575,9 @@ pub mod pallet {
         }
     }
 
-    impl<T: Config> TotalSupply<T::Balance> for Pallet<T> {
-        fn total_supply() -> T::Balance {
-            let pending_deposits: T::Balance = PendingDeposits::<T>::iter_values()
+    impl<T: Config> TotalSupply<BalanceOf<T>> for Pallet<T> {
+        fn total_supply() -> BalanceOf<T> {
+            let pending_deposits: BalanceOf<T> = PendingDeposits::<T>::iter_values()
                 .map(|deposits| {
                     deposits
                         .into_iter()
@@ -588,7 +588,7 @@ pub mod pallet {
                 .saturated_into();
 
             let asset_id = T::BtcAssetId::get();
-            let asset_supply = pallet_assets::Pallet::<T>::total_supply(asset_id);
+            let asset_supply = xpallet_assets::Pallet::<T>::total_supply(asset_id);
             asset_supply + pending_deposits
         }
     }

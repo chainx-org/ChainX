@@ -21,10 +21,10 @@ frame-support = { git = "https://github.com/paritytech/substrate", branch = "pol
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
 
 pallet-elections-phragmen = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
-pallet-assets = { path = "../../assets", default-features = false }
+xpallet-assets = { path = "../../assets", default-features = false }
 
 # ChainX primitives
-sherpax-primitives = { path = "../../../primitives", default-features = false }
+chainx-primitives = { path = "../../../primitives", default-features = false }
 xp-assets-registrar = { path = "../../../primitives/assets-registrar", default-features = false }
 xp-protocol = { path = "../../../primitives/protocol", default-features = false }
 xp-rpc = { path = "../../../primitives/rpc", optional = true }
@@ -64,7 +64,7 @@ std = [
   "frame-support/std",
   "frame-system/std",
   # ChainX primitives
-  "sherpax-primitives/std",
+  "chainx-primitives/std",
   "xp-assets-registrar/std",
   "xp-protocol/std",
   "xp-rpc",
@@ -74,7 +74,7 @@ std = [
   "xpallet-support/std",
   # light-bitcoin
   "light-bitcoin/std",
-  "pallet-assets/std",
+  "xpallet-assets/std",
   "pallet-elections-phragmen/std"
 ]
 runtime-benchmarks = ["hex", "sp-core", "frame-benchmarking"]

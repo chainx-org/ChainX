@@ -5,16 +5,12 @@ use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
 use crate::traits::{AddressBinding, ReferralBinding};
 use crate::{AddressBindingOf, BoundAddressOf, Config, Pallet};
-use sherpax_primitives::{ChainAddress, ReferralId};
+use chainx_primitives::{ChainAddress, ReferralId};
 use xp_assets_registrar::Chain;
 use xpallet_support::{traits::Validator, try_addr, try_str};
 
-impl<T: Config> ReferralBinding<T::AccountId, T::AssetId> for Pallet<T> {
-    fn update_binding(
-        assert_id: &T::AssetId,
-        who: &T::AccountId,
-        referral_name: Option<ReferralId>,
-    ) {
+impl<T: Config> ReferralBinding<T::AccountId, AssetId> for Pallet<T> {
+    fn update_binding(assert_id: &AssetId, who: &T::AccountId, referral_name: Option<ReferralId>) {
         let chain = match xpallet_gateway_records::Pallet::<T>::chain_of(assert_id) {
             Ok(chain) => chain,
             Err(err) => {
@@ -52,7 +48,7 @@ impl<T: Config> ReferralBinding<T::AccountId, T::AssetId> for Pallet<T> {
         };
     }
 
-    fn referral(assert_id: &T::AssetId, who: &T::AccountId) -> Option<T::AccountId> {
+    fn referral(assert_id: &AssetId, who: &T::AccountId) -> Option<T::AccountId> {
         let chain = xpallet_gateway_records::Pallet::<T>::chain_of(assert_id).ok()?;
         Self::referral_binding_of(who, chain)
     }

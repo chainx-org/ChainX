@@ -139,10 +139,10 @@ fn deposit<T: Config>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) ->
     }
 }
 
-fn deposit_token<T: Config>(txid: H256, who: &T::AccountId, balance: T::Balance) -> DispatchResult {
+fn deposit_token<T: Config>(txid: H256, who: &T::AccountId, balance: BalanceOf<T>) -> DispatchResult {
     let asset_id = T::BtcAssetId::get();
 
-    match pallet_assets::Pallet::<T>::mint_into(asset_id, who, balance) {
+    match xpallet_assets::Pallet::<T>::mint_into(asset_id, who, balance) {
         Ok(()) => {
             Pallet::<T>::deposit_event(Event::<T>::Deposited(txid, who.clone(), balance));
             Ok(())
@@ -224,13 +224,13 @@ fn withdraw<T: Config>(tx: Transaction) -> BtcTxResult {
                 return BtcTxResult::Failure;
             }
 
-            let mut total = T::Balance::zero();
+            let mut total = BalanceOf<T>::zero();
             for number in proposal.withdrawal_id_list.iter() {
                 // just for event record
                 let withdraw_balance =
                     xpallet_gateway_records::Pallet::<T>::pending_withdrawals(number)
                         .map(|record| record.balance())
-                        .unwrap_or_else(T::Balance::zero);
+                        .unwrap_or_else(BalanceOf<T>::zero);
                 total += withdraw_balance;
 
                 match xpallet_gateway_records::Pallet::<T>::finish_withdrawal(*number, None) {

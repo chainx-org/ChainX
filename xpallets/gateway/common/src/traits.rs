@@ -4,7 +4,7 @@ use frame_support::dispatch::DispatchError;
 use sp_std::{convert::TryFrom, prelude::Vec};
 
 use crate::types::{ScriptInfo, TrusteeInfoConfig, TrusteeIntentionProps, TrusteeSessionInfo};
-use sherpax_primitives::ReferralId;
+use chainx_primitives::ReferralId;
 use xp_assets_registrar::Chain;
 
 pub trait BytesLike: Into<Vec<u8>> + TryFrom<Vec<u8>> {}

@@ -21,7 +21,7 @@ use sp_runtime::{
     AccountId32, Perbill,
 };
 
-use sherpax_primitives::AssetId;
+use chainx_primitives::AssetId;
 use xp_assets_registrar::Chain;
 pub use xp_protocol::{X_BTC, X_ETH};
 use xpallet_gateway_common::{trustees, types::TrusteeInfoConfig};
@@ -56,7 +56,7 @@ frame_support::construct_runtime!(
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
         Elections: pallet_elections_phragmen::{Pallet, Call, Storage, Event<T>, Config<T>},
-        Assets: pallet_assets::{Pallet, Call, Storage, Event<T>},
+        Assets: xpallet_assets::{Pallet, Call, Storage, Event<T>},
         XGatewayRecords: xpallet_gateway_records::{Pallet, Call, Storage, Event<T>},
         XGatewayCommon: xpallet_gateway_common::{Pallet, Call, Storage, Event<T>, Config<T>},
         XGatewayBitcoin: xpallet_gateway_bitcoin::{Pallet, Call, Storage, Event<T>, Config<T>},
@@ -153,7 +153,7 @@ parameter_types! {
     pub const MetadataDepositPerByte: Balance = 1;
 }
 
-impl pallet_assets::Config for Test {
+impl xpallet_assets::Config for Test {
     type Event = ();
     type Balance = Balance;
     type AssetId = AssetId;
@@ -166,7 +166,7 @@ impl pallet_assets::Config for Test {
     type StringLimit = StringLimit;
     type Freezer = XGatewayRecords;
     type Extra = ();
-    type WeightInfo = pallet_assets::weights::SubstrateWeight<Test>;
+    type WeightInfo = xpallet_assets::weights::SubstrateWeight<Test>;
 }
 
 // assets
@@ -328,7 +328,7 @@ impl ExtBuilder {
         }
         .assimilate_storage(&mut storage);
 
-        let _ = pallet_assets::GenesisConfig::<Test> {
+        let _ = xpallet_assets::GenesisConfig::<Test> {
             assets: vec![(X_BTC, alice(), true, 1), (X_ETH, alice(), true, 1)],
             metadata: vec![
                 (

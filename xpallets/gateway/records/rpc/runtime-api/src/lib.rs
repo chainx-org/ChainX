@@ -7,7 +7,7 @@ use sp_std::collections::btree_map::BTreeMap;
 
 use codec::Codec;
 
-pub use sherpax_primitives::{AssetId, Decimals};
+pub use chainx_primitives::{AssetId, Decimals};
 pub use xp_assets_registrar::Chain;
 pub use xpallet_gateway_records::{Withdrawal, WithdrawalRecordId, WithdrawalState};
 

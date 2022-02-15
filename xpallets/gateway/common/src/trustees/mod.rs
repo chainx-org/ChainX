@@ -143,23 +143,25 @@ impl<T: Config> TrusteeInfoUpdate for Pallet<T> {
                             trustee.0.trustee_list[i].1 =
                                 Self::trustee_sig_record(&trustee.0.trustee_list[i].0);
                         }
-                        let total_apply: T::Balance = Self::pre_total_supply(T::BtcAssetId::get());
-                        let reward_amount: T::Balance = trans_amount
+                        let total_apply: BalanceOf<T> =
+                            Self::pre_total_supply(T::BtcAssetId::get());
+                        let reward_amount: BalanceOf<T> = trans_amount
                             .unwrap_or(0u64)
-                            .saturated_into::<T::Balance>()
+                            .saturated_into::<BalanceOf<T>>()
                             .saturating_sub(total_apply)
                             .max(0u64.saturated_into())
                             .saturating_mul(6u64.saturated_into())
-                            .checked_div(&10u64.saturated_into::<T::Balance>())
+                            .checked_div(&10u64.saturated_into::<BalanceOf<T>>())
                             .unwrap_or_else(|| 0u64.saturated_into());
 
                         if let Some(multi_account) = trustee.0.multi_account.clone() {
                             if !reward_amount.is_zero() {
-                                match pallet_assets::Pallet::<T>::mint_into(
-                                    T::BtcAssetId::get(),
-                                    &multi_account,
-                                    reward_amount,
-                                ) {
+                                match xpallet
+                                    - assets::Pallet::<T>::mint_into(
+                                        T::BtcAssetId::get(),
+                                        &multi_account,
+                                        reward_amount,
+                                    ) {
                                     Ok(()) => {
                                         PreTotalSupply::<T>::remove(T::BtcAssetId::get());
                                         Pallet::<T>::deposit_event(
