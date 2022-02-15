@@ -39,10 +39,8 @@ impl frame_support::traits::OnRuntimeUpgrade for PhragmenElectionDepositRuntimeU
     }
 }
 
-/// 1. SystemToDualRefCount: from `unique`  to `dual` reference counting.
-/// 2. frame_system::Pallet<System>(automatically): from `dual` to dual `triple` reference counting.
-pub struct SystemToDualRefCount;
-impl frame_support::traits::OnRuntimeUpgrade for SystemToDualRefCount {
+pub struct SystemToTripleRefCount;
+impl frame_support::traits::OnRuntimeUpgrade for SystemToTripleRefCount {
     fn on_runtime_upgrade() -> frame_support::weights::Weight {
         frame_system::migrations::migrate_to_dual_ref_count::<Runtime>()
     }
@@ -226,5 +224,89 @@ impl frame_support::traits::OnRuntimeUpgrade for ElectionsPrefixMigration {
         let name = <Runtime as frame_system::Config>::PalletInfo::name::<Elections>()
             .expect("Elections is part of runtime, so it has a name; qed");
         pallet_elections_phragmen::migrations::v4::migrate::<Runtime, _>(name)
+    }
+}
+
+
+use frame_support::{traits::OnRuntimeUpgrade, weights::Weight};
+pub struct CustomOnRuntimeUpgrades;
+impl OnRuntimeUpgrade for CustomOnRuntimeUpgrades {
+    fn on_runtime_upgrade() -> Weight {
+        let mut weight = 0;
+
+        // 1. RemoveCollectiveFlip
+        frame_support::log::info!("🔍️ RemoveCollectiveFlip start");
+        weight += <RemoveCollectiveFlip as OnRuntimeUpgrade>::on_runtime_upgrade();
+        frame_support::log::info!("🚀 RemoveCollectiveFlip end");
+
+        // 2. MigratePalletVersionToStorageVersion
+        frame_support::log::info!("🔍️ MigratePalletVersionToStorageVersion start");
+        weight += <MigratePalletVersionToStorageVersion as OnRuntimeUpgrade>::on_runtime_upgrade();
+        frame_support::log::info!("🚀 MigratePalletVersionToStorageVersion end");
+
+        // 3. PhragmenElectionDepositRuntimeUpgrade
+        frame_support::log::info!("🔍️ PhragmenElectionDepositRuntimeUpgrade start");
+        frame_support::traits::StorageVersion::new(0).put::<Elections>();
+        weight += <PhragmenElectionDepositRuntimeUpgrade as OnRuntimeUpgrade>::on_runtime_upgrade();
+        frame_support::log::info!("🚀 PhragmenElectionDepositRuntimeUpgrade end");
+
+        // 4. SystemToTripleRefCount
+        frame_support::log::info!("🔍️ SystemToTripleRefCount start");
+        weight += <SystemToTripleRefCount as OnRuntimeUpgrade>::on_runtime_upgrade();
+        frame_support::log::info!("🚀 SystemToTripleRefCount end");
+
+        // 5. BabeEpochConfigMigrations
+        frame_support::log::info!("🔍️ BabeEpochConfigMigrations start");
+        weight += <BabeEpochConfigMigrations as OnRuntimeUpgrade>::on_runtime_upgrade();
+        frame_support::log::info!("🚀 BabeEpochConfigMigrations end");
+
+        // 6. GrandpaStoragePrefixMigration
+        frame_support::log::info!("🔍️ GrandpaStoragePrefixMigration start");
+        frame_support::traits::StorageVersion::new(0).put::<Grandpa>();
+        weight += <GrandpaStoragePrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
+        frame_support::log::info!("🚀 GrandpaStoragePrefixMigration end");
+
+        // 7. CouncilStoragePrefixMigration
+        frame_support::log::info!("🔍️ CouncilStoragePrefixMigration start");
+        frame_support::traits::StorageVersion::new(0).put::<Council>();
+        weight += <CouncilStoragePrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
+        frame_support::log::info!("🚀 CouncilStoragePrefixMigration end");
+
+        // 8. TechnicalCommitteeStoragePrefixMigration
+        frame_support::log::info!("🔍️ TechnicalCommitteeStoragePrefixMigration start");
+        frame_support::traits::StorageVersion::new(0).put::<TechnicalCommittee>();
+        weight += <TechnicalCommitteeStoragePrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
+        frame_support::log::info!("🚀 TechnicalCommitteeStoragePrefixMigration end");
+
+        // 9. TechnicalMembershipStoragePrefixMigration
+        frame_support::log::info!("🔍️ TechnicalMembershipStoragePrefixMigration start");
+        frame_support::traits::StorageVersion::new(0).put::<TechnicalMembership>();
+        weight += <TechnicalMembershipStoragePrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
+        frame_support::log::info!("🚀 TechnicalMembershipStoragePrefixMigration end");
+
+        // 10. CouncilStoragePrefixMigration
+        frame_support::log::info!("🔍️ CouncilStoragePrefixMigration start");
+        frame_support::traits::StorageVersion::new(0).put::<Council>();
+        weight += <CouncilStoragePrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
+        frame_support::log::info!("🚀 CouncilStoragePrefixMigration end");
+
+        // 11. MigrateTipsPalletPrefix
+        frame_support::log::info!("🔍️ MigrateTipsPalletPrefix start");
+        frame_support::traits::StorageVersion::new(0).put::<Tips>();
+        weight += <MigrateTipsPalletPrefix as OnRuntimeUpgrade>::on_runtime_upgrade();
+        frame_support::log::info!("🚀 MigrateTipsPalletPrefix end");
+
+        // 12. BountiesPrefixMigration
+        frame_support::log::info!("🔍️ BountiesPrefixMigration start");
+        frame_support::traits::StorageVersion::new(0).put::<Bounties>();
+        weight += <BountiesPrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
+        frame_support::log::info!("🚀 BountiesPrefixMigration end");
+
+        // 13. ElectionsPrefixMigration
+        frame_support::log::info!("🔍️ ElectionsPrefixMigration start");
+        weight += <ElectionsPrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
+        frame_support::log::info!("🚀 ElectionsPrefixMigration end");
+
+        weight
     }
 }

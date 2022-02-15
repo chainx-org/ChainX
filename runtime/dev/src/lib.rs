@@ -1201,20 +1201,7 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPallets,
-    (
-        RemoveCollectiveFlip,
-        MigratePalletVersionToStorageVersion,
-        PhragmenElectionDepositRuntimeUpgrade,
-        SystemToDualRefCount,
-        BabeEpochConfigMigrations,
-        GrandpaStoragePrefixMigration,
-        CouncilStoragePrefixMigration,
-        TechnicalCommitteeStoragePrefixMigration,
-        TechnicalMembershipStoragePrefixMigration,
-        MigrateTipsPalletPrefix,
-        BountiesPrefixMigration,
-        ElectionsPrefixMigration,
-    ),
+    CustomOnRuntimeUpgrades,
 >;
 
 impl_runtime_apis! {
