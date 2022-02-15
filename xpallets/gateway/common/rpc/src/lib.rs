@@ -374,10 +374,10 @@ pub struct RpcWithdrawalRecord<AccountId, Balance: Display + FromStr, BlockNumbe
 }
 
 impl<AccountId, Balance: Display + FromStr, BlockNumber>
-    From<Withdrawal<AccountId, AssetId, Balance, BlockNumber>>
+    From<Withdrawal<AccountId, Balance, BlockNumber>>
     for RpcWithdrawalRecord<AccountId, Balance, BlockNumber>
 {
-    fn from(record: Withdrawal<AccountId, AssetId, Balance, BlockNumber>) -> Self {
+    fn from(record: Withdrawal<AccountId, Balance, BlockNumber>) -> Self {
         Self {
             asset_id: record.asset_id,
             applicant: record.applicant,

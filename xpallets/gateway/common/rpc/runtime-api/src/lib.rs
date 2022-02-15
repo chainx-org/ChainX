@@ -13,14 +13,12 @@ pub use chainx_primitives::{AddrStr, AssetId, ChainAddress};
 pub use xp_assets_registrar::Chain;
 pub use xp_runtime::Memo;
 
+pub use xpallet_assets::WithdrawalLimit;
 pub use xpallet_gateway_common::{
     trustees,
     types::{GenericTrusteeIntentionProps, GenericTrusteeSessionInfo, ScriptInfo},
 };
-pub use xpallet_gateway_records::{
-    Withdrawal, WithdrawalLimit, WithdrawalRecordId, WithdrawalState,
-};
-
+pub use xpallet_gateway_records::{Withdrawal, WithdrawalRecordId, WithdrawalState};
 sp_api::decl_runtime_apis! {
     /// The API to query account nonce (aka transaction index).
     pub trait XGatewayCommonApi<AccountId, Balance, BlockNumber>
@@ -38,7 +36,7 @@ sp_api::decl_runtime_apis! {
         BTreeMap<
             WithdrawalRecordId,
             (
-                Withdrawal<AccountId, AssetId, Balance, BlockNumber>,
+                Withdrawal<AccountId, Balance, BlockNumber>,
                 WithdrawalLimit<Balance>,
             ),
         >,

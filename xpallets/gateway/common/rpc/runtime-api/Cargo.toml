@@ -21,6 +21,7 @@ xp-assets-registrar = { path = "../../../../../primitives/assets-registrar", def
 xp-runtime = { path = "../../../../../primitives/runtime", default-features = false }
 
 # ChainX pallets
+xpallet-assets = { path = "../../../../assets" }
 xpallet-gateway-common = { path = "../../", default-features = false }
 xpallet-gateway-records = { path = "../../../records", default-features = false }
 
@@ -37,6 +38,7 @@ std = [
     "xp-assets-registrar/std",
     "xp-runtime/std",
     # ChainX pallets
+    "xpallet-assets/std",
     "xpallet-gateway-common/std",
     "xpallet-gateway-records/std",
 ]

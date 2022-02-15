@@ -9524,6 +9524,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "xpallet-gateway-bitcoin-rpc"
+version = "3.0.0"
+dependencies = [
+ "hex",
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "parity-scale-codec",
+ "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-runtime",
+ "xp-rpc",
+ "xpallet-gateway-bitcoin-rpc-runtime-api",
+]
+
+[[package]]
+name = "xpallet-gateway-bitcoin-rpc-runtime-api"
+version = "3.0.0"
+dependencies = [
+ "chainx-primitives",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-runtime",
+ "sp-std",
+ "xp-assets-registrar",
+ "xp-runtime",
+ "xpallet-gateway-bitcoin",
+]
+
+[[package]]
 name = "xpallet-gateway-common"
 version = "3.0.0"
 dependencies = [
@@ -9586,6 +9617,7 @@ dependencies = [
  "sp-std",
  "xp-assets-registrar",
  "xp-runtime",
+ "xpallet-assets",
  "xpallet-gateway-common",
  "xpallet-gateway-records",
 ]
