@@ -88,7 +88,7 @@ pub fn get_last_trustee_address_pair<T: Config>() -> Result<(Address, Address), 
     })
 }
 
-fn check_keys<T: Config>(keys: &[Public]) -> DispatchResult {
+pub fn check_keys<T: Config>(keys: &[Public]) -> DispatchResult {
     let has_duplicate = (1..keys.len()).any(|i| keys[i..].contains(&keys[i - 1]));
     if has_duplicate {
         log!(
@@ -230,20 +230,6 @@ impl<T: Config> TrusteeForChain<T::AccountId, T::BlockNumber, BtcTrusteeType, Bt
             .parse()
             .map_err(|_| Error::<T>::InvalidAddress)?;
 
-        // Set cold address for taproot threshold address
-        let cold_pks = cold_keys
-            .into_iter()
-            .map(|k| k.try_into().map_err(|_| Error::<T>::InvalidPublicKey))
-            .collect::<Result<Vec<_>, Error<T>>>()?;
-
-        let cold_mast = Mast::new(cold_pks, sig_num).map_err(|_| Error::<T>::InvalidAddress)?;
-
-        let cold_threshold_addr: Address = cold_mast
-            .generate_address(&Pallet::<T>::network_id().to_string())
-            .map_err(|_| Error::<T>::InvalidAddress)?
-            .parse()
-            .map_err(|_| Error::<T>::InvalidAddress)?;
-
         // Aggregate public key script and corresponding personal public key index
         let mut agg_pubkeys: Vec<Vec<u8>> = vec![];
         let mut personal_accounts: Vec<Vec<T::AccountId>> = vec![];
@@ -266,10 +252,15 @@ impl<T: Config> TrusteeForChain<T::AccountId, T::BlockNumber, BtcTrusteeType, Bt
             redeem_script: vec![],
         };
 
-        let cold_trustee_addr_info: BtcTrusteeAddrInfo = BtcTrusteeAddrInfo {
-            addr: cold_threshold_addr.to_string().into_bytes(),
-            redeem_script: vec![],
-        };
+        let cold_trustee_addr_info: BtcTrusteeAddrInfo =
+            create_multi_address::<T>(&cold_keys, sig_num).ok_or_else(|| {
+                log!(
+                    error,
+                    "[generate_trustee_session_info] Create cold_addr error, cold_keys:{:?}",
+                    cold_keys
+                );
+                Error::<T>::GenerateMultisigFailed
+            })?;
 
         log!(
             info,
