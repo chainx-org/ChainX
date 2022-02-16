@@ -17,13 +17,11 @@ sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v
 
 # ChainX primitives
 chainx-primitives = { path = "../../../../../primitives", default-features = false }
-xp-assets-registrar = { path = "../../../../../primitives/assets-registrar", default-features = false }
 xp-runtime = { path = "../../../../../primitives/runtime", default-features = false }
 
 # ChainX pallets
-xpallet-assets = { path = "../../../../assets" }
+xpallet-assets = { path = "../../../../assets", default-features = false }
 xpallet-gateway-common = { path = "../../", default-features = false }
-xpallet-gateway-records = { path = "../../../records", default-features = false }
 
 [features]
 default = ["std"]
@@ -35,10 +33,8 @@ std = [
     "sp-std/std",
     # ChainX primitives
     "chainx-primitives/std",
-    "xp-assets-registrar/std",
     "xp-runtime/std",
     # ChainX pallets
     "xpallet-assets/std",
     "xpallet-gateway-common/std",
-    "xpallet-gateway-records/std",
 ]

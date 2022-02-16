@@ -24,7 +24,8 @@ use sp_runtime::{
 use chainx_primitives::AssetId;
 use xp_assets_registrar::Chain;
 pub use xp_protocol::{X_BTC, X_ETH};
-use xpallet_assets::{AssetInfo, AssetRestrictions};
+use xpallet_assets::AssetRestrictions;
+use xpallet_assets_registrar::AssetInfo;
 use xpallet_gateway_common::{trustees, types::TrusteeInfoConfig};
 
 use light_bitcoin::{
@@ -59,7 +60,7 @@ frame_support::construct_runtime!(
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
         Elections: pallet_elections_phragmen::{Pallet, Call, Storage, Event<T>, Config<T>},
         XAssetsRegistrar: xpallet_assets_registrar::{Pallet, Call, Storage, Event<T>, Config},
-        XAssets: xpallet_assets::{Pallet, Call, Storage, Event<T>},
+        XAssets: xpallet_assets::{Pallet, Call, Storage, Event<T>, Config<T>},
         XGatewayRecords: xpallet_gateway_records::{Pallet, Call, Storage, Event<T>},
         XGatewayCommon: xpallet_gateway_common::{Pallet, Call, Storage, Event<T>, Config<T>},
         XGatewayBitcoin: xpallet_gateway_bitcoin::{Pallet, Call, Storage, Event<T>, Config<T>},
@@ -105,15 +106,15 @@ parameter_types! {
     pub const MaxReserves: u32 = 50;
 }
 impl pallet_balances::Config for Test {
+    type MaxLocks = ();
     type Balance = Balance;
     type DustRemoval = ();
     type Event = ();
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
     type WeightInfo = ();
-    type MaxLocks = ();
-    type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
+    type MaxReserves = MaxReserves;
 }
 
 parameter_types! {
@@ -147,13 +148,6 @@ impl pallet_elections_phragmen::Config for Test {
     type DesiredRunnersUp = DesiredRunnersUp;
     type TermDuration = TermDuration;
     type WeightInfo = ();
-}
-parameter_types! {
-    pub const AssetDeposit: Balance = 1;
-    pub const ApprovalDeposit: Balance = 1;
-    pub const StringLimit: u32 = 50;
-    pub const MetadataDepositBase: Balance = 1;
-    pub const MetadataDepositPerByte: Balance = 1;
 }
 
 // assets
@@ -225,12 +219,11 @@ impl Config for Test {
     type AccountExtractor = xp_gateway_bitcoin::OpReturnExtractor;
     type TrusteeSessionProvider =
         xpallet_gateway_common::trustees::bitcoin::BtcTrusteeSessionManager<Test>;
-    type TrusteeInfoUpdate = XGatewayCommon;
     type TrusteeOrigin = EnsureSignedBy<
         xpallet_gateway_common::trustees::bitcoin::BtcTrusteeMultisig<Test>,
         AccountId,
     >;
-    type RelayerInfo = XGatewayCommon;
+    type TrusteeInfoUpdate = XGatewayCommon;
     type ReferralBinding = XGatewayCommon;
     type AddressBinding = XGatewayCommon;
     type WeightInfo = ();
@@ -269,6 +262,30 @@ impl ExtBuilder {
             .build_storage::<Test>()
             .unwrap();
 
+        let btc_assets = btc();
+        let assets = vec![(btc_assets.0, btc_assets.1, btc_assets.2, true, true)];
+
+        let mut init_assets = vec![];
+        let mut assets_restrictions = vec![];
+        for (a, b, c, d, e) in assets {
+            init_assets.push((a, b, d, e));
+            assets_restrictions.push((a, c))
+        }
+
+        GenesisBuild::<Test>::assimilate_storage(
+            &xpallet_assets_registrar::GenesisConfig {
+                assets: init_assets,
+            },
+            &mut storage,
+        )
+        .unwrap();
+
+        let _ = xpallet_assets::GenesisConfig::<Test> {
+            assets_restrictions,
+            endowed: Default::default(),
+        }
+        .assimilate_storage(&mut storage);
+
         // let (genesis_info, genesis_hash, network_id) = load_mock_btc_genesis_header_info();
         let genesis_hash = btc_genesis.0.hash();
         let network_id = btc_network;
@@ -299,52 +316,6 @@ impl ExtBuilder {
             .build_storage::<Test>()
             .unwrap();
 
-        let info = trustees_info();
-        let genesis_trustees = info
-            .iter()
-            .find_map(|(chain, _, trustee_params)| {
-                if *chain == Chain::Bitcoin {
-                    Some(
-                        trustee_params
-                            .iter()
-                            .map(|i| (i.0).clone())
-                            .collect::<Vec<_>>(),
-                    )
-                } else {
-                    None
-                }
-            })
-            .unwrap();
-
-        let _ = xpallet_gateway_common::GenesisConfig::<Test> {
-            trustees: info,
-            genesis_trustee_transition_duration: Default::default(),
-            genesis_trustee_transition_status: Default::default(),
-            ..Default::default()
-        }
-        .assimilate_storage(&mut storage);
-
-        let (genesis_info, genesis_hash, network_id) = load_mainnet_btc_genesis_header_info();
-
-        let _ = xpallet_gateway_bitcoin::GenesisConfig::<Test> {
-            genesis_trustees,
-            genesis_info,
-            genesis_hash,
-            network_id,
-            params_info: BtcParams::new(
-                545259519,            // max_bits
-                2 * 60 * 60,          // block_max_future
-                2 * 7 * 24 * 60 * 60, // target_timespan_seconds
-                10 * 60,              // target_spacing_seconds
-                4,                    // retargeting_factor
-            ), // retargeting_factor
-            verifier: BtcTxVerifier::Recover,
-            confirmation_number: 4,
-            btc_withdrawal_fee: 0,
-            max_withdrawal_count: 100,
-        }
-        .assimilate_storage(&mut storage);
-
         let btc_assets = btc();
         let assets = vec![(btc_assets.0, btc_assets.1, btc_assets.2, true, true)];
         // let mut endowed = BTreeMap::new();
@@ -366,6 +337,53 @@ impl ExtBuilder {
             &mut storage,
         )
         .unwrap();
+
+        let _ = xpallet_assets::GenesisConfig::<Test> {
+            assets_restrictions,
+            endowed: Default::default(),
+        }
+        .assimilate_storage(&mut storage);
+
+        let info = trustees_info();
+        let genesis_trustees = info
+            .iter()
+            .find_map(|(chain, _, trustee_params)| {
+                if *chain == Chain::Bitcoin {
+                    Some(
+                        trustee_params
+                            .iter()
+                            .map(|i| (i.0).clone())
+                            .collect::<Vec<_>>(),
+                    )
+                } else {
+                    None
+                }
+            })
+            .unwrap();
+
+        let _ = xpallet_gateway_common::GenesisConfig::<Test> { trustees: info }
+            .assimilate_storage(&mut storage);
+
+        let (genesis_info, genesis_hash, network_id) = load_mainnet_btc_genesis_header_info();
+
+        let _ = xpallet_gateway_bitcoin::GenesisConfig::<Test> {
+            genesis_trustees,
+            genesis_info,
+            genesis_hash,
+            network_id,
+            params_info: BtcParams::new(
+                545259519,            // max_bits
+                2 * 60 * 60,          // block_max_future
+                2 * 7 * 24 * 60 * 60, // target_timespan_seconds
+                10 * 60,              // target_spacing_seconds
+                4,                    // retargeting_factor
+            ), // retargeting_factor
+            verifier: BtcTxVerifier::Recover,
+            confirmation_number: 4,
+            btc_withdrawal_fee: 0,
+            max_withdrawal_count: 100,
+        }
+        .assimilate_storage(&mut storage);
 
         sp_io::TestExternalities::new(storage)
     }

@@ -2,18 +2,23 @@
 
 use frame_support::{
     dispatch::{DispatchError, DispatchResult},
+    ensure,
     log::{debug, error},
 };
 use sp_std::prelude::Vec;
 
 use light_bitcoin::{
-    chain::{Transaction, TransactionOutputArray},
+    chain::{Transaction, TransactionOutput},
     keys::{AddressTypes, XOnly},
     primitives::H256,
-    script::Script,
+    script::{check_taproot_tx, Script},
 };
 
-use crate::{trustee::get_hot_trustee_address, types::BtcRelayedTx, Config, Error};
+use crate::{
+    trustee::{get_hot_trustee_address, get_hot_trustee_redeem_script},
+    types::BtcRelayedTx,
+    Config, Error,
+};
 
 pub fn validate_transaction<T: Config>(
     tx: &BtcRelayedTx,
@@ -67,15 +72,19 @@ pub fn validate_transaction<T: Config>(
     Ok(())
 }
 
+/// Check signed transactions
+pub fn parse_and_check_signed_tx<T: Config>(tx: &Transaction) -> Result<u32, DispatchError> {
+    let redeem_script = get_hot_trustee_redeem_script::<T>()?;
+    parse_and_check_signed_tx_impl::<T>(tx, redeem_script)
+}
+
 /// Check Taproot tx
-#[allow(dead_code)]
 pub fn parse_check_taproot_tx<T: Config>(
-    _tx: &Transaction,
-    spent_outputs: &TransactionOutputArray,
+    tx: &Transaction,
+    spent_outputs: &[TransactionOutput],
 ) -> Result<bool, DispatchError> {
     let hot_addr = get_hot_trustee_address::<T>()?;
     let mut script_pubkeys = spent_outputs
-        .outputs
         .iter()
         .map(|d| d.script_pubkey.clone())
         .collect::<Vec<_>>();
@@ -96,12 +105,63 @@ pub fn parse_check_taproot_tx<T: Config>(
     if AddressTypes::WitnessV1Taproot(tweak_pubkey) != hot_addr.hash {
         return Err(Error::<T>::InvalidPublicKey.into());
     }
-    // Some data types cannot implement codec encode decode
-    // if light_bitcoin::script::check_taproot_tx(tx, &spent_outputs.outputs).is_err() {
-    //     Err(Error::<T>::VerifySignFailed.into())
-    // } else {
-    //     Ok(true)
-    // }
+    if check_taproot_tx(tx, spent_outputs).is_err() {
+        Err(Error::<T>::VerifySignFailed.into())
+    } else {
+        Ok(true)
+    }
+}
 
-    Ok(true)
+/// for test convenient
+#[inline]
+pub fn parse_and_check_signed_tx_impl<T: Config>(
+    tx: &Transaction,
+    script: Script,
+) -> Result<u32, DispatchError> {
+    let (pubkeys, _, _) = script
+        .parse_redeem_script()
+        .ok_or(Error::<T>::BadRedeemScript)?;
+    let bytes_redeem_script = script.to_bytes();
+
+    let mut input_signs = Vec::new();
+    // any input check meet error would return
+    for i in 0..tx.inputs.len() {
+        // parse sigs from transaction inputs
+        let script: Script = tx.inputs[i].script_sig.clone().into();
+        if script.len() < 2 {
+            // if script length less than 2, it must has no sig in input, use 0 to represent it
+            input_signs.push(0);
+            continue;
+        }
+        let (sigs, _) = script
+            .extract_multi_scriptsig()
+            .map_err(|_| Error::<T>::BadSignature)?;
+
+        for sig in sigs.iter() {
+            let verify = pubkeys.iter().any(|pubkey| {
+                super::secp256k1_verifier::verify_sig::<T>(sig, pubkey, tx, &bytes_redeem_script, i)
+                    .is_ok()
+            });
+            if !verify {
+                error!(
+                    target: "runtime::bitcoin",
+                    "[parse_and_check_signed_tx] Verify sig failed, tx:{:?}, input:{:?}, bytes_redeem_script:{:?}",
+                    tx, i, bytes_redeem_script
+                );
+                return Err(Error::<T>::VerifySignFailed.into());
+            }
+        }
+        input_signs.push(sigs.len());
+    }
+    // the list length must more than one, due to must have inputs; qed
+    ensure!(!input_signs.is_empty(), Error::<T>::InvalidSignCount);
+
+    let first = &input_signs[0];
+    // if just one element, `iter().all()` would return true
+    if input_signs[1..].iter().all(|item| item == first) {
+        Ok(*first as u32)
+    } else {
+        // all inputs sigs count should be same, otherwise it's an invalid tx
+        Err(Error::<T>::InvalidSignCount.into())
+    }
 }

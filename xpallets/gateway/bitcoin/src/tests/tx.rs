@@ -209,7 +209,7 @@ fn test_process_tx() {
         // with op return and without input address
         let r = mock_process_tx::<Test>(deposit_taproot2.clone(), None);
         assert_eq!(r.result, BtcTxResult::Success);
-        // assert_eq!(Assets::balance(X_BTC, op_account), 100000);
+        assert_eq!(XAssets::usable_balance(&op_account, &X_BTC), 100000);
         assert_eq!(XGatewayCommon::bound_addrs(&op_account), Default::default());
         // with op return and input address
         let r = mock_process_tx::<Test>(
@@ -217,7 +217,7 @@ fn test_process_tx() {
             Some(deposit_taproot2_prev.clone()),
         );
         assert_eq!(r.result, BtcTxResult::Success);
-        // assert_eq!(XAssets::usable_balance(&op_account, &X_BTC), 300000);
+        assert_eq!(XAssets::usable_balance(&op_account, &X_BTC), 300000);
 
         // withdraw
         WithdrawalProposal::<Test>::put(BtcWithdrawalProposal {

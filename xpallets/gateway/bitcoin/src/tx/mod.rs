@@ -1,7 +1,6 @@
 // Copyright 2019-2021 ChainX Project Authors. Licensed under GPL-3.0.
 #![allow(clippy::ptr_arg)]
 extern crate alloc;
-
 use alloc::string::ToString;
 
 mod secp256k1_verifier;
@@ -20,17 +19,18 @@ use light_bitcoin::{
     primitives::{hash_rev, H256},
 };
 
+use chainx_primitives::AssetId;
+use xp_gateway_bitcoin::{BtcDepositInfo, BtcTxMetaType, BtcTxTypeDetector};
+use xp_gateway_common::AccountExtractor;
+use xpallet_assets::ChainT;
+use xpallet_gateway_common::traits::{AddressBinding, ReferralBinding, TrusteeInfoUpdate};
+use xpallet_support::try_str;
+
 pub use self::validator::validate_transaction;
 use crate::{
     types::{AccountInfo, BtcAddress, BtcDepositCache, BtcTxResult, BtcTxState},
-    Config, Error, Event, Pallet, PendingDeposits, WithdrawalProposal,
+    BalanceOf, Config, Error, Event, Pallet, PendingDeposits, WithdrawalProposal,
 };
-use xp_gateway_bitcoin::{BtcDepositInfo, BtcTxMetaType, BtcTxTypeDetector};
-use xp_gateway_common::AccountExtractor;
-use xp_protocol::X_BTC;
-use xpallet_assets::{BalanceOf, ChainT};
-use xpallet_gateway_common::traits::{AddressBinding, ReferralBinding, TrusteeInfoUpdate};
-use xpallet_support::try_str;
 
 pub fn process_tx<T: Config>(
     tx: Transaction,
@@ -110,8 +110,12 @@ fn deposit<T: Config>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) ->
 
     match account_info {
         AccountInfo::<_>::Account((account, referral)) => {
-            T::ReferralBinding::update_binding(&X_BTC, &account, referral);
-            match deposit_token::<T>(txid, &account, deposit_info.deposit_value.saturated_into()) {
+            T::ReferralBinding::update_binding(
+                &<Pallet<T> as ChainT<_>>::ASSET_ID,
+                &account,
+                referral,
+            );
+            match deposit_token::<T>(txid, &account, deposit_info.deposit_value) {
                 Ok(_) => {
                     info!(
                         target: "runtime::bitcoin",
@@ -139,16 +143,13 @@ fn deposit<T: Config>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) ->
     }
 }
 
-fn deposit_token<T: Config>(
-    txid: H256,
-    who: &T::AccountId,
-    balance: BalanceOf<T>,
-) -> DispatchResult {
-    let asset_id = X_BTC;
+fn deposit_token<T: Config>(txid: H256, who: &T::AccountId, balance: u64) -> DispatchResult {
+    let id: AssetId = <Pallet<T> as ChainT<_>>::ASSET_ID;
 
-    match xpallet_assets::Pallet::<T>::issue(&asset_id, who, balance) {
+    let value: BalanceOf<T> = balance.saturated_into();
+    match <xpallet_gateway_records::Pallet<T>>::deposit(who, id, value) {
         Ok(()) => {
-            Pallet::<T>::deposit_event(Event::<T>::Deposited(txid, who.clone(), balance));
+            Pallet::<T>::deposit_event(Event::<T>::Deposited(txid, who.clone(), value));
             Ok(())
         }
         Err(err) => {
@@ -167,7 +168,7 @@ pub fn remove_pending_deposit<T: Config>(input_address: &BtcAddress, who: &T::Ac
     let records = PendingDeposits::<T>::take(input_address);
     for record in records {
         // ignore error
-        let _ = deposit_token::<T>(record.txid, who, record.balance.saturated_into());
+        let _ = deposit_token::<T>(record.txid, who, record.balance);
         info!(
             target: "runtime::bitcoin",
             "[remove_pending_deposit] Use pending info to re-deposit, who:{:?}, balance:{}, cached_tx:{:?}",
@@ -261,7 +262,6 @@ fn withdraw<T: Config>(tx: Transaction) -> BtcTxResult {
             // real withdraw value would reduce withdraw_fee
             total -=
                 (proposal.withdrawal_id_list.len() as u64 * btc_withdrawal_fee).saturated_into();
-
             Pallet::<T>::deposit_event(Event::<T>::Withdrawn(
                 tx_hash,
                 proposal.withdrawal_id_list,
@@ -297,7 +297,6 @@ fn withdraw<T: Config>(tx: Transaction) -> BtcTxResult {
 }
 
 /// Returns Ok if `tx1` and `tx2` are the same transaction.
-#[allow(dead_code)]
 pub fn ensure_identical<T: Config>(tx1: &Transaction, tx2: &Transaction) -> DispatchResult {
     if tx1.version == tx2.version
         && tx1.outputs == tx2.outputs

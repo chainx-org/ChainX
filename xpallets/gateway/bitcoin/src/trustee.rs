@@ -1,5 +1,4 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
-#![allow(clippy::type_complexity)]
 extern crate alloc;
 
 use alloc::string::ToString;
@@ -15,7 +14,7 @@ use sp_std::{
 };
 
 use light_bitcoin::{
-    chain::Transaction,
+    chain::{Transaction, TransactionOutput},
     crypto::dhash160,
     keys::{Address, AddressTypes, Public, Type},
     mast::{compute_min_threshold, Mast},
@@ -23,18 +22,19 @@ use light_bitcoin::{
     script::{Builder, Opcode, Script},
 };
 
-use xp_assets_registrar::Chain;
 use xp_gateway_bitcoin::extract_output_addr;
-use xpallet_gateway_common::traits::RelayerInfo;
+use xpallet_assets::Chain;
 use xpallet_gateway_common::{
     traits::{TrusteeForChain, TrusteeSession},
     trustees::bitcoin::{BtcTrusteeAddrInfo, BtcTrusteeType},
     types::{ScriptInfo, TrusteeInfoConfig, TrusteeIntentionProps, TrusteeSessionInfo},
-    utils::{two_thirds_unsafe, MAX_TAPROOT_NODES},
+    utils::two_thirds_unsafe,
 };
 
+use crate::tx::validator::parse_check_taproot_tx;
 use crate::{
     log,
+    tx::{ensure_identical, validator::parse_and_check_signed_tx},
     types::{BtcWithdrawalProposal, VoteResult},
     Config, Error, Event, Pallet, WithdrawalProposal,
 };
@@ -88,7 +88,7 @@ pub fn get_last_trustee_address_pair<T: Config>() -> Result<(Address, Address), 
     })
 }
 
-pub fn check_keys<T: Config>(keys: &[Public]) -> DispatchResult {
+fn check_keys<T: Config>(keys: &[Public]) -> DispatchResult {
     let has_duplicate = (1..keys.len()).any(|i| keys[i..].contains(&keys[i - 1]));
     if has_duplicate {
         log!(
@@ -113,6 +113,8 @@ const EC_P: [u8; 32] = [
 ];
 
 const ZERO_P: [u8; 32] = [0; 32];
+
+const MAX_TAPROOT_NODES: u32 = 250;
 
 impl<T: Config> TrusteeForChain<T::AccountId, T::BlockNumber, BtcTrusteeType, BtcTrusteeAddrInfo>
     for Pallet<T>
@@ -258,7 +260,7 @@ impl<T: Config> TrusteeForChain<T::AccountId, T::BlockNumber, BtcTrusteeType, Bt
             agg_pubkeys.push(script.into());
             personal_accounts.push(accounts);
         }
-
+        // TODO：consider remove redeem_script
         let hot_trustee_addr_info: BtcTrusteeAddrInfo = BtcTrusteeAddrInfo {
             addr: hot_threshold_addr.to_string().into_bytes(),
             redeem_script: vec![],
@@ -300,10 +302,6 @@ impl<T: Config> TrusteeForChain<T::AccountId, T::BlockNumber, BtcTrusteeType, Bt
 }
 
 impl<T: Config> Pallet<T> {
-    pub fn ensure_relayer(who: &T::AccountId) -> bool {
-        &T::RelayerInfo::current_relayer() == who
-    }
-
     pub fn ensure_trustee(who: &T::AccountId) -> DispatchResult {
         if current_proxy_account::<T>()?.iter().any(|n| n == who) {
             return Ok(());
@@ -423,7 +421,6 @@ pub fn get_sig_num<T: Config>() -> (u32, u32) {
     (two_thirds_unsafe(trustee_num), trustee_num)
 }
 
-#[allow(dead_code)]
 pub(crate) fn create_multi_address<T: Config>(
     pubkeys: &[Public],
     sig_num: u32,
@@ -471,11 +468,36 @@ pub(crate) fn create_multi_address<T: Config>(
     })
 }
 
-/// Check that the cash withdrawal transaction is correct
-pub fn check_withdraw_tx<T: Config>(
-    tx: &Transaction,
-    withdrawal_id_list: &[u32],
+/// Update the signature status of trustee
+/// state: false -> Veto signature, true -> Consent signature
+/// only allow inseRelayedTx once
+fn insert_trustee_vote_state<T: Config>(
+    state: bool,
+    who: &T::AccountId,
+    trustee_list: &mut Vec<(T::AccountId, bool)>,
 ) -> DispatchResult {
+    match trustee_list.iter_mut().find(|info| info.0 == *who) {
+        Some(_) => {
+            // if account is exist, override state
+            log!(error, "[insert_trustee_vote_state] {:?} has already vote for this withdrawal proposal, old vote:{}", who, state);
+            return Err(Error::<T>::DuplicateVote.into());
+        }
+        None => {
+            trustee_list.push((who.clone(), state));
+            log!(
+                debug,
+                "[insert_trustee_vote_state] Insert new vote, who:{:?}, state:{}",
+                who,
+                state
+            );
+        }
+    }
+    Pallet::<T>::deposit_event(Event::<T>::WithdrawalProposalVoted(who.clone(), state));
+    Ok(())
+}
+
+/// Check that the cash withdrawal transaction is correct
+fn check_withdraw_tx<T: Config>(tx: &Transaction, withdrawal_id_list: &[u32]) -> DispatchResult {
     match Pallet::<T>::withdrawal_proposal() {
         Some(_) => Err(Error::<T>::NotFinishProposal.into()),
         None => check_withdraw_tx_impl::<T>(tx, withdrawal_id_list),

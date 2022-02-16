@@ -22,34 +22,32 @@ frame-system = { git = "https://github.com/paritytech/substrate", branch = "polk
 
 pallet-elections-phragmen = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
 
-
 # ChainX primitives
 chainx-primitives = { path = "../../../primitives", default-features = false }
 xp-assets-registrar = { path = "../../../primitives/assets-registrar", default-features = false }
+# xp-logging = { path = "../../../primitives/logging", default-features = false }
 xp-protocol = { path = "../../../primitives/protocol", default-features = false }
 xp-rpc = { path = "../../../primitives/rpc", optional = true }
 xp-runtime = { path = "../../../primitives/runtime", default-features = false }
 
 # ChainX pallets
 xpallet-assets = { path = "../../assets", default-features = false }
-xpallet-support = { path = "../../support", default-features = false }
 xpallet-assets-registrar = { path = "../../assets-registrar", default-features = false }
 xpallet-gateway-records = { path = "../records", default-features = false }
+xpallet-support = { path = "../../support", default-features = false }
 
 # light-bitcoin
 light-bitcoin = { git = "https://github.com/chainx-org/light-bitcoin", branch = "taproot", default-features = false }
-musig2 = { git = "https://github.com/chainx-org/Musig2", branch = "lib", default-features = false }
 
 [dev-dependencies]
 lazy_static = "1.4"
 serde_json = "1.0"
+sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11" }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11" }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11" }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11" }
 xp-gateway-bitcoin = { path = "../../../primitives/gateway/bitcoin" }
 xpallet-gateway-bitcoin = { path = "../bitcoin" }
-sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11" }
-
 
 [features]
 default = ["std"]

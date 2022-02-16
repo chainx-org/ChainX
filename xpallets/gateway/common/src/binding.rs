@@ -3,21 +3,22 @@
 use frame_support::log::{debug, error, info, warn};
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
-use crate::traits::{AddressBinding, ReferralBinding};
-use crate::{AddressBindingOf, BoundAddressOf, Config, Pallet};
 use chainx_primitives::{AssetId, ChainAddress, ReferralId};
-use xp_assets_registrar::Chain;
+use xpallet_assets::Chain;
 use xpallet_support::{traits::Validator, try_addr, try_str};
 
+use crate::traits::{AddressBinding, ReferralBinding};
+use crate::{AddressBindingOf, BoundAddressOf, Config, Pallet};
+
 impl<T: Config> ReferralBinding<T::AccountId> for Pallet<T> {
-    fn update_binding(asset_id: &AssetId, who: &T::AccountId, referral_name: Option<ReferralId>) {
-        let chain = match xpallet_assets_registrar::Pallet::<T>::chain_of(asset_id) {
+    fn update_binding(assert_id: &AssetId, who: &T::AccountId, referral_name: Option<ReferralId>) {
+        let chain = match xpallet_assets_registrar::Pallet::<T>::chain_of(assert_id) {
             Ok(chain) => chain,
             Err(err) => {
                 error!(
                     target: "runtime::gateway::common",
                     "[update_referral_binding] Unexpected asset_id:{:?}, error:{:?}",
-                    asset_id, err
+                    assert_id, err
                 );
                 return;
             }
@@ -33,8 +34,8 @@ impl<T: Config> ReferralBinding<T::AccountId> for Pallet<T> {
                     Some(channel) => {
                         debug!(
                             target: "runtime::gateway::common",
-                            "[update_referral_binding] Already has referral binding:[assert id:{:?}, chain:{:?}, who:{:?}, referral:{:?}]",
-                            asset_id, chain, who, channel
+                            "[update_referral_binding] Already has referral binding:[assert id:{}, chain:{:?}, who:{:?}, referral:{:?}]",
+                            assert_id, chain, who, channel
                         );
                     }
                 }
@@ -48,8 +49,8 @@ impl<T: Config> ReferralBinding<T::AccountId> for Pallet<T> {
         };
     }
 
-    fn referral(asset_id: &AssetId, who: &T::AccountId) -> Option<T::AccountId> {
-        let chain = xpallet_assets_registrar::Pallet::<T>::chain_of(asset_id).ok()?;
+    fn referral(assert_id: &AssetId, who: &T::AccountId) -> Option<T::AccountId> {
+        let chain = xpallet_assets_registrar::Pallet::<T>::chain_of(assert_id).ok()?;
         Self::referral_binding_of(who, chain)
     }
 }

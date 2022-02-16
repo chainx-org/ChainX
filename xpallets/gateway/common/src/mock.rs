@@ -37,7 +37,6 @@ use crate::{
 use chainx_primitives::AssetId;
 pub use xp_protocol::{X_BTC, X_ETH};
 use xpallet_assets::{AssetInfo, AssetRestrictions, BalanceOf, Chain, ChainT, WithdrawalLimit};
-use xpallet_gateway_bitcoin::trustee::check_keys;
 use xpallet_support::traits::{MultisigAddressFor, Validator};
 
 pub(crate) type AccountId = AccountId32;
@@ -253,7 +252,6 @@ impl xpallet_gateway_bitcoin::Config for Test {
     type UnixTime = Timestamp;
     type AccountExtractor = xp_gateway_bitcoin::OpReturnExtractor;
     type TrusteeOrigin = EnsureSignedBy<BtcTrusteeMultisig<Test>, AccountId>;
-    type RelayerInfo = ();
     type TrusteeSessionProvider = ();
     type TrusteeInfoUpdate = ();
     type ReferralBinding = ();
@@ -361,8 +359,8 @@ impl<T: xpallet_gateway_bitcoin::Config>
             .unzip();
 
         // judge all props has different pubkey
-        check_keys::<T>(&hot_keys)?;
-        check_keys::<T>(&cold_keys)?;
+        // check_keys::<T>(&hot_keys)?;
+        // check_keys::<T>(&cold_keys)?;
 
         // [min, max] e.g. bitcoin min is 4, max is 15
         if (trustees.len() as u32) < config.min_trustee_count

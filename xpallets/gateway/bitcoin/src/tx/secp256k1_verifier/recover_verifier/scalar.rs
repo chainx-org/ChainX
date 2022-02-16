@@ -27,7 +27,7 @@ const SECP256K1_N_H_5: u32 = 0xFFFFFFFF;
 const SECP256K1_N_H_6: u32 = 0xFFFFFFFF;
 const SECP256K1_N_H_7: u32 = 0x7FFFFFFF;
 
-#[derive(Default, Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 /// A 256-bit scalar value.
 pub struct Scalar(pub [u32; 8]);
 
@@ -1006,6 +1006,12 @@ impl Scalar {
 
     pub fn is_even(&self) -> bool {
         self.0[0] & 1 == 0
+    }
+}
+
+impl Default for Scalar {
+    fn default() -> Scalar {
+        Scalar([0u32; 8])
     }
 }
 

@@ -247,45 +247,6 @@ benchmarks! {
         assert_eq!(Pallet::<T>::trustee_admin_multiply(), multiply);
     }
 
-    tranfer_trustee_reward {
-        let caller: T::AccountId = alice::<T>();
-        clean::<T>();
-        TrusteeMultiSigAddr::<T>::insert(Chain::Bitcoin, caller.clone());
-        assert_eq!(Pallet::<T>::trustee_session_info_len(Chain::Bitcoin), 0);
-        assert!(Pallet::<T>::trustee_session_info_of(Chain::Bitcoin, 0).is_none());
-        let mut candidators = vec![];
-        let trustee_info = new_trustees::<T>();
-        let trustee_len = trustee_info.len();
-        for (account, about, hot, cold) in (&trustee_info[0..trustee_len-1]).to_vec() {
-            Pallet::<T>::setup_trustee_impl(account.clone(), None, Chain::Bitcoin, about, hot, cold).unwrap();
-            candidators.push(account);
-        }
-        assert_eq!(Pallet::<T>::transition_trustee_session_impl(Chain::Bitcoin, candidators), Ok(()));
-
-        let mut candidators = vec![];
-        let trustee_info = new_trustees::<T>();
-        let trustee_len = trustee_info.len();
-        for (account, about, hot, cold) in (&trustee_info[1..trustee_len]).to_vec() {
-            Pallet::<T>::setup_trustee_impl(account.clone(), None, Chain::Bitcoin, about, hot, cold).unwrap();
-            candidators.push(account);
-        }
-        assert_eq!(Pallet::<T>::transition_trustee_session_impl(Chain::Bitcoin, candidators), Ok(()));
-        assert_eq!(Pallet::<T>::trustee_session_info_len(Chain::Bitcoin), 2);
-        assert!(Pallet::<T>::trustee_session_info_of(Chain::Bitcoin, 2).is_some());
-        let reward: BalanceOf<T> = 100_000_000u32.into();
-        let session_num = 1;
-        #[cfg(not(feature = "runtime-benchmarks"))]
-        <T as xpallet_assets::Config>::Currency::deposit_creating(&caller, reward);
-        #[cfg(feature = "runtime-benchmarks")]
-        update_trustee_info::<T>(session_num);
-        #[cfg(feature = "runtime-benchmarks")]
-        let reward: BalanceOf<T> = <T as xpallet_assets::Config>::Currency::free_balance(&caller).checked_div(&2u32.into()).unwrap();
-    }: _(RawOrigin::Signed(caller.clone()), session_num as i32, reward)
-    verify {
-        #[cfg(not(feature = "runtime-benchmarks"))]
-        assert_eq!(<T as xpallet_assets::Config>::Currency::free_balance(&trustee_info[0].0), 33333333u32.into());
-    }
-
     claim_trustee_reward {
         let caller: T::AccountId = alice::<T>();
         clean::<T>();
@@ -345,7 +306,6 @@ mod tests {
             assert_ok!(Pallet::<Test>::test_benchmark_set_relayer());
             assert_ok!(Pallet::<Test>::test_benchmark_set_trustee_admin());
             assert_ok!(Pallet::<Test>::test_benchmark_set_trustee_admin_multiply());
-            assert_ok!(Pallet::<Test>::test_benchmark_tranfer_trustee_reward());
             assert_ok!(Pallet::<Test>::test_benchmark_claim_trustee_reward());
         });
     }

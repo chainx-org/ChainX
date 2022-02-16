@@ -7,7 +7,8 @@ use frame_support::{
     log::{error, warn},
     traits::SortedMembers,
 };
-use sp_runtime::traits::Zero;
+use sp_runtime::traits::{CheckedDiv, Saturating, Zero};
+use sp_runtime::SaturatedConversion;
 use sp_std::{convert::TryFrom, marker::PhantomData, prelude::*};
 use xp_assets_registrar::Chain;
 use xp_protocol::X_BTC;
@@ -17,8 +18,8 @@ use xpallet_support::traits::MultiSig;
 use crate::{
     traits::{BytesLike, ChainProvider, TrusteeInfoUpdate, TrusteeSession},
     types::TrusteeSessionInfo,
-    CheckedDiv, Config, Error, Event, Pallet, PreTotalSupply, SaturatedConversion, Saturating,
-    TrusteeSessionInfoOf, TrusteeSigRecord, TrusteeTransitionStatus,
+    Config, Error, Event, Pallet, PreTotalSupply, TrusteeSessionInfoOf, TrusteeSigRecord,
+    TrusteeTransitionStatus,
 };
 
 pub struct TrusteeSessionManager<T: Config, TrusteeAddress>(
@@ -143,8 +144,9 @@ impl<T: Config> TrusteeInfoUpdate for Pallet<T> {
                             trustee.0.trustee_list[i].1 =
                                 Self::trustee_sig_record(&trustee.0.trustee_list[i].0);
                         }
-                        let total_apply: BalanceOf<T> = Self::pre_total_supply(X_BTC);
-                        let reward_amount: BalanceOf<T> = trans_amount
+                        let total_apply = Self::pre_total_supply(X_BTC);
+
+                        let reward_amount = trans_amount
                             .unwrap_or(0u64)
                             .saturated_into::<BalanceOf<T>>()
                             .saturating_sub(total_apply)
@@ -195,7 +197,10 @@ impl<T: Config> TrusteeInfoUpdate for Pallet<T> {
         let signed_trustees = Self::agg_pubkey_info(script);
         signed_trustees.into_iter().for_each(|trustee| {
             let amount = if trustee == Self::trustee_admin() {
-                withdraw_amount.saturating_mul(Self::trustee_admin_multiply()) / 10
+                withdraw_amount
+                    .saturating_mul(Self::trustee_admin_multiply())
+                    .checked_div(10)
+                    .unwrap_or(0)
             } else {
                 withdraw_amount
             };

@@ -8547,7 +8547,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f559b464de2e2bdabcac6a210d12e9b5a5973c251e102c44c585c71d51bd78e"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.8.4",
+ "rand 0.7.3",
  "static_assertions",
 ]
 
@@ -9525,37 +9525,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "xpallet-gateway-bitcoin-rpc"
-version = "3.0.0"
-dependencies = [
- "hex",
- "jsonrpc-core",
- "jsonrpc-core-client",
- "jsonrpc-derive",
- "parity-scale-codec",
- "serde",
- "sp-api",
- "sp-blockchain",
- "sp-runtime",
- "xp-rpc",
- "xpallet-gateway-bitcoin-rpc-runtime-api",
-]
-
-[[package]]
-name = "xpallet-gateway-bitcoin-rpc-runtime-api"
-version = "3.0.0"
-dependencies = [
- "chainx-primitives",
- "parity-scale-codec",
- "sp-api",
- "sp-runtime",
- "sp-std",
- "xp-assets-registrar",
- "xp-runtime",
- "xpallet-gateway-bitcoin",
-]
-
-[[package]]
 name = "xpallet-gateway-common"
 version = "3.0.0"
 dependencies = [
@@ -9566,7 +9535,6 @@ dependencies = [
  "hex",
  "lazy_static",
  "light-bitcoin",
- "musig2",
  "pallet-balances",
  "pallet-elections-phragmen",
  "parity-scale-codec",
@@ -9599,7 +9567,6 @@ dependencies = [
  "jsonrpc-core-client",
  "jsonrpc-derive",
  "parity-scale-codec",
- "serde",
  "sp-api",
  "sp-blockchain",
  "sp-runtime",
@@ -9616,11 +9583,9 @@ dependencies = [
  "sp-api",
  "sp-runtime",
  "sp-std",
- "xp-assets-registrar",
  "xp-runtime",
  "xpallet-assets",
  "xpallet-gateway-common",
- "xpallet-gateway-records",
 ]
 
 [[package]]

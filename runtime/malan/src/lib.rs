@@ -88,7 +88,9 @@ pub use xpallet_gateway_bitcoin::{
 };
 pub use xpallet_gateway_common::{
     trustees,
-    types::{GenericTrusteeIntentionProps, GenericTrusteeSessionInfo, TrusteeInfoConfig},
+    types::{
+        GenericTrusteeIntentionProps, GenericTrusteeSessionInfo, ScriptInfo, TrusteeInfoConfig,
+    },
 };
 pub use xpallet_gateway_records::Withdrawal;
 pub use xpallet_mining_asset::MiningWeight;
@@ -998,8 +1000,12 @@ impl xpallet_gateway_common::Config for Runtime {
     type Event = Event;
     type Validator = XStaking;
     type DetermineMultisigAddress = MultisigProvider;
+    type CouncilOrigin =
+        pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, CouncilCollective>;
     type Bitcoin = XGatewayBitcoin;
     type BitcoinTrustee = XGatewayBitcoin;
+    type BitcoinTrusteeSessionProvider = trustees::bitcoin::BtcTrusteeSessionManager<Runtime>;
+    type BitcoinTotalSupply = XGatewayBitcoin;
     type WeightInfo = xpallet_gateway_common::weights::SubstrateWeight<Runtime>;
 }
 
@@ -1009,6 +1015,7 @@ impl xpallet_gateway_bitcoin::Config for Runtime {
     type AccountExtractor = xp_gateway_bitcoin::OpReturnExtractor;
     type TrusteeSessionProvider = trustees::bitcoin::BtcTrusteeSessionManager<Runtime>;
     type TrusteeOrigin = EnsureSignedBy<trustees::bitcoin::BtcTrusteeMultisig<Runtime>, AccountId>;
+    type TrusteeInfoUpdate = XGatewayCommon;
     type ReferralBinding = XGatewayCommon;
     type AddressBinding = XGatewayCommon;
     type WeightInfo = xpallet_gateway_bitcoin::weights::SubstrateWeight<Runtime>;
@@ -1451,7 +1458,7 @@ impl_runtime_apis! {
         }
     }
 
-    impl xpallet_gateway_common_rpc_runtime_api::XGatewayCommonApi<Block, AccountId, Balance> for Runtime {
+    impl xpallet_gateway_common_rpc_runtime_api::XGatewayCommonApi<Block, AccountId, Balance, BlockNumber> for Runtime {
         fn bound_addrs(who: AccountId) -> BTreeMap<Chain, Vec<ChainAddress>> {
             XGatewayCommon::bound_addrs(&who)
         }
@@ -1468,21 +1475,33 @@ impl_runtime_apis! {
             XGatewayCommon::trustee_multisigs()
         }
 
-        fn trustee_properties(chain: Chain, who: AccountId) -> Option<GenericTrusteeIntentionProps> {
+        fn trustee_properties(chain: Chain, who: AccountId) -> Option<GenericTrusteeIntentionProps<AccountId>> {
             XGatewayCommon::trustee_intention_props_of(who, chain)
         }
 
-        fn trustee_session_info(chain: Chain) -> Option<GenericTrusteeSessionInfo<AccountId>> {
-            let number = XGatewayCommon::trustee_session_info_len(chain)
-                .checked_sub(1)
-                .unwrap_or_else(u32::max_value);
-            XGatewayCommon::trustee_session_info_of(chain, number)
+        fn trustee_session_info(chain: Chain, session_number: i32) -> Option<GenericTrusteeSessionInfo<AccountId, BlockNumber>> {
+            if session_number < 0 {
+                let number = match session_number {
+                    -1i32 => Some(XGatewayCommon::trustee_session_info_len(chain)),
+                    -2i32 => XGatewayCommon::trustee_session_info_len(chain).checked_sub(1),
+                    _ => None
+                };
+                if let Some(number) = number {
+                    XGatewayCommon::trustee_session_info_of(chain, number)
+                }else{
+                    None
+                }
+            }else{
+                let number = session_number as u32;
+                XGatewayCommon::trustee_session_info_of(chain, number)
+            }
+
         }
 
-        fn generate_trustee_session_info(chain: Chain, candidates: Vec<AccountId>) -> Result<GenericTrusteeSessionInfo<AccountId>, DispatchError> {
+        fn generate_trustee_session_info(chain: Chain, candidates: Vec<AccountId>) -> Result<(GenericTrusteeSessionInfo<AccountId, BlockNumber>, ScriptInfo<AccountId>), DispatchError> {
             let info = XGatewayCommon::try_generate_session_info(chain, candidates)?;
             // check multisig address
-            let _ = XGatewayCommon::generate_multisig_addr(chain, &info)?;
+            let _ = XGatewayCommon::generate_multisig_addr(chain, &info.0)?;
             Ok(info)
         }
     }

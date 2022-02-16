@@ -3,9 +3,10 @@
 use frame_support::dispatch::DispatchError;
 use sp_std::{convert::TryFrom, prelude::Vec};
 
-use crate::types::{ScriptInfo, TrusteeInfoConfig, TrusteeIntentionProps, TrusteeSessionInfo};
 use chainx_primitives::{AssetId, ReferralId};
-use xp_assets_registrar::Chain;
+use xpallet_assets::Chain;
+
+use crate::types::{ScriptInfo, TrusteeInfoConfig, TrusteeIntentionProps, TrusteeSessionInfo};
 
 pub trait BytesLike: Into<Vec<u8>> + TryFrom<Vec<u8>> {}
 impl<T: Into<Vec<u8>> + TryFrom<Vec<u8>>> BytesLike for T {}
