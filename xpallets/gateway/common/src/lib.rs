@@ -40,7 +40,7 @@ use types::{RewardInfo, ScriptInfo, TrusteeSessionInfo};
 use xp_protocol::X_BTC;
 use xp_runtime::Memo;
 use xpallet_assets::{AssetRestrictions, BalanceOf, Chain, ChainT, WithdrawalLimit};
-use xpallet_gateway_records::{WithdrawalRecordId, WithdrawalState};
+use xpallet_gateway_records::{Withdrawal, WithdrawalRecordId, WithdrawalState};
 use xpallet_support::traits::{MultisigAddressFor, Validator};
 
 use self::traits::{TotalSupply, TrusteeForChain, TrusteeInfoUpdate, TrusteeSession};
@@ -760,6 +760,43 @@ impl<T: Config> Pallet<T> {
             Chain::Bitcoin => T::Bitcoin::withdrawal_limit(asset_id),
             _ => Err(Error::<T>::NotSupportedChain.into()),
         }
+    }
+
+    pub fn withdrawal_list_with_fee_info(
+        asset_id: &AssetId,
+    ) -> Result<
+        BTreeMap<
+            WithdrawalRecordId,
+            (
+                Withdrawal<T::AccountId, BalanceOf<T>, T::BlockNumber>,
+                WithdrawalLimit<BalanceOf<T>>,
+            ),
+        >,
+        DispatchError,
+    > {
+        let limit = Self::withdrawal_limit(asset_id)?;
+
+        let result: BTreeMap<
+            WithdrawalRecordId,
+            (
+                Withdrawal<T::AccountId, BalanceOf<T>, T::BlockNumber>,
+                WithdrawalLimit<BalanceOf<T>>,
+            ),
+        > = xpallet_gateway_records::PendingWithdrawals::<T>::iter()
+            .map(|(id, record)| {
+                (
+                    id,
+                    (
+                        Withdrawal::new(
+                            record,
+                            xpallet_gateway_records::Pallet::<T>::state_of(id).unwrap_or_default(),
+                        ),
+                        limit.clone(),
+                    ),
+                )
+            })
+            .collect();
+        Ok(result)
     }
 
     pub fn verify_withdrawal(

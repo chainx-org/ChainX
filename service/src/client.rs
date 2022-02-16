@@ -21,6 +21,7 @@ pub trait RuntimeApiCollection:
     + sp_authority_discovery::AuthorityDiscoveryApi<Block>
     + xpallet_assets_rpc_runtime_api::XAssetsApi<Block, AccountId, Balance>
     + xpallet_dex_spot_rpc_runtime_api::XSpotApi<Block, AccountId, Balance, BlockNumber, Balance>
+    + xpallet_gateway_bitcoin_rpc_runtime_api::XGatewayBitcoinApi<Block>
     + xpallet_gateway_common_rpc_runtime_api::XGatewayCommonApi<
         Block,
         AccountId,
@@ -64,6 +65,7 @@ where
         + sp_authority_discovery::AuthorityDiscoveryApi<Block>
         + xpallet_assets_rpc_runtime_api::XAssetsApi<Block, AccountId, Balance>
         + xpallet_dex_spot_rpc_runtime_api::XSpotApi<Block, AccountId, Balance, BlockNumber, Balance>
+        + xpallet_gateway_bitcoin_rpc_runtime_api::XGatewayBitcoinApi<Block>
         + xpallet_gateway_common_rpc_runtime_api::XGatewayCommonApi<
             Block,
             AccountId,

@@ -92,7 +92,7 @@ pub use xpallet_gateway_common::{
         GenericTrusteeIntentionProps, GenericTrusteeSessionInfo, ScriptInfo, TrusteeInfoConfig,
     },
 };
-pub use xpallet_gateway_records::Withdrawal;
+pub use xpallet_gateway_records::{Withdrawal, WithdrawalRecordId};
 pub use xpallet_mining_asset::MiningWeight;
 pub use xpallet_mining_staking::VoteWeight;
 
@@ -1452,6 +1452,16 @@ impl_runtime_apis! {
         }
     }
 
+    impl xpallet_gateway_bitcoin_rpc_runtime_api::XGatewayBitcoinApi<Block> for Runtime {
+        fn verify_tx_valid(
+            raw_tx: Vec<u8>,
+            withdrawal_id_list: Vec<u32>,
+            full_amount: bool,
+        ) -> Result<bool, DispatchError> {
+            XGatewayBitcoin::verify_tx_valid(raw_tx, withdrawal_id_list, full_amount)
+        }
+    }
+
     impl xpallet_gateway_common_rpc_runtime_api::XGatewayCommonApi<Block, AccountId, Balance, BlockNumber> for Runtime {
         fn bound_addrs(who: AccountId) -> BTreeMap<Chain, Vec<ChainAddress>> {
             XGatewayCommon::bound_addrs(&who)
@@ -1459,6 +1469,20 @@ impl_runtime_apis! {
 
         fn withdrawal_limit(asset_id: AssetId) -> Result<WithdrawalLimit<Balance>, DispatchError> {
             XGatewayCommon::withdrawal_limit(&asset_id)
+        }
+
+        fn withdrawal_list_with_fee_info(asset_id: AssetId) -> Result<
+            BTreeMap<
+                WithdrawalRecordId,
+                (
+                    Withdrawal<AccountId, Balance, BlockNumber>,
+                    WithdrawalLimit<Balance>,
+                ),
+            >,
+            DispatchError,
+        >
+        {
+            XGatewayCommon::withdrawal_list_with_fee_info(&asset_id)
         }
 
         fn verify_withdrawal(asset_id: AssetId, value: Balance, addr: AddrStr, memo: Memo) -> Result<(), DispatchError> {

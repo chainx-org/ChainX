@@ -898,6 +898,8 @@ dependencies = [
  "xpallet-assets-rpc-runtime-api",
  "xpallet-dex-spot-rpc",
  "xpallet-dex-spot-rpc-runtime-api",
+ "xpallet-gateway-bitcoin-rpc",
+ "xpallet-gateway-bitcoin-rpc-runtime-api",
  "xpallet-gateway-common-rpc",
  "xpallet-gateway-common-rpc-runtime-api",
  "xpallet-gateway-records-rpc",
@@ -980,6 +982,7 @@ dependencies = [
  "xpallet-dex-spot",
  "xpallet-dex-spot-rpc-runtime-api",
  "xpallet-gateway-bitcoin",
+ "xpallet-gateway-bitcoin-rpc-runtime-api",
  "xpallet-gateway-common",
  "xpallet-gateway-common-rpc-runtime-api",
  "xpallet-gateway-records",
@@ -1058,6 +1061,7 @@ dependencies = [
  "sp-transaction-pool",
  "xpallet-assets-rpc-runtime-api",
  "xpallet-dex-spot-rpc-runtime-api",
+ "xpallet-gateway-bitcoin-rpc-runtime-api",
  "xpallet-gateway-common-rpc-runtime-api",
  "xpallet-gateway-records-rpc-runtime-api",
  "xpallet-mining-asset-rpc-runtime-api",
@@ -1566,6 +1570,7 @@ dependencies = [
  "xpallet-dex-spot",
  "xpallet-dex-spot-rpc-runtime-api",
  "xpallet-gateway-bitcoin",
+ "xpallet-gateway-bitcoin-rpc-runtime-api",
  "xpallet-gateway-common",
  "xpallet-gateway-common-rpc-runtime-api",
  "xpallet-gateway-records",
@@ -3945,6 +3950,7 @@ dependencies = [
  "xpallet-dex-spot",
  "xpallet-dex-spot-rpc-runtime-api",
  "xpallet-gateway-bitcoin",
+ "xpallet-gateway-bitcoin-rpc-runtime-api",
  "xpallet-gateway-common",
  "xpallet-gateway-common-rpc-runtime-api",
  "xpallet-gateway-records",
@@ -9525,6 +9531,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "xpallet-gateway-bitcoin-rpc"
+version = "3.0.0"
+dependencies = [
+ "hex",
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "parity-scale-codec",
+ "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-runtime",
+ "xp-rpc",
+ "xpallet-gateway-bitcoin-rpc-runtime-api",
+]
+
+[[package]]
+name = "xpallet-gateway-bitcoin-rpc-runtime-api"
+version = "3.0.0"
+dependencies = [
+ "chainx-primitives",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-runtime",
+ "sp-std",
+ "xp-assets-registrar",
+ "xp-runtime",
+ "xpallet-gateway-bitcoin",
+]
+
+[[package]]
 name = "xpallet-gateway-common"
 version = "3.0.0"
 dependencies = [
@@ -9567,6 +9604,7 @@ dependencies = [
  "jsonrpc-core-client",
  "jsonrpc-derive",
  "parity-scale-codec",
+ "serde",
  "sp-api",
  "sp-blockchain",
  "sp-runtime",
@@ -9583,9 +9621,11 @@ dependencies = [
  "sp-api",
  "sp-runtime",
  "sp-std",
+ "xp-assets-registrar",
  "xp-runtime",
  "xpallet-assets",
  "xpallet-gateway-common",
+ "xpallet-gateway-records",
 ]
 
 [[package]]

@@ -627,6 +627,39 @@ pub mod pallet {
             Address::from_str(addr).map_err(|_| Error::<T>::InvalidAddr.into())
         }
 
+        pub fn verify_tx_valid(
+            raw_tx: Vec<u8>,
+            withdrawal_id_list: Vec<u32>,
+            full_amount: bool,
+        ) -> Result<bool, DispatchError> {
+            let tx = Self::deserialize_tx(raw_tx.as_slice())?;
+            // check trustee transition status
+            if T::TrusteeSessionProvider::trustee_transition_state() {
+                // check trustee transition tx
+                // tx output address = new hot address
+                let current_trustee_pair = get_current_trustee_address_pair::<T>()?;
+                let all_outputs_is_trustee = tx
+                    .outputs
+                    .iter()
+                    .map(|output| {
+                        xp_gateway_bitcoin::extract_output_addr(output, NetworkId::<T>::get())
+                            .unwrap_or_default()
+                    })
+                    .all(|addr| xp_gateway_bitcoin::is_trustee_addr(addr, current_trustee_pair));
+                if !all_outputs_is_trustee {
+                    Err(Error::<T>::NoWithdrawInTrans.into())
+                } else if !full_amount {
+                    Err(Error::<T>::InvalidAmoutInTrans.into())
+                } else {
+                    Ok(true)
+                }
+            } else {
+                // check normal withdrawal tx
+                trustee::check_withdraw_tx::<T>(&tx, &withdrawal_id_list)?;
+                Ok(true)
+            }
+        }
+
         /// Helper function for deserializing the slice of raw tx.
         #[inline]
         pub(crate) fn deserialize_tx(input: &[u8]) -> Result<Transaction, Error<T>> {

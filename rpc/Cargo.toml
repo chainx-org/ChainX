@@ -50,6 +50,8 @@ xpallet-assets-rpc = { path = "../xpallets/assets/rpc" }
 xpallet-assets-rpc-runtime-api = { path = "../xpallets/assets/rpc/runtime-api" }
 xpallet-dex-spot-rpc = { path = "../xpallets/dex/spot/rpc" }
 xpallet-dex-spot-rpc-runtime-api = { path = "../xpallets/dex/spot/rpc/runtime-api" }
+xpallet-gateway-bitcoin-rpc = { path = "../xpallets/gateway/bitcoin/rpc" }
+xpallet-gateway-bitcoin-rpc-runtime-api = { path = "../xpallets/gateway/bitcoin/rpc/runtime-api" }
 xpallet-gateway-common-rpc = { path = "../xpallets/gateway/common/rpc" }
 xpallet-gateway-common-rpc-runtime-api = { path = "../xpallets/gateway/common/rpc/runtime-api" }
 xpallet-gateway-records-rpc = { path = "../xpallets/gateway/records/rpc" }

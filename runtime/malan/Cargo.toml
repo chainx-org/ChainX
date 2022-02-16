@@ -87,6 +87,7 @@ xpallet-assets-rpc-runtime-api = { path = "../../xpallets/assets/rpc/runtime-api
 xpallet-dex-spot = { path = "../../xpallets/dex/spot", default-features = false }
 xpallet-dex-spot-rpc-runtime-api = { path = "../../xpallets/dex/spot/rpc/runtime-api", default-features = false }
 xpallet-gateway-bitcoin = { path = "../../xpallets/gateway/bitcoin", default-features = false }
+xpallet-gateway-bitcoin-rpc-runtime-api = { path = "../../xpallets/gateway/bitcoin/rpc/runtime-api", default-features = false }
 xpallet-gateway-common = { path = "../../xpallets/gateway/common", default-features = false }
 xpallet-gateway-common-rpc-runtime-api = { path = "../../xpallets/gateway/common/rpc/runtime-api", default-features = false }
 xpallet-gateway-records = { path = "../../xpallets/gateway/records", default-features = false }
@@ -171,6 +172,7 @@ std = [
   "xpallet-dex-spot/std",
   "xpallet-dex-spot-rpc-runtime-api/std",
   "xpallet-gateway-bitcoin/std",
+  "xpallet-gateway-bitcoin-rpc-runtime-api/std",
   "xpallet-gateway-common/std",
   "xpallet-gateway-common-rpc-runtime-api/std",
   "xpallet-gateway-records/std",

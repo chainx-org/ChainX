@@ -1,7 +1,7 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 //! RPC interface for the transaction payment module.
-
+#![allow(clippy::type_complexity)]
 use std::collections::BTreeMap;
 use std::convert::TryFrom;
 use std::fmt::Display;
@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use codec::Codec;
 use jsonrpc_derive::rpc;
+use serde::{Deserialize, Serialize};
 
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
@@ -25,7 +26,8 @@ use xpallet_gateway_common_rpc_runtime_api::trustees::bitcoin::{
 };
 use xpallet_gateway_common_rpc_runtime_api::{
     AssetId, Chain, GenericTrusteeIntentionProps, GenericTrusteeSessionInfo, ScriptInfo,
-    WithdrawalLimit, XGatewayCommonApi as XGatewayCommonRuntimeApi,
+    Withdrawal, WithdrawalLimit, WithdrawalRecordId, WithdrawalState,
+    XGatewayCommonApi as XGatewayCommonRuntimeApi,
 };
 
 /// XGatewayCommon RPC methods.
@@ -49,6 +51,21 @@ where
         asset_id: AssetId,
         at: Option<BlockHash>,
     ) -> Result<WithdrawalLimit<RpcBalance<Balance>>>;
+
+    #[rpc(name = "xgatewaycommon_withdrawalListWithFeeInfo")]
+    fn withdrawal_list_with_fee_info(
+        &self,
+        asset_id: AssetId,
+        at: Option<BlockHash>,
+    ) -> Result<
+        BTreeMap<
+            WithdrawalRecordId,
+            (
+                RpcWithdrawalRecord<AccountId, Balance, BlockNumber>,
+                WithdrawalLimit<RpcBalance<Balance>>,
+            ),
+        >,
+    >;
 
     /// Use the params to verify whether the withdrawal apply is valid. Notice those params is same as the params for call `XGatewayCommon::withdraw(...)`, including checking address is valid or something else. Front-end should use this rpc to check params first, than could create the extrinsic.
     #[rpc(name = "xgatewaycommon_verifyWithdrawal")]
@@ -207,7 +224,7 @@ where
                     _ => return None,
                 };
 
-                Some((chain, addrs.into_iter().map(|addr| convert(addr)).collect()))
+                Some((chain, addrs.into_iter().map(convert).collect()))
             })
             .collect();
 
@@ -230,6 +247,47 @@ where
             .map(|src| WithdrawalLimit {
                 minimal_withdrawal: src.minimal_withdrawal.into(),
                 fee: src.fee.into(),
+            })
+            .map_err(runtime_error_into_rpc_err)?;
+        Ok(result)
+    }
+
+    fn withdrawal_list_with_fee_info(
+        &self,
+        asset_id: AssetId,
+        at: Option<<Block as BlockT>::Hash>,
+    ) -> Result<
+        BTreeMap<
+            WithdrawalRecordId,
+            (
+                RpcWithdrawalRecord<AccountId, Balance, BlockNumber>,
+                WithdrawalLimit<RpcBalance<Balance>>,
+            ),
+        >,
+    > {
+        let api = self.client.runtime_api();
+        let at = BlockId::hash(at.unwrap_or_else(||
+            // If the block hash is not supplied assume the best block.
+            self.client.info().best_hash));
+
+        let result = api
+            .withdrawal_list_with_fee_info(&at, asset_id)
+            .map_err(runtime_error_into_rpc_err)?
+            .map(|map| {
+                map.into_iter()
+                    .map(|(id, (record, limit))| {
+                        (
+                            id,
+                            (
+                                record.into(),
+                                WithdrawalLimit {
+                                    minimal_withdrawal: limit.minimal_withdrawal.into(),
+                                    fee: limit.fee.into(),
+                                },
+                            ),
+                        )
+                    })
+                    .collect()
             })
             .map_err(runtime_error_into_rpc_err)?;
         Ok(result)
@@ -299,5 +357,35 @@ where
     ) -> Result<BtcTrusteeSessionInfo<AccountId, BlockNumber>> {
         let info = self.generate_generic_trustee_session_info(Chain::Bitcoin, candidates, at)?;
         BtcTrusteeSessionInfo::<_, _>::try_from(info.0).map_err(trustee_decode_error_into_rpc_err)
+    }
+}
+
+#[derive(PartialEq, Eq, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RpcWithdrawalRecord<AccountId, Balance: Display + FromStr, BlockNumber> {
+    pub asset_id: AssetId,
+    pub applicant: AccountId,
+    #[serde(with = "xp_rpc::serde_num_str")]
+    pub balance: Balance,
+    pub addr: String,
+    pub ext: String,
+    pub height: BlockNumber,
+    pub state: WithdrawalState,
+}
+
+impl<AccountId, Balance: Display + FromStr, BlockNumber>
+    From<Withdrawal<AccountId, Balance, BlockNumber>>
+    for RpcWithdrawalRecord<AccountId, Balance, BlockNumber>
+{
+    fn from(record: Withdrawal<AccountId, Balance, BlockNumber>) -> Self {
+        Self {
+            asset_id: record.asset_id,
+            applicant: record.applicant,
+            balance: record.balance,
+            addr: String::from_utf8_lossy(record.addr.as_ref()).into_owned(),
+            ext: String::from_utf8_lossy(record.ext.as_ref()).into_owned(),
+            height: record.height,
+            state: record.state,
+        }
     }
 }

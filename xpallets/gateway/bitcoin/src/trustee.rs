@@ -497,7 +497,10 @@ fn insert_trustee_vote_state<T: Config>(
 }
 
 /// Check that the cash withdrawal transaction is correct
-fn check_withdraw_tx<T: Config>(tx: &Transaction, withdrawal_id_list: &[u32]) -> DispatchResult {
+pub fn check_withdraw_tx<T: Config>(
+    tx: &Transaction,
+    withdrawal_id_list: &[u32],
+) -> DispatchResult {
     match Pallet::<T>::withdrawal_proposal() {
         Some(_) => Err(Error::<T>::NotFinishProposal.into()),
         None => check_withdraw_tx_impl::<T>(tx, withdrawal_id_list),
