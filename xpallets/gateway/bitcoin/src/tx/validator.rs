@@ -79,6 +79,7 @@ pub fn parse_and_check_signed_tx<T: Config>(tx: &Transaction) -> Result<u32, Dis
 }
 
 /// Check Taproot tx
+#[allow(dead_code)]
 pub fn parse_check_taproot_tx<T: Config>(
     tx: &Transaction,
     spent_outputs: &[TransactionOutput],

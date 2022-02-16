@@ -384,7 +384,10 @@ pub mod pallet {
             chain: Chain,
             config: TrusteeInfoConfig,
         ) -> DispatchResult {
-            ensure_root(origin)?;
+            if T::CouncilOrigin::ensure_origin(origin.clone()).is_err() {
+                ensure_root(origin)?;
+            };
+
             TrusteeInfoConfigOf::<T>::insert(chain, config);
             Ok(())
         }
