@@ -9,7 +9,7 @@ use sp_std::{convert::TryFrom, fmt, prelude::Vec};
 
 use super::{TrusteeMultisigProvider, TrusteeSessionManager};
 use crate::{
-    traits::{ChainProvider, RelayerInfo},
+    traits::ChainProvider,
     types::{TrusteeIntentionProps, TrusteeSessionInfo},
     {Config, Pallet},
 };
@@ -107,12 +107,6 @@ impl TryFrom<Vec<u8>> for BtcTrusteeType {
 impl ChainProvider for BtcTrusteeType {
     fn chain() -> Chain {
         Chain::Bitcoin
-    }
-}
-
-impl<T: Config> RelayerInfo<T::AccountId> for Pallet<T> {
-    fn current_relayer() -> T::AccountId {
-        Self::relayer()
     }
 }
 

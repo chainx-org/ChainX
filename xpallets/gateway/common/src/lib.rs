@@ -288,31 +288,6 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Automatic trustee transfer from relayer.
-        ///
-        /// Since the time of the function exectution only have 0.5 s during
-        /// the initialization of parachain, the action of the trustee election
-        /// is not supported, so the automatic trustee election is triggered by
-        /// the Relayer.
-        ///
-        /// This is called by the relayer and root.
-        #[pallet::weight(100_000_000u64)]
-        pub fn auto_trustee_election(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
-            match ensure_signed(origin.clone()) {
-                Ok(who) => {
-                    if who != Self::relayer() {
-                        return Err(Error::<T>::InvalidRelayer.into());
-                    }
-                }
-                Err(_) => {
-                    ensure_root(origin)?;
-                }
-            };
-
-            Self::do_trustee_election()?;
-            Ok(Pays::No.into())
-        }
-
         /// Force trustee election
         ///
         /// Mandatory trustee renewal if the current trustee is not doing anything
@@ -414,19 +389,6 @@ pub mod pallet {
             };
 
             TrusteeTransitionDuration::<T>::put(duration);
-            Ok(())
-        }
-
-        /// Set relayer.
-        ///
-        /// This is a root-only operation.
-        #[pallet::weight(0)]
-        pub fn set_relayer(origin: OriginFor<T>, relayer: T::AccountId) -> DispatchResult {
-            if T::CouncilOrigin::ensure_origin(origin.clone()).is_err() {
-                ensure_root(origin)?;
-            };
-
-            Relayer::<T>::put(relayer);
             Ok(())
         }
 
@@ -550,8 +512,6 @@ pub mod pallet {
         NotTrusteePreselectedMember,
         /// invalid public key
         InvalidPublicKey,
-        /// invalid relayer
-        InvalidRelayer,
         /// invalid session number
         InvalidSessionNum,
         /// invalid trustee history member
@@ -594,10 +554,6 @@ pub mod pallet {
     pub fn DefaultForTrusteeAdminMultiply() -> u64 {
         11
     }
-
-    #[pallet::storage]
-    #[pallet::getter(fn relayer)]
-    pub type Relayer<T: Config> = StorageValue<_, T::AccountId, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn agg_pubkey_info)]

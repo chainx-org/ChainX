@@ -103,16 +103,6 @@ impl TrusteeInfoUpdate for () {
     fn update_trustee_sig_record(_: &[u8], _: u64) {}
 }
 
-pub trait RelayerInfo<AccountId: Default> {
-    fn current_relayer() -> AccountId;
-}
-
-impl<AccountId: Default> RelayerInfo<AccountId> for () {
-    fn current_relayer() -> AccountId {
-        Default::default()
-    }
-}
-
 pub trait ReferralBinding<AccountId> {
     fn update_binding(asset_id: &AssetId, who: &AccountId, referral_name: Option<ReferralId>);
     fn referral(asset_id: &AssetId, who: &AccountId) -> Option<AccountId>;

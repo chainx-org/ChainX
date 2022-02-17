@@ -222,13 +222,6 @@ benchmarks! {
         assert_eq!(Pallet::<T>::trustee_transition_duration(), duration);
     }
 
-    set_relayer {
-        let who: T::AccountId = alice::<T>();
-    }: _(RawOrigin::Root, who.clone())
-    verify {
-        assert_eq!(Pallet::<T>::relayer(), who);
-    }
-
     set_trustee_admin {
         let who: T::AccountId = alice::<T>();
         for (account, about, hot, cold) in new_trustees::<T>() {
@@ -303,7 +296,6 @@ mod tests {
             assert_ok!(Pallet::<Test>::test_benchmark_set_withdrawal_state());
             assert_ok!(Pallet::<Test>::test_benchmark_set_trustee_info_config());
             assert_ok!(Pallet::<Test>::test_benchmark_change_trustee_transition_duration());
-            assert_ok!(Pallet::<Test>::test_benchmark_set_relayer());
             assert_ok!(Pallet::<Test>::test_benchmark_set_trustee_admin());
             assert_ok!(Pallet::<Test>::test_benchmark_set_trustee_admin_multiply());
             assert_ok!(Pallet::<Test>::test_benchmark_claim_trustee_reward());
