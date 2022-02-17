@@ -12,7 +12,7 @@ use frame_support::{
     traits::{LockIdentifier, UnixTime},
     weights::Weight,
 };
-use frame_system::{EnsureSigned, EnsureSignedBy};
+use frame_system::EnsureSigned;
 use sp_core::H256;
 use sp_keyring::sr25519;
 use sp_runtime::{
@@ -219,10 +219,7 @@ impl Config for Test {
     type AccountExtractor = xp_gateway_bitcoin::OpReturnExtractor;
     type TrusteeSessionProvider =
         xpallet_gateway_common::trustees::bitcoin::BtcTrusteeSessionManager<Test>;
-    type TrusteeOrigin = EnsureSignedBy<
-        xpallet_gateway_common::trustees::bitcoin::BtcTrusteeMultisig<Test>,
-        AccountId,
-    >;
+    type CouncilOrigin = EnsureSigned<AccountId>;
     type TrusteeInfoUpdate = XGatewayCommon;
     type ReferralBinding = XGatewayCommon;
     type AddressBinding = XGatewayCommon;

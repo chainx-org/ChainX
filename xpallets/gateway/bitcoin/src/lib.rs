@@ -87,17 +87,25 @@ pub mod pallet {
         frame_system::Config + xpallet_assets::Config + xpallet_gateway_records::Config
     {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
         type UnixTime: UnixTime;
+
+        type CouncilOrigin: EnsureOrigin<Self::Origin>;
+
         type AccountExtractor: AccountExtractor<Self::AccountId, ReferralId>;
+
         type TrusteeSessionProvider: TrusteeSession<
             Self::AccountId,
             Self::BlockNumber,
             BtcTrusteeAddrInfo,
         >;
+
         type TrusteeInfoUpdate: TrusteeInfoUpdate;
-        type TrusteeOrigin: EnsureOrigin<Self::Origin, Success = Self::AccountId>;
+
         type ReferralBinding: ReferralBinding<Self::AccountId>;
+
         type AddressBinding: AddressBinding<Self::AccountId, BtcAddress>;
+
         type WeightInfo: WeightInfo;
     }
 
@@ -206,7 +214,7 @@ pub mod pallet {
             addr: BtcAddress,
             who: Option<T::AccountId>,
         ) -> DispatchResult {
-            T::TrusteeOrigin::try_origin(origin)
+            T::CouncilOrigin::try_origin(origin)
                 .map(|_| ())
                 .or_else(ensure_root)?;
 
@@ -223,7 +231,7 @@ pub mod pallet {
         /// do this operation.
         #[pallet::weight(<T as Config>::WeightInfo::remove_proposal())]
         pub fn remove_proposal(origin: OriginFor<T>) -> DispatchResult {
-            T::TrusteeOrigin::try_origin(origin)
+            T::CouncilOrigin::try_origin(origin)
                 .map(|_| ())
                 .or_else(ensure_root)?;
 
@@ -255,7 +263,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             #[pallet::compact] fee: u64,
         ) -> DispatchResult {
-            T::TrusteeOrigin::try_origin(origin)
+            T::CouncilOrigin::try_origin(origin)
                 .map(|_| ())
                 .or_else(ensure_root)?;
             BtcWithdrawalFee::<T>::put(fee);
@@ -268,7 +276,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             #[pallet::compact] value: u64,
         ) -> DispatchResult {
-            T::TrusteeOrigin::try_origin(origin)
+            T::CouncilOrigin::try_origin(origin)
                 .map(|_| ())
                 .or_else(ensure_root)?;
             BtcMinDeposit::<T>::put(value);
