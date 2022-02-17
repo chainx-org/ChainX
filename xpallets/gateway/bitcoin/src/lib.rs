@@ -30,7 +30,7 @@ pub use light_bitcoin::{
     primitives::{hash_rev, Compact, H256, H264},
 };
 use light_bitcoin::{
-    chain::{Transaction, TransactionOutputArray},
+    chain::Transaction,
     keys::{Address, DisplayLayout},
     serialization::{deserialize, Reader},
 };
@@ -223,8 +223,29 @@ pub mod pallet {
         /// do this operation.
         #[pallet::weight(<T as Config>::WeightInfo::remove_proposal())]
         pub fn remove_proposal(origin: OriginFor<T>) -> DispatchResult {
-            ensure_root(origin)?;
-            WithdrawalProposal::<T>::kill();
+            T::TrusteeOrigin::try_origin(origin)
+                .map(|_| ())
+                .or_else(ensure_root)?;
+
+            if let Some(proposal) = WithdrawalProposal::<T>::take() {
+                proposal.withdrawal_id_list.iter().for_each(|id| {
+                    match xpallet_gateway_records::Pallet::<T>::set_withdrawal_state_by_trustees(
+                        *id,
+                        Chain::Bitcoin,
+                        xpallet_gateway_records::WithdrawalState::Applying,
+                    ) {
+                        Ok(_) => {}
+                        Err(e) => {
+                            log!(
+                                error,
+                                "[remove_proposal] set withdrawal state error, id:{:?}, error:{:?}",
+                                id,
+                                e
+                            );
+                        }
+                    }
+                });
+            }
             Ok(())
         }
 
@@ -647,13 +668,6 @@ pub mod pallet {
         /// Helper function for deserializing the slice of raw tx.
         #[inline]
         pub(crate) fn deserialize_tx(input: &[u8]) -> Result<Transaction, Error<T>> {
-            deserialize(Reader::new(input)).map_err(|_| Error::<T>::DeserializeErr)
-        }
-
-        #[inline]
-        pub(crate) fn deserialize_spent_outputs(
-            input: &[u8],
-        ) -> Result<TransactionOutputArray, Error<T>> {
             deserialize(Reader::new(input)).map_err(|_| Error::<T>::DeserializeErr)
         }
 

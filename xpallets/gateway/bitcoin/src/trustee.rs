@@ -14,7 +14,7 @@ use sp_std::{
 };
 
 use light_bitcoin::{
-    chain::{Transaction, TransactionOutput},
+    chain::Transaction,
     crypto::dhash160,
     keys::{Address, AddressTypes, Public, Type},
     mast::{compute_min_threshold, Mast},
@@ -31,10 +31,8 @@ use xpallet_gateway_common::{
     utils::two_thirds_unsafe,
 };
 
-use crate::tx::validator::parse_check_taproot_tx;
 use crate::{
     log,
-    tx::{ensure_identical, validator::parse_and_check_signed_tx},
     types::{BtcWithdrawalProposal, VoteResult},
     Config, Error, Event, Pallet, WithdrawalProposal,
 };
@@ -462,6 +460,7 @@ pub(crate) fn create_multi_address<T: Config>(
 /// Update the signature status of trustee
 /// state: false -> Veto signature, true -> Consent signature
 /// only allow inseRelayedTx once
+#[allow(dead_code)]
 fn insert_trustee_vote_state<T: Config>(
     state: bool,
     who: &T::AccountId,

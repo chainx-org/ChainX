@@ -11,7 +11,6 @@ use super::{TrusteeMultisigProvider, TrusteeSessionManager};
 use crate::{
     traits::ChainProvider,
     types::{TrusteeIntentionProps, TrusteeSessionInfo},
-    {Config, Pallet},
 };
 use xp_assets_registrar::Chain;
 

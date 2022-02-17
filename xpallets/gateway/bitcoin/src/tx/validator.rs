@@ -73,6 +73,7 @@ pub fn validate_transaction<T: Config>(
 }
 
 /// Check signed transactions
+#[allow(dead_code)]
 pub fn parse_and_check_signed_tx<T: Config>(tx: &Transaction) -> Result<u32, DispatchError> {
     let redeem_script = get_hot_trustee_redeem_script::<T>()?;
     parse_and_check_signed_tx_impl::<T>(tx, redeem_script)
@@ -114,6 +115,7 @@ pub fn parse_check_taproot_tx<T: Config>(
 }
 
 /// for test convenient
+#[allow(dead_code)]
 #[inline]
 pub fn parse_and_check_signed_tx_impl<T: Config>(
     tx: &Transaction,

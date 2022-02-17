@@ -21,6 +21,7 @@ mod runtime_interface {
     }
 }
 
+#[allow(dead_code)]
 pub fn verify_sig<T: Config>(
     sig: &Bytes,
     pubkey: &Bytes,

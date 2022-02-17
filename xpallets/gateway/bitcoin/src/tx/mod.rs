@@ -297,6 +297,7 @@ fn withdraw<T: Config>(tx: Transaction) -> BtcTxResult {
 }
 
 /// Returns Ok if `tx1` and `tx2` are the same transaction.
+#[allow(dead_code)]
 pub fn ensure_identical<T: Config>(tx1: &Transaction, tx2: &Transaction) -> DispatchResult {
     if tx1.version == tx2.version
         && tx1.outputs == tx2.outputs
