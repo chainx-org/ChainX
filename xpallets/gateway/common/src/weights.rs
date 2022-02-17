@@ -1,8 +1,8 @@
 // Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
 
 //! Weights for xpallet_gateway_common
-//! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 2.0.0
-//! DATE: 2020-12-07, STEPS: [50, ], REPEAT: 20, LOW RANGE: [], HIGH RANGE: []
+//! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 4.0.0-dev
+//! DATE: 2022-02-17, STEPS: 50, REPEAT: 20, LOW RANGE: [], HIGH RANGE: []
 //! EXECUTION: Some(Wasm), WASM-EXECUTION: Compiled, CHAIN: Some("benchmarks"), DB CACHE: 128
 
 // Executed Command:
@@ -33,81 +33,115 @@ pub trait WeightInfo {
     fn withdraw() -> Weight;
     fn cancel_withdrawal() -> Weight;
     fn setup_trustee() -> Weight;
-    fn transition_trustee_session(u: u32) -> Weight;
+    fn transition_trustee_session() -> Weight;
     fn set_withdrawal_state() -> Weight;
     fn set_trustee_info_config() -> Weight;
-    fn force_set_referral_binding() -> Weight;
+    fn change_trustee_transition_duration() -> Weight;
+    fn set_relayer() -> Weight;
+    fn set_trustee_admin() -> Weight;
+    fn set_trustee_admin_multiply() -> Weight;
+    fn claim_trustee_reward() -> Weight;
 }
 
 /// Weights for xpallet_gateway_common using the Substrate node and recommended hardware.
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
     fn withdraw() -> Weight {
-        (226_245_000_u64)
-            .saturating_add(T::DbWeight::get().reads(10_u64))
-            .saturating_add(T::DbWeight::get().writes(6_u64))
+        (140_196_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(9 as Weight))
+            .saturating_add(T::DbWeight::get().writes(5 as Weight))
     }
     fn cancel_withdrawal() -> Weight {
-        (130_921_000_u64)
-            .saturating_add(T::DbWeight::get().reads(6_u64))
-            .saturating_add(T::DbWeight::get().writes(4_u64))
+        (84_902_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(6 as Weight))
+            .saturating_add(T::DbWeight::get().writes(4 as Weight))
     }
     fn setup_trustee() -> Weight {
-        (40_920_000_u64)
-            .saturating_add(T::DbWeight::get().reads(1_u64))
-            .saturating_add(T::DbWeight::get().writes(1_u64))
+        (88_469_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(6 as Weight))
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
-    fn transition_trustee_session(u: u32) -> Weight {
-        (135_412_000_u64)
-            .saturating_add((2_000_u64).saturating_mul(u as Weight))
-            .saturating_add(T::DbWeight::get().reads(8_u64))
-            .saturating_add(T::DbWeight::get().writes(3_u64))
+    fn transition_trustee_session() -> Weight {
+        (6_023_131_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(9 as Weight))
+            .saturating_add(T::DbWeight::get().writes(11 as Weight))
     }
     fn set_withdrawal_state() -> Weight {
-        (217_002_000_u64)
-            .saturating_add(T::DbWeight::get().reads(11_u64))
-            .saturating_add(T::DbWeight::get().writes(6_u64))
+        (128_616_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(11 as Weight))
+            .saturating_add(T::DbWeight::get().writes(6 as Weight))
     }
     fn set_trustee_info_config() -> Weight {
-        (6_432_000_u64).saturating_add(T::DbWeight::get().writes(1_u64))
+        (3_949_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
-    fn force_set_referral_binding() -> Weight {
-        (30_667_000_u64).saturating_add(T::DbWeight::get().writes(1_u64))
+    fn change_trustee_transition_duration() -> Weight {
+        (2_482_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
+    }
+    fn set_relayer() -> Weight {
+        (2_742_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
+    }
+    fn set_trustee_admin() -> Weight {
+        (11_979_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(1 as Weight))
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+    }
+    fn set_trustee_admin_multiply() -> Weight {
+        (2_428_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
+    }
+    fn claim_trustee_reward() -> Weight {
+        (157_328_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(6 as Weight))
+            .saturating_add(T::DbWeight::get().writes(4 as Weight))
     }
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
     fn withdraw() -> Weight {
-        (226_245_000_u64)
-            .saturating_add(RocksDbWeight::get().reads(10_u64))
-            .saturating_add(RocksDbWeight::get().writes(6_u64))
+        (140_196_000 as Weight)
+            .saturating_add(RocksDbWeight::get().reads(9 as Weight))
+            .saturating_add(RocksDbWeight::get().writes(5 as Weight))
     }
     fn cancel_withdrawal() -> Weight {
-        (130_921_000_u64)
-            .saturating_add(RocksDbWeight::get().reads(6_u64))
-            .saturating_add(RocksDbWeight::get().writes(4_u64))
+        (84_902_000 as Weight)
+            .saturating_add(RocksDbWeight::get().reads(6 as Weight))
+            .saturating_add(RocksDbWeight::get().writes(4 as Weight))
     }
     fn setup_trustee() -> Weight {
-        (40_920_000_u64)
-            .saturating_add(RocksDbWeight::get().reads(1_u64))
-            .saturating_add(RocksDbWeight::get().writes(1_u64))
+        (88_469_000 as Weight)
+            .saturating_add(RocksDbWeight::get().reads(6 as Weight))
+            .saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
-    fn transition_trustee_session(u: u32) -> Weight {
-        (135_412_000_u64)
-            .saturating_add((2_000_u64).saturating_mul(u as Weight))
-            .saturating_add(RocksDbWeight::get().reads(8_u64))
-            .saturating_add(RocksDbWeight::get().writes(3_u64))
+    fn transition_trustee_session() -> Weight {
+        (6_023_131_000 as Weight)
+            .saturating_add(RocksDbWeight::get().reads(9 as Weight))
+            .saturating_add(RocksDbWeight::get().writes(11 as Weight))
     }
     fn set_withdrawal_state() -> Weight {
-        (217_002_000_u64)
-            .saturating_add(RocksDbWeight::get().reads(11_u64))
-            .saturating_add(RocksDbWeight::get().writes(6_u64))
+        (128_616_000 as Weight)
+            .saturating_add(RocksDbWeight::get().reads(11 as Weight))
+            .saturating_add(RocksDbWeight::get().writes(6 as Weight))
     }
     fn set_trustee_info_config() -> Weight {
-        (6_432_000_u64).saturating_add(RocksDbWeight::get().writes(1_u64))
+        (3_949_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
-    fn force_set_referral_binding() -> Weight {
-        (30_667_000_u64).saturating_add(RocksDbWeight::get().writes(1_u64))
+    fn change_trustee_transition_duration() -> Weight {
+        (2_482_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
+    }
+    fn set_relayer() -> Weight {
+        (2_742_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
+    }
+    fn set_trustee_admin() -> Weight {
+        (11_979_000 as Weight)
+            .saturating_add(RocksDbWeight::get().reads(1 as Weight))
+            .saturating_add(RocksDbWeight::get().writes(1 as Weight))
+    }
+    fn set_trustee_admin_multiply() -> Weight {
+        (2_428_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
+    }
+    fn claim_trustee_reward() -> Weight {
+        (157_328_000 as Weight)
+            .saturating_add(RocksDbWeight::get().reads(6 as Weight))
+            .saturating_add(RocksDbWeight::get().writes(4 as Weight))
     }
 }

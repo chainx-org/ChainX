@@ -118,20 +118,20 @@ pub fn benchmarks_trustees() -> Vec<(Chain, TrusteeInfoConfig, Vec<BtcTrusteePar
         // 1
         btc_trustee_gen(
             "Alice",
-            "02df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6",
-            "0386b58f51da9b37e59c40262153173bdb59d7e4e45b73994b99eec4d964ee7e88",
+            "0283f579dd2380bd31355d066086e1b4d46b518987c1f8a64d4c0101560280eae2",
+            "0300849497d4f88ebc3e1bc2583677c5abdbd3b63640b3c5c50cd4628a33a2a2ca",
         ),
         // 2
         btc_trustee_gen(
             "Bob",
-            "0244d81efeb4171b1a8a433b87dd202117f94e44c909c49e42e77b69b5a6ce7d0d",
-            "02e4631e46255571122d6e11cda75d5d601d5eb2585e65e4e87fe9f68c7838a278",
+            "027a0868a14bd18e2e45ff3ad960f892df8d0edd1a5685f0a1dc63c7986d4ad55d",
+            "032122032ae9656f9a133405ffe02101469a8d62002270a33ceccf0e40dda54d08",
         ),
         // 3
         btc_trustee_gen(
             "Charlie",
-            "03a36339f413da869df12b1ab0def91749413a0dee87f0bfa85ba7196e6cdad102",
-            "0263d46c760d3e04883d4b433c9ce2bc32130acd9faad0192a2b375dbba9f865c3",
+            "02c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f",
+            "02b3cc747f572d33f12870fa6866aebbfd2b992ba606b8dc89b676b3697590ad63",
         ),
     ];
 

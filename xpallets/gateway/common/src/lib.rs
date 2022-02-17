@@ -178,7 +178,7 @@ pub mod pallet {
         }
 
         /// Transition the trustee session.
-        #[pallet::weight(<T as Config>::WeightInfo::transition_trustee_session(new_trustees.len() as u32))]
+        #[pallet::weight(<T as Config>::WeightInfo::transition_trustee_session())]
         pub fn transition_trustee_session(
             origin: OriginFor<T>,
             chain: Chain,
@@ -318,7 +318,7 @@ pub mod pallet {
         /// Mandatory trustee renewal if the current trustee is not doing anything
         ///
         /// This is called by the root.
-        #[pallet::weight(100_000_000u64)]
+        #[pallet::weight(0)]
         pub fn force_trustee_election(origin: OriginFor<T>) -> DispatchResult {
             ensure_root(origin)?;
             Self::update_transition_status(false, None);
@@ -329,7 +329,7 @@ pub mod pallet {
         /// Force update trustee info
         ///
         /// This is called by the root.
-        #[pallet::weight(100_000_000u64)]
+        #[pallet::weight(0)]
         pub fn force_update_trustee(
             origin: OriginFor<T>,
             who: T::AccountId,
@@ -348,7 +348,7 @@ pub mod pallet {
         /// Force cancel trustee transition
         ///
         /// This is called by the root.
-        #[pallet::weight(100_000_000u64)]
+        #[pallet::weight(0)]
         pub fn cancel_trustee_election(origin: OriginFor<T>, chain: Chain) -> DispatchResult {
             ensure_root(origin)?;
 
@@ -378,7 +378,7 @@ pub mod pallet {
         /// Set the config of trustee information.
         ///
         /// This is a root-only operation.
-        #[pallet::weight(<T as Config>::WeightInfo::set_trustee_info_config())]
+        #[pallet::weight(0)]
         pub fn set_trustee_info_config(
             origin: OriginFor<T>,
             chain: Chain,
@@ -461,7 +461,7 @@ pub mod pallet {
         /// Set the referral binding of corresponding chain and account.
         ///
         /// This is a root-only operation.
-        #[pallet::weight(<T as Config>::WeightInfo::force_set_referral_binding())]
+        #[pallet::weight(0)]
         pub fn force_set_referral_binding(
             origin: OriginFor<T>,
             chain: Chain,
@@ -476,7 +476,7 @@ pub mod pallet {
         }
 
         /// A certain trustee member declares the reward
-        #[pallet::weight(0)]
+        #[pallet::weight(< T as Config >::WeightInfo::claim_trustee_reward())]
         pub fn claim_trustee_reward(origin: OriginFor<T>, session_num: i32) -> DispatchResult {
             let who = ensure_signed(origin)?;
             let session_num: u32 = if session_num < 0 {
