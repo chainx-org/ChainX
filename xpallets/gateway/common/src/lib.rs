@@ -204,6 +204,24 @@ pub mod pallet {
             Self::transition_trustee_session_impl(chain, new_trustees)
         }
 
+        /// Manual execution of the election by admin.
+        #[pallet::weight(100_000_000u64)]
+        pub fn host_trustee_election(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+            match ensure_signed(origin.clone()) {
+                Ok(who) => {
+                    if who != Self::trustee_admin() {
+                        return Err(Error::<T>::NotTrusteeAdmin.into());
+                    }
+                }
+                Err(_) => {
+                    ensure_root(origin)?;
+                }
+            };
+
+            Self::do_trustee_election()?;
+            Ok(Pays::No.into())
+        }
+
         /// Move a current trustee into a small black room.
         ///
         /// This is to allow for timely replacement in the event of a problem with a particular trustee.
@@ -217,7 +235,7 @@ pub mod pallet {
         pub fn move_trust_into_black_room(
             origin: OriginFor<T>,
             trustees: Option<Vec<T::AccountId>>,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             match ensure_signed(origin.clone()) {
                 Ok(who) => {
                     if who != Self::trustee_admin() {
@@ -249,7 +267,7 @@ pub mod pallet {
             }
 
             Self::do_trustee_election()?;
-            Ok(())
+            Ok(Pays::No.into())
         }
 
         /// Move member out small black room.
@@ -262,7 +280,7 @@ pub mod pallet {
         pub fn move_trust_out_black_room(
             origin: OriginFor<T>,
             members: Vec<T::AccountId>,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             match ensure_signed(origin.clone()) {
                 Ok(who) => {
                     if who != Self::trustee_admin() {
@@ -285,7 +303,7 @@ pub mod pallet {
                 }
             });
 
-            Ok(())
+            Ok(Pays::No.into())
         }
 
         /// Force trustee election
