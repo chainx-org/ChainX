@@ -32,28 +32,34 @@ use frame_support::{
     traits::{ChangeMembers, Currency, ExistenceRequirement, Get},
 };
 use frame_system::{ensure_root, ensure_signed};
+
 use sp_runtime::{
     traits::{CheckedDiv, Saturating, StaticLookup, UniqueSaturatedInto, Zero},
     SaturatedConversion,
 };
 use sp_std::{collections::btree_map::BTreeMap, convert::TryFrom, prelude::*};
 
+/// ChainX primitives
 use chainx_primitives::{AddrStr, AssetId, ChainAddress, Text};
-use trustees::bitcoin::BtcTrusteeAddrInfo;
-use types::{RewardInfo, ScriptInfo, TrusteeSessionInfo};
 use xp_protocol::X_BTC;
 use xp_runtime::Memo;
+
+/// ChainX pallets
 use xpallet_assets::{AssetRestrictions, BalanceOf, Chain, ChainT, WithdrawalLimit};
-use xpallet_gateway_records::{Withdrawal, WithdrawalRecordId, WithdrawalState};
+use xpallet_gateway_records::{Withdrawal, WithdrawalRecordId};
 use xpallet_support::traits::{MultisigAddressFor, Validator};
 
-use self::traits::{TotalSupply, TrusteeForChain, TrusteeInfoUpdate, TrusteeSession};
-use self::types::{
-    GenericTrusteeIntentionProps, GenericTrusteeSessionInfo, TrusteeInfoConfig,
-    TrusteeIntentionProps,
+use self::{
+    traits::{TotalSupply, TrusteeForChain, TrusteeInfoUpdate, TrusteeSession},
+    trustees::bitcoin::BtcTrusteeAddrInfo,
+    types::{
+        GenericTrusteeIntentionProps, GenericTrusteeSessionInfo, RewardInfo, ScriptInfo,
+        TrusteeInfoConfig, TrusteeIntentionProps, TrusteeSessionInfo,
+    },
 };
-pub use self::weights::WeightInfo;
+
 pub use pallet::*;
+pub use weights::WeightInfo;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -74,18 +80,22 @@ pub mod pallet {
         type CouncilOrigin: EnsureOrigin<Self::Origin>;
 
         // for bitcoin
+        // chain info
         type Bitcoin: ChainT<BalanceOf<Self>>;
+        // generate trustee session info
         type BitcoinTrustee: TrusteeForChain<
             Self::AccountId,
             Self::BlockNumber,
             trustees::bitcoin::BtcTrusteeType,
             trustees::bitcoin::BtcTrusteeAddrInfo,
         >;
+        // get trustee session info
         type BitcoinTrusteeSessionProvider: TrusteeSession<
             Self::AccountId,
             Self::BlockNumber,
             trustees::bitcoin::BtcTrusteeAddrInfo,
         >;
+        // xassets total issue + pending deposit
         type BitcoinTotalSupply: TotalSupply<BalanceOf<Self>>;
 
         type WeightInfo: WeightInfo;
@@ -179,33 +189,6 @@ pub mod pallet {
             );
 
             Self::setup_trustee_impl(who, proxy_account, chain, about, hot_entity, cold_entity)
-        }
-
-        /// Transition the trustee session.
-        #[pallet::weight(<T as Config>::WeightInfo::transition_trustee_session())]
-        pub fn transition_trustee_session(
-            origin: OriginFor<T>,
-            chain: Chain,
-            new_trustees: Vec<T::AccountId>,
-        ) -> DispatchResult {
-            match ensure_signed(origin.clone()) {
-                Ok(who) => {
-                    if who != Self::trustee_multisig_addr(chain) {
-                        return Err(Error::<T>::InvalidMultisig.into());
-                    }
-                }
-                Err(_) => {
-                    ensure_root(origin)?;
-                }
-            };
-
-            info!(
-                target: "runtime::gateway::common",
-                "[transition_trustee_session] Try to transition trustees, chain:{:?}, new_trustees:{:?}",
-                chain,
-                new_trustees
-            );
-            Self::transition_trustee_session_impl(chain, new_trustees)
         }
 
         /// Manual execution of the election by admin.
@@ -310,156 +293,16 @@ pub mod pallet {
             Ok(Pays::No.into())
         }
 
-        /// Force trustee election
+        /// Assign trustee reward
         ///
-        /// Mandatory trustee renewal if the current trustee is not doing anything
+        /// Any trust can actively call this to receive the
+        /// award for the term the trust is in after the change
+        /// of term.
         ///
-        /// This is called by the root.
-        #[pallet::weight(0)]
-        pub fn force_trustee_election(origin: OriginFor<T>) -> DispatchResult {
-            ensure_root(origin)?;
-            Self::update_transition_status(false, None);
-
-            Ok(())
-        }
-
-        /// Force update trustee info
-        ///
-        /// This is called by the root.
-        #[pallet::weight(0)]
-        pub fn force_update_trustee(
-            origin: OriginFor<T>,
-            who: T::AccountId,
-            proxy_account: Option<T::AccountId>,
-            chain: Chain,
-            about: Text,
-            hot_entity: Vec<u8>,
-            cold_entity: Vec<u8>,
-        ) -> DispatchResult {
-            ensure_root(origin)?;
-
-            Self::setup_trustee_impl(who, proxy_account, chain, about, hot_entity, cold_entity)?;
-            Ok(())
-        }
-
-        /// Force cancel trustee transition
-        ///
-        /// This is called by the root.
-        #[pallet::weight(0)]
-        pub fn cancel_trustee_election(origin: OriginFor<T>, chain: Chain) -> DispatchResult {
-            ensure_root(origin)?;
-
-            TrusteeTransitionStatus::<T>::put(false);
-            Self::cancel_trustee_transition_impl(chain)?;
-            Ok(())
-        }
-
-        /// Set the state of withdraw record by the trustees.
-        #[pallet::weight(<T as Config>::WeightInfo::set_withdrawal_state())]
-        pub fn set_withdrawal_state(
-            origin: OriginFor<T>,
-            #[pallet::compact] id: WithdrawalRecordId,
-            state: WithdrawalState,
-        ) -> DispatchResult {
-            let from = ensure_signed(origin)?;
-
-            let map = Self::trustee_multisigs();
-            let chain = map
-                .into_iter()
-                .find_map(|(chain, multisig)| if from == multisig { Some(chain) } else { None })
-                .ok_or(Error::<T>::InvalidMultisig)?;
-
-            xpallet_gateway_records::Pallet::<T>::set_withdrawal_state_by_trustees(id, chain, state)
-        }
-
-        /// Set the config of trustee information.
-        ///
-        /// This is a root-only operation.
-        #[pallet::weight(0)]
-        pub fn set_trustee_info_config(
-            origin: OriginFor<T>,
-            chain: Chain,
-            config: TrusteeInfoConfig,
-        ) -> DispatchResult {
-            if T::CouncilOrigin::ensure_origin(origin.clone()).is_err() {
-                ensure_root(origin)?;
-            };
-
-            TrusteeInfoConfigOf::<T>::insert(chain, config);
-            Ok(())
-        }
-
-        /// Set trustee admin multiply
-        #[pallet::weight(0)]
-        pub fn set_trustee_admin_multiply(origin: OriginFor<T>, multiply: u64) -> DispatchResult {
-            if T::CouncilOrigin::ensure_origin(origin.clone()).is_err() {
-                ensure_root(origin)?;
-            };
-
-            TrusteeAdminMultiply::<T>::put(multiply);
-            Ok(())
-        }
-
-        /// Dangerous! Be careful to set TrusteeTransitionDuration
-        #[pallet::weight(0)]
-        pub fn change_trustee_transition_duration(
-            origin: OriginFor<T>,
-            duration: T::BlockNumber,
-        ) -> DispatchResult {
-            if T::CouncilOrigin::ensure_origin(origin.clone()).is_err() {
-                ensure_root(origin)?;
-            };
-
-            TrusteeTransitionDuration::<T>::put(duration);
-            Ok(())
-        }
-
-        /// Set the trustee admin.
-        ///
-        /// This is a root-only operation.
-        /// The trustee admin is the account who can change the trustee list.
-        #[pallet::weight(0)]
-        pub fn set_trustee_admin(
-            origin: OriginFor<T>,
-            admin: T::AccountId,
-            chain: Chain,
-        ) -> DispatchResult {
-            if T::CouncilOrigin::ensure_origin(origin.clone()).is_err() {
-                ensure_root(origin)?;
-            };
-
-            Self::trustee_intention_props_of(&admin, chain).ok_or_else::<DispatchError, _>(
-                || {
-                    error!(
-                        target: "runtime::gateway::common",
-                        "[set_trustee_admin] admin {:?} has not in TrusteeIntentionPropertiesOf",
-                        admin
-                    );
-                    Error::<T>::NotRegistered.into()
-                },
-            )?;
-            TrusteeAdmin::<T>::put(admin);
-            Ok(())
-        }
-
-        /// Set the referral binding of corresponding chain and account.
-        ///
-        /// This is a root-only operation.
-        #[pallet::weight(0)]
-        pub fn force_set_referral_binding(
-            origin: OriginFor<T>,
-            chain: Chain,
-            who: <T::Lookup as StaticLookup>::Source,
-            referral: <T::Lookup as StaticLookup>::Source,
-        ) -> DispatchResult {
-            ensure_root(origin)?;
-            let who = T::Lookup::lookup(who)?;
-            let referral = T::Lookup::lookup(referral)?;
-            Self::set_referral_binding(chain, who, referral);
-            Ok(())
-        }
-
-        /// A certain trustee member declares the reward
+        /// If a trust has not renewed for a long period of time
+        /// (no change in council membership or no unusual
+        /// circumstances to not renew), but they want to receive
+        /// their award early, they can call this through the council.
         #[pallet::weight(< T as Config >::WeightInfo::claim_trustee_reward())]
         pub fn claim_trustee_reward(origin: OriginFor<T>, session_num: i32) -> DispatchResult {
             let session_num: u32 = if session_num < 0 {
@@ -495,6 +338,141 @@ pub mod pallet {
             }
 
             Self::apply_claim_trustee_reward(session_num, &session_info)
+        }
+
+        /// Force trustee election
+        ///
+        /// Mandatory trustee renewal if the current trustee is not doing anything
+        ///
+        /// This is called by the root.
+        #[pallet::weight(0)]
+        pub fn force_trustee_election(origin: OriginFor<T>) -> DispatchResult {
+            T::CouncilOrigin::try_origin(origin)
+                .map(|_| ())
+                .or_else(ensure_root)?;
+            Self::update_transition_status(false, None);
+
+            Ok(())
+        }
+
+        /// Force update trustee info
+        ///
+        /// This is called by the root.
+        #[pallet::weight(0)]
+        pub fn force_update_trustee(
+            origin: OriginFor<T>,
+            who: T::AccountId,
+            proxy_account: Option<T::AccountId>,
+            chain: Chain,
+            about: Text,
+            hot_entity: Vec<u8>,
+            cold_entity: Vec<u8>,
+        ) -> DispatchResult {
+            T::CouncilOrigin::try_origin(origin)
+                .map(|_| ())
+                .or_else(ensure_root)?;
+
+            Self::setup_trustee_impl(who, proxy_account, chain, about, hot_entity, cold_entity)?;
+            Ok(())
+        }
+
+        /// Force cancel trustee transition
+        ///
+        /// This is called by the root.
+        #[pallet::weight(0)]
+        pub fn cancel_trustee_election(origin: OriginFor<T>, chain: Chain) -> DispatchResult {
+            T::CouncilOrigin::try_origin(origin)
+                .map(|_| ())
+                .or_else(ensure_root)?;
+
+            TrusteeTransitionStatus::<T>::put(false);
+            Self::cancel_trustee_transition_impl(chain)?;
+            Ok(())
+        }
+
+        /// Set the config of trustee information.
+        ///
+        /// This is a root-only operation.
+        #[pallet::weight(0)]
+        pub fn set_trustee_info_config(
+            origin: OriginFor<T>,
+            chain: Chain,
+            config: TrusteeInfoConfig,
+        ) -> DispatchResult {
+            ensure_root(origin)?;
+
+            TrusteeInfoConfigOf::<T>::insert(chain, config);
+            Ok(())
+        }
+
+        /// Set trustee admin multiply
+        ///
+        /// In order to incentivize trust administrators, a weighted multiplier
+        /// for award distribution to trust administrators is set.
+        #[pallet::weight(0)]
+        pub fn set_trustee_admin_multiply(origin: OriginFor<T>, multiply: u64) -> DispatchResult {
+            T::CouncilOrigin::try_origin(origin)
+                .map(|_| ())
+                .or_else(ensure_root)?;
+
+            TrusteeAdminMultiply::<T>::put(multiply);
+            Ok(())
+        }
+
+        /// Set the trustee admin.
+        ///
+        /// The trustee admin is the account who can change the trustee list.
+        #[pallet::weight(0)]
+        pub fn set_trustee_admin(
+            origin: OriginFor<T>,
+            admin: T::AccountId,
+            chain: Chain,
+        ) -> DispatchResult {
+            T::CouncilOrigin::try_origin(origin)
+                .map(|_| ())
+                .or_else(ensure_root)?;
+
+            Self::trustee_intention_props_of(&admin, chain).ok_or_else::<DispatchError, _>(
+                || {
+                    error!(
+                        target: "runtime::gateway::common",
+                        "[set_trustee_admin] admin {:?} has not in TrusteeIntentionPropertiesOf",
+                        admin
+                    );
+                    Error::<T>::NotRegistered.into()
+                },
+            )?;
+            TrusteeAdmin::<T>::put(admin);
+            Ok(())
+        }
+
+        /// Dangerous! Be careful to set TrusteeTransitionDuration
+        #[pallet::weight(0)]
+        pub fn change_trustee_transition_duration(
+            origin: OriginFor<T>,
+            duration: T::BlockNumber,
+        ) -> DispatchResult {
+            if T::CouncilOrigin::ensure_origin(origin.clone()).is_err() {
+                ensure_root(origin)?;
+            };
+
+            TrusteeTransitionDuration::<T>::put(duration);
+            Ok(())
+        }
+
+        /// Set the referral binding of corresponding chain and account.
+        #[pallet::weight(0)]
+        pub fn force_set_referral_binding(
+            origin: OriginFor<T>,
+            chain: Chain,
+            who: <T::Lookup as StaticLookup>::Source,
+            referral: <T::Lookup as StaticLookup>::Source,
+        ) -> DispatchResult {
+            ensure_root(origin)?;
+            let who = T::Lookup::lookup(who)?;
+            let referral = T::Lookup::lookup(referral)?;
+            Self::set_referral_binding(chain, who, referral);
+            Ok(())
         }
     }
 
@@ -544,30 +522,18 @@ pub mod pallet {
         DuplicatedAccountId,
         /// not registered as trustee
         NotRegistered,
-        /// just allow validator to register trustee
-        NotValidator,
         /// just allow trustee admin to remove trustee
         NotTrusteeAdmin,
         /// just allow trustee preselected members to set their trustee information
         NotTrusteePreselectedMember,
-        /// invalid public key
-        InvalidPublicKey,
         /// invalid session number
         InvalidSessionNum,
         /// invalid trustee history member
         InvalidTrusteeHisMember,
         /// invalid multi account
         InvalidMultiAccount,
-        /// the reward of multi account is zero
-        MultiAccountRewardZero,
         /// invalid trustee weight
         InvalidTrusteeWeight,
-        /// invalid trustee start height
-        InvalidTrusteeStartHeight,
-        /// invalid trustee end height
-        InvalidTrusteeEndHeight,
-        /// not multi signature count
-        NotMultiSigCount,
         /// the last trustee transition was not completed.
         LastTransitionNotCompleted,
         /// the trustee members was not enough.
@@ -628,9 +594,6 @@ pub mod pallet {
     }
 
     /// Trustee session info of the corresponding chain and number.
-    ///
-    /// NOTE: storage changed
-    /// TODO: storage migration
     #[pallet::storage]
     #[pallet::getter(fn trustee_session_info_of)]
     pub type TrusteeSessionInfoOf<T: Config> = StorageDoubleMap<
@@ -643,9 +606,6 @@ pub mod pallet {
     >;
 
     /// Trustee intention properties of the corresponding account and chain.
-    ///
-    /// NOTE: storage changed
-    /// TODO: storage migration
     #[pallet::storage]
     #[pallet::getter(fn trustee_intention_props_of)]
     pub type TrusteeIntentionPropertiesOf<T: Config> = StorageDoubleMap<
@@ -823,20 +783,6 @@ impl<T: Config> Pallet<T> {
         }
         Ok(())
     }
-
-    // Make sure the hot and cold pubkey are set and do not check the validity of the address
-    pub fn ensure_set_address(who: &T::AccountId, chain: Chain) -> bool {
-        Self::trustee_intention_props_of(who, chain).is_some()
-    }
-}
-
-pub fn is_valid_about<T: Config>(about: &[u8]) -> DispatchResult {
-    // TODO
-    if about.len() > 128 {
-        return Err(Error::<T>::InvalidAboutLen.into());
-    }
-
-    xp_runtime::xss_check(about)
 }
 
 // trustees
@@ -849,6 +795,19 @@ impl<T: Config> Pallet<T> {
         }
     }
 
+    // Make sure the hot and cold pubkey are set and do not check the validity of the address
+    pub fn ensure_set_address(who: &T::AccountId, chain: Chain) -> bool {
+        Self::trustee_intention_props_of(who, chain).is_some()
+    }
+
+    pub fn is_valid_about(about: &[u8]) -> DispatchResult {
+        if about.len() > 128 {
+            return Err(Error::<T>::InvalidAboutLen.into());
+        }
+
+        xp_runtime::xss_check(about)
+    }
+
     pub fn setup_trustee_impl(
         who: T::AccountId,
         proxy_account: Option<T::AccountId>,
@@ -857,7 +816,7 @@ impl<T: Config> Pallet<T> {
         hot_entity: Vec<u8>,
         cold_entity: Vec<u8>,
     ) -> DispatchResult {
-        is_valid_about::<T>(&about)?;
+        Self::is_valid_about(&about)?;
 
         let (hot, cold) = match chain {
             Chain::Bitcoin => {
@@ -1147,6 +1106,10 @@ impl<T: Config> Pallet<T> {
         Ok(multi_addr)
     }
 
+    pub fn trustee_multisigs() -> BTreeMap<Chain, T::AccountId> {
+        TrusteeMultiSigAddr::<T>::iter().collect()
+    }
+
     fn set_referral_binding(chain: Chain, who: T::AccountId, referral: T::AccountId) {
         ReferralBindingOf::<T>::insert(&who, &chain, referral.clone());
         Self::deposit_event(Event::<T>::ReferralBinded(who, chain, referral))
@@ -1279,11 +1242,5 @@ impl<T: Config> Pallet<T> {
             Err(e) => return Err(e),
         }
         Ok(())
-    }
-}
-
-impl<T: Config> Pallet<T> {
-    pub fn trustee_multisigs() -> BTreeMap<Chain, T::AccountId> {
-        TrusteeMultiSigAddr::<T>::iter().collect()
     }
 }

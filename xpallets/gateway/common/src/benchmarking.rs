@@ -160,51 +160,6 @@ benchmarks! {
         assert!(Pallet::<T>::trustee_intention_props_of(caller, Chain::Bitcoin).is_some());
     }
 
-    transition_trustee_session {
-        let caller: T::AccountId = alice::<T>();
-        clean::<T>();
-        TrusteeMultiSigAddr::<T>::insert(Chain::Bitcoin, caller.clone());
-
-        let mut candidators = vec![];
-        for (account, about, hot, cold) in new_trustees::<T>() {
-            Pallet::<T>::setup_trustee_impl(account.clone(), None, Chain::Bitcoin, about, hot, cold).unwrap();
-            candidators.push(account);
-        }
-
-        assert_eq!(Pallet::<T>::trustee_session_info_len(Chain::Bitcoin), 0);
-        assert!(Pallet::<T>::trustee_session_info_of(Chain::Bitcoin, 0).is_none());
-
-    }: _(RawOrigin::Signed(caller.clone()), Chain::Bitcoin, candidators)
-    verify {
-        assert_eq!(Pallet::<T>::trustee_session_info_len(Chain::Bitcoin), 1);
-        assert!(Pallet::<T>::trustee_session_info_of(Chain::Bitcoin, 1).is_some());
-    }
-
-    set_withdrawal_state {
-        let caller: T::AccountId = alice::<T>();
-        TrusteeMultiSigAddr::<T>::insert(Chain::Bitcoin, caller.clone());
-
-        let amount: BalanceOf<T> = 1_000_000_000u32.into();
-        XGatewayRecords::<T>::deposit(&caller, X_BTC, amount).unwrap();
-        let withdrawal = 100_000_000u32.into();
-        let addr = b"3PgYgJA6h5xPEc3HbnZrUZWkpRxuCZVyEP".to_vec();
-        let memo = b"".to_vec().into();
-        Pallet::<T>::withdraw(
-            RawOrigin::Signed(caller.clone()).into(),
-            X_BTC, withdrawal, addr, memo,
-        )
-        .unwrap();
-        let withdrawal_id: WithdrawalRecordId = 0;
-        assert!(XGatewayRecords::<T>::pending_withdrawals(withdrawal_id).is_some());
-        assert_eq!(XGatewayRecords::<T>::state_of(withdrawal_id), Some(WithdrawalState::Applying));
-
-        XGatewayRecords::<T>::process_withdrawal(withdrawal_id, Chain::Bitcoin).unwrap();
-        assert_eq!(XGatewayRecords::<T>::state_of(withdrawal_id), Some(WithdrawalState::Processing));
-    }: _(RawOrigin::Signed(caller.clone()), withdrawal_id, WithdrawalState::RootFinish)
-    verify {
-        assert!(XGatewayRecords::<T>::pending_withdrawals(withdrawal_id).is_none());
-    }
-
     set_trustee_info_config {
         let config = TrusteeInfoConfig {
             min_trustee_count: 5,
@@ -292,8 +247,6 @@ mod tests {
             assert_ok!(Pallet::<Test>::test_benchmark_withdraw());
             assert_ok!(Pallet::<Test>::test_benchmark_cancel_withdrawal());
             assert_ok!(Pallet::<Test>::test_benchmark_setup_trustee());
-            assert_ok!(Pallet::<Test>::test_benchmark_transition_trustee_session());
-            assert_ok!(Pallet::<Test>::test_benchmark_set_withdrawal_state());
             assert_ok!(Pallet::<Test>::test_benchmark_set_trustee_info_config());
             assert_ok!(Pallet::<Test>::test_benchmark_change_trustee_transition_duration());
             assert_ok!(Pallet::<Test>::test_benchmark_set_trustee_admin());
