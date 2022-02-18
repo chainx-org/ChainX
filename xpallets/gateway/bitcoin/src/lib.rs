@@ -77,6 +77,7 @@ pub mod pallet {
 
     use frame_support::{dispatch::DispatchResult, pallet_prelude::*, traits::UnixTime};
     use frame_system::pallet_prelude::*;
+    use sp_runtime::traits::Saturating;
 
     use super::*;
 
@@ -600,9 +601,8 @@ pub mod pallet {
                 .sum::<u64>()
                 .saturated_into();
 
-            let asset_id = xp_protocol::X_BTC;
-            let asset_supply = xpallet_assets::Pallet::<T>::total_issuance(&asset_id);
-            asset_supply + pending_deposits
+            let asset_supply = xpallet_assets::Pallet::<T>::total_issuance(&xp_protocol::X_BTC);
+            asset_supply.saturating_add(pending_deposits)
         }
     }
 
@@ -763,12 +763,9 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
-        pub fn verify_btc_address(data: &[u8]) -> Result<Address, DispatchError> {
-            let result = Self::verify_bs58_address(data);
-            if result.is_ok() {
-                return result;
-            }
-            Self::verify_bech32_address(data)
+        pub fn verify_bech32_address(data: &[u8]) -> Result<Address, DispatchError> {
+            let addr = core::str::from_utf8(data).map_err(|_| Error::<T>::InvalidAddr)?;
+            Address::from_str(addr).map_err(|_| Error::<T>::InvalidAddr.into())
         }
 
         pub fn verify_bs58_address(data: &[u8]) -> Result<Address, DispatchError> {
@@ -779,9 +776,12 @@ pub mod pallet {
             Ok(addr)
         }
 
-        pub fn verify_bech32_address(data: &[u8]) -> Result<Address, DispatchError> {
-            let addr = core::str::from_utf8(data).map_err(|_| Error::<T>::InvalidAddr)?;
-            Address::from_str(addr).map_err(|_| Error::<T>::InvalidAddr.into())
+        pub fn verify_btc_address(data: &[u8]) -> Result<Address, DispatchError> {
+            let result = Self::verify_bs58_address(data);
+            if result.is_ok() {
+                return result;
+            }
+            Self::verify_bech32_address(data)
         }
 
         pub fn verify_tx_valid(
@@ -794,16 +794,16 @@ pub mod pallet {
             if T::TrusteeSessionProvider::trustee_transition_state() {
                 // check trustee transition tx
                 // tx output address = new hot address
-                let current_trustee_pair = get_current_trustee_address_pair::<T>()?;
-                let all_outputs_is_trustee = tx
+                let last_trustee_pair = get_last_trustee_address_pair::<T>()?;
+                let all_outputs_is_cold_address = tx
                     .outputs
                     .iter()
                     .map(|output| {
                         xp_gateway_bitcoin::extract_output_addr(output, NetworkId::<T>::get())
                             .unwrap_or_default()
                     })
-                    .all(|addr| xp_gateway_bitcoin::is_trustee_addr(addr, current_trustee_pair));
-                if !all_outputs_is_trustee {
+                    .all(|addr| addr.hash == last_trustee_pair.1.hash);
+                if !all_outputs_is_cold_address {
                     Err(Error::<T>::NoWithdrawInTrans.into())
                 } else if !full_amount {
                     Err(Error::<T>::InvalidAmoutInTrans.into())
