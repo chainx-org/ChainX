@@ -326,7 +326,7 @@ impl<T: Config> Pallet<T> {
                 "[apply_create_withdraw] Current list (len:{}) exceeding the max withdrawal amount {}",
                 withdrawal_id_list.len(), withdraw_amount
             );
-            return Err(Error::<T>::WroungWithdrawalCount.into());
+            return Err(Error::<T>::WrongWithdrawalCount.into());
         }
         // remove duplicate
         let mut withdrawal_id_list = withdrawal_id_list;

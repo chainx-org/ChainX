@@ -201,22 +201,6 @@ pub mod pallet {
             Ok(Pays::No.into())
         }
 
-        /// Dangerous! Be careful to set BestIndex
-        #[pallet::weight(<T as Config>::WeightInfo::set_best_index())]
-        pub fn set_best_index(origin: OriginFor<T>, index: BtcHeaderIndex) -> DispatchResult {
-            ensure_root(origin)?;
-            BestIndex::<T>::put(index);
-            Ok(())
-        }
-
-        /// Dangerous! Be careful to set ConfirmedIndex
-        #[pallet::weight(<T as Config>::WeightInfo::set_confirmed_index())]
-        pub fn set_confirmed_index(origin: OriginFor<T>, index: BtcHeaderIndex) -> DispatchResult {
-            ensure_root(origin)?;
-            ConfirmedIndex::<T>::put(index);
-            Ok(())
-        }
-
         /// Allow root or trustees could remove pending deposits for an address and decide whether
         /// deposit to an account id. if pass `None` to `who`, would just remove pendings, if pass
         /// Some, would deposit to this account id.
@@ -269,6 +253,22 @@ pub mod pallet {
             Ok(())
         }
 
+        /// Dangerous! Be careful to set BestIndex
+        #[pallet::weight(<T as Config>::WeightInfo::set_best_index())]
+        pub fn set_best_index(origin: OriginFor<T>, index: BtcHeaderIndex) -> DispatchResult {
+            ensure_root(origin)?;
+            BestIndex::<T>::put(index);
+            Ok(())
+        }
+
+        /// Dangerous! Be careful to set ConfirmedIndex
+        #[pallet::weight(<T as Config>::WeightInfo::set_confirmed_index())]
+        pub fn set_confirmed_index(origin: OriginFor<T>, index: BtcHeaderIndex) -> DispatchResult {
+            ensure_root(origin)?;
+            ConfirmedIndex::<T>::put(index);
+            Ok(())
+        }
+
         /// Set bitcoin withdrawal fee
         #[pallet::weight(<T as Config>::WeightInfo::set_btc_withdrawal_fee())]
         pub fn set_btc_withdrawal_fee(
@@ -313,8 +313,6 @@ pub mod pallet {
         HeaderFuturisticTimestamp,
         /// nBits do not match difficulty rules
         HeaderNBitsNotMatch,
-        /// Unknown parent
-        HeaderUnknownParent,
         /// Header already exists
         ExistingHeader,
         /// Can't find previous header
@@ -344,7 +342,7 @@ pub mod pallet {
         /// invalid trustee count
         InvalidTrusteeCount,
         /// unexpected withdraw records count
-        WroungWithdrawalCount,
+        WrongWithdrawalCount,
         /// no proposal for current withdrawal
         NoProposal,
         /// invalid proposal
