@@ -376,6 +376,21 @@ pub mod pallet {
             Ok(())
         }
 
+        /// Set the referral binding of corresponding chain and account.
+        #[pallet::weight(0)]
+        pub fn force_set_referral_binding(
+            origin: OriginFor<T>,
+            chain: Chain,
+            who: <T::Lookup as StaticLookup>::Source,
+            referral: <T::Lookup as StaticLookup>::Source,
+        ) -> DispatchResult {
+            ensure_root(origin)?;
+            let who = T::Lookup::lookup(who)?;
+            let referral = T::Lookup::lookup(referral)?;
+            Self::set_referral_binding(chain, who, referral);
+            Ok(())
+        }
+
         /// Force cancel trustee transition
         ///
         /// This is called by the root.
@@ -457,21 +472,6 @@ pub mod pallet {
             };
 
             TrusteeTransitionDuration::<T>::put(duration);
-            Ok(())
-        }
-
-        /// Set the referral binding of corresponding chain and account.
-        #[pallet::weight(0)]
-        pub fn force_set_referral_binding(
-            origin: OriginFor<T>,
-            chain: Chain,
-            who: <T::Lookup as StaticLookup>::Source,
-            referral: <T::Lookup as StaticLookup>::Source,
-        ) -> DispatchResult {
-            ensure_root(origin)?;
-            let who = T::Lookup::lookup(who)?;
-            let referral = T::Lookup::lookup(referral)?;
-            Self::set_referral_binding(chain, who, referral);
             Ok(())
         }
     }
@@ -562,11 +562,6 @@ pub mod pallet {
     }
 
     #[pallet::storage]
-    #[pallet::getter(fn agg_pubkey_info)]
-    pub type AggPubkeyInfo<T: Config> =
-        StorageMap<_, Twox64Concat, Vec<u8>, Vec<T::AccountId>, ValueQuery>;
-
-    #[pallet::storage]
     #[pallet::getter(fn trustee_sig_record)]
     pub type TrusteeSigRecord<T: Config> =
         StorageMap<_, Twox64Concat, T::AccountId, u64, ValueQuery>;
@@ -616,6 +611,13 @@ pub mod pallet {
         Chain,
         GenericTrusteeIntentionProps<T::AccountId>,
     >;
+
+    /// Each aggregated public key corresponds to a set of trustees used
+    /// to confirm a set of trustees for processing withdrawals.
+    #[pallet::storage]
+    #[pallet::getter(fn agg_pubkey_info)]
+    pub type AggPubkeyInfo<T: Config> =
+        StorageMap<_, Twox64Concat, Vec<u8>, Vec<T::AccountId>, ValueQuery>;
 
     /// The account of the corresponding chain and chain address.
     #[pallet::storage]
@@ -709,55 +711,8 @@ pub mod pallet {
     }
 }
 
-// withdraw
+// Withdraw
 impl<T: Config> Pallet<T> {
-    pub fn withdrawal_limit(
-        asset_id: &AssetId,
-    ) -> Result<WithdrawalLimit<BalanceOf<T>>, DispatchError> {
-        let chain = xpallet_assets_registrar::Pallet::<T>::chain_of(asset_id)?;
-        match chain {
-            Chain::Bitcoin => T::Bitcoin::withdrawal_limit(asset_id),
-            _ => Err(Error::<T>::NotSupportedChain.into()),
-        }
-    }
-
-    pub fn withdrawal_list_with_fee_info(
-        asset_id: &AssetId,
-    ) -> Result<
-        BTreeMap<
-            WithdrawalRecordId,
-            (
-                Withdrawal<T::AccountId, BalanceOf<T>, T::BlockNumber>,
-                WithdrawalLimit<BalanceOf<T>>,
-            ),
-        >,
-        DispatchError,
-    > {
-        let limit = Self::withdrawal_limit(asset_id)?;
-
-        let result: BTreeMap<
-            WithdrawalRecordId,
-            (
-                Withdrawal<T::AccountId, BalanceOf<T>, T::BlockNumber>,
-                WithdrawalLimit<BalanceOf<T>>,
-            ),
-        > = xpallet_gateway_records::PendingWithdrawals::<T>::iter()
-            .map(|(id, record)| {
-                (
-                    id,
-                    (
-                        Withdrawal::new(
-                            record,
-                            xpallet_gateway_records::Pallet::<T>::state_of(id).unwrap_or_default(),
-                        ),
-                        limit.clone(),
-                    ),
-                )
-            })
-            .collect();
-        Ok(result)
-    }
-
     pub fn verify_withdrawal(
         asset_id: AssetId,
         value: BalanceOf<T>,
@@ -785,29 +740,8 @@ impl<T: Config> Pallet<T> {
     }
 }
 
-// trustees
+/// Trustee setup
 impl<T: Config> Pallet<T> {
-    pub fn ensure_not_current_trustee(who: &T::AccountId) -> bool {
-        if let Ok(info) = T::BitcoinTrusteeSessionProvider::current_trustee_session() {
-            !info.trustee_list.into_iter().any(|n| &n.0 == who)
-        } else {
-            true
-        }
-    }
-
-    // Make sure the hot and cold pubkey are set and do not check the validity of the address
-    pub fn ensure_set_address(who: &T::AccountId, chain: Chain) -> bool {
-        Self::trustee_intention_props_of(who, chain).is_some()
-    }
-
-    pub fn is_valid_about(about: &[u8]) -> DispatchResult {
-        if about.len() > 128 {
-            return Err(Error::<T>::InvalidAboutLen.into());
-        }
-
-        xp_runtime::xss_check(about)
-    }
-
     pub fn setup_trustee_impl(
         who: T::AccountId,
         proxy_account: Option<T::AccountId>,
@@ -852,6 +786,22 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
+    fn set_referral_binding(chain: Chain, who: T::AccountId, referral: T::AccountId) {
+        ReferralBindingOf::<T>::insert(&who, &chain, referral.clone());
+        Self::deposit_event(Event::<T>::ReferralBinded(who, chain, referral))
+    }
+
+    pub fn ensure_not_current_trustee(who: &T::AccountId) -> bool {
+        if let Ok(info) = T::BitcoinTrusteeSessionProvider::current_trustee_session() {
+            !info.trustee_list.into_iter().any(|n| &n.0 == who)
+        } else {
+            true
+        }
+    }
+}
+
+/// Trustee common
+impl<T: Config> Pallet<T> {
     pub fn generate_trustee_pool() -> Vec<T::AccountId> {
         let members = {
             let mut members = pallet_elections_phragmen::Pallet::<T>::members();
@@ -870,6 +820,22 @@ impl<T: Config> Pallet<T> {
                 .collect::<Vec<T::AccountId>>()
         };
         [members, runners_up].concat()
+    }
+}
+
+/// Trustee transition
+impl<T: Config> Pallet<T> {
+    // Make sure the hot and cold pubkey are set and do not check the validity of the address
+    pub fn ensure_set_address(who: &T::AccountId, chain: Chain) -> bool {
+        Self::trustee_intention_props_of(who, chain).is_some()
+    }
+
+    pub fn is_valid_about(about: &[u8]) -> DispatchResult {
+        if about.len() > 128 {
+            return Err(Error::<T>::InvalidAboutLen.into());
+        }
+
+        xp_runtime::xss_check(about)
     }
 
     pub fn do_trustee_election() -> DispatchResult {
@@ -1109,12 +1075,10 @@ impl<T: Config> Pallet<T> {
     pub fn trustee_multisigs() -> BTreeMap<Chain, T::AccountId> {
         TrusteeMultiSigAddr::<T>::iter().collect()
     }
+}
 
-    fn set_referral_binding(chain: Chain, who: T::AccountId, referral: T::AccountId) {
-        ReferralBindingOf::<T>::insert(&who, &chain, referral.clone());
-        Self::deposit_event(Event::<T>::ReferralBinded(who, chain, referral))
-    }
-
+/// Trustee rewards
+impl<T: Config> Pallet<T> {
     fn compute_reward<Balance>(
         reward: Balance,
         trustee_info: &TrusteeSessionInfo<T::AccountId, T::BlockNumber, BtcTrusteeAddrInfo>,
@@ -1242,5 +1206,55 @@ impl<T: Config> Pallet<T> {
             Err(e) => return Err(e),
         }
         Ok(())
+    }
+}
+
+/// Rpc calls
+impl<T: Config> Pallet<T> {
+    pub fn withdrawal_limit(
+        asset_id: &AssetId,
+    ) -> Result<WithdrawalLimit<BalanceOf<T>>, DispatchError> {
+        let chain = xpallet_assets_registrar::Pallet::<T>::chain_of(asset_id)?;
+        match chain {
+            Chain::Bitcoin => T::Bitcoin::withdrawal_limit(asset_id),
+            _ => Err(Error::<T>::NotSupportedChain.into()),
+        }
+    }
+
+    pub fn withdrawal_list_with_fee_info(
+        asset_id: &AssetId,
+    ) -> Result<
+        BTreeMap<
+            WithdrawalRecordId,
+            (
+                Withdrawal<T::AccountId, BalanceOf<T>, T::BlockNumber>,
+                WithdrawalLimit<BalanceOf<T>>,
+            ),
+        >,
+        DispatchError,
+    > {
+        let limit = Self::withdrawal_limit(asset_id)?;
+
+        let result: BTreeMap<
+            WithdrawalRecordId,
+            (
+                Withdrawal<T::AccountId, BalanceOf<T>, T::BlockNumber>,
+                WithdrawalLimit<BalanceOf<T>>,
+            ),
+        > = xpallet_gateway_records::PendingWithdrawals::<T>::iter()
+            .map(|(id, record)| {
+                (
+                    id,
+                    (
+                        Withdrawal::new(
+                            record,
+                            xpallet_gateway_records::Pallet::<T>::state_of(id).unwrap_or_default(),
+                        ),
+                        limit.clone(),
+                    ),
+                )
+            })
+            .collect();
+        Ok(result)
     }
 }
