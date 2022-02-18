@@ -10,8 +10,10 @@ use xp_gateway_common::AccountExtractor;
 
 use light_bitcoin::script::Script;
 
-use crate::mock::{Test, XGatewayBitcoin};
-use crate::Config;
+use crate::{
+    mock::{Test, XGatewayBitcoin},
+    Config,
+};
 
 #[test]
 pub fn test_verify_btc_address() {

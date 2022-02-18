@@ -17,6 +17,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+use sp_core::sp_std::str::FromStr;
 use sp_runtime::SaturatedConversion;
 use sp_std::prelude::*;
 
@@ -44,8 +45,6 @@ use xpallet_gateway_common::{
 };
 use xpallet_support::try_addr;
 
-pub use self::types::{BtcAddress, BtcParams, BtcTxVerifier, BtcWithdrawalProposal};
-pub use self::weights::WeightInfo;
 use self::{
     trustee::{get_current_trustee_address_pair, get_last_trustee_address_pair},
     tx::remove_pending_deposit,
@@ -54,9 +53,12 @@ use self::{
         BtcTxResult, BtcTxState,
     },
 };
+pub use self::{
+    types::{BtcAddress, BtcParams, BtcTxVerifier, BtcWithdrawalProposal},
+    weights::WeightInfo,
+};
 
 pub use pallet::*;
-use sp_core::sp_std::str::FromStr;
 
 // syntactic sugar for native log.
 #[macro_export]
@@ -86,26 +88,35 @@ pub mod pallet {
     pub trait Config:
         frame_system::Config + xpallet_assets::Config + xpallet_gateway_records::Config
     {
+        /// The overarching event type.
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
+        /// The unix time type.
         type UnixTime: UnixTime;
 
+        /// A majority of the council can excute some transactions.
         type CouncilOrigin: EnsureOrigin<Self::Origin>;
 
+        /// Extract the account and possible extra from the data.
         type AccountExtractor: AccountExtractor<Self::AccountId, ReferralId>;
 
+        /// Get information about the trustee.
         type TrusteeSessionProvider: TrusteeSession<
             Self::AccountId,
             Self::BlockNumber,
             BtcTrusteeAddrInfo,
         >;
 
+        /// Update information about the trustee.
         type TrusteeInfoUpdate: TrusteeInfoUpdate;
 
+        /// Handle referral of assets across chains.
         type ReferralBinding: ReferralBinding<Self::AccountId>;
 
+        /// Handle address binding about pending deposit.
         type AddressBinding: AddressBinding<Self::AccountId, BtcAddress>;
 
+        /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
     }
 
@@ -291,8 +302,6 @@ pub mod pallet {
         InvalidBase58,
         /// load addr from bytes error
         InvalidAddr,
-        /// can't find the best header in chain or it's invalid
-        InvalidBestIndex,
         /// Invalid proof-of-work (Block hash does not satisfy nBits)
         InvalidPoW,
         /// Fork is too long to proceed
@@ -305,17 +314,13 @@ pub mod pallet {
         HeaderNBitsNotMatch,
         /// Unknown parent
         HeaderUnknownParent,
-        /// Not Found
-        HeaderNotFound,
-        /// Ancient fork
-        HeaderAncientFork,
         /// Header already exists
         ExistingHeader,
         /// Can't find previous header
         PrevHeaderNotExisted,
         /// Cannot deserialize the header or tx vec
         DeserializeErr,
-        ///
+        /// Invalid merkle proof
         BadMerkleProof,
         /// The tx is not yet confirmed, i.e, the block of which is not confirmed.
         UnconfirmedTx,
@@ -327,18 +332,8 @@ pub mod pallet {
         MismatchedTx,
         /// invalid bitcoin address
         InvalidAddress,
-        /// verify tx signature failed
-        VerifySignFailed,
-        /// invalid sign count in trustee withdrawal tx proposal
-        InvalidSignCount,
         /// invalid bitcoin public key
         InvalidPublicKey,
-        /// construct bad signature
-        ConstructBadSign,
-        /// Invalid signature
-        BadSignature,
-        /// Parse redeem script failed
-        BadRedeemScript,
         /// not set trustee yet
         NotTrustee,
         /// duplicated pubkey for trustees
@@ -349,8 +344,6 @@ pub mod pallet {
         InvalidTrusteeCount,
         /// unexpected withdraw records count
         WroungWithdrawalCount,
-        /// reject sig for current proposal
-        RejectSig,
         /// no proposal for current withdrawal
         NoProposal,
         /// invalid proposal
@@ -388,10 +381,6 @@ pub mod pallet {
         WithdrawalProposalCreated(T::AccountId, Vec<u32>),
         /// A trustee voted/vetoed a withdrawal proposal. [trustee, vote_status]
         WithdrawalProposalVoted(T::AccountId, bool),
-        /// A withdrawal proposal was dropped. [reject_count, total_count, withdrawal_ids]
-        WithdrawalProposalDropped(u32, u32, Vec<u32>),
-        /// The proposal has been processed successfully and is waiting for broadcasting. [tx_hash]
-        WithdrawalProposalCompleted(H256),
         /// A fatal error happened during the withdrwal process. [tx_hash, proposal_hash]
         WithdrawalFatalErr(H256, H256),
     }
@@ -559,7 +548,6 @@ pub mod pallet {
         }
 
         fn check_addr(addr: &[u8], _: &[u8]) -> DispatchResult {
-            // this addr is base58 addr
             let address = Self::verify_btc_address(addr).map_err(|err| {
                 log!(
                     error,
@@ -619,60 +607,6 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
-        pub fn verify_btc_address(data: &[u8]) -> Result<Address, DispatchError> {
-            let result = Self::verify_bs58_address(data);
-            if result.is_ok() {
-                return result;
-            }
-            Self::verify_bech32_address(data)
-        }
-
-        pub fn verify_bs58_address(data: &[u8]) -> Result<Address, DispatchError> {
-            let r = bs58::decode(data)
-                .into_vec()
-                .map_err(|_| Error::<T>::InvalidBase58)?;
-            let addr = Address::from_layout(&r).map_err(|_| Error::<T>::InvalidAddr)?;
-            Ok(addr)
-        }
-
-        pub fn verify_bech32_address(data: &[u8]) -> Result<Address, DispatchError> {
-            let addr = core::str::from_utf8(data).map_err(|_| Error::<T>::InvalidAddr)?;
-            Address::from_str(addr).map_err(|_| Error::<T>::InvalidAddr.into())
-        }
-
-        pub fn verify_tx_valid(
-            raw_tx: Vec<u8>,
-            withdrawal_id_list: Vec<u32>,
-            full_amount: bool,
-        ) -> Result<bool, DispatchError> {
-            let tx = Self::deserialize_tx(raw_tx.as_slice())?;
-            // check trustee transition status
-            if T::TrusteeSessionProvider::trustee_transition_state() {
-                // check trustee transition tx
-                // tx output address = new hot address
-                let current_trustee_pair = get_current_trustee_address_pair::<T>()?;
-                let all_outputs_is_trustee = tx
-                    .outputs
-                    .iter()
-                    .map(|output| {
-                        xp_gateway_bitcoin::extract_output_addr(output, NetworkId::<T>::get())
-                            .unwrap_or_default()
-                    })
-                    .all(|addr| xp_gateway_bitcoin::is_trustee_addr(addr, current_trustee_pair));
-                if !all_outputs_is_trustee {
-                    Err(Error::<T>::NoWithdrawInTrans.into())
-                } else if !full_amount {
-                    Err(Error::<T>::InvalidAmoutInTrans.into())
-                } else {
-                    Ok(true)
-                }
-            } else {
-                // check normal withdrawal tx
-                trustee::check_withdraw_tx::<T>(&tx, &withdrawal_id_list)?;
-                Ok(true)
-            }
-        }
-
         /// Helper function for deserializing the slice of raw tx.
         #[inline]
         pub(crate) fn deserialize_tx(input: &[u8]) -> Result<Transaction, Error<T>> {
@@ -824,6 +758,62 @@ pub mod pallet {
             match state.result {
                 BtcTxResult::Success => Ok(()),
                 BtcTxResult::Failure => Err(Error::<T>::ProcessTxFailed.into()),
+            }
+        }
+    }
+
+    impl<T: Config> Pallet<T> {
+        pub fn verify_btc_address(data: &[u8]) -> Result<Address, DispatchError> {
+            let result = Self::verify_bs58_address(data);
+            if result.is_ok() {
+                return result;
+            }
+            Self::verify_bech32_address(data)
+        }
+
+        pub fn verify_bs58_address(data: &[u8]) -> Result<Address, DispatchError> {
+            let r = bs58::decode(data)
+                .into_vec()
+                .map_err(|_| Error::<T>::InvalidBase58)?;
+            let addr = Address::from_layout(&r).map_err(|_| Error::<T>::InvalidAddr)?;
+            Ok(addr)
+        }
+
+        pub fn verify_bech32_address(data: &[u8]) -> Result<Address, DispatchError> {
+            let addr = core::str::from_utf8(data).map_err(|_| Error::<T>::InvalidAddr)?;
+            Address::from_str(addr).map_err(|_| Error::<T>::InvalidAddr.into())
+        }
+
+        pub fn verify_tx_valid(
+            raw_tx: Vec<u8>,
+            withdrawal_id_list: Vec<u32>,
+            full_amount: bool,
+        ) -> Result<bool, DispatchError> {
+            let tx = Self::deserialize_tx(raw_tx.as_slice())?;
+            // check trustee transition status
+            if T::TrusteeSessionProvider::trustee_transition_state() {
+                // check trustee transition tx
+                // tx output address = new hot address
+                let current_trustee_pair = get_current_trustee_address_pair::<T>()?;
+                let all_outputs_is_trustee = tx
+                    .outputs
+                    .iter()
+                    .map(|output| {
+                        xp_gateway_bitcoin::extract_output_addr(output, NetworkId::<T>::get())
+                            .unwrap_or_default()
+                    })
+                    .all(|addr| xp_gateway_bitcoin::is_trustee_addr(addr, current_trustee_pair));
+                if !all_outputs_is_trustee {
+                    Err(Error::<T>::NoWithdrawInTrans.into())
+                } else if !full_amount {
+                    Err(Error::<T>::InvalidAmoutInTrans.into())
+                } else {
+                    Ok(true)
+                }
+            } else {
+                // check normal withdrawal tx
+                trustee::check_withdraw_tx::<T>(&tx, &withdrawal_id_list)?;
+                Ok(true)
             }
         }
     }

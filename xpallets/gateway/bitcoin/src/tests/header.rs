@@ -8,11 +8,13 @@ use light_bitcoin::{
     serialization,
 };
 
-use crate::mock::{
-    generate_blocks_478557_478563, generate_blocks_63290_63310, ExtBuilder, XGatewayBitcoin,
-    XGatewayBitcoinErr,
+use crate::{
+    mock::{
+        generate_blocks_478557_478563, generate_blocks_63290_63310, ExtBuilder, XGatewayBitcoin,
+        XGatewayBitcoinErr,
+    },
+    types::BtcHeaderIndex,
 };
-use crate::types::BtcHeaderIndex;
 
 #[test]
 fn test_genesis() {

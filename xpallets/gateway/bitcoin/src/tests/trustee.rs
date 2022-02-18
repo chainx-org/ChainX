@@ -2,6 +2,7 @@
 
 use frame_support::assert_noop;
 use hex_literal::hex;
+use sp_std::convert::TryInto;
 
 use light_bitcoin::{
     crypto::dhash160,
@@ -12,9 +13,10 @@ use light_bitcoin::{
 
 use xpallet_gateway_common::traits::TrusteeForChain;
 
-use crate::mock::{ExtBuilder, Test, XGatewayBitcoin, XGatewayBitcoinErr};
-use crate::trustee::create_multi_address;
-use sp_std::convert::TryInto;
+use crate::{
+    mock::{ExtBuilder, Test, XGatewayBitcoin, XGatewayBitcoinErr},
+    trustee::create_multi_address,
+};
 
 #[test]
 pub fn test_check_trustee_entity() {

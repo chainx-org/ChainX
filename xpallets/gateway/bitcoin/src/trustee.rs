@@ -340,11 +340,6 @@ impl<T: Config> Pallet<T> {
             withdrawal_id_list
         );
 
-        // check sig
-        // if parse_check_taproot_tx::<T>(&tx, &spent_outputs).is_err() {
-        //     return Err(Error::<T>::VerifySignFailed.into());
-        // };
-
         xpallet_gateway_records::Pallet::<T>::process_withdrawals(
             &withdrawal_id_list,
             Chain::Bitcoin,
@@ -384,11 +379,6 @@ impl<T: Config> Pallet<T> {
         // make sure withdrawal list is same as current proposal
         let current_withdrawal_list = &proposal.withdrawal_id_list;
         check_withdraw_tx_impl::<T>(&tx, current_withdrawal_list)?;
-
-        // check sig
-        // if parse_check_taproot_tx::<T>(&tx, &spent_outputs).is_err() {
-        //     return Err(Error::<T>::VerifySignFailed.into());
-        // };
 
         // replace old transaction
         proposal.tx = tx;

@@ -15,9 +15,8 @@ use light_bitcoin::{
 
 use xp_gateway_bitcoin::{AccountExtractor, BtcTxMetaType, BtcTxType, BtcTxTypeDetector};
 
-use crate::mock::*;
-
 use crate::{
+    mock::*,
     tx::process_tx,
     types::{
         BtcDepositCache, BtcRelayedTxInfo, BtcTxResult, BtcTxState, BtcWithdrawalProposal,
