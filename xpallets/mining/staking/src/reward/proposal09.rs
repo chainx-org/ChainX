@@ -19,7 +19,7 @@ impl<T: Config> Pallet<T> {
                 let r = x / total;
                 assert!(
                     r < u128::from(u64::max_value()),
-                    "reward of per validator definitely less than u64::max_value()"
+                    "reward of per validator definitely less than u64::MAX"
                 );
                 r.saturated_into::<BalanceOf<T>>()
             }
@@ -51,10 +51,10 @@ impl<T: Config> Pallet<T> {
         let asset_mining_info = T::AssetMining::asset_mining_power();
 
         // [PASS*] No risk of sum overflow practically.
-        //        u128::max_value() / u128::from(u64::max_value()) / u128::from(u32::max_value())
-        //      = 4294967297 > u32::max_value() = 4294967295
-        //        which means even we have u32::max_value() mining assets and each power of them
-        //        is u32::max_value(), the computation of sum() here won't overflow.
+        //        u128::MAX / u128::from(u64::max_value()) / u128::from(u32::max_value())
+        //      = 4294967297 > u32::MAX = 4294967295
+        //        which means even we have u32::MAX mining assets and each power of them
+        //        is u32::MAX, the computation of sum() here won't overflow.
         let mut total_power: u128 = asset_mining_info.iter().map(|(_, power)| power).sum();
 
         let mut total_reward = total_reward;

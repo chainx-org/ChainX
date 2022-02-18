@@ -140,10 +140,10 @@ impl<T: Config> Pallet<T> {
             };
 
             if !volume.is_zero() {
-                if volume < u128::max_value() {
+                if volume < u128::MAX {
                     Ok(volume.saturated_into::<BalanceOf<T>>())
                 } else {
-                    panic!("the value of converted quote currency definitely less than u128::max_value()")
+                    panic!("the value of converted quote currency definitely less than u128::MAX")
                 }
             } else {
                 Err(Error::<T>::VolumeTooSmall)

@@ -71,33 +71,41 @@ pub mod pallet {
     pub trait Config:
         frame_system::Config + pallet_elections_phragmen::Config + xpallet_gateway_records::Config
     {
+        /// The overarching event type.
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
+        /// Handle validator info.
         type Validator: Validator<Self::AccountId>;
 
+        /// Help to calculate multisig.
         type DetermineMultisigAddress: MultisigAddressFor<Self::AccountId>;
 
+        /// A majority of the council can excute some transactions.
         type CouncilOrigin: EnsureOrigin<Self::Origin>;
 
-        // for bitcoin
-        // chain info
+        /// Get btc chain info
         type Bitcoin: ChainT<BalanceOf<Self>>;
-        // generate trustee session info
+
+        // Generate btc trustee session info
         type BitcoinTrustee: TrusteeForChain<
             Self::AccountId,
             Self::BlockNumber,
             trustees::bitcoin::BtcTrusteeType,
             trustees::bitcoin::BtcTrusteeAddrInfo,
         >;
-        // get trustee session info
+
+        /// Get trustee session info
         type BitcoinTrusteeSessionProvider: TrusteeSession<
             Self::AccountId,
             Self::BlockNumber,
             trustees::bitcoin::BtcTrusteeAddrInfo,
         >;
-        // xassets total issue + pending deposit
+
+        /// When the trust changes, the total supply of btc: total issue + pending deposit. Help
+        /// to the allocation of btc withdrawal fees
         type BitcoinTotalSupply: TotalSupply<BalanceOf<Self>>;
 
+        /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
     }
 
@@ -467,9 +475,9 @@ pub mod pallet {
             origin: OriginFor<T>,
             duration: T::BlockNumber,
         ) -> DispatchResult {
-            if T::CouncilOrigin::ensure_origin(origin.clone()).is_err() {
-                ensure_root(origin)?;
-            };
+            T::CouncilOrigin::try_origin(origin)
+                .map(|_| ())
+                .or_else(ensure_root)?;
 
             TrusteeTransitionDuration::<T>::put(duration);
             Ok(())

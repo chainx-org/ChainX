@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use sp_runtime::RuntimeDebug;
 use sp_std::{convert::TryFrom, fmt, prelude::Vec};
 
-use super::{TrusteeMultisigProvider, TrusteeSessionManager};
+use super::TrusteeSessionManager;
 use crate::{
     traits::ChainProvider,
     types::{TrusteeIntentionProps, TrusteeSessionInfo},
@@ -19,7 +19,6 @@ pub type BtcTrusteeSessionInfo<AccountId, BlockNumber> =
     TrusteeSessionInfo<AccountId, BlockNumber, BtcTrusteeAddrInfo>;
 pub type BtcTrusteeIntentionProps<AccountId> = TrusteeIntentionProps<AccountId, BtcTrusteeType>;
 pub type BtcTrusteeSessionManager<T> = TrusteeSessionManager<T, BtcTrusteeAddrInfo>;
-pub type BtcTrusteeMultisig<T> = TrusteeMultisigProvider<T, BtcTrusteeType>;
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]

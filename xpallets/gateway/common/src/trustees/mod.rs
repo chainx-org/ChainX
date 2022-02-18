@@ -5,15 +5,16 @@ pub mod bitcoin;
 use frame_support::{
     dispatch::DispatchError,
     log::{error, warn},
-    traits::SortedMembers,
 };
-use sp_runtime::traits::{CheckedDiv, Saturating, Zero};
-use sp_runtime::SaturatedConversion;
+use sp_runtime::{
+    traits::{CheckedDiv, Saturating, Zero},
+    SaturatedConversion,
+};
 use sp_std::{convert::TryFrom, marker::PhantomData, prelude::*};
+
 use xp_assets_registrar::Chain;
 use xp_protocol::X_BTC;
 use xpallet_assets::BalanceOf;
-use xpallet_support::traits::MultiSig;
 
 use crate::{
     traits::{BytesLike, ChainProvider, TrusteeInfoUpdate, TrusteeSession},
@@ -80,7 +81,7 @@ impl<T: Config, TrusteeAddress: BytesLike + ChainProvider>
         let chain = TrusteeAddress::chain();
         let number = match Pallet::<T>::trustee_session_info_len(chain).checked_sub(1) {
             Some(r) => r,
-            None => u32::max_value(),
+            None => u32::MAX,
         };
         Self::trustee_session(number).map_err(|err| {
             warn!(
@@ -103,29 +104,10 @@ impl<T: Config, TrusteeAddress: BytesLike + ChainProvider>
     }
 }
 
-pub struct TrusteeMultisigProvider<T: Config, C: ChainProvider>(PhantomData<T>, PhantomData<C>);
-impl<T: Config, C: ChainProvider> TrusteeMultisigProvider<T, C> {
-    pub fn new() -> Self {
-        TrusteeMultisigProvider::<_, _>(Default::default(), Default::default())
-    }
-}
-
-impl<T: Config, C: ChainProvider> MultiSig<T::AccountId> for TrusteeMultisigProvider<T, C> {
-    fn multisig() -> T::AccountId {
-        Pallet::<T>::trustee_multisig_addr(C::chain())
-    }
-}
-
-impl<T: Config, C: ChainProvider> SortedMembers<T::AccountId> for TrusteeMultisigProvider<T, C> {
-    fn sorted_members() -> Vec<T::AccountId> {
-        vec![Self::multisig()]
-    }
-}
-
 impl<T: Config> TrusteeInfoUpdate for Pallet<T> {
     fn update_transition_status(status: bool, trans_amount: Option<u64>) {
         // The renewal of the trustee is completed, the current trustee information is replaced
-        // and the number of multiple signings is archived.
+        // and the number of multiple signings is archived. Currently only supports bitcoin
         if Self::trustee_transition_status() && !status {
             let last_session_num = Self::trustee_session_info_len(Chain::Bitcoin).saturating_sub(1);
             TrusteeSessionInfoOf::<T>::mutate(
