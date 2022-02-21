@@ -66,7 +66,7 @@ impl<T: Config, TrusteeAddress: BytesLike + ChainProvider>
             .trustee_list
             .iter()
             .filter_map(|info| {
-                match Pallet::<T>::trustee_intention_props_of(&info.0, Chain::Bitcoin) {
+                match Pallet::<T>::trustee_intention_props_of(&info.0, TrusteeAddress::chain()) {
                     None => None,
                     Some(n) => n.0.proxy_account,
                 }
@@ -107,67 +107,61 @@ impl<T: Config> TrusteeInfoUpdate for Pallet<T> {
     fn update_transition_status(chain: Chain, status: bool, trans_amount: Option<u64>) {
         // The renewal of the trustee is completed, the current trustee information is replaced
         // and the number of multiple signings is archived. Currently only supports bitcoin
-        if Self::trustee_transition_status(chain) && !status {
-            let last_session_num = Self::trustee_session_info_len(Chain::Bitcoin).saturating_sub(1);
-            TrusteeSessionInfoOf::<T>::mutate(
-                Chain::Bitcoin,
-                last_session_num,
-                |info| match info {
-                    None => {
-                        warn!(
-                            target: "runtime::gateway::common",
-                            "[last_trustee_session] Last trustee session not exist for chain:{:?}, session_num:{}",
-                            Chain::Bitcoin, last_session_num
-                        );
+        if chain == Chain::Bitcoin && Self::trustee_transition_status(chain) && !status {
+            let last_session_num = Self::trustee_session_info_len(chain).saturating_sub(1);
+            TrusteeSessionInfoOf::<T>::mutate(chain, last_session_num, |info| match info {
+                None => {
+                    warn!(
+                        target: "runtime::gateway::common",
+                        "[last_trustee_session] Last trustee session not exist for chain:{:?}, session_num:{}",
+                        chain, last_session_num
+                    );
+                }
+                Some(trustee) => {
+                    for i in 0..trustee.0.trustee_list.len() {
+                        trustee.0.trustee_list[i].1 =
+                            Self::trustee_sig_record(chain, &trustee.0.trustee_list[i].0);
                     }
-                    Some(trustee) => {
-                        for i in 0..trustee.0.trustee_list.len() {
-                            trustee.0.trustee_list[i].1 =
-                                Self::trustee_sig_record(chain, &trustee.0.trustee_list[i].0);
-                        }
-                        let total_apply = Self::pre_total_supply(chain, last_session_num);
+                    let total_apply = Self::pre_total_supply(chain, last_session_num);
 
-                        let reward_amount = trans_amount
-                            .unwrap_or(0u64)
-                            .saturated_into::<BalanceOf<T>>()
-                            .saturating_sub(total_apply)
-                            .max(0u64.saturated_into())
-                            .saturating_mul(6u64.saturated_into())
-                            .checked_div(&10u64.saturated_into::<BalanceOf<T>>())
-                            .unwrap_or_else(|| 0u64.saturated_into());
+                    let reward_amount = trans_amount
+                        .unwrap_or(0u64)
+                        .saturated_into::<BalanceOf<T>>()
+                        .saturating_sub(total_apply)
+                        .max(0u64.saturated_into())
+                        .saturating_mul(6u64.saturated_into())
+                        .checked_div(&10u64.saturated_into::<BalanceOf<T>>())
+                        .unwrap_or_else(|| 0u64.saturated_into());
 
-                        if let Some(multi_account) = trustee.0.multi_account.clone() {
-                            if !reward_amount.is_zero() {
-                                match xpallet_assets::Pallet::<T>::issue(
-                                    &X_BTC,
-                                    &multi_account,
-                                    reward_amount,
-                                ) {
-                                    Ok(()) => {
-                                        Pallet::<T>::deposit_event(
-                                            Event::<T>::TransferAssetReward(
-                                                multi_account,
-                                                X_BTC,
-                                                reward_amount,
-                                            ),
-                                        );
-                                    }
-                                    Err(err) => {
-                                        error!(
-                                            target: "runtime::bitcoin",
-                                            "[deposit_token] Deposit error:{:?}, must use root to fix it",
-                                            err
-                                        );
-                                    }
-                                };
-                            }
+                    if let Some(multi_account) = trustee.0.multi_account.clone() {
+                        if !reward_amount.is_zero() {
+                            match xpallet_assets::Pallet::<T>::issue(
+                                &X_BTC,
+                                &multi_account,
+                                reward_amount,
+                            ) {
+                                Ok(()) => {
+                                    Pallet::<T>::deposit_event(Event::<T>::TransferAssetReward(
+                                        multi_account,
+                                        X_BTC,
+                                        reward_amount,
+                                    ));
+                                }
+                                Err(err) => {
+                                    warn!(
+                                        target: "runtime::gateway::common",
+                                        "[issue] Issue fail:{:?}!",
+                                        err
+                                    );
+                                }
+                            };
                         }
-                        let end_height = frame_system::Pallet::<T>::block_number();
-                        trustee.0.end_height = Some(end_height);
                     }
-                },
-            );
-            TrusteeSigRecord::<T>::remove_all(None);
+                    let end_height = frame_system::Pallet::<T>::block_number();
+                    trustee.0.end_height = Some(end_height);
+                }
+            });
+            TrusteeSigRecord::<T>::remove_prefix(chain, None);
         }
 
         TrusteeTransitionStatus::<T>::insert(chain, status);
