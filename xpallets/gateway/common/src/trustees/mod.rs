@@ -19,8 +19,7 @@ use xpallet_assets::BalanceOf;
 use crate::{
     traits::{BytesLike, ChainProvider, TrusteeInfoUpdate, TrusteeSession},
     types::TrusteeSessionInfo,
-    Config, Error, Event, Pallet, PreTotalSupply, TrusteeSessionInfoOf, TrusteeSigRecord,
-    TrusteeTransitionStatus,
+    Config, Error, Event, Pallet, TrusteeSessionInfoOf, TrusteeSigRecord, TrusteeTransitionStatus,
 };
 
 pub struct TrusteeSessionManager<T: Config, TrusteeAddress>(
@@ -94,7 +93,7 @@ impl<T: Config, TrusteeAddress: BytesLike + ChainProvider>
     }
 
     fn trustee_transition_state() -> bool {
-        Pallet::<T>::trustee_transition_status()
+        Pallet::<T>::trustee_transition_status(TrusteeAddress::chain())
     }
 
     #[cfg(feature = "std")]
@@ -105,10 +104,10 @@ impl<T: Config, TrusteeAddress: BytesLike + ChainProvider>
 }
 
 impl<T: Config> TrusteeInfoUpdate for Pallet<T> {
-    fn update_transition_status(status: bool, trans_amount: Option<u64>) {
+    fn update_transition_status(chain: Chain, status: bool, trans_amount: Option<u64>) {
         // The renewal of the trustee is completed, the current trustee information is replaced
         // and the number of multiple signings is archived. Currently only supports bitcoin
-        if Self::trustee_transition_status() && !status {
+        if Self::trustee_transition_status(chain) && !status {
             let last_session_num = Self::trustee_session_info_len(Chain::Bitcoin).saturating_sub(1);
             TrusteeSessionInfoOf::<T>::mutate(
                 Chain::Bitcoin,
@@ -124,9 +123,9 @@ impl<T: Config> TrusteeInfoUpdate for Pallet<T> {
                     Some(trustee) => {
                         for i in 0..trustee.0.trustee_list.len() {
                             trustee.0.trustee_list[i].1 =
-                                Self::trustee_sig_record(&trustee.0.trustee_list[i].0);
+                                Self::trustee_sig_record(chain, &trustee.0.trustee_list[i].0);
                         }
-                        let total_apply = Self::pre_total_supply(X_BTC);
+                        let total_apply = Self::pre_total_supply(chain, last_session_num);
 
                         let reward_amount = trans_amount
                             .unwrap_or(0u64)
@@ -145,7 +144,6 @@ impl<T: Config> TrusteeInfoUpdate for Pallet<T> {
                                     reward_amount,
                                 ) {
                                     Ok(()) => {
-                                        PreTotalSupply::<T>::remove(X_BTC);
                                         Pallet::<T>::deposit_event(
                                             Event::<T>::TransferAssetReward(
                                                 multi_account,
@@ -172,24 +170,24 @@ impl<T: Config> TrusteeInfoUpdate for Pallet<T> {
             TrusteeSigRecord::<T>::remove_all(None);
         }
 
-        TrusteeTransitionStatus::<T>::put(status);
+        TrusteeTransitionStatus::<T>::insert(chain, status);
     }
 
-    fn update_trustee_sig_record(script: &[u8], withdraw_amount: u64) {
-        let signed_trustees = Self::agg_pubkey_info(script);
+    fn update_trustee_sig_record(chain: Chain, script: &[u8], withdraw_amount: u64) {
+        let signed_trustees = Self::agg_pubkey_info(chain, script);
         signed_trustees.into_iter().for_each(|trustee| {
-            let amount = if trustee == Self::trustee_admin() {
+            let amount = if trustee == Self::trustee_admin(chain) {
                 withdraw_amount
-                    .saturating_mul(Self::trustee_admin_multiply())
+                    .saturating_mul(Self::trustee_admin_multiply(chain))
                     .checked_div(10)
                     .unwrap_or(0)
             } else {
                 withdraw_amount
             };
-            if TrusteeSigRecord::<T>::contains_key(&trustee) {
-                TrusteeSigRecord::<T>::mutate(&trustee, |record| *record += amount);
+            if TrusteeSigRecord::<T>::contains_key(chain, &trustee) {
+                TrusteeSigRecord::<T>::mutate(chain, &trustee, |record| *record += amount);
             } else {
-                TrusteeSigRecord::<T>::insert(trustee, amount);
+                TrusteeSigRecord::<T>::insert(chain, trustee, amount);
             }
         });
     }

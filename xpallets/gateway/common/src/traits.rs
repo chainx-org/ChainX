@@ -92,15 +92,15 @@ impl<AccountId, BlockNumber, TrusteeAddress: BytesLike>
 
 pub trait TrusteeInfoUpdate {
     /// Update the trustee trasition status when the renewal of the trustee is completed
-    fn update_transition_status(status: bool, trans_amount: Option<u64>);
+    fn update_transition_status(chain: Chain, status: bool, trans_amount: Option<u64>);
     /// Each withdrawal is completed to record the weight of the signer
-    fn update_trustee_sig_record(script: &[u8], withdraw_amout: u64);
+    fn update_trustee_sig_record(chain: Chain, script: &[u8], withdraw_amout: u64);
 }
 
 impl TrusteeInfoUpdate for () {
-    fn update_transition_status(_: bool, _: Option<u64>) {}
+    fn update_transition_status(_: Chain, _: bool, _: Option<u64>) {}
 
-    fn update_trustee_sig_record(_: &[u8], _: u64) {}
+    fn update_trustee_sig_record(_: Chain, _: &[u8], _: u64) {}
 }
 
 pub trait ReferralBinding<AccountId> {

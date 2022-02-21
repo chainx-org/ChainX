@@ -187,12 +187,12 @@ pub mod pallet {
             // or the trustee is in little black house
             ensure!(
                 Self::generate_trustee_pool().contains(&who)
-                    || Self::little_black_house().contains(&who),
+                    || Self::little_black_house(chain).contains(&who),
                 Error::<T>::NotTrusteePreselectedMember
             );
 
             ensure!(
-                Self::ensure_not_current_trustee(&who) && !Self::trustee_transition_status(),
+                Self::ensure_not_current_trustee(&who) && !Self::trustee_transition_status(chain),
                 Error::<T>::ExistCurrentTrustee
             );
 
@@ -201,10 +201,13 @@ pub mod pallet {
 
         /// Manual execution of the election by admin.
         #[pallet::weight(100_000_000u64)]
-        pub fn host_trustee_election(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+        pub fn excute_trustee_election(
+            origin: OriginFor<T>,
+            chain: Chain,
+        ) -> DispatchResultWithPostInfo {
             match ensure_signed(origin.clone()) {
                 Ok(who) => {
-                    if who != Self::trustee_admin() {
+                    if who != Self::trustee_admin(chain) {
                         return Err(Error::<T>::NotTrusteeAdmin.into());
                     }
                 }
@@ -213,7 +216,7 @@ pub mod pallet {
                 }
             };
 
-            Self::do_trustee_election()?;
+            Self::do_trustee_election(chain)?;
             Ok(Pays::No.into())
         }
 
@@ -229,11 +232,12 @@ pub mod pallet {
         #[pallet::weight(100_000_000u64)]
         pub fn move_trust_into_black_room(
             origin: OriginFor<T>,
+            chain: Chain,
             trustees: Option<Vec<T::AccountId>>,
         ) -> DispatchResultWithPostInfo {
             match ensure_signed(origin.clone()) {
                 Ok(who) => {
-                    if who != Self::trustee_admin() {
+                    if who != Self::trustee_admin(chain) {
                         return Err(Error::<T>::NotTrusteeAdmin.into());
                     }
                 }
@@ -249,19 +253,19 @@ pub mod pallet {
             );
 
             if let Some(trustees) = trustees {
-                LittleBlackHouse::<T>::mutate(|l| {
+                LittleBlackHouse::<T>::mutate(chain, |l| {
                     for trustee in trustees.iter() {
                         l.push(trustee.clone());
                     }
                 });
                 trustees.into_iter().for_each(|trustee| {
-                    if TrusteeSigRecord::<T>::contains_key(&trustee) {
-                        TrusteeSigRecord::<T>::mutate(&trustee, |record| *record = 0);
+                    if TrusteeSigRecord::<T>::contains_key(chain, &trustee) {
+                        TrusteeSigRecord::<T>::mutate(chain, &trustee, |record| *record = 0);
                     }
                 });
             }
 
-            Self::do_trustee_election()?;
+            Self::do_trustee_election(chain)?;
             Ok(Pays::No.into())
         }
 
@@ -274,11 +278,12 @@ pub mod pallet {
         #[pallet::weight(100_000_000u64)]
         pub fn move_trust_out_black_room(
             origin: OriginFor<T>,
+            chain: Chain,
             members: Vec<T::AccountId>,
         ) -> DispatchResultWithPostInfo {
             match ensure_signed(origin.clone()) {
                 Ok(who) => {
-                    if who != Self::trustee_admin() {
+                    if who != Self::trustee_admin(chain) {
                         return Err(Error::<T>::NotTrusteeAdmin.into());
                     }
                 }
@@ -293,8 +298,8 @@ pub mod pallet {
                 members
             );
             members.into_iter().for_each(|member| {
-                if Self::little_black_house().contains(&member) {
-                    LittleBlackHouse::<T>::mutate(|house| house.retain(|a| *a != member));
+                if Self::little_black_house(chain).contains(&member) {
+                    LittleBlackHouse::<T>::mutate(chain, |house| house.retain(|a| *a != member));
                 }
             });
 
@@ -312,11 +317,15 @@ pub mod pallet {
         /// circumstances to not renew), but they want to receive
         /// their award early, they can call this through the council.
         #[pallet::weight(< T as Config >::WeightInfo::claim_trustee_reward())]
-        pub fn claim_trustee_reward(origin: OriginFor<T>, session_num: i32) -> DispatchResult {
+        pub fn claim_trustee_reward(
+            origin: OriginFor<T>,
+            chain: Chain,
+            session_num: i32,
+        ) -> DispatchResult {
             let session_num: u32 = if session_num < 0 {
                 match session_num {
-                    -1i32 => Self::trustee_session_info_len(Chain::Bitcoin),
-                    -2i32 => Self::trustee_session_info_len(Chain::Bitcoin)
+                    -1i32 => Self::trustee_session_info_len(chain),
+                    -2i32 => Self::trustee_session_info_len(chain)
                         .checked_sub(1)
                         .ok_or(Error::<T>::InvalidSessionNum)?,
                     _ => return Err(Error::<T>::InvalidSessionNum.into()),
@@ -330,10 +339,10 @@ pub mod pallet {
             if current_session_info == session_info {
                 T::CouncilOrigin::ensure_origin(origin)?;
                 // update trustee sig record info (update reward weight)
-                TrusteeSessionInfoOf::<T>::mutate(Chain::Bitcoin, session_num, |info| {
+                TrusteeSessionInfoOf::<T>::mutate(chain, session_num, |info| {
                     if let Some(info) = info {
                         info.0.trustee_list.iter_mut().for_each(|trustee| {
-                            trustee.1 = Self::trustee_sig_record(&trustee.0);
+                            trustee.1 = Self::trustee_sig_record(chain, &trustee.0);
                         });
                     }
                 });
@@ -354,11 +363,11 @@ pub mod pallet {
         ///
         /// This is called by the root.
         #[pallet::weight(0)]
-        pub fn force_trustee_election(origin: OriginFor<T>) -> DispatchResult {
+        pub fn force_trustee_election(origin: OriginFor<T>, chain: Chain) -> DispatchResult {
             T::CouncilOrigin::try_origin(origin)
                 .map(|_| ())
                 .or_else(ensure_root)?;
-            Self::update_transition_status(false, None);
+            Self::update_transition_status(chain, false, None);
 
             Ok(())
         }
@@ -408,7 +417,7 @@ pub mod pallet {
                 .map(|_| ())
                 .or_else(ensure_root)?;
 
-            TrusteeTransitionStatus::<T>::put(false);
+            TrusteeTransitionStatus::<T>::insert(chain, false);
             Self::cancel_trustee_transition_impl(chain)?;
             Ok(())
         }
@@ -433,12 +442,16 @@ pub mod pallet {
         /// In order to incentivize trust administrators, a weighted multiplier
         /// for award distribution to trust administrators is set.
         #[pallet::weight(0)]
-        pub fn set_trustee_admin_multiply(origin: OriginFor<T>, multiply: u64) -> DispatchResult {
+        pub fn set_trustee_admin_multiply(
+            origin: OriginFor<T>,
+            chain: Chain,
+            multiply: u64,
+        ) -> DispatchResult {
             T::CouncilOrigin::try_origin(origin)
                 .map(|_| ())
                 .or_else(ensure_root)?;
 
-            TrusteeAdminMultiply::<T>::put(multiply);
+            TrusteeAdminMultiply::<T>::insert(chain, multiply);
             Ok(())
         }
 
@@ -465,21 +478,7 @@ pub mod pallet {
                     Error::<T>::NotRegistered.into()
                 },
             )?;
-            TrusteeAdmin::<T>::put(admin);
-            Ok(())
-        }
-
-        /// Dangerous! Be careful to set TrusteeTransitionDuration
-        #[pallet::weight(0)]
-        pub fn change_trustee_transition_duration(
-            origin: OriginFor<T>,
-            duration: T::BlockNumber,
-        ) -> DispatchResult {
-            T::CouncilOrigin::try_origin(origin)
-                .map(|_| ())
-                .or_else(ensure_root)?;
-
-            TrusteeTransitionDuration::<T>::put(duration);
+            TrusteeAdmin::<T>::insert(chain, admin);
             Ok(())
         }
     }
@@ -555,25 +554,6 @@ pub mod pallet {
     pub type TrusteeMultiSigAddr<T: Config> =
         StorageMap<_, Twox64Concat, Chain, T::AccountId, ValueQuery>;
 
-    #[pallet::storage]
-    #[pallet::getter(fn trustee_admin)]
-    pub type TrusteeAdmin<T: Config> = StorageValue<_, T::AccountId, ValueQuery>;
-
-    #[pallet::storage]
-    #[pallet::getter(fn trustee_admin_multiply)]
-    pub type TrusteeAdminMultiply<T: Config> =
-        StorageValue<_, u64, ValueQuery, DefaultForTrusteeAdminMultiply>;
-
-    #[pallet::type_value]
-    pub fn DefaultForTrusteeAdminMultiply() -> u64 {
-        11
-    }
-
-    #[pallet::storage]
-    #[pallet::getter(fn trustee_sig_record)]
-    pub type TrusteeSigRecord<T: Config> =
-        StorageMap<_, Twox64Concat, T::AccountId, u64, ValueQuery>;
-
     /// Trustee info config of the corresponding chain.
     #[pallet::storage]
     #[pallet::getter(fn trustee_info_config_of)]
@@ -620,13 +600,6 @@ pub mod pallet {
         GenericTrusteeIntentionProps<T::AccountId>,
     >;
 
-    /// Each aggregated public key corresponds to a set of trustees used
-    /// to confirm a set of trustees for processing withdrawals.
-    #[pallet::storage]
-    #[pallet::getter(fn agg_pubkey_info)]
-    pub type AggPubkeyInfo<T: Config> =
-        StorageMap<_, Twox64Concat, Vec<u8>, Vec<T::AccountId>, ValueQuery>;
-
     /// The account of the corresponding chain and chain address.
     #[pallet::storage]
     pub type AddressBindingOf<T: Config> =
@@ -650,16 +623,44 @@ pub mod pallet {
     pub type ReferralBindingOf<T: Config> =
         StorageDoubleMap<_, Blake2_128Concat, T::AccountId, Twox64Concat, Chain, T::AccountId>;
 
-    /// How long each trustee is kept. This defines the next block number at which an
-    /// trustee transition will happen. If set to zero, no trustee transition are ever triggered.
+    /// Each aggregated public key corresponds to a set of trustees used
+    /// to confirm a set of trustees for processing withdrawals.
     #[pallet::storage]
-    #[pallet::getter(fn trustee_transition_duration)]
-    pub type TrusteeTransitionDuration<T: Config> = StorageValue<_, T::BlockNumber, ValueQuery>;
+    #[pallet::getter(fn agg_pubkey_info)]
+    pub type AggPubkeyInfo<T: Config> = StorageDoubleMap<
+        _,
+        Twox64Concat,
+        Chain,
+        Twox64Concat,
+        Vec<u8>,
+        Vec<T::AccountId>,
+        ValueQuery,
+    >;
+
+    #[pallet::storage]
+    #[pallet::getter(fn trustee_admin)]
+    pub type TrusteeAdmin<T: Config> = StorageMap<_, Twox64Concat, Chain, T::AccountId, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn trustee_admin_multiply)]
+    pub type TrusteeAdminMultiply<T: Config> =
+        StorageMap<_, Twox64Concat, Chain, u64, ValueQuery, DefaultForTrusteeAdminMultiply>;
+
+    #[pallet::type_value]
+    pub fn DefaultForTrusteeAdminMultiply() -> u64 {
+        11
+    }
+
+    #[pallet::storage]
+    #[pallet::getter(fn trustee_sig_record)]
+    pub type TrusteeSigRecord<T: Config> =
+        StorageDoubleMap<_, Twox64Concat, Chain, Twox64Concat, T::AccountId, u64, ValueQuery>;
 
     /// The status of the of the trustee transition
     #[pallet::storage]
     #[pallet::getter(fn trustee_transition_status)]
-    pub type TrusteeTransitionStatus<T: Config> = StorageValue<_, bool, ValueQuery>;
+    pub type TrusteeTransitionStatus<T: Config> =
+        StorageMap<_, Twox64Concat, Chain, bool, ValueQuery>;
 
     /// Members not participating in trustee elections.
     ///
@@ -667,13 +668,14 @@ pub mod pallet {
     /// little black room. Filter out the member in the next trustee election
     #[pallet::storage]
     #[pallet::getter(fn little_black_house)]
-    pub type LittleBlackHouse<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
+    pub type LittleBlackHouse<T: Config> =
+        StorageMap<_, Twox64Concat, Chain, Vec<T::AccountId>, ValueQuery>;
 
-    /// When the trust exchange begins, the total cross-chain assets of a certain AssetId
+    /// Record the total number of cross-chain assets at the time of each trust exchange
     #[pallet::storage]
     #[pallet::getter(fn pre_total_supply)]
     pub type PreTotalSupply<T: Config> =
-        StorageMap<_, Twox64Concat, AssetId, BalanceOf<T>, ValueQuery>;
+        StorageDoubleMap<_, Twox64Concat, Chain, Twox64Concat, u32, BalanceOf<T>, ValueQuery>;
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
@@ -846,8 +848,8 @@ impl<T: Config> Pallet<T> {
         xp_runtime::xss_check(about)
     }
 
-    pub fn do_trustee_election() -> DispatchResult {
-        if Self::trustee_transition_status() {
+    pub fn do_trustee_election(chain: Chain) -> DispatchResult {
+        if Self::trustee_transition_status(chain) {
             return Err(Error::<T>::LastTransitionNotCompleted.into());
         }
 
@@ -859,7 +861,7 @@ impl<T: Config> Pallet<T> {
                 vec![]
             };
 
-        let filter_members: Vec<T::AccountId> = Self::little_black_house();
+        let filter_members: Vec<T::AccountId> = Self::little_black_house(chain);
 
         let all_trustee_pool = Self::generate_trustee_pool();
 
@@ -882,7 +884,7 @@ impl<T: Config> Pallet<T> {
             })
             .collect::<Vec<_>>();
 
-        LittleBlackHouse::<T>::put(remain_filter_members);
+        LittleBlackHouse::<T>::insert(chain, remain_filter_members);
 
         let desired_members =
             (<T as pallet_elections_phragmen::Config>::DesiredMembers::get() - 1) as usize;
@@ -907,9 +909,13 @@ impl<T: Config> Pallet<T> {
         }
         Self::transition_trustee_session_impl(Chain::Bitcoin, new_trustee_candidate)?;
         if Self::trustee_session_info_len(Chain::Bitcoin) != 1 {
-            TrusteeTransitionStatus::<T>::put(true);
+            TrusteeTransitionStatus::<T>::insert(Chain::Bitcoin, true);
             let total_supply = T::BitcoinTotalSupply::total_supply();
-            PreTotalSupply::<T>::insert(X_BTC, total_supply);
+            PreTotalSupply::<T>::insert(
+                Chain::Bitcoin,
+                Self::trustee_session_info_len(Chain::Bitcoin) - 1,
+                total_supply,
+            );
         }
         Ok(())
     }
@@ -987,11 +993,12 @@ impl<T: Config> Pallet<T> {
         AggPubkeyInfo::<T>::remove_all(None);
         for index in 0..info.1.agg_pubkeys.len() {
             AggPubkeyInfo::<T>::insert(
+                chain,
                 &info.1.agg_pubkeys[index],
                 info.1.personal_accounts[index].clone(),
             );
         }
-        TrusteeAdmin::<T>::kill();
+        TrusteeAdmin::<T>::remove(chain);
 
         Self::deposit_event(Event::<T>::TrusteeSetChanged(
             chain,
@@ -1013,7 +1020,7 @@ impl<T: Config> Pallet<T> {
         TrusteeSessionInfoLen::<T>::insert(chain, session_number);
         TrusteeMultiSigAddr::<T>::insert(chain, multi_account);
         Self::generate_aggpubkey_impl(chain, session_number)?;
-        TrusteeAdmin::<T>::kill();
+        TrusteeAdmin::<T>::remove(chain);
         Ok(())
     }
 
@@ -1029,6 +1036,7 @@ impl<T: Config> Pallet<T> {
 
         for index in 0..info.1.agg_pubkeys.len() {
             AggPubkeyInfo::<T>::insert(
+                chain,
                 &info.1.agg_pubkeys[index],
                 info.1.personal_accounts[index].clone(),
             );

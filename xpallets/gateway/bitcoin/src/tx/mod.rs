@@ -64,7 +64,7 @@ pub fn process_tx<T: Config>(
 fn trustee_transition<T: Config>(tx: Transaction) -> BtcTxResult {
     let amount = tx.outputs().iter().map(|output| output.value).sum::<u64>();
 
-    T::TrusteeInfoUpdate::update_transition_status(false, Some(amount));
+    T::TrusteeInfoUpdate::update_transition_status(Pallet::<T>::chain(), false, Some(amount));
 
     BtcTxResult::Success
 }
@@ -253,6 +253,7 @@ fn withdraw<T: Config>(tx: Transaction) -> BtcTxResult {
 
             // Record trustee signature
             T::TrusteeInfoUpdate::update_trustee_sig_record(
+                Pallet::<T>::chain(),
                 input.script_witness[1].as_slice(),
                 tx.outputs.iter().map(|info| info.value).sum(),
             );

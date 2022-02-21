@@ -95,7 +95,7 @@ fn new_trustees<T: Config>() -> Vec<(T::AccountId, Vec<u8>, Vec<u8>, Vec<u8>)> {
 
 /// removes all the storage items to reverse any genesis state.
 fn clean<T: Config>() {
-    <LittleBlackHouse<T>>::kill();
+    <LittleBlackHouse<T>>::remove_all(None);
     <TrusteeSessionInfoLen<T>>::remove_all(None);
     <TrusteeSessionInfoOf<T>>::remove_all(None);
 }
@@ -148,7 +148,7 @@ benchmarks! {
         let caller: T::AccountId = alice::<T>();
         clean::<T>();
         <TrusteeIntentionPropertiesOf<T>>::remove(caller.clone(), Chain::Bitcoin);
-        LittleBlackHouse::<T>::append(caller.clone());
+        LittleBlackHouse::<T>::mutate(Chain::Bitcoin, |acc| acc.push(caller.clone()));
         let hot = hex::decode("02df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6")
                 .unwrap();
         let cold = hex::decode("0386b58f51da9b37e59c40262153173bdb59d7e4e45b73994b99eec4d964ee7e88")
@@ -170,13 +170,6 @@ benchmarks! {
         assert_eq!(Pallet::<T>::trustee_info_config_of(Chain::Bitcoin), config);
     }
 
-    change_trustee_transition_duration {
-        let duration: T::BlockNumber = 100u32.into();
-    }: _(RawOrigin::Root, duration)
-    verify {
-        assert_eq!(Pallet::<T>::trustee_transition_duration(), duration);
-    }
-
     set_trustee_admin {
         let who: T::AccountId = alice::<T>();
         for (account, about, hot, cold) in new_trustees::<T>() {
@@ -185,14 +178,14 @@ benchmarks! {
         let chain = Chain::Bitcoin;
     }: _(RawOrigin::Root, who.clone(), chain)
     verify {
-        assert_eq!(Pallet::<T>::trustee_admin(), who);
+        assert_eq!(Pallet::<T>::trustee_admin(chain), who);
     }
 
     set_trustee_admin_multiply {
         let multiply = 12;
-    }: _(RawOrigin::Root, multiply)
+    }: _(RawOrigin::Root, Chain::Bitcoin, multiply)
     verify{
-        assert_eq!(Pallet::<T>::trustee_admin_multiply(), multiply);
+        assert_eq!(Pallet::<T>::trustee_admin_multiply(Chain::Bitcoin), multiply);
     }
 
     claim_trustee_reward {
@@ -228,7 +221,7 @@ benchmarks! {
         let reward: BalanceOf<T> = <T as xpallet_assets::Config>::Currency::free_balance(&caller).checked_div(&2u32.into()).unwrap();
         let multi_account = <T as crate::Config>::BitcoinTrusteeSessionProvider::trustee_session(session_num).unwrap().multi_account.unwrap();
         <T as xpallet_assets::Config>::Currency::deposit_creating(&multi_account, reward);
-    }: _(RawOrigin::Signed(caller.clone()), session_num as i32)
+    }: _(RawOrigin::Signed(caller.clone()), Chain::Bitcoin, session_num as i32)
     verify {
         #[cfg(not(feature = "runtime-benchmarks"))]
         assert_eq!(<T as xpallet_assets::Config>::Currency::free_balance(&trustee_info[0].0), 33333333u32.into());
@@ -248,7 +241,6 @@ mod tests {
             assert_ok!(Pallet::<Test>::test_benchmark_cancel_withdrawal());
             assert_ok!(Pallet::<Test>::test_benchmark_setup_trustee());
             assert_ok!(Pallet::<Test>::test_benchmark_set_trustee_info_config());
-            assert_ok!(Pallet::<Test>::test_benchmark_change_trustee_transition_duration());
             assert_ok!(Pallet::<Test>::test_benchmark_set_trustee_admin());
             assert_ok!(Pallet::<Test>::test_benchmark_set_trustee_admin_multiply());
             assert_ok!(Pallet::<Test>::test_benchmark_claim_trustee_reward());
