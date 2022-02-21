@@ -124,6 +124,7 @@ impl<T: Config> TrusteeInfoUpdate for Pallet<T> {
                     }
                     let total_apply = Self::pre_total_supply(chain, last_session_num);
 
+                    // 60% of the excess part of the withdrawal fee will be distributed to the trust as a reward
                     let reward_amount = trans_amount
                         .unwrap_or(0u64)
                         .saturated_into::<BalanceOf<T>>()
@@ -150,7 +151,7 @@ impl<T: Config> TrusteeInfoUpdate for Pallet<T> {
                                 Err(err) => {
                                     warn!(
                                         target: "runtime::gateway::common",
-                                        "[issue] Issue fail:{:?}!",
+                                        "[update_transition_status] Issue fail:{:?}!",
                                         err
                                     );
                                 }

@@ -186,7 +186,7 @@ pub mod pallet {
             );
 
             // committer must be in the trustee list
-            Self::ensure_trustee(&from)?;
+            Self::ensure_trustee_or_bot(&from)?;
 
             let tx = Self::deserialize_tx(tx.as_slice())?;
             log!(
@@ -292,6 +292,19 @@ pub mod pallet {
                 .map(|_| ())
                 .or_else(ensure_root)?;
             BtcMinDeposit::<T>::put(value);
+            Ok(())
+        }
+
+        /// Set coming bot
+        #[pallet::weight(<T as Config>::WeightInfo::set_coming_bot())]
+        pub fn set_coming_bot(origin: OriginFor<T>, bot: Option<T::AccountId>) -> DispatchResult {
+            T::CouncilOrigin::try_origin(origin)
+                .map(|_| ())
+                .or_else(ensure_root)?;
+            match bot {
+                None => ComingBot::<T>::kill(),
+                Some(n) => ComingBot::<T>::put(n),
+            }
             Ok(())
         }
     }
@@ -471,6 +484,11 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn verifier)]
     pub(crate) type Verifier<T: Config> = StorageValue<_, BtcTxVerifier, ValueQuery>;
+
+    /// Coming bot helps update btc withdrawal transaction status
+    #[pallet::storage]
+    #[pallet::getter(fn coming_bot)]
+    pub(crate) type ComingBot<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {

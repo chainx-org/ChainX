@@ -291,7 +291,12 @@ impl<T: Config> TrusteeForChain<T::AccountId, T::BlockNumber, BtcTrusteeType, Bt
 }
 
 impl<T: Config> Pallet<T> {
-    pub fn ensure_trustee(who: &T::AccountId) -> DispatchResult {
+    pub fn ensure_trustee_or_bot(who: &T::AccountId) -> DispatchResult {
+        match Self::coming_bot() {
+            Some(n) if &n == who => return Ok(()),
+            _ => (),
+        }
+
         if current_proxy_account::<T>()?.iter().any(|n| n == who) {
             return Ok(());
         }
@@ -306,7 +311,7 @@ impl<T: Config> Pallet<T> {
         } else {
             log!(
                 error,
-                "[ensure_trustee] Committer {:?} not in the trustee list:{:?}",
+                "[ensure_trustee_or_bot] Committer {:?} not in the trustee list:{:?}",
                 who,
                 trustee_session_info.trustee_list
             );

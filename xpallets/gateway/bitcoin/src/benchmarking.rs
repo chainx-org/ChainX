@@ -225,6 +225,12 @@ benchmarks! {
     }: _(RawOrigin::Root,  2000000)
     verify {
     }
+
+    set_coming_bot {
+        let caller = alice::<T>();
+    }: _(RawOrigin::Root,  Some(caller))
+    verify {
+    }
 }
 
 #[cfg(test)]
@@ -244,6 +250,7 @@ mod tests {
             assert_ok!(Pallet::<Test>::test_benchmark_remove_pending());
             assert_ok!(Pallet::<Test>::test_benchmark_set_btc_withdrawal_fee());
             assert_ok!(Pallet::<Test>::test_benchmark_set_btc_deposit_limit());
+            assert_ok!(Pallet::<Test>::test_benchmark_set_coming_bot());
         });
     }
 }

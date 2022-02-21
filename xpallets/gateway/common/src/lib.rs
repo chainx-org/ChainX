@@ -770,7 +770,7 @@ impl<T: Config> Pallet<T> {
             }
             _ => return Err(Error::<T>::NotSupportedChain.into()),
         };
-
+        // Proxy account, the current usage can be used to generate trust multi-signature accounts
         let proxy_account = if let Some(addr) = proxy_account {
             Some(addr)
         } else {
@@ -849,9 +849,10 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn do_trustee_election(chain: Chain) -> DispatchResult {
-        if Self::trustee_transition_status(chain) {
-            return Err(Error::<T>::LastTransitionNotCompleted.into());
-        }
+        ensure!(
+            !Self::trustee_transition_status(chain),
+            Error::<T>::LastTransitionNotCompleted
+        );
 
         // Current trustee list
         let old_trustee_candidate: Vec<T::AccountId> =
@@ -868,8 +869,7 @@ impl<T: Config> Pallet<T> {
         let new_trustee_pool: Vec<T::AccountId> = all_trustee_pool
             .iter()
             .filter_map(|who| {
-                match filter_members.contains(who) || !Self::ensure_set_address(who, Chain::Bitcoin)
-                {
+                match filter_members.contains(who) || !Self::ensure_set_address(who, chain) {
                     true => None,
                     false => Some(who.clone()),
                 }
@@ -889,9 +889,10 @@ impl<T: Config> Pallet<T> {
         let desired_members =
             (<T as pallet_elections_phragmen::Config>::DesiredMembers::get() - 1) as usize;
 
-        if new_trustee_pool.len() < desired_members {
-            return Err(Error::<T>::TrusteeMembersNotEnough.into());
-        }
+        ensure!(
+            new_trustee_pool.len() >= desired_members,
+            Error::<T>::TrusteeMembersNotEnough
+        );
 
         let new_trustee_candidate = new_trustee_pool[..desired_members].to_vec();
         let mut new_trustee_candidate_sorted = new_trustee_candidate.clone();
@@ -904,16 +905,19 @@ impl<T: Config> Pallet<T> {
                 &old_trustee_candidate_sorted,
                 &new_trustee_candidate_sorted,
             );
-        if incoming.is_empty() && outgoing.is_empty() {
-            return Err(Error::<T>::TrusteeMembersNotEnough.into());
-        }
-        Self::transition_trustee_session_impl(Chain::Bitcoin, new_trustee_candidate)?;
-        if Self::trustee_session_info_len(Chain::Bitcoin) != 1 {
-            TrusteeTransitionStatus::<T>::insert(Chain::Bitcoin, true);
+
+        ensure!(
+            !incoming.is_empty() || !outgoing.is_empty(),
+            Error::<T>::TrusteeMembersNotEnough
+        );
+
+        Self::transition_trustee_session_impl(chain, new_trustee_candidate)?;
+        if Self::trustee_session_info_len(chain) != 1 {
+            TrusteeTransitionStatus::<T>::insert(chain, true);
             let total_supply = T::BitcoinTotalSupply::total_supply();
             PreTotalSupply::<T>::insert(
-                Chain::Bitcoin,
-                Self::trustee_session_info_len(Chain::Bitcoin) - 1,
+                chain,
+                Self::trustee_session_info_len(chain) - 1,
                 total_supply,
             );
         }
@@ -980,13 +984,13 @@ impl<T: Config> Pallet<T> {
     ) -> DispatchResult {
         let mut info = Self::try_generate_session_info(chain, new_trustees)?;
         let multi_addr = Self::generate_multisig_addr(chain, &info.0)?;
+        info.0 .0.multi_account = Some(multi_addr.clone());
 
         let session_number = Self::trustee_session_info_len(chain)
             .checked_add(1)
             .unwrap_or(0u32);
 
         TrusteeSessionInfoLen::<T>::insert(chain, session_number);
-        info.0 .0.multi_account = Some(multi_addr.clone());
         TrusteeSessionInfoOf::<T>::insert(chain, session_number, info.0.clone());
         TrusteeMultiSigAddr::<T>::insert(chain, multi_addr);
         // Remove the information of the previous aggregate public key，Withdrawal is prohibited at this time.
@@ -1194,7 +1198,7 @@ impl<T: Config> Pallet<T> {
             None => return Err(Error::<T>::InvalidMultiAccount.into()),
             Some(n) => n,
         };
-
+        // alloc native reward
         match Self::alloc_native_reward(&multi_account, trustee_info) {
             Ok(total_native_reward) => {
                 if !total_native_reward.is_zero() {
@@ -1207,7 +1211,7 @@ impl<T: Config> Pallet<T> {
             }
             Err(e) => return Err(e),
         }
-
+        // alloc btc reward
         match Self::alloc_not_native_reward(&multi_account, X_BTC, trustee_info) {
             Ok(total_btc_reward) => {
                 if !total_btc_reward.is_zero() {
