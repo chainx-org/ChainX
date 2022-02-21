@@ -58,10 +58,6 @@ pub fn get_hot_trustee_address<T: Config>() -> Result<Address, DispatchError> {
         .and_then(|(addr_info, _)| Pallet::<T>::verify_btc_address(&addr_info.addr))
 }
 
-pub fn get_hot_trustee_redeem_script<T: Config>() -> Result<Script, DispatchError> {
-    current_trustee_addr_pair::<T>().map(|(addr_info, _)| addr_info.redeem_script.into())
-}
-
 #[inline]
 pub fn get_current_trustee_address_pair<T: Config>() -> Result<(Address, Address), DispatchError> {
     current_trustee_addr_pair::<T>().map(|(hot_info, cold_info)| {
@@ -244,7 +240,6 @@ impl<T: Config> TrusteeForChain<T::AccountId, T::BlockNumber, BtcTrusteeType, Bt
             agg_pubkeys.push(script.into());
             personal_accounts.push(accounts);
         }
-        // TODO：consider remove redeem_script
         let hot_trustee_addr_info: BtcTrusteeAddrInfo = BtcTrusteeAddrInfo {
             addr: hot_threshold_addr.to_string().into_bytes(),
             redeem_script: vec![],
@@ -371,26 +366,6 @@ impl<T: Config> Pallet<T> {
 
         Ok(())
     }
-
-    pub fn force_replace_withdraw_tx(tx: Transaction) -> DispatchResult {
-        let mut proposal: BtcWithdrawalProposal<T::AccountId> =
-            Self::withdrawal_proposal().ok_or(Error::<T>::NoProposal)?;
-
-        ensure!(
-            proposal.sig_state == VoteResult::Finish,
-            "Only allow force change finished vote"
-        );
-
-        // make sure withdrawal list is same as current proposal
-        let current_withdrawal_list = &proposal.withdrawal_id_list;
-        check_withdraw_tx_impl::<T>(&tx, current_withdrawal_list)?;
-
-        // replace old transaction
-        proposal.tx = tx;
-
-        WithdrawalProposal::<T>::put(proposal);
-        Ok(())
-    }
 }
 
 /// Get the required number of signatures
@@ -450,35 +425,6 @@ pub(crate) fn create_multi_address<T: Config>(
         addr: addr.to_string().into_bytes(),
         redeem_script: script_bytes.into(),
     })
-}
-
-/// Update the signature status of trustee
-/// state: false -> Veto signature, true -> Consent signature
-/// only allow inseRelayedTx once
-#[allow(dead_code)]
-fn insert_trustee_vote_state<T: Config>(
-    state: bool,
-    who: &T::AccountId,
-    trustee_list: &mut Vec<(T::AccountId, bool)>,
-) -> DispatchResult {
-    match trustee_list.iter_mut().find(|info| info.0 == *who) {
-        Some(_) => {
-            // if account is exist, override state
-            log!(error, "[insert_trustee_vote_state] {:?} has already vote for this withdrawal proposal, old vote:{}", who, state);
-            return Err(Error::<T>::DuplicateVote.into());
-        }
-        None => {
-            trustee_list.push((who.clone(), state));
-            log!(
-                debug,
-                "[insert_trustee_vote_state] Insert new vote, who:{:?}, state:{}",
-                who,
-                state
-            );
-        }
-    }
-    Pallet::<T>::deposit_event(Event::<T>::WithdrawalProposalVoted(who.clone(), state));
-    Ok(())
 }
 
 /// Check that the cash withdrawal transaction is correct
