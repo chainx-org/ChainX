@@ -200,16 +200,14 @@ pub mod pallet {
         }
 
         /// Manual execution of the election by admin.
-        #[pallet::weight(100_000_000u64)]
-        pub fn excute_trustee_election(
-            origin: OriginFor<T>,
-            chain: Chain,
-        ) -> DispatchResultWithPostInfo {
+        #[pallet::weight(0u64)]
+        pub fn excute_trustee_election(origin: OriginFor<T>, chain: Chain) -> DispatchResult {
             match ensure_signed(origin.clone()) {
                 Ok(who) => {
-                    if who != Self::trustee_admin(chain) {
-                        return Err(Error::<T>::NotTrusteeAdmin.into());
-                    }
+                    ensure!(
+                        who == Self::trustee_admin(chain),
+                        Error::<T>::NotTrusteeAdmin
+                    );
                 }
                 Err(_) => {
                     ensure_root(origin)?;
@@ -217,7 +215,21 @@ pub mod pallet {
             };
 
             Self::do_trustee_election(chain)?;
-            Ok(Pays::No.into())
+            Ok(())
+        }
+
+        /// Force cancel trustee transition
+        ///
+        /// This is called by the root.
+        #[pallet::weight(0u64)]
+        pub fn cancel_trustee_election(origin: OriginFor<T>, chain: Chain) -> DispatchResult {
+            T::CouncilOrigin::try_origin(origin)
+                .map(|_| ())
+                .or_else(ensure_root)?;
+
+            TrusteeTransitionStatus::<T>::insert(chain, false);
+            Self::cancel_trustee_transition_impl(chain)?;
+            Ok(())
         }
 
         /// Move a current trustee into a small black room.
@@ -229,17 +241,18 @@ pub mod pallet {
         /// # <weight>
         /// Since this is a root call and will go into trustee election, we assume full block for now.
         /// # </weight>
-        #[pallet::weight(100_000_000u64)]
+        #[pallet::weight(0u64)]
         pub fn move_trust_into_black_room(
             origin: OriginFor<T>,
             chain: Chain,
             trustees: Option<Vec<T::AccountId>>,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             match ensure_signed(origin.clone()) {
                 Ok(who) => {
-                    if who != Self::trustee_admin(chain) {
-                        return Err(Error::<T>::NotTrusteeAdmin.into());
-                    }
+                    ensure!(
+                        who == Self::trustee_admin(chain),
+                        Error::<T>::NotTrusteeAdmin
+                    );
                 }
                 Err(_) => {
                     ensure_root(origin)?;
@@ -266,7 +279,7 @@ pub mod pallet {
             }
 
             Self::do_trustee_election(chain)?;
-            Ok(Pays::No.into())
+            Ok(())
         }
 
         /// Move member out small black room.
@@ -275,17 +288,18 @@ pub mod pallet {
         /// # <weight>
         /// Since this is a root call and will go into trustee election, we assume full block for now.
         /// # </weight>
-        #[pallet::weight(100_000_000u64)]
+        #[pallet::weight(0u64)]
         pub fn move_trust_out_black_room(
             origin: OriginFor<T>,
             chain: Chain,
             members: Vec<T::AccountId>,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             match ensure_signed(origin.clone()) {
                 Ok(who) => {
-                    if who != Self::trustee_admin(chain) {
-                        return Err(Error::<T>::NotTrusteeAdmin.into());
-                    }
+                    ensure!(
+                        who == Self::trustee_admin(chain),
+                        Error::<T>::NotTrusteeAdmin
+                    );
                 }
                 Err(_) => {
                     ensure_root(origin)?;
@@ -303,7 +317,7 @@ pub mod pallet {
                 }
             });
 
-            Ok(Pays::No.into())
+            Ok(())
         }
 
         /// Assign trustee reward
@@ -362,7 +376,7 @@ pub mod pallet {
         /// Mandatory trustee renewal if the current trustee is not doing anything
         ///
         /// This is called by the root.
-        #[pallet::weight(0)]
+        #[pallet::weight(< T as Config >::WeightInfo::force_trustee_election())]
         pub fn force_trustee_election(origin: OriginFor<T>, chain: Chain) -> DispatchResult {
             T::CouncilOrigin::try_origin(origin)
                 .map(|_| ())
@@ -375,7 +389,7 @@ pub mod pallet {
         /// Force update trustee info
         ///
         /// This is called by the root.
-        #[pallet::weight(0)]
+        #[pallet::weight(< T as Config >::WeightInfo::force_update_trustee())]
         pub fn force_update_trustee(
             origin: OriginFor<T>,
             who: T::AccountId,
@@ -394,7 +408,7 @@ pub mod pallet {
         }
 
         /// Set the referral binding of corresponding chain and account.
-        #[pallet::weight(0)]
+        #[pallet::weight(< T as Config >::WeightInfo::force_set_referral_binding())]
         pub fn force_set_referral_binding(
             origin: OriginFor<T>,
             chain: Chain,
@@ -408,24 +422,10 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Force cancel trustee transition
-        ///
-        /// This is called by the root.
-        #[pallet::weight(0)]
-        pub fn cancel_trustee_election(origin: OriginFor<T>, chain: Chain) -> DispatchResult {
-            T::CouncilOrigin::try_origin(origin)
-                .map(|_| ())
-                .or_else(ensure_root)?;
-
-            TrusteeTransitionStatus::<T>::insert(chain, false);
-            Self::cancel_trustee_transition_impl(chain)?;
-            Ok(())
-        }
-
         /// Set the config of trustee information.
         ///
         /// This is a root-only operation.
-        #[pallet::weight(0)]
+        #[pallet::weight(< T as Config >::WeightInfo::set_trustee_info_config())]
         pub fn set_trustee_info_config(
             origin: OriginFor<T>,
             chain: Chain,
@@ -441,7 +441,7 @@ pub mod pallet {
         ///
         /// In order to incentivize trust administrators, a weighted multiplier
         /// for award distribution to trust administrators is set.
-        #[pallet::weight(0)]
+        #[pallet::weight(< T as Config >::WeightInfo::set_trustee_admin_multiply())]
         pub fn set_trustee_admin_multiply(
             origin: OriginFor<T>,
             chain: Chain,
@@ -458,7 +458,7 @@ pub mod pallet {
         /// Set the trustee admin.
         ///
         /// The trustee admin is the account who can change the trustee list.
-        #[pallet::weight(0)]
+        #[pallet::weight(< T as Config >::WeightInfo::set_trustee_admin())]
         pub fn set_trustee_admin(
             origin: OriginFor<T>,
             admin: T::AccountId,
@@ -743,9 +743,10 @@ impl<T: Config> Pallet<T> {
         // to export `WithdrawalLimit` for an asset.
         let limit = Self::withdrawal_limit(&asset_id)?;
         // withdrawal value should larger than minimal_withdrawal, allow equal
-        if value < limit.minimal_withdrawal {
-            return Err(Error::<T>::InvalidWithdrawal.into());
-        }
+        ensure!(
+            value >= limit.minimal_withdrawal,
+            Error::<T>::InvalidWithdrawal
+        );
         Ok(())
     }
 }
@@ -841,9 +842,7 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn is_valid_about(about: &[u8]) -> DispatchResult {
-        if about.len() > 128 {
-            return Err(Error::<T>::InvalidAboutLen.into());
-        }
+        ensure!(about.len() <= 128, Error::<T>::InvalidAboutLen);
 
         xp_runtime::xss_check(about)
     }
@@ -1086,9 +1085,7 @@ impl<T: Config> Pallet<T> {
         let find_duplicated = Self::trustee_multisigs()
             .into_iter()
             .any(|(c, multisig)| multi_addr == multisig && c == chain);
-        if find_duplicated {
-            return Err(Error::<T>::InvalidMultisig.into());
-        }
+        ensure!(!find_duplicated, Error::<T>::InvalidMultisig);
         Ok(multi_addr)
     }
 

@@ -2,10 +2,7 @@
 extern crate alloc;
 
 use alloc::string::ToString;
-use frame_support::{
-    dispatch::{DispatchError, DispatchResult},
-    ensure,
-};
+use frame_support::dispatch::{DispatchError, DispatchResult};
 use sp_runtime::SaturatedConversion;
 use sp_std::{
     cmp::max,
@@ -19,7 +16,7 @@ use light_bitcoin::{
     keys::{Address, AddressTypes, Public, Type},
     mast::{compute_min_threshold, Mast},
     primitives::Bytes,
-    script::{Builder, Opcode, Script},
+    script::{Builder, Opcode},
 };
 
 use xp_gateway_bitcoin::extract_output_addr;

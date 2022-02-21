@@ -7,6 +7,7 @@ use frame_system::RawOrigin;
 use sp_core::crypto::AccountId32;
 #[cfg(feature = "runtime-benchmarks")]
 use sp_runtime::traits::CheckedDiv;
+use sp_runtime::traits::StaticLookup;
 use sp_std::prelude::*;
 
 use xp_assets_registrar::Chain;
@@ -17,6 +18,7 @@ use xpallet_gateway_records::{Pallet as XGatewayRecords, WithdrawalRecordId, Wit
 use crate::{
     traits::TrusteeSession, types::*, Call, Config, LittleBlackHouse, Pallet,
     TrusteeIntentionPropertiesOf, TrusteeMultiSigAddr, TrusteeSessionInfoLen, TrusteeSessionInfoOf,
+    TrusteeTransitionStatus,
 };
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -226,6 +228,37 @@ benchmarks! {
         #[cfg(not(feature = "runtime-benchmarks"))]
         assert_eq!(<T as xpallet_assets::Config>::Currency::free_balance(&trustee_info[0].0), 33333333u32.into());
     }
+
+    force_trustee_election {
+        TrusteeTransitionStatus::<T>::insert(Chain::Bitcoin, true);
+    }: _(RawOrigin::Root, Chain::Bitcoin)
+    verify {
+        assert!(!Pallet::<T>::trustee_transition_status(Chain::Bitcoin));
+    }
+
+    force_update_trustee {
+        let caller: T::AccountId = alice::<T>();
+        clean::<T>();
+        <TrusteeIntentionPropertiesOf<T>>::remove(caller.clone(), Chain::Bitcoin);
+        LittleBlackHouse::<T>::mutate(Chain::Bitcoin, |acc| acc.push(caller.clone()));
+        let hot = hex::decode("02df92e88c4380778c9c48268460a124a8f4e7da883f80477deaa644ced486efc6")
+                .unwrap();
+        let cold = hex::decode("0386b58f51da9b37e59c40262153173bdb59d7e4e45b73994b99eec4d964ee7e88")
+                .unwrap();
+
+        assert!(Pallet::<T>::trustee_intention_props_of(caller.clone(), Chain::Bitcoin).is_none());
+    }: _(RawOrigin::Root, caller.clone(), None, Chain::Bitcoin, b"about".to_vec(), hot, cold)
+    verify {
+        assert!(Pallet::<T>::trustee_intention_props_of(caller, Chain::Bitcoin).is_some());
+    }
+
+    force_set_referral_binding {
+        let who: T::AccountId = alice::<T>();
+        let who_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(who.clone());
+    }: _(RawOrigin::Root, Chain::Bitcoin, who_lookup.clone(), who_lookup)
+    verify {
+        assert_eq!(Pallet::<T>::referral_binding_of(&who, Chain::Bitcoin), Some(who));
+    }
 }
 
 #[cfg(test)]
@@ -244,6 +277,9 @@ mod tests {
             assert_ok!(Pallet::<Test>::test_benchmark_set_trustee_admin());
             assert_ok!(Pallet::<Test>::test_benchmark_set_trustee_admin_multiply());
             assert_ok!(Pallet::<Test>::test_benchmark_claim_trustee_reward());
+            assert_ok!(Pallet::<Test>::test_benchmark_force_trustee_election());
+            assert_ok!(Pallet::<Test>::test_benchmark_force_update_trustee());
+            assert_ok!(Pallet::<Test>::test_benchmark_force_set_referral_binding());
         });
     }
 }
