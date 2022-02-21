@@ -2,7 +2,8 @@
 
 use crate::{
     traits::BytesLike, Config, GenericTrusteeIntentionProps, GenericTrusteeSessionInfo,
-    TrusteeIntentionPropertiesOf, TrusteeIntentionProps, TrusteeSessionInfo, TrusteeSessionInfoOf,
+    TrusteeIntentionPropertiesOf, TrusteeIntentionProps, TrusteeSessionInfo, TrusteeSessionInfoLen,
+    TrusteeSessionInfoOf,
 };
 use chainx_primitives::Text;
 use codec::{Decode, Encode};
@@ -11,6 +12,7 @@ use scale_info::TypeInfo;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_std::prelude::*;
+use xp_assets_registrar::Chain;
 
 /// The trustee session info.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
@@ -67,6 +69,7 @@ pub fn apply<T: Config>() -> Weight {
 
 /// Migrate from the old trustee session info.
 pub fn migrate_trustee_session_info<T: Config>() -> Weight {
+    TrusteeSessionInfoLen::<T>::mutate(Chain::Bitcoin, |l| *l = l.saturating_sub(1));
     TrusteeSessionInfoOf::<T>::translate::<OldGenericTrusteeSessionInfo<T::AccountId>, _>(
         |_, _, trustee_info| {
             Some(GenericTrusteeSessionInfo(TrusteeSessionInfo {
