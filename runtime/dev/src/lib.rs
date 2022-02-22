@@ -654,9 +654,9 @@ parameter_types! {
     // additional data per vote is 32 bytes (account id).
     pub const VotingBondFactor: Balance = deposit(0, 32);
     pub const VotingBond: Balance = DOLLARS;
-    pub const TermDuration: BlockNumber = DAYS;
-    pub const DesiredMembers: u32 = 11;
-    pub const DesiredRunnersUp: u32 = 7;
+    pub const TermDuration: BlockNumber = 5 * MINUTES;
+    pub const DesiredMembers: u32 = 4;
+    pub const DesiredRunnersUp: u32 = 3;
     pub const ElectionsPhragmenPalletId: LockIdentifier = *b"pcx/phre";
 }
 
