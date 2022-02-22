@@ -7,7 +7,7 @@
 mod header;
 pub mod trustee;
 mod tx;
-mod types;
+pub mod types;
 pub mod weights;
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
@@ -53,11 +53,11 @@ use self::{
         BtcTxResult, BtcTxState,
     },
 };
+
 pub use self::{
     types::{BtcAddress, BtcParams, BtcTxVerifier, BtcWithdrawalProposal},
     weights::WeightInfo,
 };
-
 pub use pallet::*;
 
 // syntactic sugar for native log.
