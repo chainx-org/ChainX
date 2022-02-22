@@ -39,19 +39,17 @@ struct OldGenericTrusteeSessionInfo<AccountId>(pub OldTrusteeSessionInfo<Account
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-struct OldTrusteeIntentionProps<AccountId, TrusteeEntity: BytesLike> {
-    pub proxy_account: Option<AccountId>,
+pub struct OldTrusteeIntentionProps<TrusteeEntity: BytesLike> {
     #[cfg_attr(feature = "std", serde(with = "xp_rpc::serde_text"))]
     pub about: Text,
     pub hot_entity: TrusteeEntity,
     pub cold_entity: TrusteeEntity,
 }
-
 /// The generic trustee intention properties.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-struct OldGenericTrusteeIntentionProps<AccountId>(pub OldTrusteeIntentionProps<AccountId, Vec<u8>>);
+pub struct OldGenericTrusteeIntentionProps(pub OldTrusteeIntentionProps<Vec<u8>>);
 
 /// Apply all of the migrations due to taproot.
 ///
@@ -100,17 +98,16 @@ pub fn migrate_trustee_session_info<T: Config>() -> Weight {
 
 /// Migrate from the old trustee intention properties.
 pub fn migrate_trustee_intention_properties<T: Config>() -> Weight {
-    TrusteeIntentionPropertiesOf::<T>::translate::<
-        OldGenericTrusteeIntentionProps<<T as frame_system::Config>::AccountId>,
-        _,
-    >(|_, _, props| {
-        Some(GenericTrusteeIntentionProps(TrusteeIntentionProps {
-            proxy_account: None,
-            about: props.0.about,
-            hot_entity: props.0.hot_entity,
-            cold_entity: props.0.cold_entity,
-        }))
-    });
+    TrusteeIntentionPropertiesOf::<T>::translate::<OldGenericTrusteeIntentionProps, _>(
+        |_, _, props| {
+            Some(GenericTrusteeIntentionProps(TrusteeIntentionProps {
+                proxy_account: None,
+                about: props.0.about,
+                hot_entity: props.0.hot_entity,
+                cold_entity: props.0.cold_entity,
+            }))
+        },
+    );
     let count = TrusteeIntentionPropertiesOf::<T>::iter_values().count();
     info!(
         target: "runtime::gateway::common",
