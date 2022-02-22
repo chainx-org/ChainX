@@ -1198,7 +1198,16 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPallets,
+    XGatewayCommonOnRuntimeUpgrade,
 >;
+
+pub struct XGatewayCommonOnRuntimeUpgrade;
+impl frame_support::traits::OnRuntimeUpgrade for XGatewayCommonOnRuntimeUpgrade {
+    fn on_runtime_upgrade() -> frame_support::weights::Weight {
+        // Do whatever you want.
+        xpallet_gateway_common::migrations::taproot::apply::<Runtime>()
+    }
+}
 
 impl_runtime_apis! {
     impl sp_api::Core<Block> for Runtime {
