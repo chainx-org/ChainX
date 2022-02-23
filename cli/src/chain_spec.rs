@@ -659,58 +659,61 @@ fn malan_genesis(
         .expect("bitcoin trustees generation can not fail; qed");
 
     malan::GenesisConfig {
-        frame_system: Some(malan::SystemConfig {
+        system: Some(malan::SystemConfig {
             code: wasm_binary.to_vec(),
             changes_trie_config: Default::default(),
         }),
-        pallet_babe: Some(Default::default()),
-        pallet_grandpa: Some(malan::GrandpaConfig {
+        babe: Some(Default::default()),
+        grandpa: Some(malan::GrandpaConfig {
             authorities: vec![],
         }),
-        pallet_collective_Instance1: Some(malan::CouncilConfig::default()),
-        pallet_collective_Instance2: Some(malan::TechnicalCommitteeConfig {
+        council: Some(malan::CouncilConfig::default()),
+        technical_committee: Some(malan::TechnicalCommitteeConfig {
             members: tech_comm_members,
             phantom: Default::default(),
         }),
-        pallet_membership_Instance1: Some(Default::default()),
-        pallet_democracy: Some(malan::DemocracyConfig::default()),
-        pallet_treasury: Some(Default::default()),
-        pallet_elections_phragmen: Some(malan::ElectionsConfig::default()),
-        pallet_im_online: Some(malan::ImOnlineConfig { keys: vec![] }),
-        pallet_authority_discovery: Some(malan::AuthorityDiscoveryConfig { keys: vec![] }),
-        pallet_session: Some(malan::SessionConfig {
+        technical_membership: Default::default(),
+        democracy: malan::DemocracyConfig::default(),
+        treasury: Default::default(),
+        elections: Default::default(),
+        im_online: malan::ImOnlineConfig { keys: vec![] },
+        authority_discovery: malan::AuthorityDiscoveryConfig { keys: vec![] },
+        session: malan::SessionConfig {
             keys: initial_authorities
                 .iter()
                 .map(|x| {
                     (
                         (x.0).0.clone(),
                         (x.0).0.clone(),
-                        malan_session_keys(x.1.clone(), x.2.clone(), x.3.clone(), x.4.clone()),
+                        malan::SessionKeys {
+                            grandpa: x.2.clone(),
+                            babe: x.1.clone(),
+                            im_online: x.3.clone(),
+                            authority_discovery: x.4.clone(),
+                        },
                     )
                 })
                 .collect::<Vec<_>>(),
-        }),
-        pallet_balances: Some(malan::BalancesConfig::default()),
-        pallet_sudo: Some(malan::SudoConfig {
-            key: hex!["b0ca18cce5c51f51655acf683453aa1ff319e3c3edd00b43b36a686a3ae34341"].into(),
-        }),
-        pallet_indices: Some(malan::IndicesConfig { indices: vec![] }),
-        xpallet_system: Some(malan::XSystemConfig {
+        },
+        balances: malan::BalancesConfig { balances },
+        indices: malan::IndicesConfig { indices: vec![] },
+        x_system: malan::XSystemConfig {
             network_props: NetworkType::Testnet,
-        }),
-        xpallet_assets_registrar: Some(malan::XAssetsRegistrarConfig { assets }),
-        xpallet_assets: Some(malan::XAssetsConfig {
+        },
+        x_assets_registrar: malan::XAssetsRegistrarConfig { assets },
+        x_assets: malan::XAssetsConfig {
             assets_restrictions,
-            endowed: Default::default(),
-        }),
-        xpallet_gateway_common: Some(malan::XGatewayCommonConfig { trustees }),
-        xpallet_gateway_bitcoin: Some(malan::XGatewayBitcoinConfig {
+            endowed: assets_endowed,
+        },
+        x_gateway_common: malan::XGatewayCommonConfig { trustees },
+        x_gateway_bitcoin: malan::XGatewayBitcoinConfig {
             genesis_trustees: btc_genesis_trustees,
             network_id: bitcoin.network,
             confirmation_number: bitcoin.confirmation_number,
             genesis_hash: bitcoin.hash(),
             genesis_info: (bitcoin.header(), bitcoin.height),
             params_info: BtcParams::new(
+                // for signet and regtest
                 545259519,            // max_bits
                 2 * 60 * 60,          // block_max_future
                 2 * 7 * 24 * 60 * 60, // target_timespan_seconds
@@ -720,8 +723,8 @@ fn malan_genesis(
             btc_withdrawal_fee: 500000,
             max_withdrawal_count: 100,
             verifier: BtcTxVerifier::Recover,
-        }),
-        xpallet_mining_staking: Some(malan::XStakingConfig {
+        },
+        x_staking: malan::XStakingConfig {
             validator_count: 40,
             sessions_per_era: 12,
             glob_dist_ratio: (12, 88), // (Treasury, X-type Asset and Staking) = (12, 88)
@@ -729,21 +732,21 @@ fn malan_genesis(
             minimum_penalty: 100 * DOLLARS,
             candidate_requirement: (100 * DOLLARS, 1_000 * DOLLARS), // Minimum value (self_bonded, total_bonded) to be a validator candidate
             ..Default::default()
-        }),
-        xpallet_mining_asset: Some(malan::XMiningAssetConfig {
+        },
+        x_mining_asset: malan::XMiningAssetConfig {
             claim_restrictions: vec![(X_BTC, (10, DAYS * 7))],
             mining_power_map: vec![(X_BTC, 400)],
-        }),
-        xpallet_dex_spot: Some(malan::XSpotConfig {
+        },
+        x_spot: malan::XSpotConfig {
             trading_pairs: vec![(PCX, X_BTC, 9, 2, 100000, true)],
-        }),
-        xpallet_genesis_builder: Some(malan::XGenesisBuilderConfig {
+        },
+        x_genesis_builder: malan::XGenesisBuilderConfig {
             params: crate::genesis::genesis_builder_params(),
             initial_authorities: initial_authorities
                 .iter()
                 .map(|i| (i.0).1.clone())
                 .collect(),
-        }),
+        },
     }
 }
 
