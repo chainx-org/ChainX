@@ -1,6 +1,6 @@
 [package]
 name = "xpallet-gateway-records-rpc"
-version = "3.0.0"
+version = "4.0.0"
 authors = ["The ChainX Authors"]
 edition = "2018"
 
