@@ -201,7 +201,7 @@ fn load_spec(id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
         "" | "mainnet" => Box::new(chain_spec::mainnet_config()?),
         "dev" => Box::new(chain_spec::development_config()?),
         "malan" | "testnet" => Box::new(chain_spec::malan_config()?),
-        "pre-malan" => Box::new(chain_spec::pre_malan_config()?),
+        "new-malan" => Box::new(chain_spec::new_malan_config()?),
         "local" => Box::new(chain_spec::local_testnet_config()?),
         "benchmarks" => {
             #[cfg(feature = "runtime-benchmarks")]
