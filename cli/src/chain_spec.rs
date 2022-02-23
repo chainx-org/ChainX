@@ -659,19 +659,22 @@ fn malan_genesis(
         .expect("bitcoin trustees generation can not fail; qed");
 
     malan::GenesisConfig {
-        system: Some(malan::SystemConfig {
+        sudo: malan::SudoConfig {
+            key: hex!["b0ca18cce5c51f51655acf683453aa1ff319e3c3edd00b43b36a686a3ae34341"].into()
+        },
+        system: malan::SystemConfig {
             code: wasm_binary.to_vec(),
             changes_trie_config: Default::default(),
-        }),
-        babe: Some(Default::default()),
-        grandpa: Some(malan::GrandpaConfig {
+        },
+        babe: Default::default(),
+        grandpa: malan::GrandpaConfig {
             authorities: vec![],
-        }),
-        council: Some(malan::CouncilConfig::default()),
-        technical_committee: Some(malan::TechnicalCommitteeConfig {
+        },
+        council: malan::CouncilConfig::default(),
+        technical_committee: malan::TechnicalCommitteeConfig {
             members: tech_comm_members,
             phantom: Default::default(),
-        }),
+        },
         technical_membership: Default::default(),
         democracy: malan::DemocracyConfig::default(),
         treasury: Default::default(),
@@ -695,7 +698,7 @@ fn malan_genesis(
                 })
                 .collect::<Vec<_>>(),
         },
-        balances: malan::BalancesConfig { balances },
+        balances: Default::default(),
         indices: malan::IndicesConfig { indices: vec![] },
         x_system: malan::XSystemConfig {
             network_props: NetworkType::Testnet,
@@ -703,7 +706,7 @@ fn malan_genesis(
         x_assets_registrar: malan::XAssetsRegistrarConfig { assets },
         x_assets: malan::XAssetsConfig {
             assets_restrictions,
-            endowed: assets_endowed,
+            endowed: Default::default(),
         },
         x_gateway_common: malan::XGatewayCommonConfig { trustees },
         x_gateway_bitcoin: malan::XGatewayBitcoinConfig {
