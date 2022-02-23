@@ -659,7 +659,7 @@ parameter_types! {
     // additional data per vote is 32 bytes (account id).
     pub const VotingBondFactor: Balance = deposit(0, 32);
     pub const VotingBond: Balance = DOLLARS;
-    pub const TermDuration: BlockNumber = DAYS;
+    pub const TermDuration: BlockNumber = 5 * MINUTES;
     pub const DesiredMembers: u32 = 11;
     pub const DesiredRunnersUp: u32 = 7;
     pub const ElectionsPhragmenPalletId: LockIdentifier = *b"pcx/phre";
@@ -728,16 +728,16 @@ parameter_types! {
     pub const ProposalBond: Permill = Permill::from_percent(5);
     // 10 PCX
     pub const ProposalBondMinimum: Balance = 1000 * DOLLARS;
-    pub const SpendPeriod: BlockNumber = 6 * DAYS;
+    pub const SpendPeriod: BlockNumber = 6 * MINUTES;
     pub const NoBurn: Permill = Permill::from_percent(0);
-    pub const TipCountdown: BlockNumber = DAYS;
+    pub const TipCountdown: BlockNumber = 3 * MINUTES;
     pub const TipFindersFee: Percent = Percent::from_percent(20);
     pub const TipReportDepositBase: Balance = DOLLARS;
     pub const DataDepositPerByte: Balance = CENTS;
     pub const BountyDepositBase: Balance = DOLLARS;
-    pub const BountyDepositPayoutDelay: BlockNumber = 4 * DAYS;
+    pub const BountyDepositPayoutDelay: BlockNumber = 4 * MINUTES;
     pub const TreasuryPalletId: PalletId = PalletId(*b"pcx/trsy");
-    pub const BountyUpdatePeriod: BlockNumber = 90 * DAYS;
+    pub const BountyUpdatePeriod: BlockNumber = 90 * MINUTES;
     pub const MaximumReasonLength: u32 = 16384;
     pub const BountyCuratorDeposit: Permill = Permill::from_percent(50);
     pub const BountyValueMinimum: Balance = 10 * DOLLARS;

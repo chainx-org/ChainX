@@ -574,7 +574,7 @@ parameter_types! {
     // 10 PCX
     pub const MinimumDeposit: Balance = 1000 * DOLLARS;
     pub const EnactmentPeriod: BlockNumber = HOURS;
-    pub const CooloffPeriod: BlockNumber = 7 * DAYS;
+    pub const CooloffPeriod: BlockNumber = HOURS;
     // One cent: $10,000 / MB
     pub const PreimageByteDeposit: Balance = CENTS;
     pub const MaxVotes: u32 = 100;
@@ -634,7 +634,7 @@ impl pallet_democracy::Config for Runtime {
 }
 
 parameter_types! {
-    pub const CouncilMotionDuration: BlockNumber = 7 * DAYS;
+    pub const CouncilMotionDuration: BlockNumber = HOURS;
     pub const CouncilMaxProposals: u32 = 100;
     pub const CouncilMaxMembers: u32 = 100;
 }
@@ -689,7 +689,7 @@ impl pallet_elections_phragmen::Config for Runtime {
 }
 
 parameter_types! {
-    pub const TechnicalMotionDuration: BlockNumber = 5 * DAYS;
+    pub const TechnicalMotionDuration: BlockNumber = HOURS;
     pub const TechnicalMaxProposals: u32 = 100;
     pub const TechnicalMaxMembers: u32 = 100;
 }
