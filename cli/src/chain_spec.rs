@@ -275,7 +275,8 @@ pub fn malan_config() -> Result<MalanChainSpec, String> {
 }
 
 pub fn new_malan_config() -> Result<MalanChainSpec, String> {
-    let wasm_binary = malan::WASM_BINARY.ok_or_else(|| "ChainX wasm binary not available".to_string())?;
+    let wasm_binary =
+        malan::WASM_BINARY.ok_or_else(|| "ChainX wasm binary not available".to_string())?;
 
     let initial_authorities: Vec<AuthorityKeysTuple> = vec![
         (
