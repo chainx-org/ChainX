@@ -21,7 +21,7 @@
 
 #![allow(unused_parens)]
 #![allow(unused_imports)]
-
+#![allow(clippy::unnecessary_cast)]
 use frame_support::{
     traits::Get,
     weights::{constants::RocksDbWeight, Weight},
@@ -30,9 +30,9 @@ use sp_std::marker::PhantomData;
 
 /// Weight functions needed for xpallet_dex_spot.
 pub trait WeightInfo {
-    fn put_order(u: u32) -> Weight;
-    fn cancel_order(u: u32) -> Weight;
-    fn force_cancel_order(u: u32) -> Weight;
+    fn put_order() -> Weight;
+    fn cancel_order() -> Weight;
+    fn force_cancel_order() -> Weight;
     fn set_handicap() -> Weight;
     fn set_price_fluctuation() -> Weight;
     fn add_trading_pair() -> Weight;
@@ -42,35 +42,34 @@ pub trait WeightInfo {
 /// Weights for xpallet_dex_spot using the Substrate node and recommended hardware.
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
-    fn put_order(u: u32) -> Weight {
-        (184_138_000 as Weight)
-            .saturating_add((23_000 as Weight).saturating_mul(u as Weight))
+    fn put_order() -> Weight {
+        (202_519_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(11 as Weight))
             .saturating_add(T::DbWeight::get().writes(6 as Weight))
     }
-    fn cancel_order(_u: u32) -> Weight {
-        (179_177_000 as Weight)
+    fn cancel_order() -> Weight {
+        (194_053_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(8 as Weight))
             .saturating_add(T::DbWeight::get().writes(5 as Weight))
     }
-    fn force_cancel_order(_u: u32) -> Weight {
-        (180_169_000 as Weight)
+    fn force_cancel_order() -> Weight {
+        (186_868_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(8 as Weight))
             .saturating_add(T::DbWeight::get().writes(5 as Weight))
     }
     fn set_handicap() -> Weight {
-        (19_354_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
+        (21_272_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     fn set_price_fluctuation() -> Weight {
-        (22_124_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
+        (22_758_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     fn add_trading_pair() -> Weight {
-        (60_231_000 as Weight)
+        (62_294_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
             .saturating_add(T::DbWeight::get().writes(3 as Weight))
     }
     fn update_trading_pair() -> Weight {
-        (74_374_000 as Weight)
+        (75_186_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(1 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
@@ -78,35 +77,34 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
-    fn put_order(u: u32) -> Weight {
-        (184_138_000 as Weight)
-            .saturating_add((23_000 as Weight).saturating_mul(u as Weight))
+    fn put_order() -> Weight {
+        (202_519_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(11 as Weight))
             .saturating_add(RocksDbWeight::get().writes(6 as Weight))
     }
-    fn cancel_order(_u: u32) -> Weight {
-        (179_177_000 as Weight)
+    fn cancel_order() -> Weight {
+        (194_053_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(8 as Weight))
             .saturating_add(RocksDbWeight::get().writes(5 as Weight))
     }
-    fn force_cancel_order(_u: u32) -> Weight {
-        (180_169_000 as Weight)
+    fn force_cancel_order() -> Weight {
+        (186_868_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(8 as Weight))
             .saturating_add(RocksDbWeight::get().writes(5 as Weight))
     }
     fn set_handicap() -> Weight {
-        (19_354_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
+        (21_272_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
     fn set_price_fluctuation() -> Weight {
-        (22_124_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
+        (22_758_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
     fn add_trading_pair() -> Weight {
-        (60_231_000 as Weight)
+        (62_294_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(2 as Weight))
             .saturating_add(RocksDbWeight::get().writes(3 as Weight))
     }
     fn update_trading_pair() -> Weight {
-        (74_374_000 as Weight)
+        (75_186_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(1 as Weight))
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }

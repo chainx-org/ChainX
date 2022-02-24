@@ -45,8 +45,7 @@ fn b_put_order<T: Config>(
 benchmarks! {
     // TODO: put_order with matching.
     put_order {
-        let u in 1 .. 1000;
-        let user: T::AccountId = account("user", u, SEED);
+        let user: T::AccountId = account("user", 0, SEED);
 
         b_prepare_put_order::<T>(&user, 1000, 100)?;
 
@@ -56,8 +55,7 @@ benchmarks! {
     }
 
     cancel_order {
-        let u in 1 .. 1000;
-        let user: T::AccountId = account("user", u, SEED);
+        let user: T::AccountId = account("user", 0, SEED);
 
         b_put_order::<T>(user.clone(), 1000, 100, 1_000_200)?;
 
@@ -67,8 +65,7 @@ benchmarks! {
     }
 
     force_cancel_order {
-        let u in 1 .. 1000;
-        let user: T::AccountId = account("user", u, SEED);
+        let user: T::AccountId = account("user", 0, SEED);
 
         let user_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(user.clone());
 
