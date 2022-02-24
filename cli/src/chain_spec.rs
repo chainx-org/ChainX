@@ -367,7 +367,7 @@ pub fn new_malan_config() -> Result<MalanChainSpec, String> {
     let bootnodes = Default::default();
 
     Ok(MalanChainSpec::from_genesis(
-        "ChainX",
+        "ChainX-Malan",
         "chainx-malan",
         ChainType::Live,
         constructor,
