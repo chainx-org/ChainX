@@ -139,210 +139,6 @@ macro_rules! endowed {
 const ENDOWMENT: Balance = 10_000_000 * DOLLARS;
 const STASH: Balance = 100 * DOLLARS;
 
-macro_rules! build_genesis {
-    (
-        $runtime: ident,
-        $wasm_binary:expr,
-        $initial_authorities:expr ,
-        $root_key:expr,
-        $assets:expr,
-        $endowed:expr,
-        $bitcoin:expr,
-        $trustees:expr,
-    ) => {{
-        extern crate $runtime;
-
-        let (assets, assets_restrictions) = init_assets($assets);
-
-        let endowed_accounts = $endowed
-            .get(&PCX)
-            .expect("PCX endowed; qed")
-            .iter()
-            .cloned()
-            .map(|(k, _)| k)
-            .collect::<Vec<_>>();
-
-        let num_endowed_accounts = endowed_accounts.len();
-
-        let mut total_endowed = Balance::default();
-        let balances = $endowed
-            .get(&PCX)
-            .expect("PCX endowed; qed")
-            .iter()
-            .cloned()
-            .map(|(k, _)| {
-                total_endowed += ENDOWMENT;
-                (k, ENDOWMENT)
-            })
-            .collect::<Vec<_>>();
-
-        // The value of STASH balance will be reserved per phragmen member.
-        let phragmen_members = endowed_accounts
-            .iter()
-            .take((num_endowed_accounts + 1) / 2)
-            .cloned()
-            .map(|member| (member, STASH))
-            .collect();
-
-        let tech_comm_members = endowed_accounts
-            .iter()
-            .take((num_endowed_accounts + 1) / 2)
-            .cloned()
-            .collect::<Vec<_>>();
-
-        // PCX only reserves the native asset id in assets module,
-        // the actual native fund management is handled by pallet_balances.
-        let mut assets_endowed = $endowed;
-        assets_endowed.remove(&PCX);
-
-        let btc_genesis_trustees = $trustees
-            .iter()
-            .find_map(|(chain, _, trustee_params)| {
-                if *chain == Chain::Bitcoin {
-                    Some(
-                        trustee_params
-                            .iter()
-                            .map(|i| (i.0).clone())
-                            .collect::<Vec<_>>(),
-                    )
-                } else {
-                    None
-                }
-            })
-            .expect("bitcoin trustees generation can not fail; qed");
-
-        let mut config = $runtime::GenesisConfig::default();
-
-        if stringify!($runtime) == "dev" {
-            config.sudo = $runtime::SudoConfig { key: $root_key };
-        };
-
-        config.system = $runtime::SystemConfig {
-            code: $wasm_binary.to_vec(),
-            changes_trie_config: Default::default(),
-        };
-
-        config.babe = $runtime::BabeConfig {
-            authorities: vec![],
-            epoch_config: Some($runtime::BABE_GENESIS_EPOCH_CONFIG),
-        };
-
-        config.grandpa = $runtime::GrandpaConfig {
-            authorities: vec![],
-        };
-
-        config.council = $runtime::CouncilConfig::default();
-
-        config.technical_committee = $runtime::TechnicalCommitteeConfig {
-            members: tech_comm_members,
-            phantom: Default::default(),
-        };
-
-        config.technical_membership = Default::default();
-
-        config.democracy = $runtime::DemocracyConfig::default();
-
-        config.treasury = Default::default();
-
-        config.elections = $runtime::ElectionsConfig {
-            members: phragmen_members,
-        };
-
-        config.im_online = $runtime::ImOnlineConfig { keys: vec![] };
-
-        config.authority_discovery = $runtime::AuthorityDiscoveryConfig { keys: vec![] };
-
-        config.session = $runtime::SessionConfig {
-            keys: $initial_authorities
-                .iter()
-                .map(|x| {
-                    (
-                        (x.0).0.clone(),
-                        (x.0).0.clone(),
-                        $runtime::SessionKeys {
-                            grandpa: x.2.clone(),
-                            babe: x.1.clone(),
-                            im_online: x.3.clone(),
-                            authority_discovery: x.4.clone(),
-                        }
-                    )
-                })
-                .collect::<Vec<_>>(),
-        };
-
-        config.balances = $runtime::BalancesConfig { balances };
-
-        config.indices = $runtime::IndicesConfig { indices: vec![] };
-
-        config.x_system = $runtime::XSystemConfig {
-            network_props: if stringify!($runtime) == "chainx" {
-                NetworkType::Mainnet
-            } else {
-                NetworkType::Testnet
-            },
-        };
-
-        config.x_assets_registrar = $runtime::XAssetsRegistrarConfig { assets };
-
-        config.x_assets = $runtime::XAssetsConfig {
-            assets_restrictions,
-            endowed: assets_endowed,
-        };
-
-        config.x_gateway_common = $runtime::XGatewayCommonConfig {
-            trustees: $trustees
-        };
-
-        config.x_gateway_bitcoin = $runtime::XGatewayBitcoinConfig {
-            genesis_trustees: btc_genesis_trustees,
-            network_id: $bitcoin.network,
-            confirmation_number: $bitcoin.confirmation_number,
-            genesis_hash: $bitcoin.hash(),
-            genesis_info: ($bitcoin.header(), $bitcoin.height),
-            params_info: BtcParams::new(
-                // for signet and regtest
-                545259519,            // max_bits
-                2 * 60 * 60,          // block_max_future
-                2 * 7 * 24 * 60 * 60, // target_timespan_seconds
-                10 * 60,              // target_spacing_seconds
-                4,                    // retargeting_factor
-            ), // retargeting_factor
-            btc_withdrawal_fee: 500000,
-            max_withdrawal_count: 100,
-            verifier: BtcTxVerifier::Recover,
-        };
-
-        config.x_staking = $runtime::XStakingConfig {
-            validator_count: 40,
-            sessions_per_era: 12,
-            glob_dist_ratio: (12, 88), // (Treasury, X-type Asset and Staking) = (12, 88)
-            mining_ratio: (10, 90),    // (Asset Mining, Staking) = (10, 90)
-            minimum_penalty: 100 * DOLLARS,
-            candidate_requirement: (100 * DOLLARS, 1_000 * DOLLARS), // Minimum value (self_bonded, total_bonded) to be a validator candidate
-            ..Default::default()
-        };
-
-        config.x_mining_asset = $runtime::XMiningAssetConfig {
-            claim_restrictions: vec![(X_BTC, (10, DAYS * 7))],
-            mining_power_map: vec![(X_BTC, 400)],
-        };
-
-        config.x_spot = $runtime::XSpotConfig {
-            trading_pairs: vec![(PCX, X_BTC, 9, 2, 100000, true)],
-        };
-
-        config.x_genesis_builder = $runtime::XGenesisBuilderConfig {
-            params: crate::genesis::genesis_builder_params(),
-            initial_authorities: $initial_authorities
-                .iter()
-                .map(|i| (i.0).1.clone())
-                .collect(),
-        };
-
-        config
-    }}
-}
-
 /// Helper function to generate the network properties.
 fn as_properties(network: NetworkType) -> Properties {
     json!({
@@ -362,8 +158,7 @@ pub fn development_config() -> Result<DevChainSpec, String> {
 
     let endowed_balance = 50 * DOLLARS;
     let constructor = move || {
-        build_genesis!(
-            dev_runtime,
+        build_dev_genesis(
             wasm_binary,
             vec![authority_keys_from_seed("Alice")],
             get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -398,8 +193,7 @@ pub fn benchmarks_config() -> Result<DevChainSpec, String> {
 
     let endowed_balance = 50 * DOLLARS;
     let constructor = move || {
-        build_genesis!(
-            dev_runtime,
+        build_dev_genesis(
             wasm_binary,
             vec![authority_keys_from_seed("Alice")],
             get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -433,8 +227,7 @@ pub fn local_testnet_config() -> Result<DevChainSpec, String> {
 
     let endowed_balance = 50 * DOLLARS;
     let constructor = move || {
-        build_genesis!(
-            dev_runtime,
+        build_dev_genesis(
             wasm_binary,
             vec![
                 authority_keys_from_seed("Alice"),
@@ -734,6 +527,8 @@ fn malan_genesis(
             mining_ratio: (10, 90),    // (Asset Mining, Staking) = (10, 90)
             minimum_penalty: 100 * DOLLARS,
             candidate_requirement: (100 * DOLLARS, 1_000 * DOLLARS), // Minimum value (self_bonded, total_bonded) to be a validator candidate
+            minimum_validator_count: 4,
+            maximum_validator_count: 5,
             ..Default::default()
         },
         x_mining_asset: malan::XMiningAssetConfig {
@@ -753,7 +548,6 @@ fn malan_genesis(
     }
 }
 
-#[allow(unused)]
 fn build_dev_genesis(
     wasm_binary: &[u8],
     initial_authorities: Vec<AuthorityKeysTuple>,
