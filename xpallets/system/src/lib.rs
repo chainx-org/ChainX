@@ -133,17 +133,9 @@ pub mod pallet {
     pub type Blacklist<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, bool, ValueQuery>;
 
     #[pallet::genesis_config]
+    #[cfg_attr(feature = "std", derive(Default))]
     pub struct GenesisConfig {
         pub network_props: NetworkType,
-    }
-
-    #[cfg(feature = "std")]
-    impl Default for GenesisConfig {
-        fn default() -> Self {
-            Self {
-                network_props: Default::default(),
-            }
-        }
     }
 
     #[pallet::genesis_build]
