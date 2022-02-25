@@ -9835,7 +9835,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-gateway-bitcoin-rpc"
-version = "3.0.0"
+version = "4.0.0"
 dependencies = [
  "hex",
  "jsonrpc-core",
@@ -9852,7 +9852,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-gateway-bitcoin-rpc-runtime-api"
-version = "3.0.0"
+version = "4.0.0"
 dependencies = [
  "chainx-primitives",
  "parity-scale-codec",
