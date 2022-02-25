@@ -1,6 +1,6 @@
 [package]
 name = "chainx"
-version = "3.0.0"
+version = "4.0.0"
 authors = ["The ChainX Authors"]
 edition = "2018"
 description = "Fully Decentralized Interchain Crypto Asset Management on Polkadot"
@@ -10,6 +10,73 @@ cli = { package = "chainx-cli", path = "cli" }
 
 [target.'cfg(target_arch="x86_64")'.dependencies]
 cli = { package = "chainx-cli", path = "cli", features = ["wasmtime"] }
+
+[patch."https://github.com/paritytech/substrate"]
+
+sp-api = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+sp-application-crypto = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+sp-arithmetic = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+sp-authority-discovery = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+sp-blockchain = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+sp-block-builder = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+sp-consensus = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+sp-consensus-babe = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+sp-consensus-slots = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+sp-consensus-vrf = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+sp-core = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+sp-database = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+sp-externalities = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+sp-finality-grandpa = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+sp-inherents = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+sp-io = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+sp-keystore = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+sp-offchain = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+sp-runtime = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+sp-runtime-interface = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+sp-session = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+sp-staking = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+sp-state-machine = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+sp-std = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+sp-storage = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+sp-timestamp = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+sp-tracing = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+sp-transaction-pool = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+sp-trie = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+sp-version = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+sp-wasm-interface = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+
+sc-client-api = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+sc-transaction-pool-api = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+sc-utils = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+
+
+frame-executive = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+frame-support = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+frame-system = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+frame-system-rpc-runtime-api = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+
+pallet-authorship = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+pallet-babe = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+pallet-balances = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+pallet-collective = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+pallet-democracy = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+pallet-elections-phragmen = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+pallet-grandpa = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+pallet-identity = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+pallet-im-online = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+pallet-indices = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+pallet-membership = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+pallet-multisig = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+pallet-offences = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+pallet-proxy = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+pallet-scheduler = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+pallet-session = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+pallet-sudo = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+pallet-timestamp = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+pallet-transaction-payment = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+pallet-treasury = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
+pallet-utility = { git = "https://github.com/chainx-org/substrate", rev = "79f50470dadedec5c54461eea5ce7d468d054371" }
 
 [workspace]
 members = [
@@ -72,3 +139,4 @@ panic = "unwind"
 
 [features]
 runtime-benchmarks = ["cli/runtime-benchmarks"]
+try-runtime = ["cli/try-runtime"]

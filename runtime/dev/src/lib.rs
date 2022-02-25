@@ -46,6 +46,7 @@ use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthority
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 use pallet_session::historical as pallet_session_historical;
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
+use sp_consensus_babe::AllowedSlots::PrimaryAndSecondaryPlainSlots;
 
 use chainx_runtime_common::{BlockLength, BlockWeights};
 use xpallet_dex_spot::{Depth, FullPairInfo, RpcOrder, TradingPairId};
@@ -100,27 +101,22 @@ pub use xpallet_mining_staking::VoteWeight;
 pub mod constants;
 /// Implementations of some helper traits passed into runtime modules as associated types.
 pub mod impls;
+mod migrations;
 
 use self::constants::{currency::*, time::*};
 use self::impls::{ChargeExtraFee, DealWithFees, SlowAdjustingFeeUpdate};
+use self::migrations::*;
 
 /// This runtime version.
 pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("chainx"),
     impl_name: create_runtime_str!("chainx-dev"),
     authoring_version: 1,
-    spec_version: 2,
+    spec_version: 13,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 1,
+    transaction_version: 4,
 };
-
-/// The BABE epoch configuration at genesis.
-pub const BABE_GENESIS_EPOCH_CONFIG: sp_consensus_babe::BabeEpochConfiguration =
-    sp_consensus_babe::BabeEpochConfiguration {
-        c: PRIMARY_PROBABILITY,
-        allowed_slots: sp_consensus_babe::AllowedSlots::PrimaryAndSecondaryPlainSlots,
-    };
 
 /// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]
@@ -131,11 +127,27 @@ pub fn native_version() -> NativeVersion {
     }
 }
 
+/// The BABE epoch configuration at genesis.
+/// The existing chain is running with PrimaryAndSecondaryPlainSlots,
+/// you should keep returning the same thing in BabeApi::configuration()
+/// as you were doing before.
+///
+/// Edit: it's okay to change this here as BabeApi::configuration()
+/// is only used on genesis, so this change won't have any effect on
+/// the existing chains. But maybe it makes it more clear if you still
+/// keep the original value.
+pub const BABE_GENESIS_EPOCH_CONFIG: sp_consensus_babe::BabeEpochConfiguration =
+    sp_consensus_babe::BabeEpochConfiguration {
+        c: PRIMARY_PROBABILITY,
+        allowed_slots: PrimaryAndSecondaryPlainSlots,
+    };
+
 #[derive(Debug, Clone, Eq, PartialEq, codec::Encode, codec::Decode, TypeInfo)]
 pub struct BaseFilter;
 impl Contains<Call> for BaseFilter {
     fn contains(call: &Call) -> bool {
         use frame_support::dispatch::GetCallMetadata;
+
         if let Call::Currencies(_) = call {
             return false;
         }
@@ -187,7 +199,7 @@ parameter_types! {
         * MaximumBlockWeight::get();
     pub const MaximumBlockLength: u32 = 5 * 1024 * 1024;
     pub const Version: RuntimeVersion = VERSION;
-    pub const SS58Prefix: u8 = xp_protocol::TESTNET_ADDRESS_FORMAT_ID;
+    pub const SS58Prefix: u8 = xp_protocol::MAINNET_ADDRESS_FORMAT_ID;
 }
 
 const_assert!(
@@ -429,8 +441,8 @@ parameter_types! {
 impl pallet_im_online::Config for Runtime {
     type AuthorityId = ImOnlineId;
     type Event = Event;
-    type NextSessionRotation = Babe;
     type ValidatorSet = Self;
+    type NextSessionRotation = Babe;
     type ReportUnresponsiveness = Offences;
     type UnsignedPriority = ImOnlineUnsignedPriority;
     type WeightInfo = pallet_im_online::weights::SubstrateWeight<Runtime>;
@@ -556,20 +568,15 @@ impl pallet_multisig::Config for Runtime {
     type WeightInfo = pallet_multisig::weights::SubstrateWeight<Runtime>;
 }
 
-impl pallet_sudo::Config for Runtime {
-    type Event = Event;
-    type Call = Call;
-}
-
 parameter_types! {
-    pub const LaunchPeriod: BlockNumber = 7 * DAYS;
-    pub const VotingPeriod: BlockNumber = 7 * DAYS;
-    pub const FastTrackVotingPeriod: BlockNumber = 3 * HOURS;
+    pub const LaunchPeriod: BlockNumber = 7 * MINUTES;
+    pub const VotingPeriod: BlockNumber = 7 * MINUTES;
+    pub const FastTrackVotingPeriod: BlockNumber = 3 * MINUTES;
     pub const InstantAllowed: bool = true;
     // 10 PCX
     pub const MinimumDeposit: Balance = 1000 * DOLLARS;
-    pub const EnactmentPeriod: BlockNumber = 8 * DAYS;
-    pub const CooloffPeriod: BlockNumber = 7 * DAYS;
+    pub const EnactmentPeriod: BlockNumber = 8 * MINUTES;
+    pub const CooloffPeriod: BlockNumber = 7 * MINUTES;
     // One cent: $10,000 / MB
     pub const PreimageByteDeposit: Balance = CENTS;
     pub const MaxVotes: u32 = 100;
@@ -629,7 +636,7 @@ impl pallet_democracy::Config for Runtime {
 }
 
 parameter_types! {
-    pub const CouncilMotionDuration: BlockNumber = 7 * DAYS;
+    pub const CouncilMotionDuration: BlockNumber = 7 * MINUTES;
     pub const CouncilMaxProposals: u32 = 100;
     pub const CouncilMaxMembers: u32 = 100;
 }
@@ -655,8 +662,8 @@ parameter_types! {
     pub const VotingBondFactor: Balance = deposit(0, 32);
     pub const VotingBond: Balance = DOLLARS;
     pub const TermDuration: BlockNumber = 5 * MINUTES;
-    pub const DesiredMembers: u32 = 4;
-    pub const DesiredRunnersUp: u32 = 3;
+    pub const DesiredMembers: u32 = 11;
+    pub const DesiredRunnersUp: u32 = 7;
     pub const ElectionsPhragmenPalletId: LockIdentifier = *b"pcx/phre";
 }
 
@@ -684,7 +691,7 @@ impl pallet_elections_phragmen::Config for Runtime {
 }
 
 parameter_types! {
-    pub const TechnicalMotionDuration: BlockNumber = 5 * DAYS;
+    pub const TechnicalMotionDuration: BlockNumber = 5 * MINUTES;
     pub const TechnicalMaxProposals: u32 = 100;
     pub const TechnicalMaxMembers: u32 = 100;
 }
@@ -723,16 +730,16 @@ parameter_types! {
     pub const ProposalBond: Permill = Permill::from_percent(5);
     // 10 PCX
     pub const ProposalBondMinimum: Balance = 1000 * DOLLARS;
-    pub const SpendPeriod: BlockNumber = 6 * DAYS;
+    pub const SpendPeriod: BlockNumber = 6 * MINUTES;
     pub const NoBurn: Permill = Permill::from_percent(0);
-    pub const TipCountdown: BlockNumber = DAYS;
+    pub const TipCountdown: BlockNumber = 3 * MINUTES;
     pub const TipFindersFee: Percent = Percent::from_percent(20);
     pub const TipReportDepositBase: Balance = DOLLARS;
     pub const DataDepositPerByte: Balance = CENTS;
     pub const BountyDepositBase: Balance = DOLLARS;
-    pub const BountyDepositPayoutDelay: BlockNumber = 4 * DAYS;
+    pub const BountyDepositPayoutDelay: BlockNumber = 4 * MINUTES;
     pub const TreasuryPalletId: PalletId = PalletId(*b"pcx/trsy");
-    pub const BountyUpdatePeriod: BlockNumber = 90 * DAYS;
+    pub const BountyUpdatePeriod: BlockNumber = 90 * MINUTES;
     pub const MaximumReasonLength: u32 = 16384;
     pub const BountyCuratorDeposit: Permill = Permill::from_percent(50);
     pub const BountyValueMinimum: Balance = 10 * DOLLARS;
@@ -1043,8 +1050,9 @@ impl xpallet_support::traits::TreasuryAccount<AccountId> for SimpleTreasuryAccou
 }
 
 parameter_types! {
-    /// FIXME: replace this when the migration offset is determinated.
-    pub const MigrationSessionOffset: SessionIndex = 500;
+    // Total issuance is 7723350PCX by the end of ChainX 1.0.
+    // 210000 - (7723350 / 50) = 55533
+    pub const MigrationSessionOffset: SessionIndex = 55533;
     pub const MinimumReferralId: u32 = 2;
     pub const MaximumReferralId: u32 = 12;
 }
@@ -1083,7 +1091,10 @@ impl xpallet_mining_asset::Config for Runtime {
 
 impl xpallet_genesis_builder::Config for Runtime {}
 
-impl pallet_randomness_collective_flip::Config for Runtime {}
+impl pallet_sudo::Config for Runtime {
+    type Event = Event;
+    type Call = Call;
+}
 
 construct_runtime!(
     pub enum Runtime where
@@ -1092,74 +1103,74 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic
     {
         // Basic stuff.
-        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},
-        Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>},
+        System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
+        Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 2,
 
         // Must be before session.
-        Babe: pallet_babe::{Pallet, Call, Storage, Config, ValidateUnsigned},
+        Babe: pallet_babe::{Pallet, Call, Storage, Config, ValidateUnsigned} = 3,
 
-        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
-        Indices: pallet_indices::{Pallet, Call, Storage, Config<T>, Event<T>},
-        Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-        TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
+        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 4,
+        Indices: pallet_indices::{Pallet, Call, Storage, Config<T>, Event<T>} = 5,
+        Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 6,
+        TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 7,
 
         // Consensus support.
-        Authorship: pallet_authorship::{Pallet, Call, Storage, Inherent},
-        Offences: pallet_offences::{Pallet, Storage, Event},
-        Historical: pallet_session_historical::{Pallet},
-        Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
-        Grandpa: pallet_grandpa::{Pallet, Call, Storage, Config, Event},
-        ImOnline: pallet_im_online::{Pallet, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
-        AuthorityDiscovery: pallet_authority_discovery::{Pallet, Config},
+        Authorship: pallet_authorship::{Pallet, Call, Storage, Inherent} = 8,
+        Offences: pallet_offences::{Pallet, Storage, Event} = 9,
+        Historical: pallet_session_historical::{Pallet} = 10,
+        Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 11,
+        Grandpa: pallet_grandpa::{Pallet, Call, Storage, Config, Event} = 12,
+        ImOnline: pallet_im_online::{Pallet, Call, Storage, Event<T>, ValidateUnsigned, Config<T>} = 13,
+        AuthorityDiscovery: pallet_authority_discovery::{Pallet, Config} = 14,
 
         // Governance stuff.
-        Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>},
-        Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
-        TechnicalCommittee: pallet_collective::<Instance2>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
-        Elections: pallet_elections_phragmen::{Pallet, Call, Storage, Event<T>, Config<T>},
-        TechnicalMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>},
-        Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>},
-        Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>},
-        Tips: pallet_tips::{Pallet, Call, Storage, Event<T>},
+        Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 15,
+        Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 16,
+        TechnicalCommittee: pallet_collective::<Instance2>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 17,
+        Elections: pallet_elections_phragmen::{Pallet, Call, Storage, Event<T>, Config<T>} = 18,
+        TechnicalMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>} = 19,
+        Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>} = 20,
 
-        Identity: pallet_identity::{Pallet, Call, Storage, Event<T>},
+        Identity: pallet_identity::{Pallet, Call, Storage, Event<T>} = 21,
 
-        Utility: pallet_utility::{Pallet, Call, Event},
-        Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>},
+        Utility: pallet_utility::{Pallet, Call, Event} = 22,
+        Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 23,
 
         // ChainX basics.
-        XSystem: xpallet_system::{Pallet, Call, Storage, Event<T>, Config},
-        XAssetsRegistrar: xpallet_assets_registrar::{Pallet, Call, Storage, Event<T>, Config},
-        XAssets: xpallet_assets::{Pallet, Call, Storage, Event<T>, Config<T>},
+        XSystem: xpallet_system::{Pallet, Call, Storage, Event<T>, Config} = 24,
+        XAssetsRegistrar: xpallet_assets_registrar::{Pallet, Call, Storage, Event<T>, Config} = 25,
+        XAssets: xpallet_assets::{Pallet, Call, Storage, Event<T>, Config<T>} = 26,
 
         // Mining, must be after XAssets.
-        XStaking: xpallet_mining_staking::{Pallet, Call, Storage, Event<T>, Config<T>},
-        XMiningAsset: xpallet_mining_asset::{Pallet, Call, Storage, Event<T>, Config<T>},
+        XStaking: xpallet_mining_staking::{Pallet, Call, Storage, Event<T>, Config<T>} = 27,
+        XMiningAsset: xpallet_mining_asset::{Pallet, Call, Storage, Event<T>, Config<T>} = 28,
 
         // Crypto gateway stuff.
-        XGatewayRecords: xpallet_gateway_records::{Pallet, Call, Storage, Event<T>},
-        XGatewayCommon: xpallet_gateway_common::{Pallet, Call, Storage, Event<T>, Config<T>},
-        XGatewayBitcoin: xpallet_gateway_bitcoin::{Pallet, Call, Storage, Event<T>, Config<T>},
+        XGatewayRecords: xpallet_gateway_records::{Pallet, Call, Storage, Event<T>} = 29,
+        XGatewayCommon: xpallet_gateway_common::{Pallet, Call, Storage, Event<T>, Config<T>} = 30,
+        XGatewayBitcoin: xpallet_gateway_bitcoin::{Pallet, Call, Storage, Event<T>, Config<T>} = 31,
 
         // DEX
-        XSpot: xpallet_dex_spot::{Pallet, Call, Storage, Event<T>, Config<T>},
+        XSpot: xpallet_dex_spot::{Pallet, Call, Storage, Event<T>, Config<T>} = 32,
 
-        XGenesisBuilder: xpallet_genesis_builder::{Pallet, Config<T>},
+        XGenesisBuilder: xpallet_genesis_builder::{Pallet, Config<T>} = 33,
 
         // orml
         // we retain Currencies Call for this call may be used in future, but we do not need this now,
         // so that we filter it in BaseFilter.
-        Currencies: orml_currencies::{Pallet, Call, Event<T>},
+        Currencies: orml_currencies::{Pallet, Call, Event<T>} = 34,
 
         // It might be possible to merge this module into pallet_transaction_payment in future, thus
         // we put it at the end for keeping the extrinsic ordering.
-        XTransactionFee: xpallet_transaction_fee::{Pallet, Event<T>},
+        XTransactionFee: xpallet_transaction_fee::{Pallet, Event<T>} = 35,
+
+        Proxy: pallet_proxy::{Pallet, Call, Storage, Event<T>} = 36,
+
+        Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 37,
+        Tips: pallet_tips::{Pallet, Call, Storage, Event<T>} = 38,
 
         // Put Sudo last so that the extrinsic ordering stays the same once it's removed.
-        Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
-
-        Proxy: pallet_proxy::{Pallet, Call, Storage, Event<T>},
+        Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 39,
     }
 );
 
@@ -1198,16 +1209,8 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPallets,
-    XGatewayCommonOnRuntimeUpgrade,
+    CustomOnRuntimeUpgrades,
 >;
-
-pub struct XGatewayCommonOnRuntimeUpgrade;
-impl frame_support::traits::OnRuntimeUpgrade for XGatewayCommonOnRuntimeUpgrade {
-    fn on_runtime_upgrade() -> frame_support::weights::Weight {
-        // Do whatever you want.
-        xpallet_gateway_common::migrations::taproot::apply::<Runtime>()
-    }
-}
 
 impl_runtime_apis! {
     impl sp_api::Core<Block> for Runtime {
@@ -1277,10 +1280,10 @@ impl_runtime_apis! {
             sp_consensus_babe::BabeGenesisConfiguration {
                 slot_duration: Babe::slot_duration(),
                 epoch_length: EpochDuration::get(),
-                c: PRIMARY_PROBABILITY,
+                c: BABE_GENESIS_EPOCH_CONFIG.c,
                 genesis_authorities: Babe::authorities().to_vec(),
                 randomness: Babe::randomness(),
-                allowed_slots: sp_consensus_babe::AllowedSlots::PrimaryAndSecondaryVRFSlots,
+                allowed_slots: BABE_GENESIS_EPOCH_CONFIG.allowed_slots,
             }
         }
 
@@ -1542,6 +1545,21 @@ impl_runtime_apis! {
             // check multisig address
             let _ = XGatewayCommon::generate_multisig_addr(chain, &info.0)?;
             Ok(info)
+        }
+    }
+
+    #[cfg(feature = "try-runtime")]
+    impl frame_try_runtime::TryRuntime<Block> for Runtime {
+        fn on_runtime_upgrade() -> (Weight, Weight) {
+            // NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
+            // have a backtrace here. If any of the pre/post migration checks fail, we shall stop
+            // right here and right now.
+            let weight = Executive::try_runtime_upgrade().unwrap();
+            (weight, BlockWeights::get().max_block)
+        }
+
+        fn execute_block_no_check(block: Block) -> Weight {
+            Executive::execute_block_no_check(block)
         }
     }
 

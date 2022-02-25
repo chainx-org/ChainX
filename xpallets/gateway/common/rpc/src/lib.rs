@@ -52,6 +52,7 @@ where
         at: Option<BlockHash>,
     ) -> Result<WithdrawalLimit<RpcBalance<Balance>>>;
 
+    /// Get a list of withdrawals with withdrawal fee information.
     #[rpc(name = "xgatewaycommon_withdrawalListWithFeeInfo")]
     fn withdrawal_list_with_fee_info(
         &self,
