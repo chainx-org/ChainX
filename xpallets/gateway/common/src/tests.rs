@@ -29,10 +29,7 @@ fn test_do_trustee_election() {
 fn test_move_trustee_into_little_black_house() {
     ExtBuilder::default().build().execute_with(|| {
         assert_eq!(XGatewayCommon::do_trustee_election(Chain::Bitcoin), Ok(()));
-        assert_eq!(
-            XGatewayCommon::trustee_transition_status(Chain::Bitcoin),
-            false
-        );
+        assert!(!XGatewayCommon::trustee_transition_status(Chain::Bitcoin));
 
         TrusteeSigRecord::<Test>::mutate(Chain::Bitcoin, bob(), |record| *record = 10);
         assert_eq!(
@@ -52,10 +49,7 @@ fn test_move_trustee_into_little_black_house() {
         );
         assert_eq!(XGatewayCommon::trustee_sig_record(Chain::Bitcoin, bob()), 0);
 
-        assert_eq!(
-            XGatewayCommon::trustee_transition_status(Chain::Bitcoin),
-            true
-        );
+        assert!(XGatewayCommon::trustee_transition_status(Chain::Bitcoin));
     });
 }
 

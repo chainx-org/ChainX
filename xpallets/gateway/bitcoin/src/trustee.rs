@@ -139,6 +139,7 @@ impl<T: Config> TrusteeForChain<T::AccountId, T::BlockNumber, BtcTrusteeType, Bt
         Ok(BtcTrusteeType(public))
     }
 
+    #[allow(clippy::type_complexity)]
     fn generate_trustee_session_info(
         props: Vec<(
             T::AccountId,

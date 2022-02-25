@@ -1488,6 +1488,7 @@ impl_runtime_apis! {
             XGatewayCommon::withdrawal_limit(&asset_id)
         }
 
+        #[allow(clippy::type_complexity)]
         fn withdrawal_list_with_fee_info(asset_id: AssetId) -> Result<
             BTreeMap<
                 WithdrawalRecordId,

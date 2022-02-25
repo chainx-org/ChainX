@@ -539,7 +539,6 @@ impl ExtBuilder {
 
         let _ = crate::GenesisConfig::<Test> {
             trustees: trustees(),
-            ..Default::default()
         }
         .assimilate_storage(&mut storage);
 
