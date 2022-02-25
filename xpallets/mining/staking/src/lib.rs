@@ -571,11 +571,6 @@ pub mod pallet {
     pub type MaximumUnbondedChunkSize<T: Config> =
         StorageValue<_, u32, ValueQuery, DefaultForMaximumUnbondedChunkSize>;
 
-    /// The beneficiary account of vesting schedule.
-    #[pallet::storage]
-    #[pallet::getter(fn vesting_account)]
-    pub type VestingAccount<T: Config> = StorageValue<_, T::AccountId, ValueQuery>;
-
     /// The validator account behind the referral id.
     #[pallet::storage]
     pub type ValidatorFor<T: Config> = StorageMap<_, Twox64Concat, ReferralId, T::AccountId>;
@@ -711,7 +706,6 @@ pub mod pallet {
         pub bonding_duration: T::BlockNumber,
         pub validator_bonding_duration: T::BlockNumber,
         pub maximum_unbonded_chunk_size: u32,
-        pub vesting_account: T::AccountId,
         pub upper_bound_factor: u32,
         pub force_era: Forcing,
         pub minimum_penalty: BalanceOf<T>,
@@ -734,7 +728,6 @@ pub mod pallet {
                     DEFAULT_VALIDATOR_BONDING_DURATION,
                 ),
                 maximum_unbonded_chunk_size: DEFAULT_MAXIMUM_UNBONDED_CHUNK_SIZE,
-                vesting_account: Default::default(),
                 upper_bound_factor: 10u32,
                 force_era: Default::default(),
                 minimum_penalty: Default::default(),
@@ -756,7 +749,6 @@ pub mod pallet {
             <BondingDuration<T>>::put(self.bonding_duration);
             <ValidatorBondingDuration<T>>::put(self.validator_bonding_duration);
             <MaximumUnbondedChunkSize<T>>::put(self.maximum_unbonded_chunk_size);
-            <VestingAccount<T>>::put(self.vesting_account.clone());
             <UpperBoundFactorOfAcceptableVotes<T>>::put(self.upper_bound_factor);
             <ForceEra<T>>::put(self.force_era);
             <MinimumPenalty<T>>::put(self.minimum_penalty);

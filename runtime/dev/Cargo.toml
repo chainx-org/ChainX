@@ -1,6 +1,6 @@
 [package]
 name = "dev-runtime"
-version = "3.0.0"
+version = "4.0.0"
 authors = ["The ChainX Authors"]
 edition = "2018"
 
@@ -52,7 +52,6 @@ pallet-membership = { git = "https://github.com/paritytech/substrate", branch = 
 pallet-multisig = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
 pallet-offences = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
 pallet-proxy = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
-pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
 pallet-scheduler = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
 pallet-session = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false, features = ["historical"] }
 pallet-sudo = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
@@ -65,6 +64,7 @@ pallet-utility = { git = "https://github.com/paritytech/substrate", branch = "po
 
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false, optional = true }
 frame-system-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false, optional = true }
+frame-try-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false, optional = true }
 
 # Orml
 orml-traits = { git = "https://github.com/chainx-org/ormls", branch = "main", default-features = false }
@@ -129,6 +129,8 @@ std = [
   "frame-support/std",
   "frame-system/std",
   "frame-system-rpc-runtime-api/std",
+  "frame-benchmarking/std",
+  "frame-try-runtime/std",
   "pallet-authority-discovery/std",
   "pallet-authorship/std",
   "pallet-babe/std",
@@ -145,7 +147,6 @@ std = [
   "pallet-multisig/std",
   "pallet-offences/std",
   "pallet-proxy/std",
-  "pallet-randomness-collective-flip/std",
   "pallet-scheduler/std",
   "pallet-session/std",
   "pallet-sudo/std",
@@ -203,4 +204,45 @@ runtime-benchmarks = [
   "xpallet-gateway-records/runtime-benchmarks",
   "xpallet-mining-asset/runtime-benchmarks",
   "xpallet-mining-staking/runtime-benchmarks",
+]
+
+try-runtime = [
+  "frame-try-runtime",
+  "frame-executive/try-runtime",
+  "frame-system/try-runtime",
+
+  "pallet-authority-discovery/try-runtime",
+  "pallet-authorship/try-runtime",
+  "pallet-babe/try-runtime",
+  "pallet-balances/try-runtime",
+  "pallet-bounties/try-runtime",
+  "pallet-collective/try-runtime",
+  "pallet-democracy/try-runtime",
+  "pallet-elections-phragmen/try-runtime",
+  "pallet-grandpa/try-runtime",
+  "pallet-identity/try-runtime",
+  "pallet-im-online/try-runtime",
+  "pallet-indices/try-runtime",
+  "pallet-membership/try-runtime",
+  "pallet-multisig/try-runtime",
+  "pallet-offences/try-runtime",
+  "pallet-proxy/try-runtime",
+  "pallet-scheduler/try-runtime",
+  "pallet-session/try-runtime",
+  "pallet-sudo/try-runtime",
+  "pallet-timestamp/try-runtime",
+  "pallet-tips/try-runtime",
+  "pallet-transaction-payment/try-runtime",
+  "pallet-treasury/try-runtime",
+  "pallet-utility/try-runtime",
+
+  # ChainX pallets
+  "xpallet-assets/try-runtime",
+  "xpallet-assets-registrar/try-runtime",
+  "xpallet-dex-spot/try-runtime",
+  "xpallet-gateway-bitcoin/try-runtime",
+  "xpallet-gateway-common/try-runtime",
+  "xpallet-gateway-records/try-runtime",
+  "xpallet-mining-asset/try-runtime",
+  "xpallet-mining-staking/try-runtime",
 ]

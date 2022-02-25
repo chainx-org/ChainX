@@ -198,7 +198,7 @@ where
                     _ => return None,
                 };
 
-                Some((chain, addrs.into_iter().map(|addr| convert(addr)).collect()))
+                Some((chain, addrs.into_iter().map(convert).collect()))
             })
             .collect();
 

@@ -15,34 +15,36 @@ fi
 CHAIN=mainnet
 DIR="keys"
 CHAINX=../../target/release/chainx
+SESSION_KEY=""
 
 print_validator_address() {
-  address=$("$CHAINX" key inspect-key "$1" | tail -n 1 | awk '{print $NF}')
+  address=$("$CHAINX" key inspect "$1" | tail -n 1 | awk '{print $NF}')
   echo "                // $address"
 }
 
 print_validator_id() {
-  pubkey=$("$CHAINX" key inspect-key "$1" | tail -n 3 | head -1 | awk '{print $NF}')
+  pubkey=$("$CHAINX" key inspect "$1" | tail -n 3 | head -1 | awk '{print $NF}')
   echo "                hex![\"${pubkey:2}\"].into(),"
 }
 
 print_address() {
   local_scheme=$1
   local_uri=$2
-  address=$("$CHAINX" key inspect-key --scheme "$local_scheme" "$local_uri" | tail -n 1 | awk '{print $NF}')
+  address=$("$CHAINX" key inspect --scheme "$local_scheme" "$local_uri" | tail -n 1 | awk '{print $NF}')
   echo "            // $address"
 }
 
 print_account_key() {
-  pubkey=$("$CHAINX" key inspect-key "$1" | tail -n 3 | head -1 | awk '{print $NF}')
+  pubkey=$("$CHAINX" key inspect "$1" | tail -n 3 | head -1 | awk '{print $NF}')
   echo "            hex![\"${pubkey:2}\"].into(),"
 }
 
 print_aux_key() {
   local_scheme=$1
   local_uri=$2
-  pubkey=$("$CHAINX" key inspect-key --scheme "$local_scheme"  "$local_uri" | tail -n 3 | head -1 | awk '{print $NF}')
+  pubkey=$("$CHAINX" key inspect --scheme "$local_scheme"  "$local_uri" | tail -n 3 | head -1 | awk '{print $NF}')
   echo "            hex![\"${pubkey:2}\"].unchecked_into(),"
+  SESSION_KEY=$SESSION_KEY${pubkey:2}
 }
 
 generate_aux_key() {
@@ -56,10 +58,10 @@ generate_aux_key() {
 }
 
 main() {
-  # Generate 5 pairs of genesis keys given the root secret
+  # Generate some pairs of genesis keys given the root secret
   for id in 1 2 3 4 5; do
     echo "SECRET//validator//$id:"
-    echo "SECRET//babe//$id, SECRET//grandpa//$id, SECRET//im_online//$id, SECRET//authority_discovery//$id"
+    echo "SECRET//blockauthor/$id, SECRET//babe//$id, SECRET//grandpa//$id, SECRET//im_online//$id, SECRET//authority_discovery//$id"
     echo
 
     echo "            ("
@@ -70,11 +72,16 @@ main() {
     echo "                b\""$referral_id"\".to_vec(),"
     echo "            ),"
 
+    print_address      sr25519 "$SECRET//blockauthor//$id"
+    print_account_key          "$SECRET//blockauthor//$id"
+
+    SESSION_KEY="0x"
     generate_aux_key babe sr25519 "$DIR/$id" "$SECRET//babe//$id"
     # Grandpa must use ed25519.
     generate_aux_key gran ed25519 "$DIR/$id" "$SECRET//grandpa//$id"
     generate_aux_key imon sr25519 "$DIR/$id" "$SECRET//im_online//$id"
     generate_aux_key audi sr25519 "$DIR/$id" "$SECRET//authority_discovery//$id"
+    echo "            SessionKey: [$SESSION_KEY]"
 
     echo
   done
@@ -82,7 +89,8 @@ main() {
   echo 'Root:'
   print_address     sr25519 "$SECRET"
   print_account_key         "$SECRET"
+
   echo "The generated keys are in directory $DIR"
 }
 
-main
+main "$@"

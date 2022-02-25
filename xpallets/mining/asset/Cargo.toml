@@ -1,6 +1,6 @@
 [package]
 name = "xpallet-mining-asset"
-version = "3.0.0"
+version = "4.0.0"
 authors = ["The ChainX Authors"]
 edition = "2018"
 
@@ -69,3 +69,4 @@ std = [
 runtime-benchmarks = [
     "frame-benchmarking",
 ]
+try-runtime = ["frame-support/try-runtime"]

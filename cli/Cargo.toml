@@ -1,6 +1,6 @@
 [package]
 name = "chainx-cli"
-version = "3.0.0"
+version = "4.0.0"
 authors = ["The ChainX Authors"]
 description = "Implementation of protocol https://chainx.org in Rust based on the Substrate framework."
 edition = "2018"
@@ -36,6 +36,7 @@ sc-telemetry = { git = "https://github.com/paritytech/substrate", branch = "polk
 frame-benchmarking-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", optional = true }
 sc-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", optional = true }
 sc-service = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", optional = true }
+try-runtime-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", optional = true }
 
 # Substrate primitives
 sp-authority-discovery = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11" }
@@ -75,6 +76,7 @@ cli = [
   "sc-service",
   "frame-benchmarking-cli",
   "chainx-executor/wasmi-errno",
+  "try-runtime-cli"
 ]
 wasmtime = [
   "sc-cli/wasmtime",
@@ -85,4 +87,10 @@ runtime-benchmarks = [
   "chainx-runtime/runtime-benchmarks",
   "dev-runtime/runtime-benchmarks",
   "malan-runtime/runtime-benchmarks",
+]
+try-runtime = [
+  "try-runtime-cli",
+  "chainx-runtime/try-runtime",
+  "dev-runtime/try-runtime",
+  "malan-runtime/try-runtime"
 ]

@@ -10,6 +10,7 @@ use sc_service::{
     config::{PrometheusConfig, TelemetryEndpoints},
     BasePath, TransactionPoolOptions,
 };
+use sp_core::crypto::{set_default_ss58_version, Ss58AddressFormat::ChainXAccount};
 
 use chainx_service::{self as service, new_partial, IdentifyVariant};
 
@@ -200,6 +201,7 @@ fn load_spec(id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
         "" | "mainnet" => Box::new(chain_spec::mainnet_config()?),
         "dev" => Box::new(chain_spec::development_config()?),
         "malan" | "testnet" => Box::new(chain_spec::malan_config()?),
+        "new-malan" => Box::new(chain_spec::new_malan_config()?),
         "local" => Box::new(chain_spec::local_testnet_config()?),
         "benchmarks" => {
             #[cfg(feature = "runtime-benchmarks")]
@@ -228,7 +230,6 @@ fn load_spec(id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
 macro_rules! construct_async_run {
     (|$components:ident, $cli:ident, $cmd:ident, $config:ident| $( $code:tt )* ) => {{
         let runner = $cli.create_runner($cmd)?;
-        set_default_ss58_version(&runner.config().chain_spec);
 
         if runner.config().chain_spec.is_malan() {
             runner.async_run(|$config| {
@@ -274,11 +275,11 @@ pub fn run() -> sc_cli::Result<()> {
     let raw_cli_args = std::env::args().collect::<Vec<_>>();
     let cli = <Cli as SubstrateCli>::from_iter(crate::config::preprocess_cli_args(raw_cli_args));
 
+    set_default_ss58_version(ChainXAccount);
+
     match &cli.subcommand {
         None => {
             let runner = cli.create_runner(&cli)?;
-            let chain_spec = &runner.config().chain_spec;
-            set_default_ss58_version(chain_spec);
 
             runner
                 .run_node_until_exit(|config| async move {
@@ -299,9 +300,6 @@ pub fn run() -> sc_cli::Result<()> {
         Some(Subcommand::Benchmark(cmd)) => {
             if cfg!(feature = "runtime-benchmarks") {
                 let runner = cli.create_runner(cmd)?;
-                let chain_spec = &runner.config().chain_spec;
-
-                set_default_ss58_version(chain_spec);
 
                 runner.sync_run(|config| {
                     cmd.run::<chainx_runtime::Block, chainx_executor::ChainXExecutor>(config)
@@ -320,7 +318,6 @@ pub fn run() -> sc_cli::Result<()> {
         Some(Subcommand::Vanity(cmd)) => cmd.run(),
         Some(Subcommand::BuildSpec(cmd)) => {
             let runner = cli.create_runner(cmd)?;
-            set_default_ss58_version(&runner.config().chain_spec);
 
             runner.sync_run(|config| cmd.run(config.chain_spec, config.network))
         }
@@ -346,7 +343,6 @@ pub fn run() -> sc_cli::Result<()> {
         }
         Some(Subcommand::PurgeChain(cmd)) => {
             let runner = cli.create_runner(cmd)?;
-            set_default_ss58_version(&runner.config().chain_spec);
 
             runner.sync_run(|config| cmd.run(config.database))
         }
@@ -355,18 +351,55 @@ pub fn run() -> sc_cli::Result<()> {
                 Ok(cmd.run(components.client, components.backend))
             })
         }
+        #[cfg(feature = "try-runtime")]
+        Some(Subcommand::TryRuntime(cmd)) => {
+            let runner = cli.create_runner(cmd)?;
+            let chain_spec = &runner.config().chain_spec;
+
+            if chain_spec.is_malan() {
+                return runner.async_run(|config| {
+                    let registry = config.prometheus_config.as_ref().map(|cfg| &cfg.registry);
+                    let task_manager =
+                        sc_service::TaskManager::new(config.tokio_handle.clone(), registry)
+                            .map_err(|e| {
+                                sc_cli::Error::Service(sc_service::Error::Prometheus(e))
+                            })?;
+                    Ok((
+                        cmd.run::<malan_runtime::Block, chainx_executor::MalanExecutor>(config),
+                        task_manager,
+                    ))
+                });
+            } else if chain_spec.is_dev() {
+                return runner.async_run(|config| {
+                    let registry = config.prometheus_config.as_ref().map(|cfg| &cfg.registry);
+                    let task_manager =
+                        sc_service::TaskManager::new(config.tokio_handle.clone(), registry)
+                            .map_err(|e| {
+                                sc_cli::Error::Service(sc_service::Error::Prometheus(e))
+                            })?;
+                    Ok((
+                        cmd.run::<dev_runtime::Block, chainx_executor::DevExecutor>(config),
+                        task_manager,
+                    ))
+                });
+            } else {
+                return runner.async_run(|config| {
+                    let registry = config.prometheus_config.as_ref().map(|cfg| &cfg.registry);
+                    let task_manager =
+                        sc_service::TaskManager::new(config.tokio_handle.clone(), registry)
+                            .map_err(|e| {
+                                sc_cli::Error::Service(sc_service::Error::Prometheus(e))
+                            })?;
+                    Ok((
+                        cmd.run::<chainx_runtime::Block, chainx_executor::ChainXExecutor>(config),
+                        task_manager,
+                    ))
+                });
+            }
+        }
+        #[cfg(not(feature = "try-runtime"))]
+        Some(Subcommand::TryRuntime) => Err("TryRuntime wasn't enabled when building the node. \
+            You can enable it with `--features try-runtime`."
+            .into()),
     }
-}
-
-fn set_default_ss58_version(spec: &Box<dyn sc_service::ChainSpec>) {
-    use sp_core::crypto::Ss58AddressFormat;
-    // this `id()` is from `ChainSpec::from_genesis()` second parameter
-    // todo may use a better way
-    let version: Ss58AddressFormat = if spec.id() == "chainx" {
-        Ss58AddressFormat::ChainXAccount
-    } else {
-        Ss58AddressFormat::SubstrateAccount
-    };
-
-    sp_core::crypto::set_default_ss58_version(version);
 }

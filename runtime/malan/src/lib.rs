@@ -46,6 +46,7 @@ use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthority
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 use pallet_session::historical as pallet_session_historical;
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
+use sp_consensus_babe::AllowedSlots::PrimaryAndSecondaryPlainSlots;
 
 use chainx_runtime_common::{BlockLength, BlockWeights};
 use xpallet_dex_spot::{Depth, FullPairInfo, RpcOrder, TradingPairId};
@@ -98,19 +99,21 @@ pub use xpallet_mining_staking::VoteWeight;
 pub mod constants;
 /// Implementations of some helper traits passed into runtime modules as associated types.
 pub mod impls;
+mod migrations;
 
 use self::constants::{currency::*, time::*};
 use self::impls::{ChargeExtraFee, DealWithFees, SlowAdjustingFeeUpdate};
+use self::migrations::*;
 
 /// This runtime version.
 pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("chainx"),
     impl_name: create_runtime_str!("chainx-malan"),
     authoring_version: 1,
-    spec_version: 2,
+    spec_version: 12,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 1,
+    transaction_version: 3,
 };
 
 /// The version information used to identify this runtime when compiled natively.
@@ -122,13 +125,29 @@ pub fn native_version() -> NativeVersion {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, codec::Encode, codec::Decode, scale_info::TypeInfo)]
+/// The BABE epoch configuration at genesis.
+/// The existing chain is running with PrimaryAndSecondaryPlainSlots,
+/// you should keep returning the same thing in BabeApi::configuration()
+/// as you were doing before.
+///
+/// Edit: it's okay to change this here as BabeApi::configuration()
+/// is only used on genesis, so this change won't have any effect on
+/// the existing chains. But maybe it makes it more clear if you still
+/// keep the original value.
+pub const BABE_GENESIS_EPOCH_CONFIG: sp_consensus_babe::BabeEpochConfiguration =
+    sp_consensus_babe::BabeEpochConfiguration {
+        c: PRIMARY_PROBABILITY,
+        allowed_slots: PrimaryAndSecondaryPlainSlots,
+    };
+
+#[derive(Debug, Clone, Eq, PartialEq, codec::Encode, codec::Decode, TypeInfo)]
 pub struct BaseFilter;
 impl Contains<Call> for BaseFilter {
     fn contains(call: &Call) -> bool {
         use frame_support::dispatch::GetCallMetadata;
+
         if let Call::Currencies(_) = call {
-            return false; // forbidden Currencies call now
+            return false;
         }
 
         let metadata = call.get_call_metadata();
@@ -178,7 +197,7 @@ parameter_types! {
         * MaximumBlockWeight::get();
     pub const MaximumBlockLength: u32 = 5 * 1024 * 1024;
     pub const Version: RuntimeVersion = VERSION;
-    pub const SS58Prefix: u8 = xp_protocol::TESTNET_ADDRESS_FORMAT_ID;
+    pub const SS58Prefix: u8 = xp_protocol::MAINNET_ADDRESS_FORMAT_ID;
 }
 
 const_assert!(
@@ -555,7 +574,7 @@ parameter_types! {
     // 10 PCX
     pub const MinimumDeposit: Balance = 1000 * DOLLARS;
     pub const EnactmentPeriod: BlockNumber = HOURS;
-    pub const CooloffPeriod: BlockNumber = 7 * DAYS;
+    pub const CooloffPeriod: BlockNumber = HOURS;
     // One cent: $10,000 / MB
     pub const PreimageByteDeposit: Balance = CENTS;
     pub const MaxVotes: u32 = 100;
@@ -615,7 +634,7 @@ impl pallet_democracy::Config for Runtime {
 }
 
 parameter_types! {
-    pub const CouncilMotionDuration: BlockNumber = 7 * DAYS;
+    pub const CouncilMotionDuration: BlockNumber = HOURS;
     pub const CouncilMaxProposals: u32 = 100;
     pub const CouncilMaxMembers: u32 = 100;
 }
@@ -641,8 +660,8 @@ parameter_types! {
     pub const VotingBondFactor: Balance = deposit(0, 32);
     pub const VotingBond: Balance = DOLLARS;
     pub const TermDuration: BlockNumber = DAYS;
-    pub const DesiredMembers: u32 = 11;
-    pub const DesiredRunnersUp: u32 = 7;
+    pub const DesiredMembers: u32 = 5;
+    pub const DesiredRunnersUp: u32 = 3;
     pub const ElectionsPhragmenPalletId: LockIdentifier = *b"pcx/phre";
 }
 
@@ -670,7 +689,7 @@ impl pallet_elections_phragmen::Config for Runtime {
 }
 
 parameter_types! {
-    pub const TechnicalMotionDuration: BlockNumber = 5 * DAYS;
+    pub const TechnicalMotionDuration: BlockNumber = HOURS;
     pub const TechnicalMaxProposals: u32 = 100;
     pub const TechnicalMaxMembers: u32 = 100;
 }
@@ -935,11 +954,6 @@ impl pallet_proxy::Config for Runtime {
     type AnnouncementDepositFactor = AnnouncementDepositFactor;
 }
 
-impl pallet_sudo::Config for Runtime {
-    type Event = Event;
-    type Call = Call;
-}
-
 ///////////////////////////////////////////
 // orml
 ///////////////////////////////////////////
@@ -1069,7 +1083,10 @@ impl xpallet_mining_asset::Config for Runtime {
 
 impl xpallet_genesis_builder::Config for Runtime {}
 
-impl pallet_randomness_collective_flip::Config for Runtime {}
+impl pallet_sudo::Config for Runtime {
+    type Event = Event;
+    type Call = Call;
+}
 
 construct_runtime!(
     pub enum Runtime where
@@ -1079,7 +1096,6 @@ construct_runtime!(
     {
         // Basic stuff.
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
-        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 1,
         Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 2,
 
         // Must be before session.
@@ -1140,12 +1156,13 @@ construct_runtime!(
         // we put it at the end for keeping the extrinsic ordering.
         XTransactionFee: xpallet_transaction_fee::{Pallet, Event<T>} = 35,
 
-        Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 36,
+        Proxy: pallet_proxy::{Pallet, Call, Storage, Event<T>} = 36,
 
-        Proxy: pallet_proxy::{Pallet, Call, Storage, Event<T>} = 37,
+        Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 37,
+        Tips: pallet_tips::{Pallet, Call, Storage, Event<T>} = 38,
 
-        Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 38,
-        Tips: pallet_tips::{Pallet, Call, Storage, Event<T>} = 39,
+        // Put Sudo last so that the extrinsic ordering stays the same once it's removed.
+        Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 39,
     }
 );
 
@@ -1184,6 +1201,7 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPallets,
+    CustomOnRuntimeUpgrades,
 >;
 
 impl_runtime_apis! {
@@ -1254,10 +1272,10 @@ impl_runtime_apis! {
             sp_consensus_babe::BabeGenesisConfiguration {
                 slot_duration: Babe::slot_duration(),
                 epoch_length: EpochDuration::get(),
-                c: PRIMARY_PROBABILITY,
+                c: BABE_GENESIS_EPOCH_CONFIG.c,
                 genesis_authorities: Babe::authorities().to_vec(),
                 randomness: Babe::randomness(),
-                allowed_slots: sp_consensus_babe::AllowedSlots::PrimaryAndSecondaryVRFSlots,
+                allowed_slots: BABE_GENESIS_EPOCH_CONFIG.allowed_slots,
             }
         }
 
@@ -1272,7 +1290,6 @@ impl_runtime_apis! {
         fn next_epoch() -> sp_consensus_babe::Epoch {
             Babe::next_epoch()
         }
-
 
         fn generate_key_ownership_proof(
             _slot: sp_consensus_babe::Slot,
@@ -1484,6 +1501,21 @@ impl_runtime_apis! {
             // check multisig address
             let _ = XGatewayCommon::generate_multisig_addr(chain, &info)?;
             Ok(info)
+        }
+    }
+
+    #[cfg(feature = "try-runtime")]
+    impl frame_try_runtime::TryRuntime<Block> for Runtime {
+        fn on_runtime_upgrade() -> (Weight, Weight) {
+            // NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
+            // have a backtrace here. If any of the pre/post migration checks fail, we shall stop
+            // right here and right now.
+            let weight = Executive::try_runtime_upgrade().unwrap();
+            (weight, BlockWeights::get().max_block)
+        }
+
+        fn execute_block_no_check(block: Block) -> Weight {
+            Executive::execute_block_no_check(block)
         }
     }
 

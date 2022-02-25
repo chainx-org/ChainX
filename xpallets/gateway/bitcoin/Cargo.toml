@@ -1,6 +1,6 @@
 [package]
 name = "xpallet-gateway-bitcoin"
-version = "3.0.0"
+version = "4.0.0"
 authors = ["The ChainX Authors"]
 edition = "2018"
 
@@ -87,3 +87,4 @@ std = [
 ]
 runtime-benchmarks = ["frame-benchmarking"]
 ss58check = ["xp-gateway-common/ss58check"]
+try-runtime = ["frame-support/try-runtime"]
