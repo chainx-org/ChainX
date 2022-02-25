@@ -319,7 +319,7 @@ impl OnRuntimeUpgrade for CustomOnRuntimeUpgrades {
         frame_support::log::info!("🔍️ XGatewayCommonStorageMigration start");
         weight += <XGatewayCommonStorageMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
         frame_support::log::info!("🚀 XGatewayCommonStorageMigration end");
-        
+
         weight
     }
 }
