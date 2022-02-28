@@ -523,7 +523,7 @@ fn malan_genesis(
         },
         x_staking: malan::XStakingConfig {
             validator_count: 40,
-            sessions_per_era: 12,
+            sessions_per_era: 1,
             glob_dist_ratio: (12, 88), // (Treasury, X-type Asset and Staking) = (12, 88)
             mining_ratio: (10, 90),    // (Asset Mining, Staking) = (10, 90)
             minimum_penalty: 100 * DOLLARS,

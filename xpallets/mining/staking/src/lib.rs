@@ -732,7 +732,7 @@ pub mod pallet {
                 validator_count: Default::default(),
                 minimum_validator_count: Default::default(),
                 maximum_validator_count: DEFAULT_MAXIMUM_VALIDATOR_COUNT,
-                sessions_per_era: 12,
+                sessions_per_era: 1,
                 bonding_duration: T::BlockNumber::saturated_from::<u64>(DEFAULT_BONDING_DURATION),
                 validator_bonding_duration: T::BlockNumber::saturated_from::<u64>(
                     DEFAULT_VALIDATOR_BONDING_DURATION,
