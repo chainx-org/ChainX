@@ -223,7 +223,8 @@ impl<T: Config> Claim<T::AccountId> for Pallet<T> {
 
 impl<T: Config> Pallet<T> {
     /// Issue new session reward and try slashing the offenders at the same time.
-    fn mint_and_slash(session_index: SessionIndex) {
+    /// TODO: session_index
+    pub(crate) fn mint_and_slash(session_index: SessionIndex) {
         // Only the active validators can be rewarded.
         let validator_rewards = Self::distribute_session_reward();
 
@@ -290,12 +291,6 @@ impl<T: Config> Pallet<T> {
 
     /// Start a session potentially starting an era.
     fn start_session(start_session: SessionIndex) {
-        // Skip the reward minting for the genesis initialization.
-        // Actually start from session index 1.
-        if start_session > 0 {
-            Self::mint_and_slash(start_session);
-        }
-
         let next_active_era = Self::active_era().map(|e| e.index + 1).unwrap_or(0);
         debug!(
             target: "runtime::mining::staking",

@@ -2,7 +2,7 @@
 
 use frame_support::{
     assert_err, assert_ok,
-    traits::{Get, OnInitialize},
+    traits::{Get, OnFinalize, OnInitialize},
 };
 use frame_system::RawOrigin;
 
@@ -96,11 +96,11 @@ fn t_start_session(session_index: SessionIndex) {
         "start_session can only be used with session length 1."
     );
     for i in Session::current_index()..session_index {
-        // XStaking::on_finalize(System::block_number());
+        XStaking::on_finalize(System::block_number());
         System::set_block_number((i + 1).into());
         Timestamp::set_timestamp(System::block_number() * 1000 + INIT_TIMESTAMP);
         Session::on_initialize(System::block_number());
-        // XStaking::on_initialize(System::block_number());
+        XStaking::on_initialize(System::block_number());
     }
 
     assert_eq!(Session::current_index(), session_index);

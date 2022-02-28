@@ -98,13 +98,9 @@ pub mod pallet {
         #[pallet::constant]
         type MaximumReferralId: Get<u32>;
 
-        /// An expected duration of the session.
-        ///
-        /// This parameter is used to determine the longevity of `heartbeat` transaction
-        /// and a rough time when we should start considering sending heartbeats,
-        /// since the workers avoids sending them at the very beginning of the session, assuming
-        /// there is a chance the authority will produce a block and they won't be necessary.
-        type SessionDuration: Get<Self::BlockNumber>;
+        /// The block rewards mint cycle
+        #[pallet::constant]
+        type RewardsCycle: Get<Self::BlockNumber>;
 
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
@@ -113,6 +109,20 @@ pub mod pallet {
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
     pub struct Pallet<T>(_);
+
+    #[pallet::hooks]
+    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+        /// Called when a block is initialized.
+        fn on_initialize(now: T::BlockNumber) -> Weight {
+            if (now % T::RewardsCycle::get()).is_zero() {
+                Self::mint_and_slash(0);
+
+                T::BlockWeights::get().max_block
+            } else {
+                0
+            }
+        }
+    }
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {

@@ -297,15 +297,15 @@ parameter_types! {
     pub const ExpectedBlockTime: Moment = MILLISECS_PER_BLOCK;
 }
 
-pub struct ReportLongevity;
-
-impl Get<u64> for ReportLongevity {
-    fn get() -> u64 {
-        xpallet_mining_staking::BondingDuration::<Runtime>::get() as u64
-            * xpallet_mining_staking::SessionsPerEra::<Runtime>::get() as u64
-            * EpochDuration::get()
-    }
-}
+// Disable HandleEquivocation for ChainX now
+// pub struct ReportLongevity;
+// impl Get<u64> for ReportLongevity {
+//     fn get() -> u64 {
+//         // The longevity, in blocks, that the equivocation report is valid for. When using the xstaking
+//         // pallet this should be equal to the bonding duration (in blocks, not eras).
+//         xpallet_mining_staking::ValidatorBondingDuration::<Runtime>::get() as u64
+//     }
+// }
 
 impl pallet_babe::Config for Runtime {
     type EpochDuration = EpochDuration;
@@ -324,9 +324,7 @@ impl pallet_babe::Config for Runtime {
         pallet_babe::AuthorityId,
     )>>::IdentificationTuple;
 
-    type HandleEquivocation =
-        pallet_babe::EquivocationHandler<Self::KeyOwnerIdentification, Offences, ReportLongevity>;
-
+    type HandleEquivocation = ();
     type WeightInfo = ();
     type DisabledValidators = Session;
     type MaxAuthorities = MaxAuthorities;
@@ -349,7 +347,6 @@ impl pallet_grandpa::Config for Runtime {
 }
 
 parameter_types! {
-    pub const Offset: BlockNumber = 0;
     pub const DisabledValidatorsThreshold: Perbill = Perbill::from_percent(17);
 }
 
@@ -427,7 +424,6 @@ impl xpallet_transaction_fee::Config for Runtime {
 }
 
 parameter_types! {
-    pub const SessionDuration: BlockNumber = EPOCH_DURATION_IN_BLOCKS;
     pub const ImOnlineUnsignedPriority: TransactionPriority = TransactionPriority::max_value();
     /// We prioritize im-online heartbeats over election solution submission.
     pub const StakingUnsignedPriority: TransactionPriority = TransactionPriority::max_value() / 2;
@@ -1046,6 +1042,7 @@ parameter_types! {
     // Total issuance is 7723350PCX by the end of ChainX 1.0.
     // 210000 - (7723350 / 50) = 55533
     pub const MigrationSessionOffset: SessionIndex = 55533;
+    pub const RewardsCycle: BlockNumber = REWORDS_CYCLE_IN_BLOCKS;
     pub const MinimumReferralId: u32 = 2;
     pub const MaximumReferralId: u32 = 12;
 }
@@ -1053,7 +1050,7 @@ parameter_types! {
 impl xpallet_mining_staking::Config for Runtime {
     type Event = Event;
     type Currency = Balances;
-    type SessionDuration = SessionDuration;
+    type RewardsCycle = RewardsCycle;
     type MinimumReferralId = MinimumReferralId;
     type MaximumReferralId = MaximumReferralId;
     type SessionInterface = Self;
@@ -1095,7 +1092,7 @@ construct_runtime!(
         Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 2,
 
         // Must be before session.
-        Babe: pallet_babe::{Pallet, Call, Storage, Config, ValidateUnsigned} = 3,
+        Babe: pallet_babe::{Pallet, Call, Storage, Config} = 3,
 
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 4,
         Indices: pallet_indices::{Pallet, Call, Storage, Config<T>, Event<T>} = 5,

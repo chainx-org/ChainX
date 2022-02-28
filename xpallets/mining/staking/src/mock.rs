@@ -190,7 +190,7 @@ impl xp_mining_common::RewardPotAccountFor<AccountId, AccountId>
 }
 
 parameter_types! {
-    pub const SessionDuration: BlockNumber = 50;
+    pub const RewardsCycle: BlockNumber = 1;
     pub const MinimumReferralId: u32 = 2;
     pub const MaximumReferralId: u32 = 12;
 }
@@ -199,7 +199,7 @@ impl Config for Test {
     type Currency = Balances;
     type Event = Event;
     type AssetMining = ();
-    type SessionDuration = SessionDuration;
+    type RewardsCycle = RewardsCycle;
     type MinimumReferralId = MinimumReferralId;
     type MaximumReferralId = MaximumReferralId;
     type SessionInterface = Self;
