@@ -222,9 +222,8 @@ impl<T: Config> Claim<T::AccountId> for Pallet<T> {
 }
 
 impl<T: Config> Pallet<T> {
-    /// Issue new session reward and try slashing the offenders at the same time.
-    /// TODO: session_index
-    pub(crate) fn mint_and_slash(session_index: SessionIndex) {
+    /// Issue new round reward and try slashing the offenders at the same time.
+    pub(crate) fn mint_and_slash(rounds_index: u32) {
         // Only the active validators can be rewarded.
         let validator_rewards = Self::distribute_session_reward();
 
@@ -233,7 +232,7 @@ impl<T: Config> Pallet<T> {
             let force_chilled = Self::slash_offenders_in_session(offenders, validator_rewards);
             if !force_chilled.is_empty() {
                 debug!("Force chilled:{:?}", force_chilled);
-                Self::deposit_event(Event::<T>::ForceChilled(session_index, force_chilled));
+                Self::deposit_event(Event::<T>::ForceChilled(rounds_index, force_chilled));
                 // Force a new era if some offender's reward pot has been wholly slashed.
                 Self::ensure_new_era();
             }

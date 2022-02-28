@@ -115,7 +115,7 @@ pub mod pallet {
         /// Called when a block is initialized.
         fn on_initialize(now: T::BlockNumber) -> Weight {
             if (now % T::RewardsCycle::get()).is_zero() {
-                Self::mint_and_slash(0);
+                Self::mint_and_slash(now / T::RewardsCycle::get());
 
                 T::BlockWeights::get().max_block
             } else {
@@ -455,8 +455,8 @@ pub mod pallet {
         Claimed(T::AccountId, T::AccountId, BalanceOf<T>),
         /// The nominator withdrew the locked balance from the unlocking queue. [nominator, amount]
         Withdrawn(T::AccountId, BalanceOf<T>),
-        /// Offenders were forcibly to be chilled due to insufficient reward pot balance. [session_index, chilled_validators]
-        ForceChilled(SessionIndex, Vec<T::AccountId>),
+        /// Offenders were forcibly to be chilled due to insufficient reward pot balance. [rewards_rounds, chilled_validators]
+        ForceChilled(u32, Vec<T::AccountId>),
         /// Unlock the unbonded withdrawal by force. [account]
         ForceAllWithdrawn(T::AccountId),
     }
