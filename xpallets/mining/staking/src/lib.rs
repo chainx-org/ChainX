@@ -69,6 +69,7 @@ pub mod pallet {
     use super::*;
     use frame_support::{dispatch::DispatchResult, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
+    use sp_arithmetic::traits::UniqueSaturatedInto;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -115,7 +116,9 @@ pub mod pallet {
         /// Called when a block is initialized.
         fn on_initialize(now: T::BlockNumber) -> Weight {
             if (now % T::RewardsCycle::get()).is_zero() {
-                Self::mint_and_slash(now / T::RewardsCycle::get());
+                let rounds = (now / T::RewardsCycle::get()).unique_saturated_into();
+
+                Self::mint_and_slash(rounds);
 
                 T::BlockWeights::get().max_block
             } else {
