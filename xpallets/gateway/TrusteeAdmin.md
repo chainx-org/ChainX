@@ -26,13 +26,20 @@ Call to move out of the little black house
 
 ![](https://cdn.jsdelivr.net/gh/hacpy/PictureBed@master/Document/16460153141231646015313400.png)
 
-##### 4. Trustee administrator is required to initiate a trustee election at the end of each term.
+##### 4. Trustee administrator is required to initiate a trustee election at the end of each term. And ensuring the perfect execution of trust transition. The following trust transition process needs to be carried out in an orderly and correct manner
 
-Call to start trustee election![](https://cdn.jsdelivr.net/gh/hacpy/PictureBed@master/Document/16460155281231646015527278.png)
+- Call to start trustee election![](https://cdn.jsdelivr.net/gh/hacpy/PictureBed@master/Document/16460155281231646015527278.png)
+
+- **Make sure that all the btc of the previous trust hot address is transferred to the previous cold address**
+- Finally, **ensure that all the btc of the previous cold address is transferred to the current cold address**
 
 ##### 5. Perform general trustee operations and sign for withdrawal transactions
 
-Trustee administrator also needs to be more involved with trust signatures, and rewards are distributed with a weighting of the amount of withdrawals processed.
+Trustee administrator also needs to be more involved with trust signatures, and rewards are distributed with a weighting of the amount of withdrawals processed. 
+
+##### 6. Conversion of hot and cold addresses
+
+When the hot address has enough money, transfer the money to the cold address for security.When the money from the hot address is not enough to withdraw cash, transfer from the cold address to the hot address.
 
 ## Rewards for Trustee Administrator
 
