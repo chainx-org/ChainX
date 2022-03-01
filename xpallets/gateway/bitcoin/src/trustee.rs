@@ -382,6 +382,9 @@ pub(crate) fn create_multi_address<T: Config>(
     pubkeys: &[Public],
     sig_num: u32,
 ) -> Option<BtcTrusteeAddrInfo> {
+    let mut pubkeys = pubkeys.to_vec();
+    pubkeys.sort_unstable();
+
     let sum = pubkeys.len() as u32;
     if sig_num > sum {
         panic!("required sig num should less than trustee_num; qed")

@@ -93,14 +93,14 @@ fn test_create_multi_address() {
     ExtBuilder::default().build_and_execute(|| {
         let hot_info = create_multi_address::<Test>(&hot_keys, 3).unwrap();
         let cold_info = create_multi_address::<Test>(&cold_keys, 3).unwrap();
-        let real_hot_addr = b"2N1CPZyyoKj1wFz2Fy4gEHpSCVxx44GtyoY".to_vec();
-        let real_cold_addr = b"2N24ytjE3MtkMpYWo8LrTfnkbpyaJGyQbCA".to_vec();
+        let real_hot_addr = b"2N6mJFLkjN9muneSeHCsMCxWXVZ4ruLKfFo".to_vec();
+        let real_cold_addr = b"2NEf17iYn2Lj2AdnAd1C7A9i8a5PpfPjaFk".to_vec();
         assert_eq!(hot_info.addr, real_hot_addr);
         assert_eq!(cold_info.addr, real_cold_addr);
 
         let pks = [
-            169, 20, 87, 55, 193, 151, 147, 67, 146, 12, 238, 164, 14, 124, 125, 104, 178, 100,
-            176, 239, 250, 62, 135,
+            169, 20, 148, 73, 171, 119, 43, 210, 235, 251, 157, 63, 210, 43, 149, 44, 127, 46, 221,
+            9, 204, 107, 135,
         ];
         let addr: Address = String::from_utf8_lossy(&hot_info.addr).parse().unwrap();
         let pk = match addr.hash {
