@@ -542,7 +542,7 @@ pub mod pallet {
 
     #[pallet::type_value]
     pub fn DefaultForSessionsPerEra() -> SessionIndex {
-        12
+        1
     }
 
     /// The length of a staking era in sessions.
