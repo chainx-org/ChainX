@@ -216,6 +216,12 @@ fn load_spec(id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
                 );
             }
         }
+        path if path.starts_with("dev") => Box::new(chain_spec::DevChainSpec::from_json_file(
+            std::path::PathBuf::from(path),
+        )?),
+        path if path.starts_with("malan") => Box::new(chain_spec::MalanChainSpec::from_json_file(
+            std::path::PathBuf::from(path),
+        )?),
         path => {
             let p = std::path::PathBuf::from(path);
             if !p.exists() {

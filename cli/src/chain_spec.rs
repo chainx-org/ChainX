@@ -460,7 +460,10 @@ fn malan_genesis(
             code: wasm_binary.to_vec(),
             changes_trie_config: Default::default(),
         },
-        babe: Default::default(),
+        babe: malan::BabeConfig {
+            authorities: vec![],
+            epoch_config: Some(malan::BABE_GENESIS_EPOCH_CONFIG),
+        },
         grandpa: malan::GrandpaConfig {
             authorities: vec![],
         },
