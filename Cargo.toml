@@ -84,7 +84,6 @@ pallet-im-online = { git = "https://github.com/paritytech/substrate", rev = "11a
 pallet-indices = { git = "https://github.com/paritytech/substrate", rev = "11ace4ef8b2ad176293ad6db2b3dd795befd2c79" }
 pallet-membership = { git = "https://github.com/paritytech/substrate", rev = "11ace4ef8b2ad176293ad6db2b3dd795befd2c79" }
 pallet-multisig = { git = "https://github.com/paritytech/substrate", rev = "11ace4ef8b2ad176293ad6db2b3dd795befd2c79" }
-pallet-offences = { git = "https://github.com/paritytech/substrate", rev = "11ace4ef8b2ad176293ad6db2b3dd795befd2c79" }
 pallet-proxy = { git = "https://github.com/paritytech/substrate", rev = "11ace4ef8b2ad176293ad6db2b3dd795befd2c79" }
 pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate", rev = "11ace4ef8b2ad176293ad6db2b3dd795befd2c79" }
 pallet-scheduler = { git = "https://github.com/paritytech/substrate", rev = "11ace4ef8b2ad176293ad6db2b3dd795befd2c79" }

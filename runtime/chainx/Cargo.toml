@@ -47,7 +47,7 @@ pallet-im-online = { version = "2.0.0", default-features = false }
 pallet-indices = { version = "2.0.0", default-features = false }
 pallet-membership = { version = "2.0.0", default-features = false }
 pallet-multisig = { version = "2.0.0", default-features = false }
-pallet-offences = { version = "2.0.0", default-features = false }
+pallet-offences = { version = "2.0.0", default-features = false, path = "../../xpallets/offences" }
 pallet-proxy = { version = "2.0.0", default-features = false }
 pallet-randomness-collective-flip = { version = "2.0.0", default-features = false }
 pallet-scheduler = { version = "2.0.0", default-features = false }
