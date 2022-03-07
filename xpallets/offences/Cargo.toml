@@ -38,4 +38,3 @@ std = [
 	"frame-support/std",
 	"frame-system/std",
 ]
-runtime-benchmarks = []

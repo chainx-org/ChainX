@@ -1762,7 +1762,8 @@ dependencies = [
 [[package]]
 name = "frame-benchmarking"
 version = "2.0.0"
-source = "git+https://github.com/paritytech/substrate?rev=11ace4ef8b2ad176293ad6db2b3dd795befd2c79#11ace4ef8b2ad176293ad6db2b3dd795befd2c79"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "66a5e3fe43568300fdca1c1bfd45ea463a12cca8fbe6172a4f6d58cd54e3fbcc"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -1780,8 +1781,7 @@ dependencies = [
 [[package]]
 name = "frame-benchmarking"
 version = "2.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "66a5e3fe43568300fdca1c1bfd45ea463a12cca8fbe6172a4f6d58cd54e3fbcc"
+source = "git+https://github.com/paritytech/substrate?rev=11ace4ef8b2ad176293ad6db2b3dd795befd2c79#11ace4ef8b2ad176293ad6db2b3dd795befd2c79"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -7435,7 +7435,8 @@ dependencies = [
 [[package]]
 name = "sp-keyring"
 version = "2.0.0"
-source = "git+https://github.com/paritytech/substrate?rev=11ace4ef8b2ad176293ad6db2b3dd795befd2c79#11ace4ef8b2ad176293ad6db2b3dd795befd2c79"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3f76feeb27b218d58523931ea2d708b622c3bd96a3be1c3a5895bba0f7a54c13"
 dependencies = [
  "lazy_static",
  "sp-core",
@@ -7446,8 +7447,7 @@ dependencies = [
 [[package]]
 name = "sp-keyring"
 version = "2.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f76feeb27b218d58523931ea2d708b622c3bd96a3be1c3a5895bba0f7a54c13"
+source = "git+https://github.com/paritytech/substrate?rev=11ace4ef8b2ad176293ad6db2b3dd795befd2c79#11ace4ef8b2ad176293ad6db2b3dd795befd2c79"
 dependencies = [
  "lazy_static",
  "sp-core",
