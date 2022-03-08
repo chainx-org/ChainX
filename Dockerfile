@@ -1,27 +1,47 @@
-# This is the build stage for ChainX. Here we create the binary.
-FROM docker.io/paritytech/ci-linux:production as builder
+FROM phusion/baseimage:0.11 as builder
+LABEL maintainer "xuliuchengxlc@gmail.com"
+LABEL description="The build stage for ChainX. We create the ChainX binary in this stage."
 
-WORKDIR /chainx
-COPY . /chainx
-RUN cargo build --locked --release
+ARG PROFILE=release
+ARG APP=chainx
+ARG RUSTC_VERSION=nightly-2021-11-07
 
-# This is the 2nd stage: a very small image where we copy the ChainX binary."
-FROM docker.io/library/ubuntu:20.04
+WORKDIR /$APP
 
-COPY --from=builder /chainx/target/release/chainx /usr/local/bin
+COPY . /$APP
 
-RUN useradd -m -u 1000 -U -s /bin/sh -d /chainx chainx && \
-    mkdir -p /data /chainx/.local/share/chainx && \
-    chown -R chainx:chainx /data && \
-    ln -s /data /chainx/.local/share/chainx && \
-# unclutter and minimize the attack surface
-    rm -rf /usr/bin /usr/sbin && \
-# Sanity checks
-    ldd /usr/local/bin/chainx && \
-    /usr/local/bin/chainx --version
+RUN apt-get update && \
+    apt-get -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" dist-upgrade -y && \
+    apt-get install -y cmake pkg-config libssl-dev git clang
 
-USER chainx
-EXPOSE 30333 9933 9944 9615
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
+    export PATH=$PATH:$HOME/.cargo/bin && \
+    rustup toolchain install $RUSTC_VERSION && \
+    rustup target add wasm32-unknown-unknown --toolchain $RUSTC_VERSION && \
+    cargo +$RUSTC_VERSION build --$PROFILE
+
+# ===== SECOND STAGE ======
+
+FROM phusion/baseimage:0.11
+LABEL maintainer "xuliuchengxlc@gmail.com"
+LABEL description="A very small image where we copy the ChainX binary created from the builder image."
+
+ARG PROFILE=release
+ARG APP=chainx
+
+COPY --from=builder /$APP/target/$PROFILE/$APP /usr/local/bin
+
+RUN mv /usr/share/ca* /tmp && \
+    rm -rf /usr/share/*  && \
+    mv /tmp/ca-certificates /usr/share/ && \
+    rm -rf /usr/lib/python* && \
+    mkdir -p /root/.local/share/chainx && \
+    ln -s /root/.local/share/chainx /data
+
+RUN rm -rf /usr/bin /usr/sbin
+
+EXPOSE 20222 8086 8087 9615
+
 VOLUME ["/data"]
 
 CMD ["/usr/local/bin/chainx"]
