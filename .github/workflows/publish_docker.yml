@@ -3,16 +3,13 @@ name: docker
 on:
   push:
     branches:
-      - 'master'
+      - 'pre-docker'
     tags:
       - 'v*'
-  pull_request:
-    branches:
-      - 'master'
 
 jobs:
   docker:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout
         uses: actions/checkout@v2
