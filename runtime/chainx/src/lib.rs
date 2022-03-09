@@ -1041,7 +1041,7 @@ parameter_types! {
     // Total issuance is 7723350PCX by the end of ChainX 1.0.
     // 210000 - (7723350 / 50) = 55533
     pub const MigrationSessionOffset: SessionIndex = 55533;
-    pub const RewardsCycle: BlockNumber = REWORDS_CYCLE_IN_BLOCKS;
+    pub const RewardsCycle: BlockNumber = REWARDS_CYCLE_IN_BLOCKS;
     pub const MinimumReferralId: u32 = 2;
     pub const MaximumReferralId: u32 = 12;
 }
