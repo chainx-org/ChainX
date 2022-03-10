@@ -67,39 +67,24 @@ jobs:
             name: chainx-artifact
             path: shared
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-
-      - name: Cache Docker layers
-        uses: actions/cache@v2
-        with:
-         path: /tmp/.buildx-cache
-         key: ${{ runner.os }}-buildx-${{ github.sha }}
-         restore-keys: |
-           ${{ runner.os }}-buildx-
-      - name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v3
-        with:
-          images: chainxorg/chainx
-
       - name: Login to DockerHub
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build and push
-        id: docker_build
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache
-
-      - name: Image digest
-        run: echo ${{ steps.docker_build.outputs.digest }}
+      - run: |
+          DOCKER_IMAGE=chainxorg/chainx
+          VERSION="${{ github.event.inputs.tag }}"
+          COMMIT=`git rev-list -n 1 '${{ github.event.inputs.tag }}'`
+          SHA=sha-${COMMIT::8}
+          echo using "${DOCKER_IMAGE}:${SHA} as base image"
+          
+          echo building "${DOCKER_IMAGE}:${VERSION}"
+          docker build \
+            --build-arg DOCKER_IMAGE="$DOCKER_IMAGE" \
+            --build-arg SHA="$SHA" \
+            -f Dockerfile \
+            -t "${DOCKER_IMAGE}:${VERSION}" \
+            . 
+          docker push "${DOCKER_IMAGE}:${VERSION}"
