@@ -62,7 +62,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Download shared
-      - uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v2
         with:
             name: chainx-artifact
             path: shared
