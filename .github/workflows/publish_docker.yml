@@ -9,6 +9,7 @@ on:
       check:
         description: check if the tag exists
         required: true
+        default: "yes"
 
 jobs:
   ##
@@ -34,7 +35,7 @@ jobs:
           TZ: "Asia/Shanghai"
 
       - name: Check tag
-        if: '${{ github.event.inputs.check }}'
+        if: '${{ github.event.inputs.check == 'yes' }}'
         run: |
           COMMIT=`git rev-list -n 1 '${{ github.event.inputs.tag }}'`
           echo building at ${COMMIT}
