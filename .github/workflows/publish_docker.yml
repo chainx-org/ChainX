@@ -45,6 +45,7 @@ jobs:
 
       - name: Build chainx
         run: |
+          echo using `git rev-parse HEAD`
           cargo build --release
 
       - name: Collect shared
