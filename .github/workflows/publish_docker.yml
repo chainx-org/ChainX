@@ -70,8 +70,8 @@ jobs:
       - name: Download shared
         uses: actions/download-artifact@v2
         with:
-            name: chainx-artifact
-            path: shared
+          name: chainx-artifact
+          path: shared
 
       - name: Login to DockerHub
         if: github.event_name != 'pull_request'
