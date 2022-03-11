@@ -45,7 +45,6 @@ jobs:
 
       - name: Build chainx
         run: |
-          echo "::set-output name=BUILD_AT::$(date --iso-8601=seconds)"
           cargo build --release
 
       - name: Collect shared
@@ -83,16 +82,17 @@ jobs:
           DOCKER_IMAGE=chainxorg/chainx
           VERSION="${{ github.event.inputs.tag }}"
           COMMIT=`git rev-parse HEAD`
-          SHA=sha-${COMMIT::8}
-          echo using "${DOCKER_IMAGE}:${SHA} as base image"
+          BUILD_AT=`date --iso-8601=seconds`
+          
+          echo using "${DOCKER_IMAGE}:${COMMIT} as base image"
           
           chmod +x shared/chainx # REQUIRED, see above
           
           echo building "${DOCKER_IMAGE}:${VERSION}"
           docker build \
-            --build-arg CI_BUILD_AT=${{ needs.build-package.outputs.BUILD_AT }} \
+            --build-arg CI_BUILD_AT=${BUILD_AT} \
             --build-arg CI_GIT_TAG=${VERSION} \
-            --build-arg CI_GIT_SHA=${SHA} \
+            --build-arg CI_GIT_SHA=${COMMIT} \
             -f Dockerfile \
             -t "${DOCKER_IMAGE}:${VERSION}" \
             . 
