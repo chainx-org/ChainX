@@ -90,8 +90,9 @@ jobs:
           
           echo building "${DOCKER_IMAGE}:${VERSION}"
           docker build \
-            --build-arg DOCKER_IMAGE="$DOCKER_IMAGE" \
-            --build-arg SHA="$SHA" \
+            --build-arg CI_BUILD_AT=${{ needs.build-package.outputs.BUILD_AT }} \
+            --build-arg CI_GIT_TAG=${VERSION} \
+            --build-arg CI_GIT_SHA=${SHA} \
             -f Dockerfile \
             -t "${DOCKER_IMAGE}:${VERSION}" \
             . 
