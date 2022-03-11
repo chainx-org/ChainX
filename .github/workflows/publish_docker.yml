@@ -1,32 +1,71 @@
 name: docker
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: tag (ex. v4.0.0) to publish on docker
+        required: true
+
 
 jobs:
-  docker:
-    runs-on: ubuntu-20.04
+  ##
+  # Build the Rust package
+  ##
+  build-package:
+    name: Build package
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:20.04
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install dependencies
+        run: |
+          apt update -y
+          apt install --no-install-recommends -y \
+            git curl ca-certificates \
+            make gcc g++ clang-4.0
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly-2021-11-07
+          target: wasm32-unknown-unknown
+          default: true
+
+      - name: Cache target
+        uses: actions/cache@v2
+        with:
+          path: target
+          key: ${{ runner.os }}-target
+
+      - name: Build chainx
+        run: |
+          echo "::set-output name=BUILD_AT::$(date --iso-8601=seconds)"
+          cargo build --release
+      - name: Collect shared
+        run: |
+          mkdir shared
+          mv target/release/chainx shared/
+      - name: Upload shared
+        uses: actions/upload-artifact@v2.2.4
+        with:
+          name: chainx-artifact
+          path: shared
+
+  build-docker:
+    name: Build docker
+    runs-on: ubuntu-latest
+    needs: [build-package]
     steps:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-
-      - name: Cache Docker layers
-        uses: actions/cache@v2
+      - name: Download shared
+        uses: actions/download-artifact@v2
         with:
-         path: /tmp/.buildx-cache
-         key: ${{ runner.os }}-buildx-${{ github.sha }}
-         restore-keys: |
-           ${{ runner.os }}-buildx-
-      - name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v3
-        with:
-          images: chainxorg/chainx
+            name: chainx-artifact
+            path: shared
 
       - name: Login to DockerHub
         if: github.event_name != 'pull_request'
@@ -34,17 +73,18 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build and push
-        id: docker_build
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache
-
-      - name: Image digest
-        run: echo ${{ steps.docker_build.outputs.digest }}
+      - run: |
+          DOCKER_IMAGE=chainxorg/chainx
+          VERSION="${{ github.event.inputs.tag }}"
+          COMMIT=`git rev-list -n 1 '${{ github.event.inputs.tag }}'`
+          SHA=sha-${COMMIT::8}
+          echo using "${DOCKER_IMAGE}:${SHA} as base image"
+          
+          echo building "${DOCKER_IMAGE}:${VERSION}"
+          docker build \
+            --build-arg DOCKER_IMAGE="$DOCKER_IMAGE" \
+            --build-arg SHA="$SHA" \
+            -f Dockerfile \
+            -t "${DOCKER_IMAGE}:${VERSION}" \
+            . 
+          docker push "${DOCKER_IMAGE}:${VERSION}"
