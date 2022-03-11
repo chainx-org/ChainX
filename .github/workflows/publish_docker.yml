@@ -6,10 +6,6 @@ on:
       tag:
         description: tag (ex. v4.0.0) to publish on docker
         required: true
-      check:
-        description: check if the tag exists
-        required: true
-        default: "yes"
 
 jobs:
   ##
@@ -33,12 +29,6 @@ jobs:
         env:
           DEBIAN_FRONTEND: "noninteractive"
           TZ: "Asia/Shanghai"
-
-      - name: Check tag
-        if: ${{ github.event.inputs.check == 'yes' }}
-        run: |
-          COMMIT=`git rev-list -n 1 '${{ github.event.inputs.tag }}'`
-          echo building at ${COMMIT}
 
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
@@ -92,7 +82,7 @@ jobs:
       - run: |
           DOCKER_IMAGE=chainxorg/chainx
           VERSION="${{ github.event.inputs.tag }}"
-          COMMIT=`git rev-parse  HEAD`
+          COMMIT=`git rev-parse HEAD`
           SHA=sha-${COMMIT::8}
           echo using "${DOCKER_IMAGE}:${SHA} as base image"
           
