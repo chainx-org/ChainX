@@ -6,7 +6,9 @@ on:
       tag:
         description: tag (ex. v4.0.0) to publish on docker
         required: true
-
+      check:
+        description: check if the tag exists
+        required: true
 
 jobs:
   ##
@@ -20,6 +22,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+
+      - name: Check tag
+        if: '${{ github.event.inputs.check }}'
+        run: |
+            COMMIT=`git rev-list -n 1 '${{ github.event.inputs.tag }}'`
+            echo building at ${COMMIT}
 
       - name: Install dependencies
         run: |
