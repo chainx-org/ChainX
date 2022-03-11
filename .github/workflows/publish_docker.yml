@@ -92,7 +92,7 @@ jobs:
           docker build \
             --build-arg CI_BUILD_AT=${BUILD_AT} \
             --build-arg CI_GIT_TAG=${VERSION} \
-            --build-arg CI_GIT_SHA=${COMMIT} \
+            --build-arg CI_GIT_SHA=commit-${COMMIT} \
             -f Dockerfile \
             -t "${DOCKER_IMAGE}:${VERSION}" \
             . 
