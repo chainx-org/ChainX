@@ -33,7 +33,7 @@ pub trait XGatewayBitcoinApi<BlockHash> {
     #[rpc(name = "xgatewaybitcoin_verifyTxValid")]
     fn verify_tx_valid(
         &self,
-        raw_tx: Vec<u8>,
+        raw_tx: String,
         withdrawal_id_list: Vec<u32>,
         full_amount: bool,
         at: Option<BlockHash>,
@@ -48,13 +48,14 @@ where
 {
     fn verify_tx_valid(
         &self,
-        raw_tx: Vec<u8>,
+        raw_tx: String,
         withdrawal_id_list: Vec<u32>,
         full_amount: bool,
         at: Option<<Block as BlockT>::Hash>,
     ) -> Result<bool> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+        let raw_tx = hex::decode(raw_tx).map_err(runtime_error_into_rpc_err)?;
         let result = api
             .verify_tx_valid(&at, raw_tx, withdrawal_id_list, full_amount)
             .map_err(runtime_error_into_rpc_err)?
