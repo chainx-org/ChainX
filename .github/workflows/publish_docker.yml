@@ -18,7 +18,8 @@ jobs:
     container:
       image: ubuntu:20.04
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v2
 
       - name: Install dependencies
         run: |
@@ -26,6 +27,10 @@ jobs:
           apt install --no-install-recommends -y \
             git curl ca-certificates \
             gcc g++ cmake clang
+        env:
+          DEBIAN_FRONTEND: "noninteractive"
+          TZ: "Asia/Shanghai"
+
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -43,10 +48,12 @@ jobs:
         run: |
           echo "::set-output name=BUILD_AT::$(date --iso-8601=seconds)"
           cargo build --release
+
       - name: Collect shared
         run: |
           mkdir shared
           mv target/release/chainx shared/
+
       - name: Upload shared
         uses: actions/upload-artifact@v2.2.4
         with:
