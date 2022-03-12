@@ -43,7 +43,8 @@ jobs:
 
       - name: Build chainx
         run: |
-          echo using `git rev-parse HEAD` && \
+          COMMIT=`git rev-parse HEAD` && \
+          echo using $COMMIT && \
           cargo build --release
 
       - name: Collect shared
