@@ -7,25 +7,27 @@ on:
         description: tag (ex. v4.0.0) to publish on docker
         required: true
 
-
 jobs:
   ##
   # Build the Rust package
   ##
   build-package:
     name: Build package
-    runs-on: ubuntu-latest
-    container:
-      image: ubuntu:20.04
+    runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v2
 
       - name: Install dependencies
         run: |
-          apt update -y
-          apt install --no-install-recommends -y \
+          sudo apt update -y
+          sudo apt install --no-install-recommends -y \
             git curl ca-certificates \
-            make gcc g++ clang-4.0
+            gcc g++ cmake clang
+        env:
+          DEBIAN_FRONTEND: "noninteractive"
+          TZ: "Asia/Shanghai"
+
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -41,12 +43,15 @@ jobs:
 
       - name: Build chainx
         run: |
-          echo "::set-output name=BUILD_AT::$(date --iso-8601=seconds)"
+          COMMIT=`git rev-parse HEAD` && \
+          echo using $COMMIT && \
           cargo build --release
+
       - name: Collect shared
         run: |
           mkdir shared
           mv target/release/chainx shared/
+
       - name: Upload shared
         uses: actions/upload-artifact@v2.2.4
         with:
@@ -64,8 +69,8 @@ jobs:
       - name: Download shared
         uses: actions/download-artifact@v2
         with:
-            name: chainx-artifact
-            path: shared
+          name: chainx-artifact
+          path: shared
 
       - name: Login to DockerHub
         if: github.event_name != 'pull_request'
@@ -76,14 +81,18 @@ jobs:
       - run: |
           DOCKER_IMAGE=chainxorg/chainx
           VERSION="${{ github.event.inputs.tag }}"
-          COMMIT=`git rev-list -n 1 '${{ github.event.inputs.tag }}'`
-          SHA=sha-${COMMIT::8}
-          echo using "${DOCKER_IMAGE}:${SHA} as base image"
+          COMMIT=`git rev-parse HEAD`
+          BUILD_AT=`date --iso-8601=seconds`
+          
+          echo building "${DOCKER_IMAGE}:${VERSION} at ${BUILD_AT} on ${COMMIT}"
+          
+          chmod +x shared/chainx # REQUIRED, see above
           
           echo building "${DOCKER_IMAGE}:${VERSION}"
           docker build \
-            --build-arg DOCKER_IMAGE="$DOCKER_IMAGE" \
-            --build-arg SHA="$SHA" \
+            --build-arg CI_BUILD_AT=${BUILD_AT} \
+            --build-arg CI_GIT_TAG=${VERSION} \
+            --build-arg CI_GIT_SHA=commit-${COMMIT} \
             -f Dockerfile \
             -t "${DOCKER_IMAGE}:${VERSION}" \
             . 
