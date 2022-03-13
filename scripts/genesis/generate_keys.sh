@@ -72,8 +72,8 @@ main() {
     echo "                b\""$referral_id"\".to_vec(),"
     echo "            ),"
 
-    print_address      sr25519 "$SECRET//blockauthor//$id"
-    print_account_key          "$SECRET//blockauthor//$id"
+#    print_address      sr25519 "$SECRET//blockauthor//$id"
+#    print_account_key          "$SECRET//blockauthor//$id"
 
     SESSION_KEY="0x"
     generate_aux_key babe sr25519 "$DIR/$id" "$SECRET//babe//$id"

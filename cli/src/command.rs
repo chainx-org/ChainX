@@ -199,6 +199,7 @@ impl SubstrateCli for Cli {
 fn load_spec(id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
     Ok(match id {
         "" | "mainnet" => Box::new(chain_spec::mainnet_config()?),
+        "new-mainnet" => Box::new(chain_spec::new_mainnet_config()?),
         "dev" => Box::new(chain_spec::development_config()?),
         "malan" | "testnet" => Box::new(chain_spec::malan_config()?),
         "new-malan" => Box::new(chain_spec::new_malan_config()?),
