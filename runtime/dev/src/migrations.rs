@@ -39,12 +39,12 @@ impl frame_support::traits::OnRuntimeUpgrade for PhragmenElectionDepositRuntimeU
     }
 }
 
-pub struct SystemToTripleRefCount;
-impl frame_support::traits::OnRuntimeUpgrade for SystemToTripleRefCount {
-    fn on_runtime_upgrade() -> frame_support::weights::Weight {
-        frame_system::migrations::migrate_from_unique_to_triple_ref_count::<Runtime>()
-    }
-}
+// pub struct SystemToTripleRefCount;
+// impl frame_support::traits::OnRuntimeUpgrade for SystemToTripleRefCount {
+//     fn on_runtime_upgrade() -> frame_support::weights::Weight {
+//         frame_system::migrations::migrate_from_unique_to_triple_ref_count::<Runtime>()
+//     }
+// }
 
 impl pallet_babe::migrations::BabePalletPrefix for Runtime {
     fn pallet_prefix() -> &'static str {
@@ -249,10 +249,10 @@ impl OnRuntimeUpgrade for CustomOnRuntimeUpgrades {
         weight += <PhragmenElectionDepositRuntimeUpgrade as OnRuntimeUpgrade>::on_runtime_upgrade();
         frame_support::log::info!("🚀 PhragmenElectionDepositRuntimeUpgrade end");
 
-        // 4. SystemToTripleRefCount
-        frame_support::log::info!("🔍️ SystemToTripleRefCount start");
-        weight += <SystemToTripleRefCount as OnRuntimeUpgrade>::on_runtime_upgrade();
-        frame_support::log::info!("🚀 SystemToTripleRefCount end");
+        // // 4. SystemToTripleRefCount
+        // frame_support::log::info!("🔍️ SystemToTripleRefCount start");
+        // weight += <SystemToTripleRefCount as OnRuntimeUpgrade>::on_runtime_upgrade();
+        // frame_support::log::info!("🚀 SystemToTripleRefCount end");
 
         // 5. BabeEpochConfigMigrations
         frame_support::log::info!("🔍️ BabeEpochConfigMigrations start");
