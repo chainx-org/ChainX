@@ -40,17 +40,15 @@ pub fn create_validator<T: Config>(string: &'static str, n: u32, value: u32) -> 
 
 benchmarks! {
     register {
-        let u in 1 .. 1000;
-        let validator = create_funded_user::<T>("validator", u, 100);
-        let referral_id = (u as u32).to_be_bytes();
+        let validator = create_funded_user::<T>("validator", 0, 100);
+        let referral_id = (0 as u32).to_be_bytes();
     }: _(RawOrigin::Signed(validator.clone()), referral_id.to_vec(), 10u32.into())
     verify {
         assert!(Validators::<T>::contains_key(validator));
     }
 
     bond {
-        let u in 1 .. 1000;
-        let nominator = create_funded_user::<T>("nominator", u, 100);
+        let nominator = create_funded_user::<T>("nominator", 0, 100);
         let validator: T::AccountId = create_validator::<T>("validator", 2, 1000);
         let validator_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(validator.clone());
     }: _(RawOrigin::Signed(nominator.clone()), validator_lookup, 10u32.into())
@@ -88,8 +86,7 @@ benchmarks! {
     }
 
     rebond {
-        let u in 1 .. 1000;
-        let nominator = create_funded_user::<T>("nominator", u, 100);
+        let nominator = create_funded_user::<T>("nominator", 0, 100);
         let validator1: T::AccountId = create_validator::<T>("validator1", 2, 100);
         let validator2: T::AccountId = create_validator::<T>("validator2", 3, 100);
         b_bond::<T>(nominator.clone(), validator1.clone(), 30);
@@ -121,26 +118,26 @@ benchmarks! {
     }
 
     chill {
-        let u in 1 .. 1000;
-        let validator: T::AccountId = create_validator::<T>("validator", 2, 1000);
-        if !Pallet::<T>::is_validator(&validator) {
-            Pallet::<T>::register(RawOrigin::Signed(validator.clone()).into(), (u as u32).to_be_bytes().to_vec(), 100u32.into())?;
+        let validator1: T::AccountId = create_validator::<T>("validator", 1, 1000);
+        let validator2: T::AccountId = create_validator::<T>("validator", 2, 1000);
+        if !Pallet::<T>::is_validator(&validator2) {
+            Pallet::<T>::register(RawOrigin::Signed(validator2.clone()).into(), (0 as u32).to_be_bytes().to_vec(), 100u32.into())?;
         }
-    }: _(RawOrigin::Signed(validator.clone()))
+    }: _(RawOrigin::Signed(validator2.clone()))
     verify {
-        assert!(Pallet::<T>::is_chilled(&validator));
+        assert!(Pallet::<T>::is_chilled(&validator2));
     }
 
     validate {
-        let u in 1 .. 1000;
-        let validator: T::AccountId = create_validator::<T>("validator", 2, 1000);
-        if !Pallet::<T>::is_validator(&validator) {
-            Pallet::<T>::register(RawOrigin::Signed(validator.clone()).into(), (u as u32).to_be_bytes().to_vec(), 100u32.into())?;
+        let validator1: T::AccountId = create_validator::<T>("validator", 1, 1000);
+        let validator2: T::AccountId = create_validator::<T>("validator", 2, 1000);
+        if !Pallet::<T>::is_validator(&validator2) {
+            Pallet::<T>::register(RawOrigin::Signed(validator2.clone()).into(), (0 as u32).to_be_bytes().to_vec(), 100u32.into())?;
         }
-        Pallet::<T>::chill(RawOrigin::Signed(validator.clone()).into())?;
-    }: _(RawOrigin::Signed(validator.clone()))
+        Pallet::<T>::chill(RawOrigin::Signed(validator2.clone()).into())?;
+    }: _(RawOrigin::Signed(validator2.clone()))
     verify {
-        assert!(Pallet::<T>::is_active(&validator));
+        assert!(Pallet::<T>::is_active(&validator2));
     }
 
     set_validator_count {

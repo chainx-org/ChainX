@@ -2,7 +2,7 @@
 
 //! Weights for xpallet_assets
 //! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 4.0.0-dev
-//! DATE: 2022-02-24, STEPS: 50, REPEAT: 20, LOW RANGE: [], HIGH RANGE: []
+//! DATE: 2022-03-14, STEPS: 50, REPEAT: 20, LOW RANGE: [], HIGH RANGE: []
 //! EXECUTION: Some(Wasm), WASM-EXECUTION: Compiled, CHAIN: Some("benchmarks"), DB CACHE: 128
 
 // Executed Command:
@@ -21,7 +21,7 @@
 
 #![allow(unused_parens)]
 #![allow(unused_imports)]
-#![allow(clippy::unnecessary_cast)]
+
 use frame_support::{
     traits::Get,
     weights::{constants::RocksDbWeight, Weight},
@@ -40,23 +40,23 @@ pub trait WeightInfo {
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
     fn transfer() -> Weight {
-        (206_262_000 as Weight)
+        (155_613_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(8 as Weight))
             .saturating_add(T::DbWeight::get().writes(6 as Weight))
     }
     fn force_transfer() -> Weight {
-        (200_449_000 as Weight)
+        (155_904_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(8 as Weight))
             .saturating_add(T::DbWeight::get().writes(6 as Weight))
     }
     fn set_balance(n: u32) -> Weight {
-        (189_044_000 as Weight)
-            .saturating_add((52_000 as Weight).saturating_mul(n as Weight))
+        (143_787_000 as Weight)
+            .saturating_add((23_000 as Weight).saturating_mul(n as Weight))
             .saturating_add(T::DbWeight::get().reads(3 as Weight))
             .saturating_add(T::DbWeight::get().writes(3 as Weight))
     }
     fn set_asset_limit() -> Weight {
-        (12_536_000 as Weight)
+        (9_783_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(1 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
@@ -65,23 +65,23 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 // For backwards compatibility and tests
 impl WeightInfo for () {
     fn transfer() -> Weight {
-        (206_262_000 as Weight)
+        (155_613_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(8 as Weight))
             .saturating_add(RocksDbWeight::get().writes(6 as Weight))
     }
     fn force_transfer() -> Weight {
-        (200_449_000 as Weight)
+        (155_904_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(8 as Weight))
             .saturating_add(RocksDbWeight::get().writes(6 as Weight))
     }
     fn set_balance(n: u32) -> Weight {
-        (189_044_000 as Weight)
-            .saturating_add((52_000 as Weight).saturating_mul(n as Weight))
+        (143_787_000 as Weight)
+            .saturating_add((23_000 as Weight).saturating_mul(n as Weight))
             .saturating_add(RocksDbWeight::get().reads(3 as Weight))
             .saturating_add(RocksDbWeight::get().writes(3 as Weight))
     }
     fn set_asset_limit() -> Weight {
-        (12_536_000 as Weight)
+        (9_783_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(1 as Weight))
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
