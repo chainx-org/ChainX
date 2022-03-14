@@ -63,7 +63,7 @@ pub use frame_support::{
     },
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
-        IdentityFee, Weight,
+        Weight,
     },
     StorageValue,
 };
@@ -105,7 +105,6 @@ mod migrations;
 
 use self::constants::{currency::*, time::*};
 use self::impls::{ChargeExtraFee, DealWithFees, SlowAdjustingFeeUpdate};
-use self::migrations::*;
 
 /// This runtime version.
 pub const VERSION: RuntimeVersion = RuntimeVersion {
@@ -419,7 +418,7 @@ parameter_types! {
 impl pallet_transaction_payment::Config for Runtime {
     type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, DealWithFees>;
     type TransactionByteFee = TransactionByteFee;
-    type WeightToFee = IdentityFee<Balance>;
+    type WeightToFee = self::constants::fee::WeightToFee;
     type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
     type OperationalFeeMultiplier = OperationalFeeMultiplier;
 }
@@ -1202,7 +1201,7 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPallets,
-    CustomOnRuntimeUpgrades,
+    (),
 >;
 
 impl_runtime_apis! {

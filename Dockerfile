@@ -1,46 +1,36 @@
-FROM phusion/baseimage:0.11 as builder
-LABEL maintainer "xuliuchengxlc@gmail.com"
-LABEL description="The build stage for ChainX. We create the ChainX binary in this stage."
+FROM docker.io/library/ubuntu:20.04
 
-ARG PROFILE=release
-ARG APP=chainx
-ARG RUSTC_VERSION=nightly-2021-11-07
+ARG CI_GIT_TAG
+ARG CI_GIT_SHA
+ARG CI_BUILD_AT
 
-WORKDIR /$APP
-
-COPY . /$APP
+# See:
+# https://github.com/opencontainers/image-spec/blob/main/annotations.md
+# https://github.com/paritytech/polkadot/blob/master/scripts/dockerfiles/polkadot_injected_release.Dockerfile
+LABEL org.chainx.image.created="${CI_BUILD_AT}" \
+    org.chainx.image.authors="icodezjb@gmail.com" \
+    org.chainx.image.url="https://github.com/chainx-org/ChainX" \
+    org.chainx.image.documentation="https://chainx-org.github.io/documentation/" \
+    org.chainx.image.source="https://github.com/chainx-org/ChainX" \
+    org.chainx.image.version="${CI_GIT_TAG}" \
+    org.chainx.image.revision="${CI_GIT_SHA}" \
+    org.chainx.image.licenses="GPL-3.0" \
+    org.chainx.image.title="ChainX" \
+    org.chainx.image.description="BTC Layer2 & Hubs for multi-chain systems such as MiniX/SherpaX & Backend chain hub of ComingChat."
 
 RUN apt-get update && \
-    apt-get -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" dist-upgrade -y && \
-    apt-get install -y cmake pkg-config libssl-dev git clang
+    apt-get install -y ca-certificates && \
+    update-ca-certificates
 
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
-    export PATH=$PATH:$HOME/.cargo/bin && \
-    rustup toolchain install $RUSTC_VERSION && \
-    rustup target add wasm32-unknown-unknown --toolchain $RUSTC_VERSION && \
-    cargo +$RUSTC_VERSION build --$PROFILE
+COPY shared/chainx /usr/local/bin/chainx
 
-# ===== SECOND STAGE ======
+RUN mkdir -p /root/.local/share/chainx && \
+    ln -s /root/.local/share/chainx /data && \
+# Sanity checks
+    ldd /usr/local/bin/chainx && \
+    /usr/local/bin/chainx --version
 
-FROM phusion/baseimage:0.11
-LABEL maintainer "xuliuchengxlc@gmail.com"
-LABEL description="A very small image where we copy the ChainX binary created from the builder image."
-
-ARG PROFILE=release
-ARG APP=chainx
-
-COPY --from=builder /$APP/target/$PROFILE/$APP /usr/local/bin
-
-RUN mv /usr/share/ca* /tmp && \
-    rm -rf /usr/share/*  && \
-    mv /tmp/ca-certificates /usr/share/ && \
-    rm -rf /usr/lib/python* && \
-    mkdir -p /root/.local/share/chainx && \
-    ln -s /root/.local/share/chainx /data
-
-RUN rm -rf /usr/bin /usr/sbin
-
-EXPOSE 20222 8086 8087 9615
+EXPOSE 30333 8086 8087 9615
 
 VOLUME ["/data"]
 
