@@ -251,17 +251,18 @@ fn withdraw<T: Config>(tx: Transaction) -> BtcTxResult {
                 }
             }
 
-            // Record trustee signature
-            T::TrusteeInfoUpdate::update_trustee_sig_record(
-                Pallet::<T>::chain(),
-                input.script_witness[1].as_slice(),
-                tx.outputs.iter().map(|info| info.value).sum(),
-            );
-
             let btc_withdrawal_fee = Pallet::<T>::btc_withdrawal_fee();
             // real withdraw value would reduce withdraw_fee
             total -=
                 (proposal.withdrawal_id_list.len() as u64 * btc_withdrawal_fee).saturated_into();
+
+            // Record trustee signature
+            T::TrusteeInfoUpdate::update_trustee_sig_record(
+                Pallet::<T>::chain(),
+                input.script_witness[1].as_slice(),
+                total.saturated_into(),
+            );
+
             Pallet::<T>::deposit_event(Event::<T>::Withdrawn(
                 tx_hash,
                 proposal.withdrawal_id_list,
