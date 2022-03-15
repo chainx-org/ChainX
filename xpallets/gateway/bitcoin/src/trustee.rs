@@ -387,6 +387,7 @@ pub fn get_sig_num<T: Config>() -> (u32, u32) {
     (two_thirds_unsafe(trustee_num), trustee_num)
 }
 
+#[allow(dead_code)]
 pub(crate) fn create_multi_address<T: Config>(
     pubkeys: &[Public],
     sig_num: u32,
