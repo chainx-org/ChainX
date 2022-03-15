@@ -10,8 +10,6 @@ Call through the council to vote for the election. The voting threshold needs to
 
 ##### 1. Trustee administrator is required to create hot multi-signature addresses in the ComingChat trustee group in time for the election, and teach other trustees to obtain and use the hardware wallet signature script.
 
-Trustee Cold Wallet Signature Script Repository: https://github.com/chainx-org/trustee-cli-ts/tree/upgrade-taproot
-
 ##### 2. Trustee administrator needs to identify problematic trustees in a timely manner and move them into a small black house for transition.
 
 Call to move to the little black house 
