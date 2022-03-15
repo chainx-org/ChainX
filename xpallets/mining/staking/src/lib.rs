@@ -879,6 +879,18 @@ impl<T: Config> Pallet<T> {
         Self::validator_set().filter(Self::is_active)
     }
 
+    /// Returns all the validators and candidates by order
+    #[inline]
+    pub fn active_candidates() -> Vec<T::AccountId> {
+        let mut candidates = Self::active_validator_set()
+            .map(|v| (Self::total_votes_of(&v), v))
+            .collect::<Vec<_>>();
+
+        candidates.sort_by(|&(ref b1, _), &(ref b2, _)| b2.cmp(b1));
+
+        candidates.into_iter().map(|(_, v)| v).collect()
+    }
+
     /// Returns the sum of total active staked PCX, i.e., total staking power.
     ///
     /// * One (indivisible) PCX one power.
