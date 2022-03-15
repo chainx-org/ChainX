@@ -112,7 +112,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("chainx"),
     impl_name: create_runtime_str!("chainx-net"),
     authoring_version: 1,
-    spec_version: 14,
+    spec_version: 16,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 4,
