@@ -30,6 +30,13 @@ To become a trust, you must first be elected as a council member or runners up. 
 
 The hot public key is obtained through **Coming** and used in **Coming**, and the cold addresses are also obtained through Coming but with a different mnemonic.
 
+# Responsibility
+
+Process user withdrawals. Required for each withdrawal:
+
+- Check the correctness of the output address and amount
+- Make sure there is no op_return in the output
+
 # Reward distribution
 
 After the renewal of the trust each month, the previous trust can apply to the Treasury for pcx to the trust multi-signature account. After the pcx is received, any member of the previous trust can distribute rewards through the interface shown in the figure below. 

@@ -806,26 +806,51 @@ pub mod pallet {
             full_amount: bool,
         ) -> Result<bool, DispatchError> {
             let tx = Self::deserialize_tx(raw_tx.as_slice())?;
+
+            let current_trustee_pair = get_current_trustee_address_pair::<T>()?;
+            let all_outputs_is_trustee = tx
+                .outputs
+                .iter()
+                .map(|output| {
+                    xp_gateway_bitcoin::extract_output_addr(output, NetworkId::<T>::get())
+                        .unwrap_or_default()
+                })
+                .all(|addr| xp_gateway_bitcoin::is_trustee_addr(addr, current_trustee_pair));
+
             // check trustee transition status
             if T::TrusteeSessionProvider::trustee_transition_state() {
                 // check trustee transition tx
                 // tx output address = new hot address
-                let last_trustee_pair = get_last_trustee_address_pair::<T>()?;
-                let all_outputs_is_cold_address = tx
+                let prev_trustee_pair = get_last_trustee_address_pair::<T>()?;
+                let all_outputs_is_current_cold_address = tx
                     .outputs
                     .iter()
                     .map(|output| {
                         xp_gateway_bitcoin::extract_output_addr(output, NetworkId::<T>::get())
                             .unwrap_or_default()
                     })
-                    .all(|addr| addr.hash == last_trustee_pair.1.hash);
-                if !all_outputs_is_cold_address {
-                    Err(Error::<T>::NoWithdrawInTrans.into())
-                } else if !full_amount {
-                    Err(Error::<T>::InvalidAmoutInTrans.into())
-                } else {
-                    Ok(true)
-                }
+                    .all(|addr| addr.hash == current_trustee_pair.1.hash);
+
+                let all_outputs_is_prev_cold_address = tx
+                    .outputs
+                    .iter()
+                    .map(|output| {
+                        xp_gateway_bitcoin::extract_output_addr(output, NetworkId::<T>::get())
+                            .unwrap_or_default()
+                    })
+                    .all(|addr| addr.hash == prev_trustee_pair.1.hash);
+
+                // Ensure that all outputs are cold addresses
+                ensure!(
+                    all_outputs_is_current_cold_address || all_outputs_is_prev_cold_address,
+                    Error::<T>::NoWithdrawInTrans
+                );
+                // Ensure that all amounts are sent
+                ensure!(full_amount, Error::<T>::InvalidAmoutInTrans);
+
+                Ok(true)
+            } else if all_outputs_is_trustee {
+                Ok(true)
             } else {
                 // check normal withdrawal tx
                 trustee::check_withdraw_tx::<T>(&tx, &withdrawal_id_list)?;

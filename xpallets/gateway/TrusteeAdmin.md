@@ -26,10 +26,10 @@ Call to move out of the little black house
 
 ##### 4. Trustee administrator is required to initiate a trustee election at the end of each term. And ensuring the perfect execution of trust transition. The following trust transition process needs to be carried out in an orderly and correct manner
 
+- Council members set up trust addresses, refer to [Trustee.md](./Trustee.md)
 - Call to start trustee election![](https://cdn.jsdelivr.net/gh/hacpy/PictureBed@master/Document/16460155281231646015527278.png)
-
-- **Make sure that all the btc of the previous trust hot address is transferred to the previous cold address**
-- Finally, **ensure that all the btc of the previous cold address is transferred to the current cold address**
+- **Use Coming to initiate transactions and ensure that all btc that previously trusted the hot address are transferred to the previous cold address. There are two guarantees here, one is that the Coming Robot verifies the validity of the transaction. The other is to manually check the transaction, that is, transfer all the input amount to the last cold address**.
+- Finally,  **Use Coming to initiate transactions and ensure that all the btc of the previous cold address is transferred to the current cold address. There are two guarantees here, one is that the Coming Robot verifies the validity of the transaction. The other is to manually check the transaction, that is, transfer all the input amount to the current cold address**
 
 ##### 5. Perform general trustee operations and sign for withdrawal transactions
 
