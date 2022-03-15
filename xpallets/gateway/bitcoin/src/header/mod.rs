@@ -8,8 +8,10 @@ use sp_std::{cmp::Ordering, prelude::*};
 
 use light_bitcoin::primitives::{hash_rev, H256};
 
-use crate::types::{BtcHeaderIndex, BtcHeaderInfo};
-use crate::{Config, ConfirmedIndex, Error, MainChain, Pallet};
+use crate::{
+    types::{BtcHeaderIndex, BtcHeaderInfo},
+    Config, ConfirmedIndex, Error, MainChain, Pallet,
+};
 
 pub use self::header_proof::HeaderVerifier;
 

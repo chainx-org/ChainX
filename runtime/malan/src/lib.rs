@@ -40,7 +40,7 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
 use frame_support::PalletId;
-use frame_system::{EnsureOneOf, EnsureRoot, EnsureSignedBy};
+use frame_system::{EnsureOneOf, EnsureRoot};
 use pallet_grandpa::fg_primitives;
 use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
@@ -89,9 +89,11 @@ pub use xpallet_gateway_bitcoin::{
 };
 pub use xpallet_gateway_common::{
     trustees,
-    types::{GenericTrusteeIntentionProps, GenericTrusteeSessionInfo, TrusteeInfoConfig},
+    types::{
+        GenericTrusteeIntentionProps, GenericTrusteeSessionInfo, ScriptInfo, TrusteeInfoConfig,
+    },
 };
-pub use xpallet_gateway_records::Withdrawal;
+pub use xpallet_gateway_records::{Withdrawal, WithdrawalRecordId};
 pub use xpallet_mining_asset::MiningWeight;
 pub use xpallet_mining_staking::VoteWeight;
 
@@ -103,16 +105,17 @@ mod migrations;
 
 use self::constants::{currency::*, time::*};
 use self::impls::{ChargeExtraFee, DealWithFees, SlowAdjustingFeeUpdate};
+use self::migrations::*;
 
 /// This runtime version.
 pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("chainx"),
     impl_name: create_runtime_str!("chainx-malan"),
     authoring_version: 1,
-    spec_version: 13,
+    spec_version: 14,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 3,
+    transaction_version: 4,
 };
 
 /// The version information used to identify this runtime when compiled natively.
@@ -427,9 +430,9 @@ impl xpallet_transaction_fee::Config for Runtime {
 
 parameter_types! {
     pub const SessionDuration: BlockNumber = EPOCH_DURATION_IN_BLOCKS;
-    pub const ImOnlineUnsignedPriority: TransactionPriority = TransactionPriority::max_value();
+    pub const ImOnlineUnsignedPriority: TransactionPriority = TransactionPriority::MAX;
     /// We prioritize im-online heartbeats over election solution submission.
-    pub const StakingUnsignedPriority: TransactionPriority = TransactionPriority::max_value() / 2;
+    pub const StakingUnsignedPriority: TransactionPriority = TransactionPriority::MAX / 2;
     pub const MaxKeys: u32 = 10_000;
     pub const MaxPeerInHeartbeats: u32 = 10_000;
     pub const MaxPeerDataEncodingSize: u32 = 1_000;
@@ -1011,17 +1014,23 @@ impl xpallet_gateway_common::Config for Runtime {
     type Event = Event;
     type Validator = XStaking;
     type DetermineMultisigAddress = MultisigProvider;
+    type CouncilOrigin =
+        pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, CouncilCollective>;
     type Bitcoin = XGatewayBitcoin;
     type BitcoinTrustee = XGatewayBitcoin;
+    type BitcoinTrusteeSessionProvider = trustees::bitcoin::BtcTrusteeSessionManager<Runtime>;
+    type BitcoinTotalSupply = XGatewayBitcoin;
     type WeightInfo = xpallet_gateway_common::weights::SubstrateWeight<Runtime>;
 }
 
 impl xpallet_gateway_bitcoin::Config for Runtime {
     type Event = Event;
     type UnixTime = Timestamp;
+    type CouncilOrigin =
+        pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, CouncilCollective>;
     type AccountExtractor = xp_gateway_bitcoin::OpReturnExtractor;
     type TrusteeSessionProvider = trustees::bitcoin::BtcTrusteeSessionManager<Runtime>;
-    type TrusteeOrigin = EnsureSignedBy<trustees::bitcoin::BtcTrusteeMultisig<Runtime>, AccountId>;
+    type TrusteeInfoUpdate = XGatewayCommon;
     type ReferralBinding = XGatewayCommon;
     type AddressBinding = XGatewayCommon;
     type WeightInfo = xpallet_gateway_bitcoin::weights::SubstrateWeight<Runtime>;
@@ -1200,7 +1209,7 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPallets,
-    (),
+    CustomOnRuntimeUpgrades,
 >;
 
 impl_runtime_apis! {
@@ -1467,13 +1476,38 @@ impl_runtime_apis! {
         }
     }
 
-    impl xpallet_gateway_common_rpc_runtime_api::XGatewayCommonApi<Block, AccountId, Balance> for Runtime {
+    impl xpallet_gateway_bitcoin_rpc_runtime_api::XGatewayBitcoinApi<Block> for Runtime {
+        fn verify_tx_valid(
+            raw_tx: Vec<u8>,
+            withdrawal_id_list: Vec<u32>,
+            full_amount: bool,
+        ) -> Result<bool, DispatchError> {
+            XGatewayBitcoin::verify_tx_valid(raw_tx, withdrawal_id_list, full_amount)
+        }
+    }
+
+    impl xpallet_gateway_common_rpc_runtime_api::XGatewayCommonApi<Block, AccountId, Balance, BlockNumber> for Runtime {
         fn bound_addrs(who: AccountId) -> BTreeMap<Chain, Vec<ChainAddress>> {
             XGatewayCommon::bound_addrs(&who)
         }
 
         fn withdrawal_limit(asset_id: AssetId) -> Result<WithdrawalLimit<Balance>, DispatchError> {
             XGatewayCommon::withdrawal_limit(&asset_id)
+        }
+
+        #[allow(clippy::type_complexity)]
+        fn withdrawal_list_with_fee_info(asset_id: AssetId) -> Result<
+            BTreeMap<
+                WithdrawalRecordId,
+                (
+                    Withdrawal<AccountId, Balance, BlockNumber>,
+                    WithdrawalLimit<Balance>,
+                ),
+            >,
+            DispatchError,
+        >
+        {
+            XGatewayCommon::withdrawal_list_with_fee_info(&asset_id)
         }
 
         fn verify_withdrawal(asset_id: AssetId, value: Balance, addr: AddrStr, memo: Memo) -> Result<(), DispatchError> {
@@ -1484,21 +1518,33 @@ impl_runtime_apis! {
             XGatewayCommon::trustee_multisigs()
         }
 
-        fn trustee_properties(chain: Chain, who: AccountId) -> Option<GenericTrusteeIntentionProps> {
+        fn trustee_properties(chain: Chain, who: AccountId) -> Option<GenericTrusteeIntentionProps<AccountId>> {
             XGatewayCommon::trustee_intention_props_of(who, chain)
         }
 
-        fn trustee_session_info(chain: Chain) -> Option<GenericTrusteeSessionInfo<AccountId>> {
-            let number = XGatewayCommon::trustee_session_info_len(chain)
-                .checked_sub(1)
-                .unwrap_or_else(u32::max_value);
-            XGatewayCommon::trustee_session_info_of(chain, number)
+        fn trustee_session_info(chain: Chain, session_number: i32) -> Option<GenericTrusteeSessionInfo<AccountId, BlockNumber>> {
+            if session_number < 0 {
+                let number = match session_number {
+                    -1i32 => Some(XGatewayCommon::trustee_session_info_len(chain)),
+                    -2i32 => XGatewayCommon::trustee_session_info_len(chain).checked_sub(1),
+                    _ => None
+                };
+                if let Some(number) = number {
+                    XGatewayCommon::trustee_session_info_of(chain, number)
+                }else{
+                    None
+                }
+            }else{
+                let number = session_number as u32;
+                XGatewayCommon::trustee_session_info_of(chain, number)
+            }
+
         }
 
-        fn generate_trustee_session_info(chain: Chain, candidates: Vec<AccountId>) -> Result<GenericTrusteeSessionInfo<AccountId>, DispatchError> {
+        fn generate_trustee_session_info(chain: Chain, candidates: Vec<AccountId>) -> Result<(GenericTrusteeSessionInfo<AccountId, BlockNumber>, ScriptInfo<AccountId>), DispatchError> {
             let info = XGatewayCommon::try_generate_session_info(chain, candidates)?;
             // check multisig address
-            let _ = XGatewayCommon::generate_multisig_addr(chain, &info)?;
+            let _ = XGatewayCommon::generate_multisig_addr(chain, &info.0)?;
             Ok(info)
         }
     }

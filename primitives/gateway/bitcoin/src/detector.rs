@@ -58,7 +58,7 @@ impl BtcTxTypeDetector {
         prev_tx: Option<&Transaction>,
         extract_account: Extractor,
         current_trustee_pair: TrusteePair,
-        last_trustee_pair: Option<TrusteePair>,
+        prev_trustee_pair: Option<TrusteePair>,
     ) -> BtcTxMetaType<AccountId>
     where
         AccountId: Debug,
@@ -86,9 +86,14 @@ impl BtcTxTypeDetector {
                     BtcTxMetaType::Withdrawal
                 };
             }
-            if let Some(last_trustee_pair) = last_trustee_pair {
-                if is_trustee_addr(input_addr, last_trustee_pair) && all_outputs_is_trustee {
-                    // inputs should from last trustee address, outputs should all be current trustee addresses
+            if let Some(prev_trustee_pair) = prev_trustee_pair {
+                // inputs: previous trustee cold address --> outputs: current trustee cold address
+                let all_outputs_is_cold_address = tx
+                    .outputs
+                    .iter()
+                    .map(|output| extract_output_addr(output, self.network).unwrap_or_default())
+                    .all(|addr| addr.hash == current_trustee_pair.1.hash);
+                if input_addr.hash == prev_trustee_pair.1.hash && all_outputs_is_cold_address {
                     return BtcTxMetaType::TrusteeTransition;
                 }
             }

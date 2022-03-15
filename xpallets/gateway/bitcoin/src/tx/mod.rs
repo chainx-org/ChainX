@@ -3,7 +3,6 @@
 extern crate alloc;
 use alloc::string::ToString;
 
-mod secp256k1_verifier;
 pub mod validator;
 
 use frame_support::{
@@ -23,13 +22,13 @@ use chainx_primitives::AssetId;
 use xp_gateway_bitcoin::{BtcDepositInfo, BtcTxMetaType, BtcTxTypeDetector};
 use xp_gateway_common::AccountExtractor;
 use xpallet_assets::ChainT;
-use xpallet_gateway_common::traits::{AddressBinding, ReferralBinding};
+use xpallet_gateway_common::traits::{AddressBinding, ReferralBinding, TrusteeInfoUpdate};
 use xpallet_support::try_str;
 
 pub use self::validator::validate_transaction;
 use crate::{
     types::{AccountInfo, BtcAddress, BtcDepositCache, BtcTxResult, BtcTxState},
-    BalanceOf, Config, Error, Event, Pallet, PendingDeposits, WithdrawalProposal,
+    BalanceOf, Config, Event, Pallet, PendingDeposits, WithdrawalProposal,
 };
 
 pub fn process_tx<T: Config>(
@@ -53,12 +52,21 @@ pub fn process_tx<T: Config>(
     let result = match meta_type {
         BtcTxMetaType::<_>::Deposit(deposit_info) => deposit::<T>(tx.hash(), deposit_info),
         BtcTxMetaType::<_>::Withdrawal => withdraw::<T>(tx),
-        BtcTxMetaType::HotAndCold | BtcTxMetaType::TrusteeTransition => BtcTxResult::Success,
+        BtcTxMetaType::TrusteeTransition => trustee_transition::<T>(tx),
+        BtcTxMetaType::HotAndCold => BtcTxResult::Success,
         // mark `Irrelevance` be `Failure` so that it could be replayed in the future
         BtcTxMetaType::<_>::Irrelevance => BtcTxResult::Failure,
     };
 
     BtcTxState { tx_type, result }
+}
+
+fn trustee_transition<T: Config>(tx: Transaction) -> BtcTxResult {
+    let amount = tx.outputs().iter().map(|output| output.value).sum::<u64>();
+
+    T::TrusteeInfoUpdate::update_transition_status(Pallet::<T>::chain(), false, Some(amount));
+
+    BtcTxResult::Success
 }
 
 fn deposit<T: Config>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) -> BtcTxResult {
@@ -208,6 +216,18 @@ fn withdraw<T: Config>(tx: Transaction) -> BtcTxResult {
         let tx_hash = tx.hash();
 
         if proposal_hash == tx_hash {
+            // Check if the transaction is normal witness
+            let input = &tx.inputs()[0];
+            if input.script_witness.len() != 3 {
+                error!(
+                    target: "runtime::bitcoin",
+                    "[withdraw] Withdraw tx {:?} is not normal witness, proposal:{:?}",
+                    tx,
+                    proposal
+                );
+                return BtcTxResult::Failure;
+            }
+
             let mut total = BalanceOf::<T>::zero();
             for number in proposal.withdrawal_id_list.iter() {
                 // just for event record
@@ -230,6 +250,13 @@ fn withdraw<T: Config>(tx: Transaction) -> BtcTxResult {
                     }
                 }
             }
+
+            // Record trustee signature
+            T::TrusteeInfoUpdate::update_trustee_sig_record(
+                Pallet::<T>::chain(),
+                input.script_witness[1].as_slice(),
+                tx.outputs.iter().map(|info| info.value).sum(),
+            );
 
             let btc_withdrawal_fee = Pallet::<T>::btc_withdrawal_fee();
             // real withdraw value would reduce withdraw_fee
@@ -267,33 +294,4 @@ fn withdraw<T: Config>(tx: Transaction) -> BtcTxResult {
 
         BtcTxResult::Failure
     }
-}
-
-/// Returns Ok if `tx1` and `tx2` are the same transaction.
-pub fn ensure_identical<T: Config>(tx1: &Transaction, tx2: &Transaction) -> DispatchResult {
-    if tx1.version == tx2.version
-        && tx1.outputs == tx2.outputs
-        && tx1.lock_time == tx2.lock_time
-        && tx1.inputs.len() == tx2.inputs.len()
-    {
-        for i in 0..tx1.inputs.len() {
-            if tx1.inputs[i].previous_output != tx2.inputs[i].previous_output
-                || tx1.inputs[i].sequence != tx2.inputs[i].sequence
-            {
-                log::error!(
-                    target: "runtime::bitcoin",
-                    "[ensure_identical] Tx1 is different to Tx2, tx1:{:?}, tx2:{:?}",
-                    tx1,
-                    tx2
-                );
-                return Err(Error::<T>::MismatchedTx.into());
-            }
-        }
-        return Ok(());
-    }
-    log::error!(
-        target: "runtime::bitcoin",
-        "The transaction text does not match the original text to be signed",
-    );
-    Err(Error::<T>::MismatchedTx.into())
 }

@@ -7,7 +7,7 @@
 mod header;
 pub mod trustee;
 mod tx;
-mod types;
+pub mod types;
 pub mod weights;
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
@@ -17,6 +17,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+use sp_core::sp_std::str::FromStr;
 use sp_runtime::SaturatedConversion;
 use sp_std::prelude::*;
 
@@ -30,7 +31,7 @@ pub use light_bitcoin::{
     primitives::{hash_rev, Compact, H256, H264},
 };
 use light_bitcoin::{
-    chain::{Transaction, TransactionOutputArray},
+    chain::Transaction,
     keys::{Address, DisplayLayout},
     serialization::{deserialize, Reader},
 };
@@ -39,13 +40,11 @@ use chainx_primitives::{AssetId, ReferralId};
 use xp_gateway_common::AccountExtractor;
 use xpallet_assets::{BalanceOf, Chain, ChainT, WithdrawalLimit};
 use xpallet_gateway_common::{
-    traits::{AddressBinding, ReferralBinding, TrusteeSession},
+    traits::{AddressBinding, ReferralBinding, TotalSupply, TrusteeInfoUpdate, TrusteeSession},
     trustees::bitcoin::BtcTrusteeAddrInfo,
 };
 use xpallet_support::try_addr;
 
-pub use self::types::{BtcAddress, BtcParams, BtcTxVerifier, BtcWithdrawalProposal};
-pub use self::weights::WeightInfo;
 use self::{
     trustee::{get_current_trustee_address_pair, get_last_trustee_address_pair},
     tx::remove_pending_deposit,
@@ -55,8 +54,11 @@ use self::{
     },
 };
 
+pub use self::{
+    types::{BtcAddress, BtcParams, BtcTxVerifier, BtcWithdrawalProposal},
+    weights::WeightInfo,
+};
 pub use pallet::*;
-use sp_core::sp_std::str::FromStr;
 
 // syntactic sugar for native log.
 #[macro_export]
@@ -75,6 +77,7 @@ pub mod pallet {
 
     use frame_support::{dispatch::DispatchResult, pallet_prelude::*, traits::UnixTime};
     use frame_system::pallet_prelude::*;
+    use sp_runtime::traits::Saturating;
 
     use super::*;
 
@@ -86,13 +89,35 @@ pub mod pallet {
     pub trait Config:
         frame_system::Config + xpallet_assets::Config + xpallet_gateway_records::Config
     {
+        /// The overarching event type.
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+        /// The unix time type.
         type UnixTime: UnixTime;
+
+        /// A majority of the council can excute some transactions.
+        type CouncilOrigin: EnsureOrigin<Self::Origin>;
+
+        /// Extract the account and possible extra from the data.
         type AccountExtractor: AccountExtractor<Self::AccountId, ReferralId>;
-        type TrusteeSessionProvider: TrusteeSession<Self::AccountId, BtcTrusteeAddrInfo>;
-        type TrusteeOrigin: EnsureOrigin<Self::Origin, Success = Self::AccountId>;
+
+        /// Get information about the trustee.
+        type TrusteeSessionProvider: TrusteeSession<
+            Self::AccountId,
+            Self::BlockNumber,
+            BtcTrusteeAddrInfo,
+        >;
+
+        /// Update information about the trustee.
+        type TrusteeInfoUpdate: TrusteeInfoUpdate;
+
+        /// Handle referral of assets across chains.
         type ReferralBinding: ReferralBinding<Self::AccountId>;
+
+        /// Handle address binding about pending deposit.
         type AddressBinding: AddressBinding<Self::AccountId, BtcAddress>;
+
+        /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
     }
 
@@ -120,11 +145,13 @@ pub mod pallet {
         pub fn push_transaction(
             origin: OriginFor<T>,
             raw_tx: Vec<u8>,
-            relayed_info: BtcRelayedTxInfo,
+            relayed_info: Vec<u8>,
             prev_tx: Option<Vec<u8>>,
         ) -> DispatchResultWithPostInfo {
             let _from = ensure_signed(origin)?;
             let raw_tx = Self::deserialize_tx(raw_tx.as_slice())?;
+            let relayed_info: BtcRelayedTxInfo =
+                Decode::decode(&mut &relayed_info[..]).map_err(|_| Error::<T>::DeserializeErr)?;
             let prev_tx = if let Some(prev_tx) = prev_tx {
                 Some(Self::deserialize_tx(prev_tx.as_slice())?)
             } else {
@@ -145,17 +172,21 @@ pub mod pallet {
         }
 
         /// Trustee create a proposal for a withdrawal list. `tx` is the proposal withdrawal transaction.
-        /// The `tx` would have a sign for current creator or do not have sign. if creator do not sign
-        /// for this transaction, he could do `sign_withdraw_tx` later.
-        #[pallet::weight(<T as Config>::WeightInfo::create_withdraw_tx())]
-        pub fn create_withdraw_tx(
+        #[pallet::weight(<T as Config>::WeightInfo::create_taproot_withdraw_tx())]
+        pub fn create_taproot_withdraw_tx(
             origin: OriginFor<T>,
             withdrawal_id_list: Vec<u32>,
             tx: Vec<u8>,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             let from = ensure_signed(origin)?;
+
+            ensure!(
+                !T::TrusteeSessionProvider::trustee_transition_state(),
+                Error::<T>::TrusteeTransitionPeriod
+            );
+
             // committer must be in the trustee list
-            Self::ensure_trustee(&from)?;
+            Self::ensure_trustee_or_bot(&from)?;
 
             let tx = Self::deserialize_tx(tx.as_slice())?;
             log!(
@@ -166,51 +197,59 @@ pub mod pallet {
                 tx
             );
 
-            Self::apply_create_withdraw(from, tx, withdrawal_id_list)?;
-            Ok(())
+            Self::apply_create_taproot_withdraw(from, tx, withdrawal_id_list)?;
+            Ok(Pays::No.into())
         }
 
-        /// Trustee create a proposal for a withdrawal list. `tx` is the proposal withdrawal transaction.
-        #[pallet::weight(<T as Config>::WeightInfo::create_withdraw_tx())]
-        pub fn create_taproot_withdraw_tx(
+        /// Allow root or trustees could remove pending deposits for an address and decide whether
+        /// deposit to an account id. if pass `None` to `who`, would just remove pendings, if pass
+        /// Some, would deposit to this account id.
+        #[pallet::weight(<T as Config>::WeightInfo::remove_pending())]
+        pub fn remove_pending(
             origin: OriginFor<T>,
-            withdrawal_id_list: Vec<u32>,
-            tx: Vec<u8>,
-            spent_outputs: Vec<u8>,
+            addr: BtcAddress,
+            who: Option<T::AccountId>,
         ) -> DispatchResult {
-            let from = ensure_signed(origin)?;
-            // committer must be in the trustee list
-            Self::ensure_trustee(&from)?;
+            T::CouncilOrigin::try_origin(origin)
+                .map(|_| ())
+                .or_else(ensure_root)?;
 
-            let tx = Self::deserialize_tx(tx.as_slice())?;
-            let spent_outputs = Self::deserialize_spent_outputs(spent_outputs.as_slice())?.outputs;
-            log!(debug, "[create_withdraw_tx] from:{:?}, withdrawal list:{:?}, tx:{:?}, spent_outputs: {:?}", from, withdrawal_id_list, tx, spent_outputs);
-
-            Self::apply_create_taproot_withdraw(from, tx, withdrawal_id_list, spent_outputs)?;
+            if let Some(w) = who {
+                remove_pending_deposit::<T>(&addr, &w);
+            } else {
+                log!(info, "[remove_pending] Release pending deposit directly, not deposit to someone, addr:{:?}", try_addr(&addr));
+                PendingDeposits::<T>::remove(&addr);
+            }
             Ok(())
         }
 
-        /// Trustees sign a withdrawal proposal. If `tx` is None, means this trustee vote to reject
-        /// this proposal. If `tx` is Some(), the inner part must be a valid transaction with this
-        /// trustee signature.
-        #[pallet::weight(<T as Config>::WeightInfo::sign_withdraw_tx())]
-        pub fn sign_withdraw_tx(origin: OriginFor<T>, tx: Option<Vec<u8>>) -> DispatchResult {
-            let from = ensure_signed(origin)?;
-            Self::ensure_trustee(&from)?;
+        /// Dangerous! remove current withdrawal proposal directly. Please check business logic before
+        /// do this operation.
+        #[pallet::weight(<T as Config>::WeightInfo::remove_proposal())]
+        pub fn remove_proposal(origin: OriginFor<T>) -> DispatchResult {
+            T::CouncilOrigin::try_origin(origin)
+                .map(|_| ())
+                .or_else(ensure_root)?;
 
-            let tx = if let Some(raw_tx) = tx {
-                Some(Self::deserialize_tx(raw_tx.as_slice())?)
-            } else {
-                None
-            };
-            log!(
-                debug,
-                "[sign_withdraw_tx] from:{:?}, vote_tx:{:?}",
-                from,
-                tx
-            );
-
-            Self::apply_sig_withdraw(from, tx)?;
+            if let Some(proposal) = WithdrawalProposal::<T>::take() {
+                proposal.withdrawal_id_list.iter().for_each(|id| {
+                    match xpallet_gateway_records::Pallet::<T>::set_withdrawal_state_by_trustees(
+                        *id,
+                        Chain::Bitcoin,
+                        xpallet_gateway_records::WithdrawalState::Applying,
+                    ) {
+                        Ok(_) => {}
+                        Err(e) => {
+                            log!(
+                                error,
+                                "[remove_proposal] set withdrawal state error, id:{:?}, error:{:?}",
+                                id,
+                                e
+                            );
+                        }
+                    }
+                });
+            }
             Ok(())
         }
 
@@ -230,60 +269,13 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Allow root or trustees could remove pending deposits for an address and decide whether
-        /// deposit to an account id. if pass `None` to `who`, would just remove pendings, if pass
-        /// Some, would deposit to this account id.
-        #[pallet::weight(<T as Config>::WeightInfo::remove_pending())]
-        pub fn remove_pending(
-            origin: OriginFor<T>,
-            addr: BtcAddress,
-            who: Option<T::AccountId>,
-        ) -> DispatchResult {
-            T::TrusteeOrigin::try_origin(origin)
-                .map(|_| ())
-                .or_else(ensure_root)?;
-
-            if let Some(w) = who {
-                remove_pending_deposit::<T>(&addr, &w);
-            } else {
-                log!(info, "[remove_pending] Release pending deposit directly, not deposit to someone, addr:{:?}", try_addr(&addr));
-                PendingDeposits::<T>::remove(&addr);
-            }
-            Ok(())
-        }
-
-        /// Dangerous! remove current withdrawal proposal directly. Please check business logic before
-        /// do this operation.
-        #[pallet::weight(<T as Config>::WeightInfo::remove_proposal())]
-        pub fn remove_proposal(origin: OriginFor<T>) -> DispatchResult {
-            ensure_root(origin)?;
-            WithdrawalProposal::<T>::kill();
-            Ok(())
-        }
-
-        /// Dangerous! force replace current withdrawal proposal transaction. Please check business
-        /// logic before do this operation. Must make sure current proposal transaction is invalid
-        /// (e.g. when created a proposal, the inputs are not in double spend state, but after other
-        /// trustees finish signing, the inputs are in double spend due other case. Thus could create
-        /// a new valid transaction which outputs same to current proposal to replace current proposal
-        /// transaction.)
-        #[pallet::weight(<T as Config>::WeightInfo::force_replace_proposal_tx())]
-        pub fn force_replace_proposal_tx(origin: OriginFor<T>, tx: Vec<u8>) -> DispatchResult {
-            T::TrusteeOrigin::try_origin(origin)
-                .map(|_| ())
-                .or_else(ensure_root)?;
-            let tx = Self::deserialize_tx(tx.as_slice())?;
-            log!(debug, "[force_replace_proposal_tx] new_tx:{:?}", tx);
-            Self::force_replace_withdraw_tx(tx)
-        }
-
         /// Set bitcoin withdrawal fee
         #[pallet::weight(<T as Config>::WeightInfo::set_btc_withdrawal_fee())]
         pub fn set_btc_withdrawal_fee(
             origin: OriginFor<T>,
             #[pallet::compact] fee: u64,
         ) -> DispatchResult {
-            T::TrusteeOrigin::try_origin(origin)
+            T::CouncilOrigin::try_origin(origin)
                 .map(|_| ())
                 .or_else(ensure_root)?;
             BtcWithdrawalFee::<T>::put(fee);
@@ -296,10 +288,23 @@ pub mod pallet {
             origin: OriginFor<T>,
             #[pallet::compact] value: u64,
         ) -> DispatchResult {
-            T::TrusteeOrigin::try_origin(origin)
+            T::CouncilOrigin::try_origin(origin)
                 .map(|_| ())
                 .or_else(ensure_root)?;
             BtcMinDeposit::<T>::put(value);
+            Ok(())
+        }
+
+        /// Set coming bot
+        #[pallet::weight(<T as Config>::WeightInfo::set_coming_bot())]
+        pub fn set_coming_bot(origin: OriginFor<T>, bot: Option<T::AccountId>) -> DispatchResult {
+            T::CouncilOrigin::try_origin(origin)
+                .map(|_| ())
+                .or_else(ensure_root)?;
+            match bot {
+                None => ComingBot::<T>::kill(),
+                Some(n) => ComingBot::<T>::put(n),
+            }
             Ok(())
         }
     }
@@ -311,8 +316,6 @@ pub mod pallet {
         InvalidBase58,
         /// load addr from bytes error
         InvalidAddr,
-        /// can't find the best header in chain or it's invalid
-        InvalidBestIndex,
         /// Invalid proof-of-work (Block hash does not satisfy nBits)
         InvalidPoW,
         /// Fork is too long to proceed
@@ -323,19 +326,13 @@ pub mod pallet {
         HeaderFuturisticTimestamp,
         /// nBits do not match difficulty rules
         HeaderNBitsNotMatch,
-        /// Unknown parent
-        HeaderUnknownParent,
-        /// Not Found
-        HeaderNotFound,
-        /// Ancient fork
-        HeaderAncientFork,
         /// Header already exists
         ExistingHeader,
         /// Can't find previous header
         PrevHeaderNotExisted,
         /// Cannot deserialize the header or tx vec
         DeserializeErr,
-        ///
+        /// Invalid merkle proof
         BadMerkleProof,
         /// The tx is not yet confirmed, i.e, the block of which is not confirmed.
         UnconfirmedTx,
@@ -347,18 +344,8 @@ pub mod pallet {
         MismatchedTx,
         /// invalid bitcoin address
         InvalidAddress,
-        /// verify tx signature failed
-        VerifySignFailed,
-        /// invalid sign count in trustee withdrawal tx proposal
-        InvalidSignCount,
         /// invalid bitcoin public key
         InvalidPublicKey,
-        /// construct bad signature
-        ConstructBadSign,
-        /// Invalid signature
-        BadSignature,
-        /// Parse redeem script failed
-        BadRedeemScript,
         /// not set trustee yet
         NotTrustee,
         /// duplicated pubkey for trustees
@@ -368,9 +355,7 @@ pub mod pallet {
         /// invalid trustee count
         InvalidTrusteeCount,
         /// unexpected withdraw records count
-        WroungWithdrawalCount,
-        /// reject sig for current proposal
-        RejectSig,
+        WrongWithdrawalCount,
         /// no proposal for current withdrawal
         NoProposal,
         /// invalid proposal
@@ -381,6 +366,12 @@ pub mod pallet {
         NoWithdrawalRecord,
         /// already vote for this withdrawal proposal
         DuplicateVote,
+        /// Trustee transition period
+        TrusteeTransitionPeriod,
+        /// Withdrawals are prohibited during the trust transition period
+        NoWithdrawInTrans,
+        /// The total amount of the trust must be transferred out in full
+        InvalidAmoutInTrans,
     }
 
     #[pallet::event]
@@ -402,10 +393,6 @@ pub mod pallet {
         WithdrawalProposalCreated(T::AccountId, Vec<u32>),
         /// A trustee voted/vetoed a withdrawal proposal. [trustee, vote_status]
         WithdrawalProposalVoted(T::AccountId, bool),
-        /// A withdrawal proposal was dropped. [reject_count, total_count, withdrawal_ids]
-        WithdrawalProposalDropped(u32, u32, Vec<u32>),
-        /// The proposal has been processed successfully and is waiting for broadcasting. [tx_hash]
-        WithdrawalProposalCompleted(H256),
         /// A fatal error happened during the withdrwal process. [tx_hash, proposal_hash]
         WithdrawalFatalErr(H256, H256),
     }
@@ -498,6 +485,11 @@ pub mod pallet {
     #[pallet::getter(fn verifier)]
     pub(crate) type Verifier<T: Config> = StorageValue<_, BtcTxVerifier, ValueQuery>;
 
+    /// Coming bot helps update btc withdrawal transaction status
+    #[pallet::storage]
+    #[pallet::getter(fn coming_bot)]
+    pub(crate) type ComingBot<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
+
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         pub genesis_hash: H256,
@@ -573,7 +565,6 @@ pub mod pallet {
         }
 
         fn check_addr(addr: &[u8], _: &[u8]) -> DispatchResult {
-            // this addr is base58 addr
             let address = Self::verify_btc_address(addr).map_err(|err| {
                 log!(
                     error,
@@ -614,38 +605,27 @@ pub mod pallet {
         }
     }
 
+    impl<T: Config> TotalSupply<BalanceOf<T>> for Pallet<T> {
+        fn total_supply() -> BalanceOf<T> {
+            let pending_deposits: BalanceOf<T> = PendingDeposits::<T>::iter_values()
+                .map(|deposits| {
+                    deposits
+                        .into_iter()
+                        .map(|deposit| deposit.balance)
+                        .sum::<u64>()
+                })
+                .sum::<u64>()
+                .saturated_into();
+
+            let asset_supply = xpallet_assets::Pallet::<T>::total_issuance(&xp_protocol::X_BTC);
+            asset_supply.saturating_add(pending_deposits)
+        }
+    }
+
     impl<T: Config> Pallet<T> {
-        pub fn verify_btc_address(data: &[u8]) -> Result<Address, DispatchError> {
-            let result = Self::verify_bs58_address(data);
-            if result.is_ok() {
-                return result;
-            }
-            Self::verify_bech32_address(data)
-        }
-
-        pub fn verify_bs58_address(data: &[u8]) -> Result<Address, DispatchError> {
-            let r = bs58::decode(data)
-                .into_vec()
-                .map_err(|_| Error::<T>::InvalidBase58)?;
-            let addr = Address::from_layout(&r).map_err(|_| Error::<T>::InvalidAddr)?;
-            Ok(addr)
-        }
-
-        pub fn verify_bech32_address(data: &[u8]) -> Result<Address, DispatchError> {
-            let addr = core::str::from_utf8(data).map_err(|_| Error::<T>::InvalidAddr)?;
-            Address::from_str(addr).map_err(|_| Error::<T>::InvalidAddr.into())
-        }
-
         /// Helper function for deserializing the slice of raw tx.
         #[inline]
         pub(crate) fn deserialize_tx(input: &[u8]) -> Result<Transaction, Error<T>> {
-            deserialize(Reader::new(input)).map_err(|_| Error::<T>::DeserializeErr)
-        }
-
-        #[inline]
-        pub(crate) fn deserialize_spent_outputs(
-            input: &[u8],
-        ) -> Result<TransactionOutputArray, Error<T>> {
             deserialize(Reader::new(input)).map_err(|_| Error::<T>::DeserializeErr)
         }
 
@@ -794,6 +774,62 @@ pub mod pallet {
             match state.result {
                 BtcTxResult::Success => Ok(()),
                 BtcTxResult::Failure => Err(Error::<T>::ProcessTxFailed.into()),
+            }
+        }
+    }
+
+    impl<T: Config> Pallet<T> {
+        pub fn verify_bech32_address(data: &[u8]) -> Result<Address, DispatchError> {
+            let addr = core::str::from_utf8(data).map_err(|_| Error::<T>::InvalidAddr)?;
+            Address::from_str(addr).map_err(|_| Error::<T>::InvalidAddr.into())
+        }
+
+        pub fn verify_bs58_address(data: &[u8]) -> Result<Address, DispatchError> {
+            let r = bs58::decode(data)
+                .into_vec()
+                .map_err(|_| Error::<T>::InvalidBase58)?;
+            let addr = Address::from_layout(&r).map_err(|_| Error::<T>::InvalidAddr)?;
+            Ok(addr)
+        }
+
+        pub fn verify_btc_address(data: &[u8]) -> Result<Address, DispatchError> {
+            let result = Self::verify_bs58_address(data);
+            if result.is_ok() {
+                return result;
+            }
+            Self::verify_bech32_address(data)
+        }
+
+        pub fn verify_tx_valid(
+            raw_tx: Vec<u8>,
+            withdrawal_id_list: Vec<u32>,
+            full_amount: bool,
+        ) -> Result<bool, DispatchError> {
+            let tx = Self::deserialize_tx(raw_tx.as_slice())?;
+            // check trustee transition status
+            if T::TrusteeSessionProvider::trustee_transition_state() {
+                // check trustee transition tx
+                // tx output address = new hot address
+                let last_trustee_pair = get_last_trustee_address_pair::<T>()?;
+                let all_outputs_is_cold_address = tx
+                    .outputs
+                    .iter()
+                    .map(|output| {
+                        xp_gateway_bitcoin::extract_output_addr(output, NetworkId::<T>::get())
+                            .unwrap_or_default()
+                    })
+                    .all(|addr| addr.hash == last_trustee_pair.1.hash);
+                if !all_outputs_is_cold_address {
+                    Err(Error::<T>::NoWithdrawInTrans.into())
+                } else if !full_amount {
+                    Err(Error::<T>::InvalidAmoutInTrans.into())
+                } else {
+                    Ok(true)
+                }
+            } else {
+                // check normal withdrawal tx
+                trustee::check_withdraw_tx::<T>(&tx, &withdrawal_id_list)?;
+                Ok(true)
             }
         }
     }

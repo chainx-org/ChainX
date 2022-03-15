@@ -7,8 +7,12 @@ use hex_literal::hex;
 
 #[cfg(feature = "std")]
 use frame_support::traits::GenesisBuild;
-use frame_support::{parameter_types, sp_io, traits::UnixTime, weights::Weight};
-use frame_system::EnsureSignedBy;
+use frame_support::{
+    parameter_types, sp_io,
+    traits::{LockIdentifier, UnixTime},
+    weights::Weight,
+};
+use frame_system::EnsureSigned;
 use sp_core::H256;
 use sp_keyring::sr25519;
 use sp_runtime::{
@@ -22,7 +26,7 @@ use xp_assets_registrar::Chain;
 pub use xp_protocol::{X_BTC, X_ETH};
 use xpallet_assets::AssetRestrictions;
 use xpallet_assets_registrar::AssetInfo;
-use xpallet_gateway_common::types::TrusteeInfoConfig;
+use xpallet_gateway_common::{trustees, types::TrusteeInfoConfig};
 
 use light_bitcoin::{
     chain::BlockHeader as BtcHeader,
@@ -54,6 +58,7 @@ frame_support::construct_runtime!(
     {
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+        Elections: pallet_elections_phragmen::{Pallet, Call, Storage, Event<T>, Config<T>},
         XAssetsRegistrar: xpallet_assets_registrar::{Pallet, Call, Storage, Event<T>, Config},
         XAssets: xpallet_assets::{Pallet, Call, Storage, Event<T>, Config<T>},
         XGatewayRecords: xpallet_gateway_records::{Pallet, Call, Storage, Event<T>},
@@ -112,6 +117,39 @@ impl pallet_balances::Config for Test {
     type MaxReserves = MaxReserves;
 }
 
+parameter_types! {
+    pub const ElectionsPhragmenPalletId: LockIdentifier = *b"phrelect";
+}
+
+frame_support::parameter_types! {
+    pub static VotingBondBase: u64 = 2;
+    pub static VotingBondFactor: u64 = 0;
+    pub static CandidacyBond: u64 = 3;
+    pub static DesiredMembers: u32 = 2;
+    pub static DesiredRunnersUp: u32 = 0;
+    pub static TermDuration: u64 = 5;
+    pub static Members: Vec<u64> = vec![];
+    pub static Prime: Option<u64> = None;
+}
+
+impl pallet_elections_phragmen::Config for Test {
+    type Event = ();
+    type PalletId = ElectionsPhragmenPalletId;
+    type Currency = Balances;
+    type ChangeMembers = ();
+    type InitializeMembers = ();
+    type CurrencyToVote = frame_support::traits::SaturatingCurrencyToVote;
+    type CandidacyBond = CandidacyBond;
+    type VotingBondBase = VotingBondBase;
+    type VotingBondFactor = VotingBondFactor;
+    type LoserCandidate = ();
+    type KickedMember = ();
+    type DesiredMembers = DesiredMembers;
+    type DesiredRunnersUp = DesiredRunnersUp;
+    type TermDuration = TermDuration;
+    type WeightInfo = ();
+}
+
 // assets
 parameter_types! {
     pub const ChainXAssetId: AssetId = 0;
@@ -134,6 +172,11 @@ impl xpallet_assets::Config for Test {
     type WeightInfo = ();
 }
 
+// assets
+parameter_types! {
+    pub const BtcAssetId: AssetId = 1;
+}
+
 impl xpallet_gateway_records::Config for Test {
     type Event = ();
     type WeightInfo = ();
@@ -143,8 +186,11 @@ impl xpallet_gateway_common::Config for Test {
     type Event = ();
     type Validator = ();
     type DetermineMultisigAddress = ();
+    type CouncilOrigin = EnsureSigned<AccountId>;
     type Bitcoin = XGatewayBitcoin;
     type BitcoinTrustee = XGatewayBitcoin;
+    type BitcoinTrusteeSessionProvider = trustees::bitcoin::BtcTrusteeSessionManager<Test>;
+    type BitcoinTotalSupply = XGatewayBitcoin;
     type WeightInfo = ();
 }
 
@@ -173,10 +219,8 @@ impl Config for Test {
     type AccountExtractor = xp_gateway_bitcoin::OpReturnExtractor;
     type TrusteeSessionProvider =
         xpallet_gateway_common::trustees::bitcoin::BtcTrusteeSessionManager<Test>;
-    type TrusteeOrigin = EnsureSignedBy<
-        xpallet_gateway_common::trustees::bitcoin::BtcTrusteeMultisig<Test>,
-        AccountId,
-    >;
+    type CouncilOrigin = EnsureSigned<AccountId>;
+    type TrusteeInfoUpdate = XGatewayCommon;
     type ReferralBinding = XGatewayCommon;
     type AddressBinding = XGatewayCommon;
     type WeightInfo = ();

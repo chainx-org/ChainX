@@ -1,0 +1,40 @@
+[package]
+name = "xpallet-gateway-bitcoin-rpc-runtime-api"
+version = "4.0.0"
+authors = ["The ChainX Authors"]
+edition = "2018"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "2.3.1", default-features = false }
+
+# Substrate primitives
+sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
+
+# ChainX primitives
+chainx-primitives = { path = "../../../../../primitives", default-features = false }
+xp-assets-registrar = { path = "../../../../../primitives/assets-registrar", default-features = false }
+xp-runtime = { path = "../../../../../primitives/runtime", default-features = false }
+
+# ChainX pallets
+xpallet-gateway-bitcoin = { path = "../../", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    # Substrate primitives
+    "sp-api/std",
+    "sp-runtime/std",
+    "sp-std/std",
+    # ChainX primitives
+    "chainx-primitives/std",
+    "xp-assets-registrar/std",
+    "xp-runtime/std",
+    # ChainX pallets
+    "xpallet-gateway-bitcoin/std"
+]

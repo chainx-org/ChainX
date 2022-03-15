@@ -10,7 +10,6 @@ const SEED: u32 = 0;
 
 benchmarks! {
     claim {
-        let u in 1 .. 1000;
         xpallet_assets_registrar::Pallet::<T>::register(
             frame_system::RawOrigin::Root.into(),
             X_DOT,
@@ -27,7 +26,7 @@ benchmarks! {
 
         FixedAssetPowerOf::<T>::insert(X_DOT, 100);
 
-        let miner = account("miner", u, SEED);
+        let miner = account("miner", 0, SEED);
         xpallet_assets::Pallet::<T>::issue(&X_DOT, &miner, 1000u32.into())?;
 
         let reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(&X_DOT);

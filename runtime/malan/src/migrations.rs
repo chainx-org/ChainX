@@ -227,86 +227,98 @@ impl frame_support::traits::OnRuntimeUpgrade for ElectionsPrefixMigration {
     }
 }
 
+pub struct XGatewayCommonStorageMigration;
+impl frame_support::traits::OnRuntimeUpgrade for XGatewayCommonStorageMigration {
+    fn on_runtime_upgrade() -> frame_support::weights::Weight {
+        xpallet_gateway_common::migrations::taproot::apply::<Runtime>()
+    }
+}
+
 use frame_support::{traits::OnRuntimeUpgrade, weights::Weight};
 pub struct CustomOnRuntimeUpgrades;
 impl OnRuntimeUpgrade for CustomOnRuntimeUpgrades {
     fn on_runtime_upgrade() -> Weight {
         let mut weight = 0;
 
-        // 1. RemoveCollectiveFlip
-        frame_support::log::info!("🔍️ RemoveCollectiveFlip start");
-        weight += <RemoveCollectiveFlip as OnRuntimeUpgrade>::on_runtime_upgrade();
-        frame_support::log::info!("🚀 RemoveCollectiveFlip end");
+        // // 1. RemoveCollectiveFlip
+        // frame_support::log::info!("🔍️ RemoveCollectiveFlip start");
+        // weight += <RemoveCollectiveFlip as OnRuntimeUpgrade>::on_runtime_upgrade();
+        // frame_support::log::info!("🚀 RemoveCollectiveFlip end");
 
-        // 2. MigratePalletVersionToStorageVersion
-        frame_support::log::info!("🔍️ MigratePalletVersionToStorageVersion start");
-        weight += <MigratePalletVersionToStorageVersion as OnRuntimeUpgrade>::on_runtime_upgrade();
-        frame_support::log::info!("🚀 MigratePalletVersionToStorageVersion end");
+        // // 2. MigratePalletVersionToStorageVersion
+        // frame_support::log::info!("🔍️ MigratePalletVersionToStorageVersion start");
+        // weight += <MigratePalletVersionToStorageVersion as OnRuntimeUpgrade>::on_runtime_upgrade();
+        // frame_support::log::info!("🚀 MigratePalletVersionToStorageVersion end");
 
-        // 3. PhragmenElectionDepositRuntimeUpgrade
-        frame_support::log::info!("🔍️ PhragmenElectionDepositRuntimeUpgrade start");
-        frame_support::traits::StorageVersion::new(0).put::<Elections>();
-        weight += <PhragmenElectionDepositRuntimeUpgrade as OnRuntimeUpgrade>::on_runtime_upgrade();
-        frame_support::log::info!("🚀 PhragmenElectionDepositRuntimeUpgrade end");
+        // // 3. PhragmenElectionDepositRuntimeUpgrade
+        // frame_support::log::info!("🔍️ PhragmenElectionDepositRuntimeUpgrade start");
+        // frame_support::traits::StorageVersion::new(0).put::<Elections>();
+        // weight += <PhragmenElectionDepositRuntimeUpgrade as OnRuntimeUpgrade>::on_runtime_upgrade();
+        // frame_support::log::info!("🚀 PhragmenElectionDepositRuntimeUpgrade end");
 
         // // 4. SystemToTripleRefCount
         // frame_support::log::info!("🔍️ SystemToTripleRefCount start");
         // weight += <SystemToTripleRefCount as OnRuntimeUpgrade>::on_runtime_upgrade();
         // frame_support::log::info!("🚀 SystemToTripleRefCount end");
 
-        // 5. BabeEpochConfigMigrations
-        frame_support::log::info!("🔍️ BabeEpochConfigMigrations start");
-        weight += <BabeEpochConfigMigrations as OnRuntimeUpgrade>::on_runtime_upgrade();
-        frame_support::log::info!("🚀 BabeEpochConfigMigrations end");
+        // // 5. BabeEpochConfigMigrations
+        // frame_support::log::info!("🔍️ BabeEpochConfigMigrations start");
+        // weight += <BabeEpochConfigMigrations as OnRuntimeUpgrade>::on_runtime_upgrade();
+        // frame_support::log::info!("🚀 BabeEpochConfigMigrations end");
 
-        // 6. GrandpaStoragePrefixMigration
-        frame_support::log::info!("🔍️ GrandpaStoragePrefixMigration start");
-        frame_support::traits::StorageVersion::new(0).put::<Grandpa>();
-        weight += <GrandpaStoragePrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
-        frame_support::log::info!("🚀 GrandpaStoragePrefixMigration end");
+        // // 6. GrandpaStoragePrefixMigration
+        // frame_support::log::info!("🔍️ GrandpaStoragePrefixMigration start");
+        // frame_support::traits::StorageVersion::new(0).put::<Grandpa>();
+        // weight += <GrandpaStoragePrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
+        // frame_support::log::info!("🚀 GrandpaStoragePrefixMigration end");
 
-        // 7. CouncilStoragePrefixMigration
-        frame_support::log::info!("🔍️ CouncilStoragePrefixMigration start");
-        frame_support::traits::StorageVersion::new(0).put::<Council>();
-        weight += <CouncilStoragePrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
-        frame_support::log::info!("🚀 CouncilStoragePrefixMigration end");
+        // // 7. CouncilStoragePrefixMigration
+        // frame_support::log::info!("🔍️ CouncilStoragePrefixMigration start");
+        // frame_support::traits::StorageVersion::new(0).put::<Council>();
+        // weight += <CouncilStoragePrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
+        // frame_support::log::info!("🚀 CouncilStoragePrefixMigration end");
 
-        // 8. TechnicalCommitteeStoragePrefixMigration
-        frame_support::log::info!("🔍️ TechnicalCommitteeStoragePrefixMigration start");
-        frame_support::traits::StorageVersion::new(0).put::<TechnicalCommittee>();
-        weight +=
-            <TechnicalCommitteeStoragePrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
-        frame_support::log::info!("🚀 TechnicalCommitteeStoragePrefixMigration end");
+        // // 8. TechnicalCommitteeStoragePrefixMigration
+        // frame_support::log::info!("🔍️ TechnicalCommitteeStoragePrefixMigration start");
+        // frame_support::traits::StorageVersion::new(0).put::<TechnicalCommittee>();
+        // weight +=
+        //     <TechnicalCommitteeStoragePrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
+        // frame_support::log::info!("🚀 TechnicalCommitteeStoragePrefixMigration end");
 
-        // 9. TechnicalMembershipStoragePrefixMigration
-        frame_support::log::info!("🔍️ TechnicalMembershipStoragePrefixMigration start");
-        frame_support::traits::StorageVersion::new(0).put::<TechnicalMembership>();
-        weight +=
-            <TechnicalMembershipStoragePrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
-        frame_support::log::info!("🚀 TechnicalMembershipStoragePrefixMigration end");
+        // // 9. TechnicalMembershipStoragePrefixMigration
+        // frame_support::log::info!("🔍️ TechnicalMembershipStoragePrefixMigration start");
+        // frame_support::traits::StorageVersion::new(0).put::<TechnicalMembership>();
+        // weight +=
+        //     <TechnicalMembershipStoragePrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
+        // frame_support::log::info!("🚀 TechnicalMembershipStoragePrefixMigration end");
 
-        // 10. CouncilStoragePrefixMigration
-        frame_support::log::info!("🔍️ CouncilStoragePrefixMigration start");
-        frame_support::traits::StorageVersion::new(0).put::<Council>();
-        weight += <CouncilStoragePrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
-        frame_support::log::info!("🚀 CouncilStoragePrefixMigration end");
+        // // 10. CouncilStoragePrefixMigration
+        // frame_support::log::info!("🔍️ CouncilStoragePrefixMigration start");
+        // frame_support::traits::StorageVersion::new(0).put::<Council>();
+        // weight += <CouncilStoragePrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
+        // frame_support::log::info!("🚀 CouncilStoragePrefixMigration end");
 
-        // 11. MigrateTipsPalletPrefix
-        frame_support::log::info!("🔍️ MigrateTipsPalletPrefix start");
-        frame_support::traits::StorageVersion::new(0).put::<Tips>();
-        weight += <MigrateTipsPalletPrefix as OnRuntimeUpgrade>::on_runtime_upgrade();
-        frame_support::log::info!("🚀 MigrateTipsPalletPrefix end");
+        // // 11. MigrateTipsPalletPrefix
+        // frame_support::log::info!("🔍️ MigrateTipsPalletPrefix start");
+        // frame_support::traits::StorageVersion::new(0).put::<Tips>();
+        // weight += <MigrateTipsPalletPrefix as OnRuntimeUpgrade>::on_runtime_upgrade();
+        // frame_support::log::info!("🚀 MigrateTipsPalletPrefix end");
 
-        // 12. BountiesPrefixMigration
-        frame_support::log::info!("🔍️ BountiesPrefixMigration start");
-        frame_support::traits::StorageVersion::new(0).put::<Bounties>();
-        weight += <BountiesPrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
-        frame_support::log::info!("🚀 BountiesPrefixMigration end");
+        // // 12. BountiesPrefixMigration
+        // frame_support::log::info!("🔍️ BountiesPrefixMigration start");
+        // frame_support::traits::StorageVersion::new(0).put::<Bounties>();
+        // weight += <BountiesPrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
+        // frame_support::log::info!("🚀 BountiesPrefixMigration end");
 
-        // 13. ElectionsPrefixMigration
-        frame_support::log::info!("🔍️ ElectionsPrefixMigration start");
-        weight += <ElectionsPrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
-        frame_support::log::info!("🚀 ElectionsPrefixMigration end");
+        // // 13. ElectionsPrefixMigration
+        // frame_support::log::info!("🔍️ ElectionsPrefixMigration start");
+        // weight += <ElectionsPrefixMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
+        // frame_support::log::info!("🚀 ElectionsPrefixMigration end");
+
+        // 14. XGatewayCommonStorageMigration
+        frame_support::log::info!("🔍️ XGatewayCommonStorageMigration start");
+        weight += <XGatewayCommonStorageMigration as OnRuntimeUpgrade>::on_runtime_upgrade();
+        frame_support::log::info!("🚀 XGatewayCommonStorageMigration end");
 
         weight
     }

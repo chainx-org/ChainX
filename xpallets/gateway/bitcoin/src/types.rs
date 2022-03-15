@@ -121,11 +121,9 @@ pub enum VoteResult {
 pub struct BtcParams {
     max_bits: u32,
     block_max_future: u32,
-
     target_timespan_seconds: u32,
     target_spacing_seconds: u32,
     retargeting_factor: u32,
-
     retargeting_interval: u32,
     min_timespan: u32,
     max_timespan: u32,
@@ -142,11 +140,9 @@ impl BtcParams {
         Self {
             max_bits,
             block_max_future,
-
             target_timespan_seconds,
             target_spacing_seconds,
             retargeting_factor,
-
             retargeting_interval: target_timespan_seconds / target_spacing_seconds,
             min_timespan: target_timespan_seconds / retargeting_factor,
             max_timespan: target_timespan_seconds * retargeting_factor,
@@ -162,11 +158,9 @@ impl BtcParams {
     pub fn target_timespan_seconds(&self) -> u32 {
         self.target_timespan_seconds
     }
-
     pub fn retargeting_interval(&self) -> u32 {
         self.retargeting_interval
     }
-
     pub fn min_timespan(&self) -> u32 {
         self.min_timespan
     }

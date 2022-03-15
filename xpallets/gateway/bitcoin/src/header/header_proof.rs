@@ -14,8 +14,10 @@ use light_bitcoin::{
     primitives::{hash_rev, Compact, H256, U256},
 };
 
-use crate::types::{BtcHeaderInfo, BtcParams};
-use crate::{Config, Error, Pallet};
+use crate::{
+    types::{BtcHeaderInfo, BtcParams},
+    Config, Error, Pallet,
+};
 
 pub struct HeaderVerifier<'a> {
     pub work: HeaderWork<'a>,

@@ -29,8 +29,8 @@ bench_run() {
 bench_run xpallet_assets            ./xpallets/assets/src/weights.rs
 bench_run xpallet_assets_registrar  ./xpallets/assets-registrar/src/weights.rs
 bench_run xpallet_dex_spot          ./xpallets/dex/spot/src/weights.rs
-bench_run xpallet_gateway_bitcoin   ./xpallets/gateway/bitcoin/v1/src/weights.rs
-#bench_run xpallet_gateway_common    ./xpallets/gateway/common/src/weights.rs
+bench_run xpallet_gateway_bitcoin   ./xpallets/gateway/bitcoin/src/weights.rs
+bench_run xpallet_gateway_common    ./xpallets/gateway/common/src/weights.rs
 bench_run xpallet_gateway_records   ./xpallets/gateway/records/src/weights.rs
 bench_run xpallet_mining_asset      ./xpallets/mining/asset/src/weights.rs
 bench_run xpallet_mining_staking    ./xpallets/mining/staking/src/weights.rs
