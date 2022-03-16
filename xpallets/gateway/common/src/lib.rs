@@ -64,7 +64,7 @@ pub use weights::WeightInfo;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use frame_support::pallet_prelude::*;
+    use frame_support::{pallet_prelude::*, transactional};
     use frame_system::pallet_prelude::*;
 
     #[pallet::config]
@@ -122,6 +122,7 @@ pub mod pallet {
         ///
         /// NOTE: `ext` is for the compatibility purpose, e.g., EOS requires a memo when doing the transfer.
         #[pallet::weight(<T as Config>::WeightInfo::withdraw())]
+        #[transactional]
         pub fn withdraw(
             origin: OriginFor<T>,
             #[pallet::compact] asset_id: AssetId,
@@ -145,6 +146,7 @@ pub mod pallet {
         ///
         /// WithdrawalRecord State: `Applying` ==> `NormalCancel`
         #[pallet::weight(<T as Config>::WeightInfo::cancel_withdrawal())]
+        #[transactional]
         pub fn cancel_withdrawal(origin: OriginFor<T>, id: WithdrawalRecordId) -> DispatchResult {
             let from = ensure_signed(origin)?;
             xpallet_gateway_records::Pallet::<T>::cancel_withdrawal(id, &from)
@@ -201,6 +203,7 @@ pub mod pallet {
 
         /// Manual execution of the election by admin.
         #[pallet::weight(0u64)]
+        #[transactional]
         pub fn excute_trustee_election(origin: OriginFor<T>, chain: Chain) -> DispatchResult {
             match ensure_signed(origin.clone()) {
                 Ok(who) => {
@@ -222,6 +225,7 @@ pub mod pallet {
         ///
         /// This is called by the root.
         #[pallet::weight(0u64)]
+        #[transactional]
         pub fn cancel_trustee_election(origin: OriginFor<T>, chain: Chain) -> DispatchResult {
             T::CouncilOrigin::try_origin(origin)
                 .map(|_| ())
@@ -242,6 +246,7 @@ pub mod pallet {
         /// Since this is a root call and will go into trustee election, we assume full block for now.
         /// # </weight>
         #[pallet::weight(0u64)]
+        #[transactional]
         pub fn move_trust_into_black_room(
             origin: OriginFor<T>,
             chain: Chain,
@@ -270,6 +275,8 @@ pub mod pallet {
                     for trustee in trustees.iter() {
                         l.push(trustee.clone());
                     }
+                    l.sort_unstable();
+                    l.dedup();
                 });
                 trustees.into_iter().for_each(|trustee| {
                     if TrusteeSigRecord::<T>::contains_key(chain, &trustee) {
@@ -331,6 +338,7 @@ pub mod pallet {
         /// circumstances to not renew), but they want to receive
         /// their award early, they can call this through the council.
         #[pallet::weight(< T as Config >::WeightInfo::claim_trustee_reward())]
+        #[transactional]
         pub fn claim_trustee_reward(
             origin: OriginFor<T>,
             chain: Chain,

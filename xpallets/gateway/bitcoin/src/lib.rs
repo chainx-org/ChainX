@@ -75,7 +75,9 @@ macro_rules! log {
 pub mod pallet {
     use sp_std::marker::PhantomData;
 
-    use frame_support::{dispatch::DispatchResult, pallet_prelude::*, traits::UnixTime};
+    use frame_support::{
+        dispatch::DispatchResult, pallet_prelude::*, traits::UnixTime, transactional,
+    };
     use frame_system::pallet_prelude::*;
     use sp_runtime::traits::Saturating;
 
@@ -226,6 +228,7 @@ pub mod pallet {
         /// Dangerous! remove current withdrawal proposal directly. Please check business logic before
         /// do this operation.
         #[pallet::weight(<T as Config>::WeightInfo::remove_proposal())]
+        #[transactional]
         pub fn remove_proposal(origin: OriginFor<T>) -> DispatchResult {
             T::CouncilOrigin::try_origin(origin)
                 .map(|_| ())
@@ -758,18 +761,16 @@ pub mod pallet {
         }
 
         pub(crate) fn apply_remove_proposal() -> DispatchResult {
-            with_transaction_result(|| {
-                if let Some(proposal) = WithdrawalProposal::<T>::take() {
-                    for id in proposal.withdrawal_id_list.iter() {
-                        xpallet_gateway_records::Pallet::<T>::set_withdrawal_state_by_trustees(
-                            *id,
-                            Chain::Bitcoin,
-                            xpallet_gateway_records::WithdrawalState::Applying,
-                        )?;
-                    }
+            if let Some(proposal) = WithdrawalProposal::<T>::take() {
+                for id in proposal.withdrawal_id_list.iter() {
+                    xpallet_gateway_records::Pallet::<T>::set_withdrawal_state_by_trustees(
+                        *id,
+                        Chain::Bitcoin,
+                        xpallet_gateway_records::WithdrawalState::Applying,
+                    )?;
                 }
-                Ok(())
-            })
+            }
+            Ok(())
         }
     }
 
