@@ -99,7 +99,6 @@ pub mod pallet {
         ///
         /// This is a root-only operation.
         #[pallet::weight(<T as Config>::WeightInfo::set_withdrawal_state())]
-        #[transactional]
         pub fn set_withdrawal_state(
             origin: OriginFor<T>,
             #[pallet::compact] withdrawal_id: WithdrawalRecordId,
