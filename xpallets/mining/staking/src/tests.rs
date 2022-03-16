@@ -518,17 +518,17 @@ fn staking_reward_should_work() {
              staked: Balance,
              session_index: SessionIndex| {
                 let val_total_reward = staking_mining_reward * staked / total_staked;
-                // 10% -> validator
-                // 90% -> validator's reward pot
+                // 20% -> validator
+                // 80% -> validator's reward pot
                 assert_eq!(
                     Balances::free_balance(&validator),
-                    initial_free + val_total_reward * session_index as u128 / 10
+                    initial_free + val_total_reward * session_index as u128 / 5
                 );
                 assert_eq!(
                     Balances::free_balance(
                         &DummyStakingRewardPotAccountDeterminer::reward_pot_account_for(&validator)
                     ),
-                    (val_total_reward - val_total_reward / 10) * session_index as u128
+                    (val_total_reward - val_total_reward / 5) * session_index as u128
                 );
             };
 
@@ -625,22 +625,22 @@ fn staker_reward_should_work() {
         let calc_reward_for_pot =
             |validator_votes: Balance, total_staked: Balance, total_reward: Balance| {
                 let total_reward_for_validator = validator_votes * total_reward / total_staked;
-                let to_validator = total_reward_for_validator / 10;
+                let to_validator = total_reward_for_validator / 5;
                 total_reward_for_validator - to_validator
             };
 
         // Block 1
         // total_staked = val(10+10) + val2(20) + val(30) + val(40) = 110
         // reward pot:
-        // 1: 1_980_000_000 * 20/110 * 90% = 324_000_000
-        // 2: 1_980_000_000 * 20/110 * 90% = 324_000_000
-        // 3: 1_980_000_000 * 30/110 * 90% = 486_000_000
-        // 4: 1_980_000_000 * 40/110 * 90% = 648_000_000
+        // 1: 1_980_000_000 * 20/110 * 90% = 288_000_000
+        // 2: 1_980_000_000 * 20/110 * 90% = 288_000_000
+        // 3: 1_980_000_000 * 30/110 * 90% = 432_000_000
+        // 4: 1_980_000_000 * 40/110 * 90% = 576_000_000
         t_start_session(1);
-        assert_eq!(t_reward_pot_balance(1), 324_000_000);
-        assert_eq!(t_reward_pot_balance(2), 324_000_000);
-        assert_eq!(t_reward_pot_balance(3), 486_000_000);
-        assert_eq!(t_reward_pot_balance(4), 648_000_000);
+        assert_eq!(t_reward_pot_balance(1), 288_000_000);
+        assert_eq!(t_reward_pot_balance(2), 288_000_000);
+        assert_eq!(t_reward_pot_balance(3), 432_000_000);
+        assert_eq!(t_reward_pot_balance(4), 576_000_000);
 
         assert_eq!(
             <ValidatorLedgers<Test>>::get(2),
@@ -663,36 +663,36 @@ fn staker_reward_should_work() {
         // Block 2
         // total_staked = val(10+10) + val2(20+20) + val(30) + val(40) = 130
         // reward pot:
-        // There might be a calculation loss using 90% directly, the actual
+        // There might be a calculation loss using 80% directly, the actual
         // calculation is:
         // validator 3: 1_980_000_000 * 30/130 = 456_923_076
-        //                    |_ validator 3: 456_923_076 / 10 = 45_692_307
+        //                    |_ validator 3: 456_923_076 / 5 = 91_384_615
         //                    |_ validator 3's reward pot: 731_076_923 - 73_107_692
 
         t_start_session(2);
         // The order is [3, 4, 1, 2] when calculating.
         assert_eq!(
             t_reward_pot_balance(3),
-            486_000_000 + 456_923_076 - 45_692_307
+            432_000_000 + 456_923_076 - 91_384_615
         );
         assert_eq!(
             t_reward_pot_balance(3),
-            486_000_000 + calc_reward_for_pot(30, 130, TOTAL_STAKING_REWARD)
+            432_000_000 + calc_reward_for_pot(30, 130, TOTAL_STAKING_REWARD)
         );
-        assert_eq!(t_reward_pot_balance(4), 1_196_307_693);
-        assert_eq!(t_reward_pot_balance(1), 598_153_847);
-        assert_eq!(t_reward_pot_balance(2), 872_307_693);
+        assert_eq!(t_reward_pot_balance(4), 1_063_384_616);
+        assert_eq!(t_reward_pot_balance(1), 531_692_308);
+        assert_eq!(t_reward_pot_balance(2), 775_384_616);
 
         // validator 1: vote weight = 10 + 20 * 1 = 30
         // t_1 vote weight: 10 * 1  = 10
         assert_ok!(XStaking::claim(Origin::signed(t_1), 1));
         // t_1 = reward_pot_balance * 10 / 30
-        assert_eq!(XStaking::free_balance(&t_1), 100 + 598_153_847 / 3);
+        assert_eq!(XStaking::free_balance(&t_1), 100 + 531_692_308 / 3);
 
         // validator 2: vote weight = 40 * 1 + 20 = 60
         // t_2 vote weight = 20 * 1 = 20
         assert_ok!(XStaking::claim(Origin::signed(t_2), 2));
-        assert_eq!(XStaking::free_balance(&t_2), 100 + 872_307_693 * 20 / 60);
+        assert_eq!(XStaking::free_balance(&t_2), 100 + 775_384_616 * 20 / 60);
 
         assert_ok!(XStaking::set_minimum_validator_count(Origin::root(), 3));
         assert_ok!(XStaking::chill(Origin::signed(3)));
@@ -702,7 +702,7 @@ fn staker_reward_should_work() {
         // validator 3 is chilled now, not rewards then.
         assert_eq!(
             t_reward_pot_balance(3),
-            486_000_000 + calc_reward_for_pot(30, 130, TOTAL_STAKING_REWARD)
+            432_000_000 + calc_reward_for_pot(30, 130, TOTAL_STAKING_REWARD)
         );
     });
 }

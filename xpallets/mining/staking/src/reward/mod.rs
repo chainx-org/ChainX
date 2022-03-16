@@ -35,8 +35,8 @@ impl<T: Config> Pallet<T> {
     ///
     /// Add the reward to their balance, and their reward pot, pro-rata.
     fn apply_reward_validator(who: &T::AccountId, reward: BalanceOf<T>) {
-        // Validator themselves can only directly gain 10%, the rest 90% is for the reward pot.
-        let off_the_table = reward.saturated_into::<BalanceOf<T>>() / 10u32.saturated_into();
+        // Validator themselves can only directly gain 20%, the rest 80% is for the reward pot.
+        let off_the_table = reward.saturated_into::<BalanceOf<T>>() / 5u32.saturated_into();
         Self::mint(who, off_the_table);
         frame_support::log::debug!(
             target: "runtime::mining::staking",
@@ -45,7 +45,7 @@ impl<T: Config> Pallet<T> {
             off_the_table
         );
 
-        // Issue the rest 90% to validator's reward pot.
+        // Issue the rest 80% to validator's reward pot.
         let to_reward_pot = reward - off_the_table;
         let reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(who);
         Self::mint(&reward_pot, to_reward_pot);
