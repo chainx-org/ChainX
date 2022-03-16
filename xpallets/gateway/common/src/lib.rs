@@ -228,8 +228,8 @@ pub mod pallet {
                 .map(|_| ())
                 .or_else(ensure_root)?;
 
-            TrusteeTransitionStatus::<T>::insert(chain, false);
             Self::cancel_trustee_transition_impl(chain)?;
+            TrusteeTransitionStatus::<T>::insert(chain, false);
             Ok(())
         }
 
