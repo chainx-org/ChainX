@@ -203,7 +203,6 @@ pub mod pallet {
 
         /// Manual execution of the election by admin.
         #[pallet::weight(0u64)]
-        #[transactional]
         pub fn excute_trustee_election(origin: OriginFor<T>, chain: Chain) -> DispatchResult {
             match ensure_signed(origin.clone()) {
                 Ok(who) => {
@@ -217,15 +216,13 @@ pub mod pallet {
                 }
             };
 
-            Self::do_trustee_election(chain)?;
-            Ok(())
+            Self::do_trustee_election(chain)
         }
 
         /// Force cancel trustee transition
         ///
         /// This is called by the root.
         #[pallet::weight(0u64)]
-        #[transactional]
         pub fn cancel_trustee_election(origin: OriginFor<T>, chain: Chain) -> DispatchResult {
             T::CouncilOrigin::try_origin(origin)
                 .map(|_| ())
@@ -891,8 +888,6 @@ impl<T: Config> Pallet<T> {
             })
             .collect::<Vec<_>>();
 
-        LittleBlackHouse::<T>::insert(chain, remain_filter_members);
-
         let desired_members =
             (<T as pallet_elections_phragmen::Config>::DesiredMembers::get() - 1) as usize;
 
@@ -919,6 +914,7 @@ impl<T: Config> Pallet<T> {
         );
 
         Self::transition_trustee_session_impl(chain, new_trustee_candidate)?;
+        LittleBlackHouse::<T>::insert(chain, remain_filter_members);
         if Self::trustee_session_info_len(chain) != 1 {
             TrusteeTransitionStatus::<T>::insert(chain, true);
             let total_supply = T::BitcoinTotalSupply::total_supply();
@@ -1028,9 +1024,9 @@ impl<T: Config> Pallet<T> {
             .0
             .multi_account
             .ok_or(Error::<T>::InvalidTrusteeSession)?;
+        Self::generate_aggpubkey_impl(chain, session_number)?;
         TrusteeSessionInfoLen::<T>::insert(chain, session_number);
         TrusteeMultiSigAddr::<T>::insert(chain, multi_account);
-        Self::generate_aggpubkey_impl(chain, session_number)?;
         TrusteeAdmin::<T>::remove(chain);
         Ok(())
     }
@@ -1042,9 +1038,10 @@ impl<T: Config> Pallet<T> {
             .into_iter()
             .unzip::<_, _, _, Vec<u64>>()
             .0;
-        AggPubkeyInfo::<T>::remove_all(None);
+
         let info = Self::try_generate_session_info(chain, trustees)?;
 
+        AggPubkeyInfo::<T>::remove_all(None);
         for index in 0..info.1.agg_pubkeys.len() {
             AggPubkeyInfo::<T>::insert(
                 chain,
