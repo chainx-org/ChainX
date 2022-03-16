@@ -112,7 +112,6 @@ pub mod pallet {
         ///
         /// This is a root-only operation.
         #[pallet::weight(<T as Config>::WeightInfo::set_withdrawal_state_list(item.len() as u32))]
-        #[transactional]
         pub fn set_withdrawal_state_list(
             origin: OriginFor<T>,
             item: Vec<(WithdrawalRecordId, WithdrawalState)>,
