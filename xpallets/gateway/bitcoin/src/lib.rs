@@ -230,27 +230,7 @@ pub mod pallet {
             T::CouncilOrigin::try_origin(origin)
                 .map(|_| ())
                 .or_else(ensure_root)?;
-
-            if let Some(proposal) = WithdrawalProposal::<T>::take() {
-                proposal.withdrawal_id_list.iter().for_each(|id| {
-                    match xpallet_gateway_records::Pallet::<T>::set_withdrawal_state_by_trustees(
-                        *id,
-                        Chain::Bitcoin,
-                        xpallet_gateway_records::WithdrawalState::Applying,
-                    ) {
-                        Ok(_) => {}
-                        Err(e) => {
-                            log!(
-                                error,
-                                "[remove_proposal] set withdrawal state error, id:{:?}, error:{:?}",
-                                id,
-                                e
-                            );
-                        }
-                    }
-                });
-            }
-            Ok(())
+            Self::apply_remove_proposal()
         }
 
         /// Dangerous! Be careful to set BestIndex
@@ -775,6 +755,21 @@ pub mod pallet {
                 BtcTxResult::Success => Ok(()),
                 BtcTxResult::Failure => Err(Error::<T>::ProcessTxFailed.into()),
             }
+        }
+
+        pub(crate) fn apply_remove_proposal() -> DispatchResult {
+            with_transaction_result(|| {
+                if let Some(proposal) = WithdrawalProposal::<T>::take() {
+                    for id in proposal.withdrawal_id_list.iter() {
+                        xpallet_gateway_records::Pallet::<T>::set_withdrawal_state_by_trustees(
+                            *id,
+                            Chain::Bitcoin,
+                            xpallet_gateway_records::WithdrawalState::Applying,
+                        )?;
+                    }
+                }
+                Ok(())
+            })
         }
     }
 
