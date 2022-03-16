@@ -75,7 +75,9 @@ macro_rules! log {
 pub mod pallet {
     use sp_std::marker::PhantomData;
 
-    use frame_support::{dispatch::DispatchResult, pallet_prelude::*, traits::UnixTime};
+    use frame_support::{
+        dispatch::DispatchResult, pallet_prelude::*, traits::UnixTime, transactional,
+    };
     use frame_system::pallet_prelude::*;
     use sp_runtime::traits::Saturating;
 
@@ -226,31 +228,12 @@ pub mod pallet {
         /// Dangerous! remove current withdrawal proposal directly. Please check business logic before
         /// do this operation.
         #[pallet::weight(<T as Config>::WeightInfo::remove_proposal())]
+        #[transactional]
         pub fn remove_proposal(origin: OriginFor<T>) -> DispatchResult {
             T::CouncilOrigin::try_origin(origin)
                 .map(|_| ())
                 .or_else(ensure_root)?;
-
-            if let Some(proposal) = WithdrawalProposal::<T>::take() {
-                proposal.withdrawal_id_list.iter().for_each(|id| {
-                    match xpallet_gateway_records::Pallet::<T>::set_withdrawal_state_by_trustees(
-                        *id,
-                        Chain::Bitcoin,
-                        xpallet_gateway_records::WithdrawalState::Applying,
-                    ) {
-                        Ok(_) => {}
-                        Err(e) => {
-                            log!(
-                                error,
-                                "[remove_proposal] set withdrawal state error, id:{:?}, error:{:?}",
-                                id,
-                                e
-                            );
-                        }
-                    }
-                });
-            }
-            Ok(())
+            Self::apply_remove_proposal()
         }
 
         /// Dangerous! Be careful to set BestIndex
@@ -775,6 +758,18 @@ pub mod pallet {
                 BtcTxResult::Success => Ok(()),
                 BtcTxResult::Failure => Err(Error::<T>::ProcessTxFailed.into()),
             }
+        }
+
+        pub(crate) fn apply_remove_proposal() -> DispatchResult {
+            if let Some(proposal) = WithdrawalProposal::<T>::take() {
+                for id in proposal.withdrawal_id_list.iter() {
+                    xpallet_gateway_records::Pallet::<T>::set_withdrawal_state_by_root(
+                        *id,
+                        xpallet_gateway_records::WithdrawalState::Applying,
+                    )?;
+                }
+            }
+            Ok(())
         }
     }
 

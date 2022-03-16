@@ -2,7 +2,7 @@
 
 //! Weights for xpallet_mining_staking
 //! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 4.0.0-dev
-//! DATE: 2022-03-14, STEPS: 50, REPEAT: 20, LOW RANGE: [], HIGH RANGE: []
+//! DATE: 2022-03-16, STEPS: 50, REPEAT: 20, LOW RANGE: [], HIGH RANGE: []
 //! EXECUTION: Some(Wasm), WASM-EXECUTION: Compiled, CHAIN: Some("benchmarks"), DB CACHE: 128
 
 // Executed Command:
@@ -51,123 +51,123 @@ pub trait WeightInfo {
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
     fn register() -> Weight {
-        (1_309_844_000 as Weight)
+        (1_490_959_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(149 as Weight))
             .saturating_add(T::DbWeight::get().writes(7 as Weight))
     }
     fn bond() -> Weight {
-        (120_406_000 as Weight)
+        (126_880_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(9 as Weight))
             .saturating_add(T::DbWeight::get().writes(5 as Weight))
     }
     fn unbond() -> Weight {
-        (90_678_000 as Weight)
+        (113_698_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(6 as Weight))
             .saturating_add(T::DbWeight::get().writes(3 as Weight))
     }
     fn unlock_unbonded_withdrawal() -> Weight {
-        (81_065_000 as Weight)
+        (91_309_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(4 as Weight))
             .saturating_add(T::DbWeight::get().writes(4 as Weight))
     }
     fn rebond() -> Weight {
-        (120_141_000 as Weight)
+        (123_534_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(10 as Weight))
             .saturating_add(T::DbWeight::get().writes(5 as Weight))
     }
     fn claim() -> Weight {
-        (99_420_000 as Weight)
+        (105_275_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(5 as Weight))
             .saturating_add(T::DbWeight::get().writes(4 as Weight))
     }
     fn chill() -> Weight {
-        (1_070_679_000 as Weight)
+        (1_157_271_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(95 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     fn validate() -> Weight {
-        (24_999_000 as Weight)
+        (25_963_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(1 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     fn set_validator_count() -> Weight {
-        (2_513_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
+        (2_378_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     fn set_minimum_validator_count() -> Weight {
-        (2_428_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
+        (2_465_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     fn set_bonding_duration() -> Weight {
-        (2_446_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
+        (2_515_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     fn set_validator_bonding_duration() -> Weight {
-        (2_471_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
+        (2_515_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     fn set_minimum_penalty() -> Weight {
-        (2_506_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
+        (2_579_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     fn set_sessions_per_era() -> Weight {
-        (2_528_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
+        (2_470_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
     fn register() -> Weight {
-        (1_309_844_000 as Weight)
+        (1_490_959_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(149 as Weight))
             .saturating_add(RocksDbWeight::get().writes(7 as Weight))
     }
     fn bond() -> Weight {
-        (120_406_000 as Weight)
+        (126_880_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(9 as Weight))
             .saturating_add(RocksDbWeight::get().writes(5 as Weight))
     }
     fn unbond() -> Weight {
-        (90_678_000 as Weight)
+        (113_698_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(6 as Weight))
             .saturating_add(RocksDbWeight::get().writes(3 as Weight))
     }
     fn unlock_unbonded_withdrawal() -> Weight {
-        (81_065_000 as Weight)
+        (91_309_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(4 as Weight))
             .saturating_add(RocksDbWeight::get().writes(4 as Weight))
     }
     fn rebond() -> Weight {
-        (120_141_000 as Weight)
+        (123_534_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(10 as Weight))
             .saturating_add(RocksDbWeight::get().writes(5 as Weight))
     }
     fn claim() -> Weight {
-        (99_420_000 as Weight)
+        (105_275_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(5 as Weight))
             .saturating_add(RocksDbWeight::get().writes(4 as Weight))
     }
     fn chill() -> Weight {
-        (1_070_679_000 as Weight)
+        (1_157_271_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(95 as Weight))
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
     fn validate() -> Weight {
-        (24_999_000 as Weight)
+        (25_963_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(1 as Weight))
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
     fn set_validator_count() -> Weight {
-        (2_513_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
+        (2_378_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
     fn set_minimum_validator_count() -> Weight {
-        (2_428_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
+        (2_465_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
     fn set_bonding_duration() -> Weight {
-        (2_446_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
+        (2_515_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
     fn set_validator_bonding_duration() -> Weight {
-        (2_471_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
+        (2_515_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
     fn set_minimum_penalty() -> Weight {
-        (2_506_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
+        (2_579_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
     fn set_sessions_per_era() -> Weight {
-        (2_528_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
+        (2_470_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
 }
