@@ -763,9 +763,8 @@ pub mod pallet {
         pub(crate) fn apply_remove_proposal() -> DispatchResult {
             if let Some(proposal) = WithdrawalProposal::<T>::take() {
                 for id in proposal.withdrawal_id_list.iter() {
-                    xpallet_gateway_records::Pallet::<T>::set_withdrawal_state_by_trustees(
+                    xpallet_gateway_records::Pallet::<T>::set_withdrawal_state_by_root(
                         *id,
-                        Chain::Bitcoin,
                         xpallet_gateway_records::WithdrawalState::Applying,
                     )?;
                 }
