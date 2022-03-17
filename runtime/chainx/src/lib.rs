@@ -454,7 +454,7 @@ impl frame_support::traits::ValidatorSet<AccountId> for Runtime {
     }
 
     fn validators() -> Vec<Self::ValidatorId> {
-        XStaking::active_validator_set().collect()
+        Session::validators()
     }
 }
 
