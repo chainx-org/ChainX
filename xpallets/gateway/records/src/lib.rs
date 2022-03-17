@@ -171,7 +171,7 @@ pub mod pallet {
     /// Withdraw applications collection, use serial numbers to mark them.
     #[pallet::storage]
     #[pallet::getter(fn pending_withdrawals)]
-    pub type PendingWithdrawals<T: Config> =
+    pub(crate) type PendingWithdrawals<T: Config> =
         StorageMap<_, Twox64Concat, WithdrawalRecordId, WithdrawalRecordOf<T>>;
 
     /// The state of withdraw record corresponding to an id.
@@ -544,6 +544,12 @@ impl<T: Config> Pallet<T> {
     fn destroy(who: &T::AccountId, asset_id: AssetId, value: BalanceOf<T>) -> DispatchResult {
         xpallet_assets::Pallet::<T>::destroy_reserved_withdrawal(&asset_id, who, value)?;
         Ok(())
+    }
+
+    #[inline]
+    pub fn pending_withdrawal_set(
+    ) -> impl Iterator<Item = (WithdrawalRecordId, WithdrawalRecordOf<T>)> {
+        PendingWithdrawals::<T>::iter()
     }
 }
 

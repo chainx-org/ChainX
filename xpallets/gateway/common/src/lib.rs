@@ -556,13 +556,13 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn trustee_multisig_addr)]
-    pub type TrusteeMultiSigAddr<T: Config> =
+    pub(crate) type TrusteeMultiSigAddr<T: Config> =
         StorageMap<_, Twox64Concat, Chain, T::AccountId, ValueQuery>;
 
     /// Trustee info config of the corresponding chain.
     #[pallet::storage]
     #[pallet::getter(fn trustee_info_config_of)]
-    pub type TrusteeInfoConfigOf<T: Config> =
+    pub(crate) type TrusteeInfoConfigOf<T: Config> =
         StorageMap<_, Twox64Concat, Chain, TrusteeInfoConfig, ValueQuery>;
 
     /// Next Trustee session info number of the chain.
@@ -573,7 +573,7 @@ pub mod pallet {
     /// NOTE: The number can't be modified by users.
     #[pallet::storage]
     #[pallet::getter(fn trustee_session_info_len)]
-    pub type TrusteeSessionInfoLen<T: Config> =
+    pub(crate) type TrusteeSessionInfoLen<T: Config> =
         StorageMap<_, Twox64Concat, Chain, u32, ValueQuery, DefaultForTrusteeSessionInfoLen>;
 
     #[pallet::type_value]
@@ -584,7 +584,7 @@ pub mod pallet {
     /// Trustee session info of the corresponding chain and number.
     #[pallet::storage]
     #[pallet::getter(fn trustee_session_info_of)]
-    pub type TrusteeSessionInfoOf<T: Config> = StorageDoubleMap<
+    pub(crate) type TrusteeSessionInfoOf<T: Config> = StorageDoubleMap<
         _,
         Twox64Concat,
         Chain,
@@ -596,7 +596,7 @@ pub mod pallet {
     /// Trustee intention properties of the corresponding account and chain.
     #[pallet::storage]
     #[pallet::getter(fn trustee_intention_props_of)]
-    pub type TrusteeIntentionPropertiesOf<T: Config> = StorageDoubleMap<
+    pub(crate) type TrusteeIntentionPropertiesOf<T: Config> = StorageDoubleMap<
         _,
         Blake2_128Concat,
         T::AccountId,
@@ -607,12 +607,12 @@ pub mod pallet {
 
     /// The account of the corresponding chain and chain address.
     #[pallet::storage]
-    pub type AddressBindingOf<T: Config> =
+    pub(crate) type AddressBindingOf<T: Config> =
         StorageDoubleMap<_, Twox64Concat, Chain, Blake2_128Concat, ChainAddress, T::AccountId>;
 
     /// The bound address of the corresponding account and chain.
     #[pallet::storage]
-    pub type BoundAddressOf<T: Config> = StorageDoubleMap<
+    pub(crate) type BoundAddressOf<T: Config> = StorageDoubleMap<
         _,
         Blake2_128Concat,
         T::AccountId,
@@ -625,14 +625,14 @@ pub mod pallet {
     /// The referral account of the corresponding account and chain.
     #[pallet::storage]
     #[pallet::getter(fn referral_binding_of)]
-    pub type ReferralBindingOf<T: Config> =
+    pub(crate) type ReferralBindingOf<T: Config> =
         StorageDoubleMap<_, Blake2_128Concat, T::AccountId, Twox64Concat, Chain, T::AccountId>;
 
     /// Each aggregated public key corresponds to a set of trustees used
     /// to confirm a set of trustees for processing withdrawals.
     #[pallet::storage]
     #[pallet::getter(fn agg_pubkey_info)]
-    pub type AggPubkeyInfo<T: Config> = StorageDoubleMap<
+    pub(crate) type AggPubkeyInfo<T: Config> = StorageDoubleMap<
         _,
         Twox64Concat,
         Chain,
@@ -644,11 +644,12 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn trustee_admin)]
-    pub type TrusteeAdmin<T: Config> = StorageMap<_, Twox64Concat, Chain, T::AccountId, ValueQuery>;
+    pub(crate) type TrusteeAdmin<T: Config> =
+        StorageMap<_, Twox64Concat, Chain, T::AccountId, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn trustee_admin_multiply)]
-    pub type TrusteeAdminMultiply<T: Config> =
+    pub(crate) type TrusteeAdminMultiply<T: Config> =
         StorageMap<_, Twox64Concat, Chain, u64, ValueQuery, DefaultForTrusteeAdminMultiply>;
 
     #[pallet::type_value]
@@ -658,13 +659,13 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn trustee_sig_record)]
-    pub type TrusteeSigRecord<T: Config> =
+    pub(crate) type TrusteeSigRecord<T: Config> =
         StorageDoubleMap<_, Twox64Concat, Chain, Twox64Concat, T::AccountId, u64, ValueQuery>;
 
     /// The status of the of the trustee transition
     #[pallet::storage]
     #[pallet::getter(fn trustee_transition_status)]
-    pub type TrusteeTransitionStatus<T: Config> =
+    pub(crate) type TrusteeTransitionStatus<T: Config> =
         StorageMap<_, Twox64Concat, Chain, bool, ValueQuery>;
 
     /// Members not participating in trustee elections.
@@ -673,13 +674,13 @@ pub mod pallet {
     /// little black room. Filter out the member in the next trustee election
     #[pallet::storage]
     #[pallet::getter(fn little_black_house)]
-    pub type LittleBlackHouse<T: Config> =
+    pub(crate) type LittleBlackHouse<T: Config> =
         StorageMap<_, Twox64Concat, Chain, Vec<T::AccountId>, ValueQuery>;
 
     /// Record the total number of cross-chain assets at the time of each trust exchange
     #[pallet::storage]
     #[pallet::getter(fn pre_total_supply)]
-    pub type PreTotalSupply<T: Config> =
+    pub(crate) type PreTotalSupply<T: Config> =
         StorageDoubleMap<_, Twox64Concat, Chain, Twox64Concat, u32, BalanceOf<T>, ValueQuery>;
 
     #[pallet::genesis_config]
@@ -1032,7 +1033,7 @@ impl<T: Config> Pallet<T> {
     }
 
     fn generate_aggpubkey_impl(chain: Chain, session_number: u32) -> DispatchResult {
-        let trustee_session = T::BitcoinTrusteeSessionProvider::current_trustee_session()?;
+        let trustee_session = T::BitcoinTrusteeSessionProvider::trustee_session(session_number)?;
         let trustees = trustee_session
             .trustee_list
             .into_iter()
@@ -1263,7 +1264,7 @@ impl<T: Config> Pallet<T> {
                 Withdrawal<T::AccountId, BalanceOf<T>, T::BlockNumber>,
                 WithdrawalLimit<BalanceOf<T>>,
             ),
-        > = xpallet_gateway_records::PendingWithdrawals::<T>::iter()
+        > = xpallet_gateway_records::Pallet::<T>::pending_withdrawal_set()
             .map(|(id, record)| {
                 (
                     id,
