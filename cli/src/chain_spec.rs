@@ -270,6 +270,282 @@ pub fn mainnet_config() -> Result<ChainXChainSpec, String> {
     ChainXChainSpec::from_json_bytes(&include_bytes!("./res/chainx_regenesis.json")[..])
 }
 
+pub fn new_mainnet_config() -> Result<ChainXChainSpec, String> {
+    let wasm_binary =
+        chainx::WASM_BINARY.ok_or_else(|| "ChainX wasm binary not available".to_string())?;
+
+    let initial_authorities: Vec<AuthorityKeysTuple> = vec![
+        (
+            (
+                // 5StNFoeSmLXr7SfDuwJqHR5CyKV2o4BD2yU36GGay3GVFhtt
+                hex!["8fa51087d1a7327c90da45f8e369e31037606427f07ef77007a41036227a3a5b"].into(),
+                b"Web3".to_vec(),
+            ),
+            // 5V8a6nmGmu7N9iCtds7Eb8EkdpBABx9BrcJvDewFNCLX3WKa
+            hex!["f2f2d6e98256e93ed1ce9a089364193d08bb005276be3b312648585a12413c36"]
+                .unchecked_into(),
+            // 5R9SwUoWziEZyFr17AYB8Z1a4EYCXzyYGYWwWsGiP2pygtyX
+            hex!["42ad0bf20a8a38084f62a8bc720cdf948994aa97c0afcc04f070ee85f7c3f4bf"]
+                .unchecked_into(),
+            // 5TDjip2pGZ8KUgW8iGFDGto4wt7gxXcmXFR98TcifiVYXnQA
+            hex!["9e6afcacebf456bfc909d81d0bbdd0a337f1abca3677150bc83d388956cc1701"]
+                .unchecked_into(),
+            // 5RpGMngHcMKVHhY4f5CQ1LZDBbtuzofuVPKvFk9XxMjWaNLi
+            hex!["6047ffbc896c22352433c0b3cf81b2e3264a3a0ab792709ef103b046bce86553"]
+                .unchecked_into(),
+        ),
+        (
+            (
+                // 5RAZf8UHcbS5RBRpP9zptQJm84tpfnxcJ64ctSyxNJeLLxtq
+                hex!["4386e83d66fbdf9ebe72af81d453f41fb8f877287f04823665fc81b58cab6e6b"].into(),
+                b"XPool".to_vec(),
+            ),
+            // 5RuM4NsTGSTA3yVgWibxWNt8KEXYBLwmbq2p3rvz4TdJ2JVa
+            hex!["64280c07db03b85ac6206e6558df9fd4abc8778ff9afe094e53aa7767ed05313"]
+                .unchecked_into(),
+            // 5RFAnoweNDFxvMsKNmeQazYRZwEeeYegGqHSCjTvgW8AxkbM
+            hex!["470a27b38990f1a0101cb5f149c514bd0f5bc1ec24d24b3aa72ca4e92482ebff"]
+                .unchecked_into(),
+            // 5QcEM9mppDHKxKv5BnaYzFuHMmH35AtbS4JkCdPaWbVeCyyM
+            hex!["2ade0d1735328c5753af812ce54df9db24d3979204d331cb1c08cc455dbb6f16"]
+                .unchecked_into(),
+            // 5UtnsNGRV867j5VHbBGsKxfiCbAJG4iFaocvW1dKg8T6dToi
+            hex!["e87062ff7a629b90d2af59b1982442b2aa88fd470c961ab3f86de2f340e0fe55"]
+                .unchecked_into(),
+        ),
+        (
+            (
+                // 5RaxFQc7E4ACr4FVoHj2SMA6MGMqT8Ck9mDV5byGZtPPUw8f
+                hex!["5620d851190bda61acb08f1a06defcdd5a3c7da3c33819643e7d6ee232ee78bf"].into(),
+                b"ChainY".to_vec(),
+            ),
+            // 5U3PkBpUqTxcqvdigWt21q2MnW3cyKVm44rsc4HLGPzf5Wn8
+            hex!["c2c3852ff9feec91412b271a8a49eb41ca83b9d9fecf9906240e19d73eceed0d"]
+                .unchecked_into(),
+            // 5SVSrKBth8wwUAKS64Y2bUor7TUAhRgcH8HdqW3EPq3MBtdD
+            hex!["7e29e36d138c6f789c0b6b4c98ca1162ee78a1828e4b1682f5e06756b6b1994f"]
+                .unchecked_into(),
+            // 5Ui2auEpdXnTybFMGFP183U7aUygrUcSGZzkvpas7k4wUHJT
+            hex!["e03adc1ac1b442a5e0e2c6ef1b806a9874e478a7cfc8a3d4fce5731716fd951e"]
+                .unchecked_into(),
+            // 5USdrQDtyebV2d2exhGNjv1nG5vGCfUPhz5ZBMUSgLUQkFCe
+            hex!["d47da74631ce8f5e0f29971538c4bae9834bbc28e82f250bbff060ba203ac035"]
+                .unchecked_into(),
+        ),
+        (
+            (
+                // 5QpaUQudS4cxZEQTtviWm5pmv8NQWX5HkKmd9T1GFamqcu3h
+                hex!["3448be503acf3f8c8831af55a4816e5382284dab213e1022edf368fb07aaeb25"].into(),
+                b"PolkaWorld".to_vec(),
+            ),
+            // 5TTRAay4UF7C9tzua5K3TNTJ61gZ88XKZtqKqKeFvbAbrYLP
+            hex!["a8d9f57c79d86a056b53b0a496359f0dc8099fb1f5a5ee46647b9e319a953a51"]
+                .unchecked_into(),
+            // 5ST6rf1SBgf7PSXVGypJMEsMFcujJ6wGhTFTJb5svuMfccKN
+            hex!["7c60176664c7ba4c273771955509ed0a54ba45467356595b8961a3ec0ae71d55"]
+                .unchecked_into(),
+            // 5UMq5kxN8ExVj6USS8y7Umok1Dize44jteVR7eisLsc6xDds
+            hex!["d0d33b1fead76b802c1aeebaeb86a25e133925b0cca6264da6feba6015b5bf4e"]
+                .unchecked_into(),
+            // 5QHcomC2mrLp51WbLW4j1uNjjSRMUdnq4H2FNADozp1jV5iY
+            hex!["1cabfdd4b314033594b899a08fc285181fc928be962edef2e3323802df86283a"]
+                .unchecked_into(),
+        ),
+        (
+            (
+                // 5SmuQ9LA8GexmSHgLsD3FSftBZBQqRySyJT2EQhvHWqYdMHn
+                hex!["8ab72fa19af7cce7983af666d2945c238c10812d760b6b0181753cb9cbba127f"].into(),
+                b"Polkadog".to_vec(),
+            ),
+            // 5UXwsgRGh2gNScAKyjKNC5TVDZLCGhSFp5UYcZcqfHKKZ2B8
+            hex!["d88a8c4f49af34e68de2d71cb2ac390ad10c06f5bb7ddfa2df34098ec3ef3a10"]
+                .unchecked_into(),
+            // 5U2nLh22whssvbqCq6FQvmbqgvVthkZJuJdJhPy6EVgLuDUc
+            hex!["c24c5605efdc47faedbb3c5fe6b7b47d73940597d1e3d898da53f8766c9678b4"]
+                .unchecked_into(),
+            // 5PniNjFJDBpjjc8GD6Xg8aJQhgS4ioWVAvcZUZsQenhndZXR
+            hex!["06a09ea25228d2f53f0589a37b614282dcd94b118d2a029cb07b3cf568e90541"]
+                .unchecked_into(),
+            // 5TmtSzg3oAPs8Agv7x1WftQHNRQDJsMRH8P6Qu8ZABEKHXhR
+            hex!["b6f037faa989b654b6869bbd931797078eb025dcb0cbd8ab17192461af634d32"]
+                .unchecked_into(),
+        ),
+    ];
+    let constructor = move || {
+        mainnet_genesis(
+            wasm_binary,
+            initial_authorities.clone(),
+            genesis_assets(),
+            btc_genesis_params(include_str!("res/btc_genesis_params_mainnet.json")),
+            crate::genesis::bitcoin::mainnet_trustees(),
+        )
+    };
+
+    let bootnodes = Default::default();
+
+    Ok(ChainXChainSpec::from_genesis(
+        "ChainX",
+        "chainx",
+        ChainType::Live,
+        constructor,
+        bootnodes,
+        Some(
+            TelemetryEndpoints::new(vec![
+                (CHAINX_TELEMETRY_URL.to_string(), 0),
+                (POLKADOT_TELEMETRY_URL.to_string(), 0),
+            ])
+            .expect("ChainX telemetry url is valid; qed"),
+        ),
+        Some("pcx1"),
+        Some(as_properties(NetworkType::Mainnet)),
+        Default::default(),
+    ))
+}
+
+fn mainnet_session_keys(
+    babe: BabeId,
+    grandpa: GrandpaId,
+    im_online: ImOnlineId,
+    authority_discovery: AuthorityDiscoveryId,
+) -> chainx::SessionKeys {
+    chainx::SessionKeys {
+        grandpa,
+        babe,
+        im_online,
+        authority_discovery,
+    }
+}
+
+fn mainnet_genesis(
+    wasm_binary: &[u8],
+    initial_authorities: Vec<AuthorityKeysTuple>,
+    assets: Vec<AssetParams>,
+    bitcoin: BtcGenesisParams,
+    trustees: Vec<(Chain, TrusteeInfoConfig, Vec<BtcTrusteeParams>)>,
+) -> chainx::GenesisConfig {
+    use malan_runtime::constants::time::DAYS;
+
+    let (assets, assets_restrictions) = init_assets(assets);
+    let tech_comm_members: Vec<AccountId> = vec![
+        // 5TPu4DCQRSbNS9ESUcNGUn9HcF9AzrHiDP395bDxM9ZAqSD8
+        hex!["a62add1af3bcf9256aa2def0fea1b9648cb72517ccee92a891dc2903a9093e52"].into(),
+        // 5PgpWgUe5T5yw67hLAmbzge7viSwaKYQmpoMQosjpQsA9xvG
+        hex!["0221ce7c4a0b771faaf0bbae23c3a1965348cb5257611313a73c3d4a53599509"].into(),
+        // 5T1jHMHspov8UgD9ygXc7rL5oNZJdDB7WfRtAduDt4AXPUSq
+        hex!["9542907d40eaab54d3a35a08be01ff82abe298ce210a7a3de3dd2cd0d6b0e9d3"].into(),
+    ];
+
+    let btc_genesis_trustees = trustees
+        .iter()
+        .find_map(|(chain, _, trustee_params)| {
+            if *chain == Chain::Bitcoin {
+                Some(
+                    trustee_params
+                        .iter()
+                        .map(|i| (i.0).clone())
+                        .collect::<Vec<_>>(),
+                )
+            } else {
+                None
+            }
+        })
+        .expect("bitcoin trustees generation can not fail; qed");
+
+    chainx::GenesisConfig {
+        system: chainx::SystemConfig {
+            code: wasm_binary.to_vec(),
+            changes_trie_config: Default::default(),
+        },
+        babe: chainx::BabeConfig {
+            authorities: vec![],
+            epoch_config: Some(chainx::BABE_GENESIS_EPOCH_CONFIG),
+        },
+        grandpa: chainx::GrandpaConfig {
+            authorities: vec![],
+        },
+        council: chainx::CouncilConfig::default(),
+        technical_committee: Default::default(),
+        technical_membership: malan::TechnicalMembershipConfig {
+            members: tech_comm_members,
+            phantom: Default::default(),
+        },
+        democracy: chainx::DemocracyConfig::default(),
+        treasury: Default::default(),
+        elections: Default::default(),
+        im_online: chainx::ImOnlineConfig { keys: vec![] },
+        authority_discovery: chainx::AuthorityDiscoveryConfig { keys: vec![] },
+        session: chainx::SessionConfig {
+            keys: initial_authorities
+                .iter()
+                .map(|x| {
+                    (
+                        (x.0).0.clone(),
+                        (x.0).0.clone(),
+                        chainx::SessionKeys {
+                            grandpa: x.2.clone(),
+                            babe: x.1.clone(),
+                            im_online: x.3.clone(),
+                            authority_discovery: x.4.clone(),
+                        },
+                    )
+                })
+                .collect::<Vec<_>>(),
+        },
+        balances: Default::default(),
+        indices: chainx::IndicesConfig { indices: vec![] },
+        x_system: chainx::XSystemConfig {
+            network_props: NetworkType::Mainnet,
+        },
+        x_assets_registrar: chainx::XAssetsRegistrarConfig { assets },
+        x_assets: chainx::XAssetsConfig {
+            assets_restrictions,
+            endowed: Default::default(),
+        },
+        x_gateway_common: chainx::XGatewayCommonConfig { trustees },
+        x_gateway_bitcoin: chainx::XGatewayBitcoinConfig {
+            genesis_trustees: btc_genesis_trustees,
+            network_id: bitcoin.network,
+            confirmation_number: bitcoin.confirmation_number,
+            genesis_hash: bitcoin.hash(),
+            genesis_info: (bitcoin.header(), bitcoin.height),
+            params_info: BtcParams::new(
+                // for bitcoin mainnet
+                486604799,            // max_bits
+                2 * 60 * 60,          // block_max_future
+                2 * 7 * 24 * 60 * 60, // target_timespan_seconds
+                10 * 60,              // target_spacing_seconds
+                4,                    // retargeting_factor
+            ), // retargeting_factor
+            btc_withdrawal_fee: 500000,
+            max_withdrawal_count: 100,
+            verifier: BtcTxVerifier::Recover,
+        },
+        x_staking: chainx::XStakingConfig {
+            validator_count: 40,
+            sessions_per_era: 1,
+            glob_dist_ratio: (12, 88), // (Treasury, X-type Asset and Staking) = (12, 88)
+            mining_ratio: (10, 90),    // (Asset Mining, Staking) = (10, 90)
+            minimum_penalty: 100 * DOLLARS,
+            candidate_requirement: (100 * DOLLARS, 1_000 * DOLLARS), // Minimum value (self_bonded, total_bonded) to be a validator candidate
+            ..Default::default()
+        },
+        x_mining_asset: chainx::XMiningAssetConfig {
+            claim_restrictions: vec![(X_BTC, (10, DAYS * 7))],
+            mining_power_map: vec![(X_BTC, 400)],
+        },
+        x_spot: chainx::XSpotConfig {
+            trading_pairs: vec![(PCX, X_BTC, 9, 2, 100000, true)],
+        },
+        x_genesis_builder: chainx::XGenesisBuilderConfig {
+            params: crate::genesis::genesis_builder_params(),
+            initial_authorities: initial_authorities
+                .iter()
+                .map(|i| (i.0).1.clone())
+                .collect(),
+        },
+    }
+}
+
 pub fn malan_config() -> Result<MalanChainSpec, String> {
     MalanChainSpec::from_json_bytes(&include_bytes!("./res/malan.json")[..])
 }
@@ -460,16 +736,19 @@ fn malan_genesis(
             code: wasm_binary.to_vec(),
             changes_trie_config: Default::default(),
         },
-        babe: Default::default(),
+        babe: malan::BabeConfig {
+            authorities: vec![],
+            epoch_config: Some(malan::BABE_GENESIS_EPOCH_CONFIG),
+        },
         grandpa: malan::GrandpaConfig {
             authorities: vec![],
         },
         council: malan::CouncilConfig::default(),
-        technical_committee: malan::TechnicalCommitteeConfig {
+        technical_committee: Default::default(),
+        technical_membership: malan::TechnicalMembershipConfig {
             members: tech_comm_members,
             phantom: Default::default(),
         },
-        technical_membership: Default::default(),
         democracy: malan::DemocracyConfig::default(),
         treasury: Default::default(),
         elections: Default::default(),
@@ -633,11 +912,11 @@ fn build_dev_genesis(
             authorities: vec![],
         },
         council: dev::CouncilConfig::default(),
-        technical_committee: dev::TechnicalCommitteeConfig {
+        technical_committee: Default::default(),
+        technical_membership: malan::TechnicalMembershipConfig {
             members: tech_comm_members,
             phantom: Default::default(),
         },
-        technical_membership: Default::default(),
         democracy: dev::DemocracyConfig::default(),
         treasury: Default::default(),
         elections: dev::ElectionsConfig {
