@@ -364,6 +364,7 @@ pub mod pallet {
                     }
                 });
             } else {
+                let session_info = T::BitcoinTrusteeSessionProvider::trustee_session(session_num)?;
                 let who = ensure_signed(origin)?;
                 ensure!(
                     session_info.trustee_list.iter().any(|n| n.0 == who),
