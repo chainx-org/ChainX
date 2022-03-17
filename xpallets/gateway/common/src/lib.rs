@@ -1033,8 +1033,8 @@ impl<T: Config> Pallet<T> {
 
         let trustees = trustee_info
             .0
-            .clone()
             .trustee_list
+            .clone()
             .into_iter()
             .unzip::<_, _, _, Vec<u64>>()
             .0;
