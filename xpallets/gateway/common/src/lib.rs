@@ -373,7 +373,7 @@ pub mod pallet {
                 );
             }
 
-            Self::apply_claim_trustee_reward(session_num, &session_info)
+            Self::apply_claim_trustee_reward(session_num)
         }
 
         /// Force trustee election
@@ -1193,16 +1193,14 @@ impl<T: Config> Pallet<T> {
         Ok(total_reward)
     }
 
-    pub fn apply_claim_trustee_reward(
-        session_num: u32,
-        trustee_info: &TrusteeSessionInfo<T::AccountId, T::BlockNumber, BtcTrusteeAddrInfo>,
-    ) -> DispatchResult {
-        let multi_account = match trustee_info.multi_account.clone() {
+    pub fn apply_claim_trustee_reward(session_num: u32) -> DispatchResult {
+        let session_info = T::BitcoinTrusteeSessionProvider::trustee_session(session_num)?;
+        let multi_account = match session_info.multi_account.clone() {
             None => return Err(Error::<T>::InvalidMultiAccount.into()),
             Some(n) => n,
         };
         // alloc native reward
-        match Self::alloc_native_reward(&multi_account, trustee_info) {
+        match Self::alloc_native_reward(&multi_account, &session_info) {
             Ok(total_native_reward) => {
                 if !total_native_reward.is_zero() {
                     Self::deposit_event(Event::<T>::AllocNativeReward(
@@ -1215,7 +1213,7 @@ impl<T: Config> Pallet<T> {
             Err(e) => return Err(e),
         }
         // alloc btc reward
-        match Self::alloc_not_native_reward(&multi_account, X_BTC, trustee_info) {
+        match Self::alloc_not_native_reward(&multi_account, X_BTC, &session_info) {
             Ok(total_btc_reward) => {
                 if !total_btc_reward.is_zero() {
                     Self::deposit_event(Event::<T>::AllocNotNativeReward(

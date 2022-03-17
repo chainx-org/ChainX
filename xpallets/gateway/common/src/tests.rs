@@ -1,13 +1,7 @@
 use frame_system::RawOrigin;
-use sp_std::convert::TryFrom;
 
 use crate::{
-    mock::{
-        bob, charlie, dave, AccountId, BlockNumber, ExtBuilder, Test, XAssets, XGatewayCommon,
-        XGatewayRecords,
-    },
-    trustees::bitcoin::BtcTrusteeAddrInfo,
-    types::TrusteeSessionInfo,
+    mock::{bob, charlie, dave, ExtBuilder, Test, XAssets, XGatewayCommon, XGatewayRecords},
     Pallet, TrusteeSessionInfoLen, TrusteeSessionInfoOf, TrusteeSigRecord,
 };
 use frame_support::assert_ok;
@@ -83,13 +77,7 @@ fn test_claim_not_native_asset_reward() {
             }
         });
 
-        let session_info = XGatewayCommon::trustee_session_info_of(Chain::Bitcoin, 1).unwrap();
-        let info = TrusteeSessionInfo::<AccountId, BlockNumber, BtcTrusteeAddrInfo>::try_from(
-            session_info,
-        )
-        .unwrap();
-
-        assert_ok!(XGatewayCommon::apply_claim_trustee_reward(1, &info));
+        assert_ok!(XGatewayCommon::apply_claim_trustee_reward(1));
 
         assert_eq!(XAssets::usable_balance(&bob(), &X_BTC), 9);
         assert_eq!(XAssets::usable_balance(&charlie(), &X_BTC), 1);
