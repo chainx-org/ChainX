@@ -981,17 +981,14 @@ impl<T: Config> Pallet<T> {
         Ok(info)
     }
 
-    fn transition_trustee_session_impl(
+    fn alter_trustee_session(
         chain: Chain,
+        session_number: u32,
         new_trustees: Vec<T::AccountId>,
     ) -> DispatchResult {
         let mut info = Self::try_generate_session_info(chain, new_trustees)?;
         let multi_addr = Self::generate_multisig_addr(chain, &info.0)?;
         info.0 .0.multi_account = Some(multi_addr.clone());
-
-        let session_number = Self::trustee_session_info_len(chain)
-            .checked_add(1)
-            .unwrap_or(0u32);
 
         TrusteeSessionInfoLen::<T>::insert(chain, session_number);
         TrusteeSessionInfoOf::<T>::insert(chain, session_number, info.0.clone());
@@ -1016,6 +1013,16 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
+    fn transition_trustee_session_impl(
+        chain: Chain,
+        new_trustees: Vec<T::AccountId>,
+    ) -> DispatchResult {
+        let session_number = Self::trustee_session_info_len(chain)
+            .checked_add(1)
+            .unwrap_or(0u32);
+        Self::alter_trustee_session(chain, session_number, new_trustees)
+    }
+
     fn cancel_trustee_transition_impl(chain: Chain) -> DispatchResult {
         let session_number = Self::trustee_session_info_len(chain).saturating_sub(1);
         let trustee_info = Self::trustee_session_info_of(chain, session_number)
@@ -1027,32 +1034,8 @@ impl<T: Config> Pallet<T> {
             .into_iter()
             .unzip::<_, _, _, Vec<u64>>()
             .0;
-        let mut info = Self::try_generate_session_info(chain, trustees)?;
-        info.0 .0.multi_account = trustee_info.0.multi_account.clone();
 
-        let multi_account = trustee_info
-            .0
-            .multi_account
-            .ok_or(Error::<T>::InvalidTrusteeSession)?;
-
-        AggPubkeyInfo::<T>::remove_all(None);
-        for index in 0..info.1.agg_pubkeys.len() {
-            AggPubkeyInfo::<T>::insert(
-                chain,
-                &info.1.agg_pubkeys[index],
-                info.1.personal_accounts[index].clone(),
-            );
-        }
-        TrusteeSessionInfoLen::<T>::insert(chain, session_number);
-        TrusteeMultiSigAddr::<T>::insert(chain, multi_account);
-        TrusteeAdmin::<T>::remove(chain);
-        Self::deposit_event(Event::<T>::TrusteeSetChanged(
-            chain,
-            session_number,
-            info.0,
-            info.1.agg_pubkeys.len() as u32,
-        ));
-        Ok(())
+        Self::alter_trustee_session(chain, session_number, trustees)
     }
 
     pub fn generate_multisig_addr(
