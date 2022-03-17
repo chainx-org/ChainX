@@ -352,10 +352,8 @@ pub mod pallet {
             } else {
                 session_num as u32
             };
-            let session_info = T::BitcoinTrusteeSessionProvider::trustee_session(session_num)?;
 
-            let current_session_info = T::BitcoinTrusteeSessionProvider::current_trustee_session()?;
-            if current_session_info == session_info {
+            if session_num == Self::trustee_session_info_len(chain) {
                 T::CouncilOrigin::ensure_origin(origin)?;
                 // update trustee sig record info (update reward weight)
                 TrusteeSessionInfoOf::<T>::mutate(chain, session_num, |info| {
