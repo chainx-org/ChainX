@@ -76,12 +76,12 @@ impl<T: Config> Pallet<T> {
     fn distribute_to_active_validators(
         session_reward: BalanceOf<T>,
     ) -> Vec<(T::AccountId, BalanceOf<T>)> {
-        let active_validators = Self::active_validator_votes().collect::<Vec<_>>();
-        let mut total_stake = active_validators
+        let current_validators = T::SessionInterface::validators();
+        let mut total_stake = current_validators
             .iter()
             .fold(Zero::zero(), |acc: BalanceOf<T>, (_, x)| acc + *x);
         let mut total_reward = session_reward;
-        active_validators
+        current_validators
             .into_iter()
             .filter_map(|(validator, stake)| {
                 // May become zero after meeting the last one.
