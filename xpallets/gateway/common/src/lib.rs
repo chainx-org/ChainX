@@ -352,10 +352,8 @@ pub mod pallet {
             } else {
                 session_num as u32
             };
-            let session_info = T::BitcoinTrusteeSessionProvider::trustee_session(session_num)?;
 
-            let current_session_info = T::BitcoinTrusteeSessionProvider::current_trustee_session()?;
-            if current_session_info == session_info {
+            if session_num == Self::trustee_session_info_len(chain) {
                 T::CouncilOrigin::ensure_origin(origin)?;
                 // update trustee sig record info (update reward weight)
                 TrusteeSessionInfoOf::<T>::mutate(chain, session_num, |info| {
@@ -366,6 +364,7 @@ pub mod pallet {
                     }
                 });
             } else {
+                let session_info = T::BitcoinTrusteeSessionProvider::trustee_session(session_num)?;
                 let who = ensure_signed(origin)?;
                 ensure!(
                     session_info.trustee_list.iter().any(|n| n.0 == who),
@@ -373,7 +372,7 @@ pub mod pallet {
                 );
             }
 
-            Self::apply_claim_trustee_reward(session_num, &session_info)
+            Self::apply_claim_trustee_reward(session_num)
         }
 
         /// Force trustee election
@@ -982,28 +981,27 @@ impl<T: Config> Pallet<T> {
         Ok(info)
     }
 
-    fn transition_trustee_session_impl(
+    fn alter_trustee_session(
         chain: Chain,
-        new_trustees: Vec<T::AccountId>,
+        session_number: u32,
+        session_info: &mut (
+            GenericTrusteeSessionInfo<T::AccountId, T::BlockNumber>,
+            ScriptInfo<T::AccountId>,
+        ),
     ) -> DispatchResult {
-        let mut info = Self::try_generate_session_info(chain, new_trustees)?;
-        let multi_addr = Self::generate_multisig_addr(chain, &info.0)?;
-        info.0 .0.multi_account = Some(multi_addr.clone());
-
-        let session_number = Self::trustee_session_info_len(chain)
-            .checked_add(1)
-            .unwrap_or(0u32);
+        let multi_addr = Self::generate_multisig_addr(chain, &session_info.0)?;
+        session_info.0 .0.multi_account = Some(multi_addr.clone());
 
         TrusteeSessionInfoLen::<T>::insert(chain, session_number);
-        TrusteeSessionInfoOf::<T>::insert(chain, session_number, info.0.clone());
+        TrusteeSessionInfoOf::<T>::insert(chain, session_number, session_info.0.clone());
         TrusteeMultiSigAddr::<T>::insert(chain, multi_addr);
         // Remove the information of the previous aggregate public key，Withdrawal is prohibited at this time.
         AggPubkeyInfo::<T>::remove_all(None);
-        for index in 0..info.1.agg_pubkeys.len() {
+        for index in 0..session_info.1.agg_pubkeys.len() {
             AggPubkeyInfo::<T>::insert(
                 chain,
-                &info.1.agg_pubkeys[index],
-                info.1.personal_accounts[index].clone(),
+                &session_info.1.agg_pubkeys[index],
+                session_info.1.personal_accounts[index].clone(),
             );
         }
         TrusteeAdmin::<T>::remove(chain);
@@ -1011,54 +1009,40 @@ impl<T: Config> Pallet<T> {
         Self::deposit_event(Event::<T>::TrusteeSetChanged(
             chain,
             session_number,
-            info.0,
-            info.1.agg_pubkeys.len() as u32,
+            session_info.0.clone(),
+            session_info.1.agg_pubkeys.len() as u32,
         ));
         Ok(())
+    }
+
+    fn transition_trustee_session_impl(
+        chain: Chain,
+        new_trustees: Vec<T::AccountId>,
+    ) -> DispatchResult {
+        let session_number = Self::trustee_session_info_len(chain)
+            .checked_add(1)
+            .unwrap_or(0u32);
+        let mut session_info = Self::try_generate_session_info(chain, new_trustees)?;
+        Self::alter_trustee_session(chain, session_number, &mut session_info)
     }
 
     fn cancel_trustee_transition_impl(chain: Chain) -> DispatchResult {
         let session_number = Self::trustee_session_info_len(chain).saturating_sub(1);
         let trustee_info = Self::trustee_session_info_of(chain, session_number)
             .ok_or(Error::<T>::InvalidTrusteeSession)?;
-        let multi_account = trustee_info
-            .0
-            .multi_account
-            .ok_or(Error::<T>::InvalidTrusteeSession)?;
-        Self::generate_aggpubkey_impl(chain, session_number)?;
-        TrusteeSessionInfoLen::<T>::insert(chain, session_number);
-        TrusteeMultiSigAddr::<T>::insert(chain, multi_account);
-        TrusteeAdmin::<T>::remove(chain);
-        Ok(())
-    }
 
-    fn generate_aggpubkey_impl(chain: Chain, session_number: u32) -> DispatchResult {
-        let trustee_session = T::BitcoinTrusteeSessionProvider::trustee_session(session_number)?;
-        let trustees = trustee_session
+        let trustees = trustee_info
+            .0
             .trustee_list
+            .clone()
             .into_iter()
             .unzip::<_, _, _, Vec<u64>>()
             .0;
 
-        let info = Self::try_generate_session_info(chain, trustees)?;
+        let mut session_info = Self::try_generate_session_info(chain, trustees)?;
+        session_info.0 = trustee_info;
 
-        AggPubkeyInfo::<T>::remove_all(None);
-        for index in 0..info.1.agg_pubkeys.len() {
-            AggPubkeyInfo::<T>::insert(
-                chain,
-                &info.1.agg_pubkeys[index],
-                info.1.personal_accounts[index].clone(),
-            );
-        }
-        // There is no multi-signature address inserted in info so
-        // the event will not display the multi-signature address.
-        Self::deposit_event(Event::<T>::TrusteeSetChanged(
-            chain,
-            session_number,
-            info.0,
-            info.1.agg_pubkeys.len() as u32,
-        ));
-        Ok(())
+        Self::alter_trustee_session(chain, session_number, &mut session_info)
     }
 
     pub fn generate_multisig_addr(
@@ -1193,16 +1177,14 @@ impl<T: Config> Pallet<T> {
         Ok(total_reward)
     }
 
-    pub fn apply_claim_trustee_reward(
-        session_num: u32,
-        trustee_info: &TrusteeSessionInfo<T::AccountId, T::BlockNumber, BtcTrusteeAddrInfo>,
-    ) -> DispatchResult {
-        let multi_account = match trustee_info.multi_account.clone() {
+    pub fn apply_claim_trustee_reward(session_num: u32) -> DispatchResult {
+        let session_info = T::BitcoinTrusteeSessionProvider::trustee_session(session_num)?;
+        let multi_account = match session_info.multi_account.clone() {
             None => return Err(Error::<T>::InvalidMultiAccount.into()),
             Some(n) => n,
         };
         // alloc native reward
-        match Self::alloc_native_reward(&multi_account, trustee_info) {
+        match Self::alloc_native_reward(&multi_account, &session_info) {
             Ok(total_native_reward) => {
                 if !total_native_reward.is_zero() {
                     Self::deposit_event(Event::<T>::AllocNativeReward(
@@ -1215,7 +1197,7 @@ impl<T: Config> Pallet<T> {
             Err(e) => return Err(e),
         }
         // alloc btc reward
-        match Self::alloc_not_native_reward(&multi_account, X_BTC, trustee_info) {
+        match Self::alloc_not_native_reward(&multi_account, X_BTC, &session_info) {
             Ok(total_btc_reward) => {
                 if !total_btc_reward.is_zero() {
                     Self::deposit_event(Event::<T>::AllocNotNativeReward(
