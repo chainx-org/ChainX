@@ -1020,26 +1020,20 @@ impl<T: Config> Pallet<T> {
         let session_number = Self::trustee_session_info_len(chain).saturating_sub(1);
         let trustee_info = Self::trustee_session_info_of(chain, session_number)
             .ok_or(Error::<T>::InvalidTrusteeSession)?;
-        let multi_account = trustee_info
-            .0
-            .multi_account
-            .ok_or(Error::<T>::InvalidTrusteeSession)?;
-        Self::generate_aggpubkey_impl(chain, session_number)?;
-        TrusteeSessionInfoLen::<T>::insert(chain, session_number);
-        TrusteeMultiSigAddr::<T>::insert(chain, multi_account);
-        TrusteeAdmin::<T>::remove(chain);
-        Ok(())
-    }
 
-    fn generate_aggpubkey_impl(chain: Chain, session_number: u32) -> DispatchResult {
-        let trustee_session = T::BitcoinTrusteeSessionProvider::trustee_session(session_number)?;
-        let trustees = trustee_session
+        let trustees = trustee_info
+            .0
             .trustee_list
             .into_iter()
             .unzip::<_, _, _, Vec<u64>>()
             .0;
+        let mut info = Self::try_generate_session_info(chain, trustees)?;
+        info.0 .0.multi_account = trustee_info.0.multi_account.clone();
 
-        let info = Self::try_generate_session_info(chain, trustees)?;
+        let multi_account = trustee_info
+            .0
+            .multi_account
+            .ok_or(Error::<T>::InvalidTrusteeSession)?;
 
         AggPubkeyInfo::<T>::remove_all(None);
         for index in 0..info.1.agg_pubkeys.len() {
@@ -1049,8 +1043,9 @@ impl<T: Config> Pallet<T> {
                 info.1.personal_accounts[index].clone(),
             );
         }
-        // There is no multi-signature address inserted in info so
-        // the event will not display the multi-signature address.
+        TrusteeSessionInfoLen::<T>::insert(chain, session_number);
+        TrusteeMultiSigAddr::<T>::insert(chain, multi_account);
+        TrusteeAdmin::<T>::remove(chain);
         Self::deposit_event(Event::<T>::TrusteeSetChanged(
             chain,
             session_number,
