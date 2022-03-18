@@ -5,6 +5,7 @@
 use frame_support::{assert_noop, assert_ok};
 use sp_core::crypto::{set_default_ss58_version, Ss58AddressFormat};
 
+use light_bitcoin::script::Script;
 use light_bitcoin::{
     chain::Transaction,
     keys::{Address, Network},
@@ -16,6 +17,7 @@ use xp_gateway_bitcoin::{AccountExtractor, BtcTxMetaType, BtcTxType, BtcTxTypeDe
 
 use crate::mock::*;
 
+use crate::tx::validator::parse_and_check_signed_tx_impl;
 use crate::{
     tx::process_tx,
     types::{
@@ -59,6 +61,7 @@ lazy_static::lazy_static! {
     // Todo generate cold to hot
     // static ref cold_to_hot_prev: Transaction = "01000000015dfd7ae51ea70f3dfc9d4a49d57ae0d02660f089204fc8c4d086624d065f85620000000000000000000180010b270100000017a91495a12f1eba77d085711e9c837d04e4d8868a83438700000000".parse().unwrap();
     // static ref cold_to_hot: Transaction = "0100000001bc7be600cba239950fd664995bb9bc2cb88a29d95ddd49625644ef188c98012e0000000000000000000180010b270100000022512052898a03a9f04bb83f8a48fb953089de10e6ee70658b059551ebf7c008b05b7a00000000".parse().unwrap();
+    static ref multisig_tx: Transaction = "010000000197a359e392f96c247eb3f4fafe81581541073f9cda5e7e8d32c47d5e4a84f4c100000000fd690100483045022100db5e82d95a0a3f02730e7216a9f6620a9803fcd236eda54feb0b90970c7ab762022018d127a637ca8efce400e313f0f3f28cfc0f347422ddf8bffed25158fa6fb9ca01483045022100886da91effdb5bd1e383014198401898c41617ebc8a1174481a70851fe271e6b022073c95c2aa5c16c9a793f81925146640c04fd2bc5dae1eec2a865b5d8e70d01ab01483045022100bbfbc3bc3e1d00ed0546a6876f2aca1759b45a1a30aa0d8073474cce67195ab3022019f38387b56c0f987d8bdadabea23876b8f6c1790178ca88247bad7345ebf1da014c8b53210376b9649206c74cc3dad6332c3a86d925a251bf9a55e6381f5d67b29a47559634210351eb6f687193cb79940541e60c62477aaa4a472d0b95e39f2f88aa61bb1020372103a4384a02d87e8552a2ee7fbaa2f336a7e08503a18c2ea51e85b6cbab4f14d176210285eed6fa121c3a82ba6d0c37fa37e72bb06740761bfe9f294d2fa95fe237d5ba54ae0000000002803801000000000017a914a4af2cb3387e5c34a4e7dbfdd5ddcf3e228748c987102700000000000022512093ef7ac6eb9e3a85629c4ed203e93cdf4ef50259a8f3d5f1b760086cd2d5823600000000".parse().unwrap();
 }
 
 fn mock_detect_transaction_type<T: Config>(
@@ -283,5 +286,16 @@ fn test_push_tx_call() {
             ),
             XGatewayBitcoinErr::ReplayedTx,
         );
+    });
+}
+
+#[test]
+fn test_parse_and_check_signed_tx_impl() {
+    ExtBuilder::default().build_and_execute(|| {
+    let redeem_script: Script = hex::decode("53210376b9649206c74cc3dad6332c3a86d925a251bf9a55e6381f5d67b29a47559634210351eb6f687193cb79940541e60c62477aaa4a472d0b95e39f2f88aa61bb1020372103a4384a02d87e8552a2ee7fbaa2f336a7e08503a18c2ea51e85b6cbab4f14d176210285eed6fa121c3a82ba6d0c37fa37e72bb06740761bfe9f294d2fa95fe237d5ba54ae").unwrap().into();
+    assert_eq!(
+        parse_and_check_signed_tx_impl::<Test>(&multisig_tx, redeem_script),
+        Ok(3)
+    );
     });
 }
