@@ -3,7 +3,9 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](./LICENSE)
 [![CI](https://github.com/chainx-org/ChainX/workflows/ci/badge.svg)](https://github.com/chainx-org/ChainX/actions?workflow=ci)
 
-[ChainX](https://github.com/chainx-org/ChainX) is a community-driven project built on the next-generation blockchain framework [substrate](https://github.com/paritytech/substrate), the largest Layer-2 network of Bitcoin using the Light-client protocol with smart contract support, will evolve into the Polkadot network as a secondary relay chain in the future.
+[ChainX](https://github.com/chainx-org/ChainX) is a community-driven project built on the next-generation blockchain framework [substrate](https://github.com/paritytech/substrate), the largest Layer-2 network of Bitcoin using the Light-client protocol with smart contract support, spawn as the third relay chain besides Polkadot/Kusama. SherpaX and MiniX will be added as a parachain.
+[light white paper](https://chainx.org/static/media/Chainx.3df914fe.pdf).
+[website](https://chainx.org)
 
 ## ChainX Ecological Project：
 * [ComingChat](https://coming.chat/):Integrated web3 portal for encrypted social, digital identity, NFT, digital wallet, smart contract platform portal and other functions
