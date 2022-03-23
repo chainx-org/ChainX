@@ -9,7 +9,8 @@ use sp_core::sr25519;
 
 use chainx_primitives::AccountId;
 use chainx_runtime::{
-    h256_rev, trustees, BtcCompact, BtcHash, BtcHeader, BtcNetwork, Chain, TrusteeInfoConfig,
+    h256_rev, trustees, BtcHeader, BtcNetwork, Chain, Compact as BtcCompact, TrusteeInfoConfig,
+    H256 as BtcHash,
 };
 
 use crate::chain_spec::get_account_id_from_seed;
