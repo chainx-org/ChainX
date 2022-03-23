@@ -48,7 +48,7 @@ pub trait XGatewayBitcoinApi<BlockHash, AccountId> {
     fn get_withdrawal_proposal(
         &self,
         at: Option<BlockHash>,
-    ) -> Result<BtcWithdrawalProposal<AccountId>>;
+    ) -> Result<Option<BtcWithdrawalProposal<AccountId>>>;
 
     /// Get genesis info
     #[rpc(name = "xgatewaybitcoin_getGenesisInfo")]
@@ -56,7 +56,11 @@ pub trait XGatewayBitcoinApi<BlockHash, AccountId> {
 
     /// Get block header
     #[rpc(name = "xgatewaybitcoin_getBtcBlockHeader")]
-    fn get_btc_block_header(&self, txid: H256, at: Option<BlockHash>) -> Result<BtcHeaderInfo>;
+    fn get_btc_block_header(
+        &self,
+        txid: H256,
+        at: Option<BlockHash>,
+    ) -> Result<Option<BtcHeaderInfo>>;
 }
 
 impl<C, Block, AccountId> XGatewayBitcoinApi<<Block as BlockT>::Hash, AccountId>
@@ -87,13 +91,12 @@ where
     fn get_withdrawal_proposal(
         &self,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<BtcWithdrawalProposal<AccountId>> {
+    ) -> Result<Option<BtcWithdrawalProposal<AccountId>>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
         let result = api
             .get_withdrawal_proposal(&at)
-            .map_err(runtime_error_into_rpc_err)?
-            .unwrap_or_default();
+            .map_err(runtime_error_into_rpc_err)?;
         Ok(result)
     }
 
@@ -110,13 +113,12 @@ where
         &self,
         txid: H256,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<BtcHeaderInfo> {
+    ) -> Result<Option<BtcHeaderInfo>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-        let result = api
+        let reslut = api
             .get_btc_block_header(&at, txid)
-            .map_err(runtime_error_into_rpc_err)?
-            .unwrap_or_default();
-        Ok(result)
+            .map_err(runtime_error_into_rpc_err)?;
+        Ok(reslut)
     }
 }

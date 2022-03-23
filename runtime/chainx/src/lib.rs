@@ -85,7 +85,7 @@ pub use xpallet_assets::{
 pub use xpallet_gateway_bitcoin::h256_rev;
 pub use xpallet_gateway_bitcoin::{
     hash_rev, types::BtcHeaderInfo, BtcHeader, BtcNetwork, BtcParams, BtcTxVerifier,
-    BtcWithdrawalProposal, H256,
+    BtcWithdrawalProposal, Compact, H256,
 };
 pub use xpallet_gateway_common::{
     trustees,
