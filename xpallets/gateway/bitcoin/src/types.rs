@@ -47,6 +47,7 @@ impl BtcRelayedTxInfo {
 }
 
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug, TypeInfo)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct BtcHeaderInfo {
     pub header: BtcHeader,
     pub height: u32,
@@ -85,6 +86,7 @@ pub struct BtcDepositCache {
 }
 
 #[derive(PartialEq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+#[cfg_attr(feature = "std", derive(Default, Serialize, Deserialize))]
 pub struct BtcWithdrawalProposal<AccountId> {
     pub sig_state: VoteResult,
     pub withdrawal_id_list: Vec<u32>,
@@ -108,8 +110,8 @@ impl<AccountId> BtcWithdrawalProposal<AccountId> {
     }
 }
 
-#[derive(PartialEq, Clone, Copy, Eq, Encode, Decode, RuntimeDebug, TypeInfo)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(PartialEq, Clone, Copy, Eq, Encode, Decode, , RuntimeDebug, TypeInfo)]
+#[cfg_attr(feature = "std", derive(Default, Serialize, Deserialize))]
 pub enum VoteResult {
     Unfinish,
     Finish,

@@ -84,8 +84,8 @@ pub use xpallet_assets::{
 #[cfg(feature = "std")]
 pub use xpallet_gateway_bitcoin::h256_rev;
 pub use xpallet_gateway_bitcoin::{
-    hash_rev, BtcHeader, BtcNetwork, BtcParams, BtcTxVerifier, Compact as BtcCompact,
-    H256 as BtcHash,
+    hash_rev, types::BtcHeaderInfo, BtcHeader, BtcNetwork, BtcParams, BtcTxVerifier,
+    BtcWithdrawalProposal, H256,
 };
 pub use xpallet_gateway_common::{
     trustees,
@@ -1476,13 +1476,25 @@ impl_runtime_apis! {
         }
     }
 
-    impl xpallet_gateway_bitcoin_rpc_runtime_api::XGatewayBitcoinApi<Block> for Runtime {
+    impl xpallet_gateway_bitcoin_rpc_runtime_api::XGatewayBitcoinApi<Block, AccountId> for Runtime {
         fn verify_tx_valid(
             raw_tx: Vec<u8>,
             withdrawal_id_list: Vec<u32>,
             full_amount: bool,
         ) -> Result<bool, DispatchError> {
             XGatewayBitcoin::verify_tx_valid(raw_tx, withdrawal_id_list, full_amount)
+        }
+
+        fn get_withdrawal_proposal() -> Option<BtcWithdrawalProposal<AccountId>> {
+            XGatewayBitcoin::get_withdrawal_proposal()
+        }
+
+        fn get_genesis_info() -> (BtcHeader, u32) {
+            XGatewayBitcoin::get_genesis_info()
+        }
+
+        fn get_btc_block_header(txid: H256) -> Option<BtcHeaderInfo> {
+            XGatewayBitcoin::get_btc_block_header(txid)
         }
     }
 

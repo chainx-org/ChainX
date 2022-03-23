@@ -853,4 +853,22 @@ pub mod pallet {
             }
         }
     }
+
+    /// Storage Query RPCs
+    impl<T: Config> Pallet<T> {
+        /// Get withdrawal proposal
+        pub fn get_withdrawal_proposal() -> Option<BtcWithdrawalProposal<T::AccountId>> {
+            Self::withdrawal_proposal()
+        }
+
+        /// Get genesis info
+        pub fn get_genesis_info() -> (BtcHeader, u32) {
+            Self::genesis_info()
+        }
+
+        /// Ger btc block headers
+        pub fn get_btc_block_header(txid: H256) -> Option<BtcHeaderInfo> {
+            Self::headers(txid)
+        }
+    }
 }
