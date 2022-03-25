@@ -465,7 +465,7 @@ fn mainnet_genesis(
         },
         council: chainx::CouncilConfig::default(),
         technical_committee: Default::default(),
-        technical_membership: malan::TechnicalMembershipConfig {
+        technical_membership: chainx::TechnicalMembershipConfig {
             members: tech_comm_members,
             phantom: Default::default(),
         },
@@ -913,7 +913,7 @@ fn build_dev_genesis(
         },
         council: dev::CouncilConfig::default(),
         technical_committee: Default::default(),
-        technical_membership: malan::TechnicalMembershipConfig {
+        technical_membership: dev::TechnicalMembershipConfig {
             members: tech_comm_members,
             phantom: Default::default(),
         },
