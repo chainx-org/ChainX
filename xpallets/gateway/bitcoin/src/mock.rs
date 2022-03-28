@@ -187,6 +187,7 @@ impl xpallet_gateway_common::Config for Test {
     type Validator = ();
     type DetermineMultisigAddress = ();
     type CouncilOrigin = EnsureSigned<AccountId>;
+    type WithdrawalProposal = XGatewayBitcoin;
     type Bitcoin = XGatewayBitcoin;
     type BitcoinTrustee = XGatewayBitcoin;
     type BitcoinTrusteeSessionProvider = trustees::bitcoin::BtcTrusteeSessionManager<Test>;

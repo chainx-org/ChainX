@@ -50,7 +50,7 @@ use xpallet_gateway_records::{Withdrawal, WithdrawalRecordId};
 use xpallet_support::traits::{MultisigAddressFor, Validator};
 
 use self::{
-    traits::{TotalSupply, TrusteeForChain, TrusteeInfoUpdate, TrusteeSession},
+    traits::{ProposalProvider, TotalSupply, TrusteeForChain, TrusteeInfoUpdate, TrusteeSession},
     trustees::bitcoin::BtcTrusteeAddrInfo,
     types::{
         GenericTrusteeIntentionProps, GenericTrusteeSessionInfo, RewardInfo, ScriptInfo,
@@ -83,10 +83,13 @@ pub mod pallet {
         /// A majority of the council can excute some transactions.
         type CouncilOrigin: EnsureOrigin<Self::Origin>;
 
-        /// Get btc chain info
+        /// Get withdrawal proposal.
+        type WithdrawalProposal: ProposalProvider;
+
+        /// Get btc chain info.
         type Bitcoin: ChainT<BalanceOf<Self>>;
 
-        // Generate btc trustee session info
+        // Generate btc trustee session info.
         type BitcoinTrustee: TrusteeForChain<
             Self::AccountId,
             Self::BlockNumber,
@@ -94,7 +97,7 @@ pub mod pallet {
             trustees::bitcoin::BtcTrusteeAddrInfo,
         >;
 
-        /// Get trustee session info
+        /// Get trustee session info.
         type BitcoinTrusteeSessionProvider: TrusteeSession<
             Self::AccountId,
             Self::BlockNumber,
@@ -102,7 +105,7 @@ pub mod pallet {
         >;
 
         /// When the trust changes, the total supply of btc: total issue + pending deposit. Help
-        /// to the allocation of btc withdrawal fees
+        /// to the allocation of btc withdrawal fees.
         type BitcoinTotalSupply: TotalSupply<BalanceOf<Self>>;
 
         /// Weight information for extrinsics in this pallet.
@@ -547,6 +550,8 @@ pub mod pallet {
         InvalidTrusteeWeight,
         /// the last trustee transition was not completed.
         LastTransitionNotCompleted,
+        /// prevent transition when the withdrawal proposal exists.
+        WithdrawalProposalExist,
         /// the trustee members was not enough.
         TrusteeMembersNotEnough,
         /// exist in current trustee
@@ -856,6 +861,11 @@ impl<T: Config> Pallet<T> {
         ensure!(
             !Self::trustee_transition_status(chain),
             Error::<T>::LastTransitionNotCompleted
+        );
+
+        ensure!(
+            T::WithdrawalProposal::get_withdrawal_proposal().is_none(),
+            Error::<T>::WithdrawalProposalExist,
         );
 
         // Current trustee list

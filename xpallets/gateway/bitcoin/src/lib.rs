@@ -40,7 +40,10 @@ use chainx_primitives::{AssetId, ReferralId};
 use xp_gateway_common::AccountExtractor;
 use xpallet_assets::{BalanceOf, Chain, ChainT, WithdrawalLimit};
 use xpallet_gateway_common::{
-    traits::{AddressBinding, ReferralBinding, TotalSupply, TrusteeInfoUpdate, TrusteeSession},
+    traits::{
+        AddressBinding, ProposalProvider, ReferralBinding, TotalSupply, TrusteeInfoUpdate,
+        TrusteeSession,
+    },
     trustees::bitcoin::BtcTrusteeAddrInfo,
 };
 use xpallet_support::try_addr;
@@ -602,6 +605,13 @@ pub mod pallet {
 
             let asset_supply = xpallet_assets::Pallet::<T>::total_issuance(&xp_protocol::X_BTC);
             asset_supply.saturating_add(pending_deposits)
+        }
+    }
+
+    impl<T: Config> ProposalProvider for Pallet<T> {
+        type WithdrawalProposal = BtcWithdrawalProposal<T::AccountId>;
+        fn get_withdrawal_proposal() -> Option<Self::WithdrawalProposal> {
+            Self::withdrawal_proposal()
         }
     }
 

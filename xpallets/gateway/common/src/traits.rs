@@ -15,6 +15,19 @@ pub trait ChainProvider {
     fn chain() -> Chain;
 }
 
+pub trait ProposalProvider {
+    type WithdrawalProposal;
+
+    fn get_withdrawal_proposal() -> Option<Self::WithdrawalProposal>;
+}
+
+impl ProposalProvider for () {
+    type WithdrawalProposal = ();
+
+    fn get_withdrawal_proposal() -> Option<Self::WithdrawalProposal> {
+        None
+    }
+}
 pub trait TotalSupply<Balance> {
     fn total_supply() -> Balance;
 }

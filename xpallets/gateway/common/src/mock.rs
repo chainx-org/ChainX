@@ -465,6 +465,7 @@ impl crate::Config for Test {
     type Event = ();
     type Validator = AlwaysValidator;
     type DetermineMultisigAddress = MultisigAddr;
+    type WithdrawalProposal = ();
     type Bitcoin = MockBitcoin<Test>;
     type BitcoinTrustee = MockBitcoin<Test>;
     type BitcoinTrusteeSessionProvider = trustees::bitcoin::BtcTrusteeSessionManager<Test>;
