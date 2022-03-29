@@ -1017,11 +1017,11 @@ impl xpallet_gateway_common::Config for Runtime {
     type DetermineMultisigAddress = MultisigProvider;
     type CouncilOrigin =
         pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, CouncilCollective>;
-    type WithdrawalProposal = XGatewayBitcoin;
     type Bitcoin = XGatewayBitcoin;
     type BitcoinTrustee = XGatewayBitcoin;
     type BitcoinTrusteeSessionProvider = trustees::bitcoin::BtcTrusteeSessionManager<Runtime>;
     type BitcoinTotalSupply = XGatewayBitcoin;
+    type BitcoinWithdrawalProposal = XGatewayBitcoin;
     type WeightInfo = xpallet_gateway_common::weights::SubstrateWeight<Runtime>;
 }
 

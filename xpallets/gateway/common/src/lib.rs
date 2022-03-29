@@ -83,9 +83,6 @@ pub mod pallet {
         /// A majority of the council can excute some transactions.
         type CouncilOrigin: EnsureOrigin<Self::Origin>;
 
-        /// Get withdrawal proposal.
-        type WithdrawalProposal: ProposalProvider;
-
         /// Get btc chain info.
         type Bitcoin: ChainT<BalanceOf<Self>>;
 
@@ -107,6 +104,9 @@ pub mod pallet {
         /// When the trust changes, the total supply of btc: total issue + pending deposit. Help
         /// to the allocation of btc withdrawal fees.
         type BitcoinTotalSupply: TotalSupply<BalanceOf<Self>>;
+
+        /// Get btc withdrawal proposal.
+        type BitcoinWithdrawalProposal: ProposalProvider;
 
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
@@ -864,7 +864,7 @@ impl<T: Config> Pallet<T> {
         );
 
         ensure!(
-            T::WithdrawalProposal::get_withdrawal_proposal().is_none(),
+            T::BitcoinWithdrawalProposal::get_withdrawal_proposal().is_none(),
             Error::<T>::WithdrawalProposalExist,
         );
 
