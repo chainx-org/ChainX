@@ -31,7 +31,7 @@ use frame_support::{
     log::{error, info},
     traits::{ChangeMembers, Currency, ExistenceRequirement, Get},
 };
-use frame_system::{ensure_root, ensure_signed};
+use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
 
 use sp_runtime::{
     traits::{CheckedDiv, Saturating, StaticLookup, UniqueSaturatedInto, Zero},
@@ -65,7 +65,6 @@ pub use weights::WeightInfo;
 pub mod pallet {
     use super::*;
     use frame_support::{pallet_prelude::*, transactional};
-    use frame_system::pallet_prelude::*;
 
     #[pallet::config]
     pub trait Config:
@@ -207,13 +206,11 @@ pub mod pallet {
         /// Manual execution of the election by admin.
         #[pallet::weight(0u64)]
         pub fn excute_trustee_election(origin: OriginFor<T>, chain: Chain) -> DispatchResult {
-            let who = ensure_signed(origin.clone())?;
-
-            if who != Self::trustee_admin(chain) {
-                T::CouncilOrigin::try_origin(origin)
-                    .map(|_| ())
-                    .or_else(ensure_root)?;
-            }
+            T::CouncilOrigin::try_origin(origin.clone())
+                .map(|_| ())
+                .or_else(|o| Self::try_ensure_trustee_admin(o, chain))
+                .map(|_| ())
+                .or_else(ensure_root)?;
 
             Self::do_trustee_election(chain)
         }
@@ -248,13 +245,11 @@ pub mod pallet {
             chain: Chain,
             trustees: Option<Vec<T::AccountId>>,
         ) -> DispatchResult {
-            let who = ensure_signed(origin.clone())?;
-
-            if who != Self::trustee_admin(chain) {
-                T::CouncilOrigin::try_origin(origin)
-                    .map(|_| ())
-                    .or_else(ensure_root)?;
-            }
+            T::CouncilOrigin::try_origin(origin.clone())
+                .map(|_| ())
+                .or_else(|o| Self::try_ensure_trustee_admin(o, chain))
+                .map(|_| ())
+                .or_else(ensure_root)?;
 
             info!(
                 target: "runtime::gateway::common",
@@ -293,13 +288,11 @@ pub mod pallet {
             chain: Chain,
             members: Vec<T::AccountId>,
         ) -> DispatchResult {
-            let who = ensure_signed(origin.clone())?;
-
-            if who != Self::trustee_admin(chain) {
-                T::CouncilOrigin::try_origin(origin)
-                    .map(|_| ())
-                    .or_else(ensure_root)?;
-            }
+            T::CouncilOrigin::try_origin(origin.clone())
+                .map(|_| ())
+                .or_else(|o| Self::try_ensure_trustee_admin(o, chain))
+                .map(|_| ())
+                .or_else(ensure_root)?;
 
             info!(
                 target: "runtime::gateway::common",
@@ -1196,6 +1189,22 @@ impl<T: Config> Pallet<T> {
             }
             Err(e) => return Err(e),
         }
+        Ok(())
+    }
+}
+
+/// Ensure trustee admin
+impl<T: Config> Pallet<T> {
+    fn try_ensure_trustee_admin(origin: OriginFor<T>, chain: Chain) -> Result<(), OriginFor<T>> {
+        match ensure_signed(origin.clone()) {
+            Ok(who) => {
+                if who != Self::trustee_admin(chain) {
+                    return Err(origin);
+                }
+            }
+            Err(_) => return Err(origin),
+        }
+
         Ok(())
     }
 }
