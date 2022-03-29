@@ -206,7 +206,7 @@ pub mod pallet {
         /// Manual execution of the election by admin.
         #[pallet::weight(0u64)]
         pub fn excute_trustee_election(origin: OriginFor<T>, chain: Chain) -> DispatchResult {
-            T::CouncilOrigin::try_origin(origin.clone())
+            T::CouncilOrigin::try_origin(origin)
                 .map(|_| ())
                 .or_else(|o| Self::try_ensure_trustee_admin(o, chain))
                 .map(|_| ())
@@ -245,7 +245,7 @@ pub mod pallet {
             chain: Chain,
             trustees: Option<Vec<T::AccountId>>,
         ) -> DispatchResult {
-            T::CouncilOrigin::try_origin(origin.clone())
+            T::CouncilOrigin::try_origin(origin)
                 .map(|_| ())
                 .or_else(|o| Self::try_ensure_trustee_admin(o, chain))
                 .map(|_| ())
@@ -288,7 +288,7 @@ pub mod pallet {
             chain: Chain,
             members: Vec<T::AccountId>,
         ) -> DispatchResult {
-            T::CouncilOrigin::try_origin(origin.clone())
+            T::CouncilOrigin::try_origin(origin)
                 .map(|_| ())
                 .or_else(|o| Self::try_ensure_trustee_admin(o, chain))
                 .map(|_| ())
