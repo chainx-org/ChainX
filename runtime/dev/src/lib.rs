@@ -1020,6 +1020,7 @@ impl xpallet_gateway_common::Config for Runtime {
     type BitcoinTrustee = XGatewayBitcoin;
     type BitcoinTrusteeSessionProvider = trustees::bitcoin::BtcTrusteeSessionManager<Runtime>;
     type BitcoinTotalSupply = XGatewayBitcoin;
+    type BitcoinWithdrawalProposal = XGatewayBitcoin;
     type WeightInfo = xpallet_gateway_common::weights::SubstrateWeight<Runtime>;
 }
 

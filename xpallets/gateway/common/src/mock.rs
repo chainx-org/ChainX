@@ -465,11 +465,12 @@ impl crate::Config for Test {
     type Event = ();
     type Validator = AlwaysValidator;
     type DetermineMultisigAddress = MultisigAddr;
+    type CouncilOrigin = EnsureSigned<AccountId>;
     type Bitcoin = MockBitcoin<Test>;
     type BitcoinTrustee = MockBitcoin<Test>;
     type BitcoinTrusteeSessionProvider = trustees::bitcoin::BtcTrusteeSessionManager<Test>;
-    type CouncilOrigin = EnsureSigned<AccountId>;
     type BitcoinTotalSupply = MockBitcoin<Test>;
+    type BitcoinWithdrawalProposal = ();
     type WeightInfo = ();
 }
 
