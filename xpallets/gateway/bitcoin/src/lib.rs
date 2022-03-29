@@ -352,7 +352,7 @@ pub mod pallet {
         DuplicateVote,
         /// Trustee transition period
         TrusteeTransitionPeriod,
-        /// Withdrawals are prohibited during the trust transition period
+        /// The output address must be a cold address during the trust transition process
         TxOutputNotColdAddr,
         /// The total amount of the trust must be transferred out in full
         TxNotFullAmount,
