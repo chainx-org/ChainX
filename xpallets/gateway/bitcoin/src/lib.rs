@@ -326,8 +326,6 @@ pub mod pallet {
         ReplayedTx,
         /// process tx failed
         ProcessTxFailed,
-        /// withdraw tx not match expected tx
-        MismatchedTx,
         /// invalid bitcoin address
         InvalidAddress,
         /// invalid bitcoin public key
@@ -344,8 +342,8 @@ pub mod pallet {
         WrongWithdrawalCount,
         /// no proposal for current withdrawal
         NoProposal,
-        /// invalid proposal
-        InvalidProposal,
+        /// tx's outputs not match withdrawal id list
+        TxOutputsNotMatch,
         /// last proposal not finished yet
         NotFinishProposal,
         /// no withdrawal record for this id
@@ -354,10 +352,10 @@ pub mod pallet {
         DuplicateVote,
         /// Trustee transition period
         TrusteeTransitionPeriod,
-        /// Withdrawals are prohibited during the trust transition period
-        NoWithdrawInTrans,
+        /// The output address must be a cold address during the trust transition process
+        TxOutputNotColdAddr,
         /// The total amount of the trust must be transferred out in full
-        InvalidAmoutInTrans,
+        TxNotFullAmount,
     }
 
     #[pallet::event]
@@ -848,10 +846,10 @@ pub mod pallet {
                 // Ensure that all outputs are cold addresses
                 ensure!(
                     all_outputs_is_current_cold_address || all_outputs_is_prev_cold_address,
-                    Error::<T>::NoWithdrawInTrans
+                    Error::<T>::TxOutputNotColdAddr
                 );
                 // Ensure that all amounts are sent
-                ensure!(full_amount, Error::<T>::InvalidAmoutInTrans);
+                ensure!(full_amount, Error::<T>::TxNotFullAmount);
 
                 Ok(true)
             } else if all_outputs_is_trustee {

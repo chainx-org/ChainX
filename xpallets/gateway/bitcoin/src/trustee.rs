@@ -495,7 +495,7 @@ fn check_withdraw_tx_impl<T: Config>(
                 .zip(appl_withdrawal_list)
                 .collect::<Vec<_>>()
         );
-        return Err(Error::<T>::InvalidProposal.into());
+        return Err(Error::<T>::TxOutputsNotMatch.into());
     }
 
     let count = appl_withdrawal_list
@@ -518,7 +518,7 @@ fn check_withdraw_tx_impl<T: Config>(
         .count();
 
     if count != appl_withdrawal_list.len() {
-        return Err(Error::<T>::InvalidProposal.into());
+        return Err(Error::<T>::TxOutputsNotMatch.into());
     }
 
     Ok(())
