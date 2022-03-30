@@ -105,7 +105,6 @@ mod migrations;
 
 use self::constants::{currency::*, time::*};
 use self::impls::{ChargeExtraFee, DealWithFees, SlowAdjustingFeeUpdate};
-use self::migrations::*;
 
 /// This runtime version.
 pub const VERSION: RuntimeVersion = RuntimeVersion {
