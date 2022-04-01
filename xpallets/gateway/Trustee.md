@@ -28,7 +28,7 @@ To become a trust, you must first be elected as a council member or runners up. 
 - hot_entity: Btc public key. Such as `0x043858204f15d385da76fcbdf019debde624689e296c5ac53f6437491528857617691fe85c5c529b692bd75e361a9d0995dbd3e20a81e949642dfb74095520d981`.
 - cold_entity: Btc public key. Such as `0x043858204f15d385da76fcbdf019debde624689e296c5ac53f6437491528857617691fe85c5c529b692bd75e361a9d0995dbd3e20a81e949642dfb74095520d981`.
 
-The hot public key is obtained through **Coming** and used in **Coming**, and the cold addresses are also obtained through Coming but with a different mnemonic.
+The hot public key is obtained through **Coming** and used in **Coming**, and the cold addresses are also obtained through Coming but with a different mnemonic. **When Coming adds the check logic of the withdrawal address and amount, the PCX account associated with the BTC hot address in Coming must be the parliament account or the Proxy Account in the above figure.**
 
 # Responsibility
 
