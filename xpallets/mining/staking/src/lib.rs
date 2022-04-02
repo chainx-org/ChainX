@@ -433,6 +433,8 @@ pub mod pallet {
     pub enum Event<T: Config> {
         /// Issue new balance to this account. [account, reward_amount]
         Minted(T::AccountId, BalanceOf<T>),
+        /// Issue new balance to validator and pot. [validator, reward_amount, validator_pot, reward_amount]
+        MintedForValidator(T::AccountId, BalanceOf<T>, T::AccountId, BalanceOf<T>),
         /// A validator (and its reward pot) was slashed. [validator, slashed_amount]
         Slashed(T::AccountId, BalanceOf<T>),
         /// A nominator bonded to the validator this amount. [nominator, validator, amount]
