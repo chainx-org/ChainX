@@ -1,4 +1,4 @@
-// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
 
 pub trait MultisigAddressFor<AccountId> {
     fn calc_multisig(accounts: &[AccountId], threshold: u16) -> AccountId;

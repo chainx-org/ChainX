@@ -1,4 +1,4 @@
-// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
 
 //! The Substrate Node Template runtime. This can be compiled with `#[no_std]`, ready for Wasm.
 #![allow(clippy::unnecessary_cast)]
