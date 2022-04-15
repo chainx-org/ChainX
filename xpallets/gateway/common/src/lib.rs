@@ -425,6 +425,24 @@ pub mod pallet {
             Ok(())
         }
 
+        /// Set trustee's proxy account
+        #[pallet::weight(< T as Config >::WeightInfo::set_trustee_proxy())]
+        pub fn set_trustee_proxy(
+            origin: OriginFor<T>,
+            proxy_account: T::AccountId,
+            chain: Chain,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+
+            ensure!(
+                TrusteeIntentionPropertiesOf::<T>::contains_key(&who, chain),
+                Error::<T>::NotRegistered
+            );
+
+            Self::set_trustee_proxy_impl(&who, proxy_account, chain);
+            Ok(())
+        }
+
         /// Set trustee admin multiply
         ///
         /// In order to incentivize trust administrators, a weighted multiplier
@@ -470,6 +488,8 @@ pub mod pallet {
             Chain,
             GenericTrusteeIntentionProps<T::AccountId>,
         ),
+        /// A trustee set proxy account. [who, chain, proxy_account]
+        SetTrusteeProxy(T::AccountId, Chain, T::AccountId),
         /// An account set its referral_account of some chain. [who, chain, referral_account]
         ReferralBinded(T::AccountId, Chain, T::AccountId),
         /// The trustee set of a chain was changed. [chain, session_number, session_info, script_info]
@@ -774,6 +794,19 @@ impl<T: Config> Pallet<T> {
         }
         Self::deposit_event(Event::<T>::SetTrusteeProps(who, chain, props));
         Ok(())
+    }
+
+    pub fn set_trustee_proxy_impl(who: &T::AccountId, proxy_account: T::AccountId, chain: Chain) {
+        TrusteeIntentionPropertiesOf::<T>::mutate(who, chain, |t| {
+            if let Some(props) = t {
+                props.0.proxy_account = Some(proxy_account.clone());
+            }
+        });
+        Self::deposit_event(Event::<T>::SetTrusteeProxy(
+            who.clone(),
+            chain,
+            proxy_account,
+        ));
     }
 
     fn set_referral_binding(chain: Chain, who: T::AccountId, referral: T::AccountId) {

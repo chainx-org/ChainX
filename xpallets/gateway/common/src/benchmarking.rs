@@ -162,6 +162,17 @@ benchmarks! {
         assert!(Pallet::<T>::trustee_intention_props_of(caller, Chain::Bitcoin).is_some());
     }
 
+    set_trustee_proxy {
+        let caller: T::AccountId = alice::<T>();
+        assert!(Pallet::<T>::trustee_intention_props_of(caller.clone(), Chain::Bitcoin).is_some());
+    }: _(RawOrigin::Signed(caller.clone()), bob::<T>(), Chain::Bitcoin)
+    verify {
+        assert_eq!(
+            Pallet::<T>::trustee_intention_props_of(caller, Chain::Bitcoin).unwrap().0.proxy_account,
+            Some(bob::<T>())
+        );
+    }
+
     set_trustee_info_config {
         let config = TrusteeInfoConfig {
             min_trustee_count: 5,
@@ -273,6 +284,7 @@ mod tests {
             assert_ok!(Pallet::<Test>::test_benchmark_withdraw());
             assert_ok!(Pallet::<Test>::test_benchmark_cancel_withdrawal());
             assert_ok!(Pallet::<Test>::test_benchmark_setup_trustee());
+            assert_ok!(Pallet::<Test>::test_benchmark_set_trustee_proxy());
             assert_ok!(Pallet::<Test>::test_benchmark_set_trustee_info_config());
             assert_ok!(Pallet::<Test>::test_benchmark_set_trustee_admin());
             assert_ok!(Pallet::<Test>::test_benchmark_set_trustee_admin_multiply());
