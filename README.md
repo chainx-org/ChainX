@@ -5,7 +5,7 @@
 
 [ChainX](https://github.com/chainx-org/ChainX) is a community-driven project built on the next-generation blockchain framework [substrate](https://github.com/paritytech/substrate), the largest Layer-2 network of Bitcoin using the Light-client protocol with smart contract support, spawn as the third relay chain besides Polkadot/Kusama. SherpaX and MiniX will be added as a parachain.
 
-Based on the LayerZero protocol, the EVM Layer2 ecology on chainx can share the liquidity of the EVM ecology such as ETH/BSC, and the POW payment coin such as BTC/DogeCoin can share the DAPP ecology of the EVM.
+Based on the LayerZero protocol, the EVM Layer2 ecology on ChainX can share the liquidity of the EVM ecology such as ETH/BSC, and the POW payment coin such as BTC/DogeCoin can share the DAPP ecology of the EVM.
 [light white paper](https://chainx.org/static/media/Chainx.3df914fe.pdf).
 [website](https://chainx.org)
 
