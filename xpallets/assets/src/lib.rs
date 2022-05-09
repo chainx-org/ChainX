@@ -12,10 +12,7 @@ mod benchmarking;
 mod mock;
 #[cfg(test)]
 mod tests;
-#[cfg(test)]
-mod tests_multicurrency;
 
-mod multicurrency;
 pub mod traits;
 mod trigger;
 pub mod types;
@@ -23,7 +20,6 @@ pub mod weights;
 
 use sp_std::{
     collections::btree_map::BTreeMap,
-    convert::{TryFrom, TryInto},
 };
 
 use frame_support::{
@@ -32,11 +28,9 @@ use frame_support::{
     inherent::Vec,
     log::{debug, error, info},
     traits::{Currency, Get, HandleLifetime, LockableCurrency, ReservableCurrency},
-    Parameter,
 };
 
 use frame_system::{ensure_root, ensure_signed, AccountInfo};
-use orml_traits::arithmetic::{Signed, SimpleArithmetic};
 use sp_runtime::traits::{CheckedAdd, CheckedSub, Saturating, StaticLookup, Zero};
 
 use self::trigger::AssetChangedTrigger;
@@ -72,17 +66,6 @@ pub mod pallet {
         /// The native currency.
         type Currency: ReservableCurrency<Self::AccountId>
             + LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
-
-        /// The amount type, should be signed version of `Balance`
-        type Amount: Parameter
-            + Member
-            + Default
-            + Copy
-            + MaybeSerializeDeserialize
-            + Signed
-            + SimpleArithmetic
-            + TryInto<BalanceOf<Self>>
-            + TryFrom<BalanceOf<Self>>;
 
         /// The treasury account.
         type TreasuryAccount: TreasuryAccount<Self::AccountId>;
@@ -234,20 +217,6 @@ pub mod pallet {
         Twox64Concat,
         AssetId,
         BTreeMap<AssetType, BalanceOf<T>>,
-        ValueQuery,
-    >;
-
-    /// Any liquidity locks of a token type under an account.
-    /// NOTE: Should only be accessed when setting, changing and freeing a lock.
-    #[pallet::storage]
-    #[pallet::getter(fn locks)]
-    pub type Locks<T: Config> = StorageDoubleMap<
-        _,
-        Blake2_128Concat,
-        T::AccountId,
-        Twox64Concat,
-        AssetId,
-        Vec<BalanceLock<BalanceOf<T>>>,
         ValueQuery,
     >;
 
@@ -683,56 +652,4 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
-    fn update_locks(currency_id: AssetId, who: &T::AccountId, locks: &[BalanceLock<BalanceOf<T>>]) {
-        // update locked balance
-        if let Some(max_locked) = locks.iter().map(|lock| lock.amount).max() {
-            use sp_std::cmp::Ordering;
-            let current_locked = Self::asset_balance_of(who, &currency_id, AssetType::Locked);
-
-            let result = match max_locked.cmp(&current_locked) {
-                Ordering::Greater => {
-                    // new lock more than current locked, move usable to locked
-                    Self::move_balance(
-                        &currency_id,
-                        who,
-                        AssetType::Usable,
-                        who,
-                        AssetType::Locked,
-                        max_locked - current_locked,
-                    )
-                }
-                Ordering::Less => {
-                    // new lock less then current locked, release locked to usable
-                    Self::move_balance(
-                        &currency_id,
-                        who,
-                        AssetType::Locked,
-                        who,
-                        AssetType::Usable,
-                        current_locked - max_locked,
-                    )
-                }
-                Ordering::Equal => {
-                    // if max_locked == locked, need do nothing
-                    Ok(())
-                }
-            };
-            if let Err(err) = result {
-                // should not fail, for set lock need to check free_balance, free_balance = usable + free
-                error!(
-                    target: "runtime::assets",
-                    "[update_locks] Should not be failed when move asset (usable <=> locked), \
-                    who:{:?}, asset:[id:{}, max_locked:{:?}, current_locked:{:?}], err:{:?}",
-                    who, currency_id, max_locked, current_locked, err
-                );
-            }
-        }
-
-        // update locks
-        if locks.is_empty() {
-            <Locks<T>>::remove(who, currency_id);
-        } else {
-            <Locks<T>>::insert(who, currency_id, locks);
-        }
-    }
 }

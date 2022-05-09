@@ -21,8 +21,6 @@ use sp_core::sp_std::str::FromStr;
 use sp_runtime::SaturatedConversion;
 use sp_std::prelude::*;
 
-use orml_utilities::with_transaction_result;
-
 #[cfg(feature = "std")]
 pub use light_bitcoin::primitives::h256_rev;
 pub use light_bitcoin::{
@@ -620,6 +618,7 @@ pub mod pallet {
             deserialize(Reader::new(input)).map_err(|_| Error::<T>::DeserializeErr)
         }
 
+        #[transactional]
         pub(crate) fn apply_push_header(header: BtcHeader) -> DispatchResult {
             // current should not exist
             if Self::headers(&header.hash()).is_some() {
@@ -649,57 +648,55 @@ pub mod pallet {
             let header_verifier = header::HeaderVerifier::new::<T>(&header_info);
             header_verifier.check::<T>()?;
 
-            with_transaction_result(|| {
-                // insert into storage
-                let hash = header_info.header.hash();
-                // insert valid header into storage
-                Headers::<T>::insert(&hash, header_info.clone());
-                // storage height => block list (contains forked header hash)
-                BlockHashFor::<T>::mutate(header_info.height, |v| {
-                    if !v.contains(&hash) {
-                        v.push(hash);
-                    }
-                });
+            // insert into storage
+            let hash = header_info.header.hash();
+            // insert valid header into storage
+            Headers::<T>::insert(&hash, header_info.clone());
+            // storage height => block list (contains forked header hash)
+            BlockHashFor::<T>::mutate(header_info.height, |v| {
+                if !v.contains(&hash) {
+                    v.push(hash);
+                }
+            });
 
-                log!(debug,
+            log!(debug,
                 "[apply_push_header] Verify successfully, insert header to storage [height:{}, hash:{:?}, all hashes of the height:{:?}]",
                 header_info.height,
                 hash,
                 Self::block_hash_for(header_info.height)
             );
 
-                let best_index = Self::best_index();
+            let best_index = Self::best_index();
 
-                if header_info.height > best_index.height {
-                    // note update_confirmed_header would mutate other storage depend on BlockHashFor
-                    let confirmed_index = header::update_confirmed_header::<T>(&header_info);
-                    log!(
-                        info,
-                        "[apply_push_header] Update new height:{}, hash:{:?}, confirm:{:?}",
-                        header_info.height,
-                        hash,
-                        confirmed_index
-                    );
+            if header_info.height > best_index.height {
+                // note update_confirmed_header would mutate other storage depend on BlockHashFor
+                let confirmed_index = header::update_confirmed_header::<T>(&header_info);
+                log!(
+                    info,
+                    "[apply_push_header] Update new height:{}, hash:{:?}, confirm:{:?}",
+                    header_info.height,
+                    hash,
+                    confirmed_index
+                );
 
-                    // new best index
-                    let new_best_index = BtcHeaderIndex {
-                        hash,
-                        height: header_info.height,
-                    };
-                    BestIndex::<T>::put(new_best_index);
-                } else {
-                    // forked chain
-                    log!(
-                        info,
-                        "[apply_push_header] Best index {} larger than this height {}",
-                        best_index.height,
-                        header_info.height
-                    );
-                    header::check_confirmed_header::<T>(&header_info)?;
+                // new best index
+                let new_best_index = BtcHeaderIndex {
+                    hash,
+                    height: header_info.height,
                 };
-                Self::deposit_event(Event::<T>::HeaderInserted(hash));
-                Ok(())
-            })
+                BestIndex::<T>::put(new_best_index);
+            } else {
+                // forked chain
+                log!(
+                    info,
+                    "[apply_push_header] Best index {} larger than this height {}",
+                    best_index.height,
+                    header_info.height
+                );
+                header::check_confirmed_header::<T>(&header_info)?;
+            };
+            Self::deposit_event(Event::<T>::HeaderInserted(hash));
+            Ok(())
         }
 
         pub(crate) fn apply_push_transaction(

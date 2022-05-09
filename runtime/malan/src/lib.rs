@@ -111,7 +111,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("chainx"),
     impl_name: create_runtime_str!("chainx-malan"),
     authoring_version: 1,
-    spec_version: 21,
+    spec_version: 22,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 4,
@@ -146,10 +146,6 @@ pub struct BaseFilter;
 impl Contains<Call> for BaseFilter {
     fn contains(call: &Call) -> bool {
         use frame_support::dispatch::GetCallMetadata;
-
-        if let Call::Currencies(_) = call {
-            return false;
-        }
 
         let metadata = call.get_call_metadata();
         !XSystem::is_paused(metadata)
@@ -956,19 +952,6 @@ impl pallet_proxy::Config for Runtime {
 }
 
 ///////////////////////////////////////////
-// orml
-///////////////////////////////////////////
-use orml_currencies::BasicCurrencyAdapter;
-
-impl orml_currencies::Config for Runtime {
-    type Event = Event;
-    type MultiCurrency = XAssets;
-    type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
-    type GetNativeCurrencyId = ChainXAssetId;
-    type WeightInfo = ();
-}
-
-///////////////////////////////////////////
 // Chainx pallets
 ///////////////////////////////////////////
 impl xpallet_system::Config for Runtime {
@@ -990,7 +973,6 @@ impl xpallet_assets_registrar::Config for Runtime {
 impl xpallet_assets::Config for Runtime {
     type Event = Event;
     type Currency = Balances;
-    type Amount = Amount;
     type TreasuryAccount = SimpleTreasuryAccount;
     type OnCreatedAccount = frame_system::Provider<Runtime>;
     type OnAssetChanged = XMiningAsset;
@@ -1154,11 +1136,6 @@ construct_runtime!(
         XSpot: xpallet_dex_spot::{Pallet, Call, Storage, Event<T>, Config<T>} = 32,
 
         XGenesisBuilder: xpallet_genesis_builder::{Pallet, Config<T>} = 33,
-
-        // orml
-        // we retain Currencies Call for this call may be used in future, but we do not need this now,
-        // so that we filter it in BaseFilter.
-        Currencies: orml_currencies::{Pallet, Call, Event<T>} = 34,
 
         // It might be possible to merge this module into pallet_transaction_payment in future, thus
         // we put it at the end for keeping the extrinsic ordering.

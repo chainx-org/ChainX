@@ -27,7 +27,6 @@ use crate::{self as xpallet_dex_spot, *};
 pub(crate) type AccountId = u64;
 pub(crate) type AccountIndex = u64;
 pub(crate) type Balance = u128;
-pub(crate) type Amount = i128;
 pub(crate) type Price = u128;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -123,7 +122,6 @@ impl xpallet_assets_registrar::Config for Test {
 impl xpallet_assets::Config for Test {
     type Event = ();
     type Currency = Balances;
-    type Amount = Amount;
     type TreasuryAccount = ();
     type OnCreatedAccount = frame_system::Provider<Test>;
     type OnAssetChanged = ();
