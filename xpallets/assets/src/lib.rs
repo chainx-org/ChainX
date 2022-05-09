@@ -18,9 +18,7 @@ mod trigger;
 pub mod types;
 pub mod weights;
 
-use sp_std::{
-    collections::btree_map::BTreeMap,
-};
+use sp_std::collections::btree_map::BTreeMap;
 
 use frame_support::{
     dispatch::{DispatchError, DispatchResult},
@@ -651,5 +649,4 @@ impl<T: Config> Pallet<T> {
         AssetChangedTrigger::<T>::on_destroy_post(id, who, value)?;
         Ok(())
     }
-
 }
