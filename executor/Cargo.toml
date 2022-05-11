@@ -2,16 +2,16 @@
 name = "chainx-executor"
 version = "4.3.0"
 authors = ["The ChainX Authors"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
-frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11" }
-sc-executor = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11" }
+frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
+sc-executor = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
 
 # ChainX runtime
-chainx-runtime = { path = "../runtime/chainx" }
+#chainx-runtime = { path = "../runtime/chainx" }
 dev-runtime = { path = "../runtime/dev" }
-malan-runtime = { path = "../runtime/malan" }
+#malan-runtime = { path = "../runtime/malan" }
 
 # ChainX primitives
 xp-io = { path = "../primitives/io" }

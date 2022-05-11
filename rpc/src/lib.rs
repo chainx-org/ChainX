@@ -19,22 +19,10 @@ use sp_consensus::SelectChain;
 use sp_consensus_babe::BabeApi;
 
 use chainx_primitives::Block;
-use chainx_runtime::{AccountId, Balance, BlockNumber, Hash, Index};
+use dev_runtime::{AccountId, Balance, BlockNumber, Hash, Index};
 
 use xpallet_mining_asset_rpc_runtime_api::MiningWeight;
 use xpallet_mining_staking_rpc_runtime_api::VoteWeight;
-
-/// Light client extra dependencies.
-pub struct LightDeps<C, F, P> {
-    /// The client instance to use.
-    pub client: Arc<C>,
-    /// Transaction pool instance.
-    pub pool: Arc<P>,
-    /// Remote access to the blockchain (async).
-    pub remote_blockchain: Arc<dyn sc_client_api::light::RemoteBlockchain<Block>>,
-    /// Fetcher instance.
-    pub fetcher: Arc<F>,
-}
 
 /// Extra dependencies for BABE.
 pub struct BabeDeps {
@@ -98,21 +86,21 @@ where
     C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>,
     C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
     C::Api: xpallet_assets_rpc_runtime_api::XAssetsApi<Block, AccountId, Balance>,
-    C::Api:
-        xpallet_dex_spot_rpc_runtime_api::XSpotApi<Block, AccountId, Balance, BlockNumber, Balance>,
-    C::Api: xpallet_gateway_bitcoin_rpc_runtime_api::XGatewayBitcoinApi<Block, AccountId>,
-    C::Api: xpallet_gateway_common_rpc_runtime_api::XGatewayCommonApi<
-        Block,
-        AccountId,
-        Balance,
-        BlockNumber,
-    >,
-    C::Api: xpallet_gateway_records_rpc_runtime_api::XGatewayRecordsApi<
-        Block,
-        AccountId,
-        Balance,
-        BlockNumber,
-    >,
+    // C::Api:
+    //     xpallet_dex_spot_rpc_runtime_api::XSpotApi<Block, AccountId, Balance, BlockNumber, Balance>,
+    // C::Api: xpallet_gateway_bitcoin_rpc_runtime_api::XGatewayBitcoinApi<Block, AccountId>,
+    // C::Api: xpallet_gateway_common_rpc_runtime_api::XGatewayCommonApi<
+    //     Block,
+    //     AccountId,
+    //     Balance,
+    //     BlockNumber,
+    // >,
+    // C::Api: xpallet_gateway_records_rpc_runtime_api::XGatewayRecordsApi<
+    //     Block,
+    //     AccountId,
+    //     Balance,
+    //     BlockNumber,
+    // >,
     C::Api: xpallet_mining_staking_rpc_runtime_api::XStakingApi<
         Block,
         AccountId,
@@ -136,10 +124,10 @@ where
     use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
     use substrate_frame_rpc_system::{FullSystem, SystemApi};
     use xpallet_assets_rpc::{Assets, XAssetsApi};
-    use xpallet_dex_spot_rpc::{XSpot, XSpotApi};
-    use xpallet_gateway_bitcoin_rpc::{XGatewayBitcoin, XGatewayBitcoinApi};
-    use xpallet_gateway_common_rpc::{XGatewayCommon, XGatewayCommonApi};
-    use xpallet_gateway_records_rpc::{XGatewayRecords, XGatewayRecordsApi};
+    // use xpallet_dex_spot_rpc::{XSpot, XSpotApi};
+    // use xpallet_gateway_bitcoin_rpc::{XGatewayBitcoin, XGatewayBitcoinApi};
+    // use xpallet_gateway_common_rpc::{XGatewayCommon, XGatewayCommonApi};
+    // use xpallet_gateway_records_rpc::{XGatewayRecords, XGatewayRecordsApi};
     use xpallet_mining_asset_rpc::{XMiningAsset, XMiningAssetApi};
     use xpallet_mining_staking_rpc::{XStaking, XStakingApi};
     use xpallet_transaction_fee_rpc::{XTransactionFee, XTransactionFeeApi};
@@ -200,7 +188,6 @@ where
             client.clone(),
             shared_authority_set,
             shared_epoch_changes,
-            deny_unsafe,
         )?,
     ));
 
@@ -209,42 +196,17 @@ where
     )));
     io.extend_with(XAssetsApi::to_delegate(Assets::new(client.clone())));
     io.extend_with(XStakingApi::to_delegate(XStaking::new(client.clone())));
-    io.extend_with(XSpotApi::to_delegate(XSpot::new(client.clone())));
+    // io.extend_with(XSpotApi::to_delegate(XSpot::new(client.clone())));
     io.extend_with(XMiningAssetApi::to_delegate(XMiningAsset::new(
         client.clone(),
     )));
-    io.extend_with(XGatewayBitcoinApi::to_delegate(XGatewayBitcoin::new(
-        client.clone(),
-    )));
-    io.extend_with(XGatewayRecordsApi::to_delegate(XGatewayRecords::new(
-        client.clone(),
-    )));
-    io.extend_with(XGatewayCommonApi::to_delegate(XGatewayCommon::new(client)));
+    // io.extend_with(XGatewayBitcoinApi::to_delegate(XGatewayBitcoin::new(
+    //     client.clone(),
+    // )));
+    // io.extend_with(XGatewayRecordsApi::to_delegate(XGatewayRecords::new(
+    //     client.clone(),
+    // )));
+    // io.extend_with(XGatewayCommonApi::to_delegate(XGatewayCommon::new(client)));
 
     Ok(io)
-}
-
-/// Instantiate all Light RPC extensions.
-pub fn create_light<C, P, M, F>(deps: LightDeps<C, F, P>) -> jsonrpc_core::IoHandler<M>
-where
-    C: sc_client_api::blockchain::HeaderBackend<Block>,
-    C: Send + Sync + 'static,
-    F: sc_client_api::light::Fetcher<Block> + 'static,
-    P: TransactionPool + 'static,
-    M: jsonrpc_core::Metadata + Default,
-{
-    use substrate_frame_rpc_system::{LightSystem, SystemApi};
-
-    let LightDeps {
-        client,
-        pool,
-        remote_blockchain,
-        fetcher,
-    } = deps;
-    let mut io = jsonrpc_core::IoHandler::default();
-    io.extend_with(SystemApi::<Hash, AccountId, Index>::to_delegate(
-        LightSystem::new(client, remote_blockchain, fetcher, pool),
-    ));
-
-    io
 }

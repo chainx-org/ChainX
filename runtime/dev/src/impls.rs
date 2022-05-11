@@ -19,7 +19,7 @@ use frame_support::{
 
 use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 
-use xpallet_gateway_common::Call as XGatewayCommonCall;
+//use xpallet_gateway_common::Call as XGatewayCommonCall;
 use xpallet_mining_staking::Call as XStakingCall;
 
 use chainx_primitives::{AccountId, Balance};
@@ -31,7 +31,9 @@ type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
 pub struct Author;
 impl OnUnbalanced<NegativeImbalance> for Author {
     fn on_nonzero_unbalanced(amount: NegativeImbalance) {
-        Balances::resolve_creating(&Authorship::author(), amount);
+        if let Some(author) = Authorship::author() {
+            Balances::resolve_creating(&author, amount);
+        }
     }
 }
 
@@ -44,19 +46,20 @@ impl OnUnbalanced<NegativeImbalance> for DealWithFees {
         let to_author_numeric_amount = to_author.peek();
         let to_reward_pot_numeric_amount = to_reward_pot.peek();
 
-        let author = <pallet_authorship::Pallet<Runtime>>::author();
-        let reward_pot = <xpallet_mining_staking::Pallet<Runtime>>::reward_pot_for(&author);
+        if let Some(author) = <pallet_authorship::Pallet<Runtime>>::author() {
+            let reward_pot = <xpallet_mining_staking::Pallet<Runtime>>::reward_pot_for(&author);
 
-        <pallet_balances::Pallet<Runtime>>::resolve_creating(&author, to_author);
-        <pallet_balances::Pallet<Runtime>>::resolve_creating(&reward_pot, to_reward_pot);
-        <frame_system::Pallet<Runtime>>::deposit_event(
-            xpallet_transaction_fee::Event::<Runtime>::FeePaid(
-                author,
-                to_author_numeric_amount,
-                reward_pot,
-                to_reward_pot_numeric_amount,
-            ),
-        );
+            <pallet_balances::Pallet<Runtime>>::resolve_creating(&author, to_author);
+            <pallet_balances::Pallet<Runtime>>::resolve_creating(&reward_pot, to_reward_pot);
+            <frame_system::Pallet<Runtime>>::deposit_event(
+                xpallet_transaction_fee::Event::<Runtime>::FeePaid(
+                    author,
+                    to_author_numeric_amount,
+                    reward_pot,
+                    to_reward_pot_numeric_amount,
+                ),
+            );
+        }
     }
 }
 
@@ -80,7 +83,7 @@ impl ChargeExtraFee {
         const BASE_EXTRA_FEE: Balance = 100_000_000;
 
         let extra_cofficient: Option<u32> = match call {
-            Call::XGatewayCommon(XGatewayCommonCall::setup_trustee { .. }) => Some(1),
+//            Call::XGatewayCommon(XGatewayCommonCall::setup_trustee { .. }) => Some(1),
             Call::XStaking(xstaking) => match xstaking {
                 XStakingCall::register { .. } => Some(10),
                 XStakingCall::validate { .. } => Some(1),
@@ -119,6 +122,16 @@ impl SignedExtension for ChargeExtraFee {
 
     fn additional_signed(&self) -> sp_std::result::Result<(), TransactionValidityError> {
         Ok(())
+    }
+
+    fn pre_dispatch(
+        self,
+        who: &Self::AccountId,
+        call: &Self::Call,
+        info: &DispatchInfoOf<Self::Call>,
+        len: usize,
+    ) -> Result<Self::Pre, TransactionValidityError> {
+        self.validate(who, call, info, len).map(|_| ())
     }
 
     fn validate(

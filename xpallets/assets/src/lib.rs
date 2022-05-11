@@ -18,7 +18,10 @@ mod trigger;
 pub mod types;
 pub mod weights;
 
-use sp_std::collections::btree_map::BTreeMap;
+use sp_std::collections::btree_map::{
+    BTreeMap,
+    Entry::{Occupied, Vacant},
+};
 
 use frame_support::{
     dispatch::{DispatchError, DispatchResult},
@@ -80,6 +83,7 @@ pub mod pallet {
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
+    #[pallet::without_storage_info]
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::call]
@@ -195,6 +199,10 @@ pub mod pallet {
         ActionNotAllowed,
         /// Account still has active reserved
         StillHasActiveReserved,
+        /// Unable to increment the consumer reference counters on the account. Either no provider
+        /// reference exists to allow a non-zero balance of a non-self-sufficient asset, or the
+        /// maximum number of consumers has been reached.
+        NoProvider,
     }
 
     /// asset extend limit properties, set asset "can do", example, `CanTransfer`, `CanDestroyWithdrawal`
@@ -556,32 +564,44 @@ impl<T: Config> Pallet<T> {
         new_balance: BalanceOf<T>,
     ) {
         let mut original: BalanceOf<T> = Zero::zero();
-        // todo change to try_mutate when update to rc5
+        let mut exists = false;
+
         let existed = AssetBalance::<T>::contains_key(who, id);
-        let exists = AssetBalance::<T>::mutate(
-            who,
-            id,
-            |balance_map: &mut BTreeMap<AssetType, BalanceOf<T>>| {
-                if new_balance == Zero::zero() {
-                    // remove Zero balance to save space
-                    if let Some(old) = balance_map.remove(&type_) {
-                        original = old;
+        AssetBalance::<T>::mutate(who, id, |balances: &mut BTreeMap<AssetType, BalanceOf<T>>| {
+            match balances.entry(type_) {
+                Occupied(mut entry) => {
+                    original = *entry.get();
+
+                    if new_balance == Zero::zero() {
+                        // remove Zero balance to save space
+                        entry.remove();
+
+                    } else {
+                        // update balance
+                        entry.insert(new_balance);
                     }
-                    // if is_empty(), means not exists
-                    !balance_map.is_empty()
-                } else {
-                    let balance = balance_map.entry(type_).or_default();
-                    original = *balance;
-                    // modify to new balance
-                    *balance = new_balance;
-                    true
                 }
-            },
-        );
+                Vacant(entry) => {
+                    entry.insert(new_balance);
+                }
+            };
+
+            // if is_empty(), means not exists
+            exists = !balances.is_empty();
+        });
+
         if !existed && exists {
             Self::try_new_account(who);
-            // FIXME: handle the result properly
-            let _ = frame_system::Pallet::<T>::inc_consumers(who);
+            match frame_system::Pallet::<T>::inc_consumers(who) {
+                Err(e) => {
+                    frame_support::log::error!(
+                        target: "runtime::xassets",
+                        "inc_consumers: {:?}",
+                        e
+                    );
+                }
+                _ => {}
+            }
         } else if existed && !exists {
             frame_system::Pallet::<T>::dec_consumers(who);
             AssetBalance::<T>::remove(who, id);

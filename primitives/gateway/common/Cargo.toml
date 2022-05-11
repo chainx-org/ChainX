@@ -2,15 +2,15 @@
 name = "xp-gateway-common"
 version = "4.3.0"
 authors = ["The ChainX Authors"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 bs58 = { version = "0.3", default-features = false, features = ["alloc"] }
 hex = { version = "0.4", default-features = false }
 
 # Substrate primitives
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
 
 # ChainX primitives
 xp-io = { path = "../../io", default-features = false, optional = true }

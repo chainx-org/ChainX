@@ -10,7 +10,7 @@ use sc_service::{
     config::{PrometheusConfig, TelemetryEndpoints},
     BasePath, TransactionPoolOptions,
 };
-use sp_core::crypto::{set_default_ss58_version, Ss58AddressFormat::ChainXAccount};
+use sp_core::crypto::{set_default_ss58_version, Ss58AddressFormat};
 
 use chainx_service::{self as service, new_partial, IdentifyVariant};
 
@@ -102,8 +102,9 @@ where
     fn prometheus_config(
         &self,
         default_listen_port: u16,
+        chain_spec: &Box<dyn ChainSpec>,
     ) -> sc_cli::Result<Option<PrometheusConfig>> {
-        self.run.base.prometheus_config(default_listen_port)
+        self.run.base.prometheus_config(default_listen_port, chain_spec)
     }
 
     fn telemetry_endpoints(
@@ -175,238 +176,180 @@ impl SubstrateCli for Cli {
         let raw_cli_args = std::env::args().collect::<Vec<_>>();
         let cli = Cli::from_iter(crate::config::preprocess_cli_args(raw_cli_args));
 
+        let tokio_runtime = sc_cli::build_runtime()?;
+        let config = command.create_configuration(self, tokio_runtime.handle().clone())?;
+
         // Try to enable the log rotation function if from config file.
         if cli.run.config_file.is_some() && !cli.run.logger.no_log_rotation {
             cli.try_init_logger()?;
         } else {
-            command.init::<Self>()?;
+            command.init(&Self::support_url(), &Self::impl_version(), |_, _| {}, &config)?;
         }
 
-        sc_cli::Runner::new(self, command)
+        sc_cli::Runner::new(config, tokio_runtime)
     }
 
     fn native_runtime_version(chain_spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-        if chain_spec.is_malan() {
-            &malan_runtime::VERSION
-        } else if chain_spec.is_dev() {
-            &dev_runtime::VERSION
-        } else {
-            &chainx_runtime::VERSION
-        }
+        &dev_runtime::VERSION
     }
 }
 
 fn load_spec(id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
-    Ok(match id {
-        "" | "mainnet" => Box::new(chain_spec::mainnet_config()?),
-        "new-mainnet" => Box::new(chain_spec::new_mainnet_config()?),
-        "dev" => Box::new(chain_spec::development_config()?),
-        "malan" | "testnet" => Box::new(chain_spec::malan_config()?),
-        "new-malan" => Box::new(chain_spec::new_malan_config()?),
-        "local" => Box::new(chain_spec::local_testnet_config()?),
-        "benchmarks" => {
-            #[cfg(feature = "runtime-benchmarks")]
-            {
-                Box::new(chain_spec::benchmarks_config()?)
-            }
-            #[cfg(not(feature = "runtime-benchmarks"))]
-            {
-                return Err(
-                    "benchmarks chain-config should compile with feature `runtime-benchmarks`"
-                        .into(),
-                );
-            }
-        }
-        path if path.starts_with("dev") => Box::new(chain_spec::DevChainSpec::from_json_file(
-            std::path::PathBuf::from(path),
-        )?),
-        path if path.starts_with("malan") => Box::new(chain_spec::MalanChainSpec::from_json_file(
-            std::path::PathBuf::from(path),
-        )?),
-        path => {
-            let p = std::path::PathBuf::from(path);
-            if !p.exists() {
-                // TODO more better hint
-                return Err("invalid path or just use --chain={dev, local, testnet, mainnet, malan, benchmarks}".into());
-            }
-            Box::new(chain_spec::ChainXChainSpec::from_json_file(p)?)
-        }
-    })
-}
+    Ok(Box::new(chain_spec::development_config()?))
+ }
 
-macro_rules! construct_async_run {
-    (|$components:ident, $cli:ident, $cmd:ident, $config:ident| $( $code:tt )* ) => {{
-        let runner = $cli.create_runner($cmd)?;
+ macro_rules! construct_async_run {
+     (|$components:ident, $cli:ident, $cmd:ident, $config:ident| $( $code:tt )* ) => {{
+         let runner = $cli.create_runner($cmd)?;
 
-        if runner.config().chain_spec.is_malan() {
-            runner.async_run(|$config| {
-                let $components = new_partial::<
-                    malan_runtime::RuntimeApi,
-                    chainx_executor::MalanExecutor
-                >(
-                    &$config,
-                )?;
-                let task_manager = $components.task_manager;
-                { $( $code )* }.map(|v| (v, task_manager))
-            })
-        } else if runner.config().chain_spec.is_dev() {
-            runner.async_run(|$config| {
-                let $components = new_partial::<
-                    dev_runtime::RuntimeApi,
-                    chainx_executor::DevExecutor
-                >(
-                    &$config,
-                )?;
-                let task_manager = $components.task_manager;
-                { $( $code )* }.map(|v| (v, task_manager))
-            })
-        } else {
-            runner.async_run(|$config| {
-                let $components = new_partial::<
-                    chainx_runtime::RuntimeApi,
-                    chainx_executor::ChainXExecutor,
-                >(
-                    &$config,
-                )?;
-                let task_manager = $components.task_manager;
-                { $( $code )* }.map(|v| (v, task_manager))
-            })
-        }
-    }}
-}
+         runner.async_run(|$config| {
+                 let $components = new_partial::<
+                     dev_runtime::RuntimeApi,
+                     chainx_executor::DevExecutor
+                 >(
+                     &$config,
+                 )?;
+                 let task_manager = $components.task_manager;
+                 { $( $code )* }.map(|v| (v, task_manager))
+         })
+     }}
+ }
 
-/// Parse and run command line arguments
-pub fn run() -> sc_cli::Result<()> {
-    // Workaround for https://github.com/paritytech/substrate/issues/6856
-    // Remove this once the cli config file is supported in Substrate.
-    let raw_cli_args = std::env::args().collect::<Vec<_>>();
-    let cli = <Cli as SubstrateCli>::from_iter(crate::config::preprocess_cli_args(raw_cli_args));
+ /// Parse and run command line arguments
+ pub fn run() -> sc_cli::Result<()> {
+     // Workaround for https://github.com/paritytech/substrate/issues/6856
+     // Remove this once the cli config file is supported in Substrate.
+     let raw_cli_args = std::env::args().collect::<Vec<_>>();
+     let cli = <Cli as SubstrateCli>::from_iter(crate::config::preprocess_cli_args(raw_cli_args));
 
-    set_default_ss58_version(ChainXAccount);
+     // Set ChainX account
+     set_default_ss58_version(Ss58AddressFormat::from(44u16));
 
-    match &cli.subcommand {
-        None => {
-            let runner = cli.create_runner(&cli)?;
+     match &cli.subcommand {
+         None => {
+             let runner = cli.create_runner(&cli)?;
 
-            runner
-                .run_node_until_exit(|config| async move {
-                    let config = SubstrateCli::create_configuration::<Cli, Cli>(
-                        &cli,
-                        &cli,
-                        config.tokio_handle.clone(),
-                    )
-                    .map_err(|err| format!("chain argument error: {:?}", err))?;
+             runner
+                 .run_node_until_exit(|config| async move {
+                     service::build_full(config).map_err(sc_cli::Error::Service)
+                 })
+         }
+         Some(Subcommand::Benchmark(cmd)) => {
+             if cfg!(feature = "runtime-benchmarks") {
+                 let runner = cli.create_runner(cmd)?;
 
-                    match config.role {
-                        Role::Light => service::build_light(config),
-                        _ => service::build_full(config),
-                    }
-                })
-                .map_err(sc_cli::Error::Service)
-        }
-        Some(Subcommand::Benchmark(cmd)) => {
-            if cfg!(feature = "runtime-benchmarks") {
-                let runner = cli.create_runner(cmd)?;
+                 runner.sync_run(|config| {
+                     cmd.run::<dev_runtime::Block, chainx_executor::DevExecutor>(config)
+                 })
+             } else {
+                 println!(
+                     "Benchmarking wasn't enabled when building the node. \
+                     You can enable it with `--features runtime-benchmarks`."
+                 );
+                 Ok(())
+             }
+         }
+         Some(Subcommand::Key(cmd)) => cmd.run(&cli),
+         Some(Subcommand::Sign(cmd)) => cmd.run(),
+         Some(Subcommand::Verify(cmd)) => cmd.run(),
+         Some(Subcommand::Vanity(cmd)) => cmd.run(),
+         Some(Subcommand::BuildSpec(cmd)) => {
+             let runner = cli.create_runner(cmd)?;
 
-                runner.sync_run(|config| {
-                    cmd.run::<chainx_runtime::Block, chainx_executor::ChainXExecutor>(config)
-                })
-            } else {
-                println!(
-                    "Benchmarking wasn't enabled when building the node. \
-                    You can enable it with `--features runtime-benchmarks`."
-                );
-                Ok(())
-            }
-        }
-        Some(Subcommand::Key(cmd)) => cmd.run(&cli),
-        Some(Subcommand::Sign(cmd)) => cmd.run(),
-        Some(Subcommand::Verify(cmd)) => cmd.run(),
-        Some(Subcommand::Vanity(cmd)) => cmd.run(),
-        Some(Subcommand::BuildSpec(cmd)) => {
-            let runner = cli.create_runner(cmd)?;
+             runner.sync_run(|config| cmd.run(config.chain_spec, config.network))
+         }
+         Some(Subcommand::CheckBlock(cmd)) => {
+             construct_async_run!(|components, cli, cmd, config| {
+                 Ok(cmd.run(components.client, components.import_queue))
+             })
+         }
+         Some(Subcommand::ExportBlocks(cmd)) => {
+             construct_async_run!(|components, cli, cmd, config| {
+                 Ok(cmd.run(components.client, config.database))
+             })
+         }
+         Some(Subcommand::ExportState(cmd)) => {
+             construct_async_run!(|components, cli, cmd, config| {
+                 Ok(cmd.run(components.client, config.chain_spec))
+             })
+         }
+         Some(Subcommand::ImportBlocks(cmd)) => {
+             construct_async_run!(|components, cli, cmd, config| {
+                 Ok(cmd.run(components.client, components.import_queue))
+             })
+         }
+         Some(Subcommand::PurgeChain(cmd)) => {
+             let runner = cli.create_runner(cmd)?;
 
-            runner.sync_run(|config| cmd.run(config.chain_spec, config.network))
-        }
-        Some(Subcommand::CheckBlock(cmd)) => {
-            construct_async_run!(|components, cli, cmd, config| {
-                Ok(cmd.run(components.client, components.import_queue))
-            })
-        }
-        Some(Subcommand::ExportBlocks(cmd)) => {
-            construct_async_run!(|components, cli, cmd, config| {
-                Ok(cmd.run(components.client, config.database))
-            })
-        }
-        Some(Subcommand::ExportState(cmd)) => {
-            construct_async_run!(|components, cli, cmd, config| {
-                Ok(cmd.run(components.client, config.chain_spec))
-            })
-        }
-        Some(Subcommand::ImportBlocks(cmd)) => {
-            construct_async_run!(|components, cli, cmd, config| {
-                Ok(cmd.run(components.client, components.import_queue))
-            })
-        }
-        Some(Subcommand::PurgeChain(cmd)) => {
-            let runner = cli.create_runner(cmd)?;
+             runner.sync_run(|config| cmd.run(config.database))
+         }
+         Some(Subcommand::Revert(cmd)) => {
+             construct_async_run!(|components, cli, cmd, config| {
+                 Ok(cmd.run(components.client, components.backend))
+             })
+         }
+         #[cfg(feature = "try-runtime")]
+         Some(Subcommand::TryRuntime(cmd)) => {
+             let runner = cli.create_runner(cmd)?;
+             let chain_spec = &runner.config().chain_spec;
 
-            runner.sync_run(|config| cmd.run(config.database))
-        }
-        Some(Subcommand::Revert(cmd)) => {
-            construct_async_run!(|components, cli, cmd, config| {
-                Ok(cmd.run(components.client, components.backend))
-            })
-        }
-        #[cfg(feature = "try-runtime")]
-        Some(Subcommand::TryRuntime(cmd)) => {
-            let runner = cli.create_runner(cmd)?;
-            let chain_spec = &runner.config().chain_spec;
-
-            if chain_spec.is_malan() {
-                return runner.async_run(|config| {
-                    let registry = config.prometheus_config.as_ref().map(|cfg| &cfg.registry);
-                    let task_manager =
-                        sc_service::TaskManager::new(config.tokio_handle.clone(), registry)
-                            .map_err(|e| {
-                                sc_cli::Error::Service(sc_service::Error::Prometheus(e))
-                            })?;
-                    Ok((
-                        cmd.run::<malan_runtime::Block, chainx_executor::MalanExecutor>(config),
-                        task_manager,
-                    ))
-                });
-            } else if chain_spec.is_dev() {
-                return runner.async_run(|config| {
-                    let registry = config.prometheus_config.as_ref().map(|cfg| &cfg.registry);
-                    let task_manager =
-                        sc_service::TaskManager::new(config.tokio_handle.clone(), registry)
-                            .map_err(|e| {
-                                sc_cli::Error::Service(sc_service::Error::Prometheus(e))
-                            })?;
-                    Ok((
-                        cmd.run::<dev_runtime::Block, chainx_executor::DevExecutor>(config),
-                        task_manager,
-                    ))
-                });
-            } else {
-                return runner.async_run(|config| {
-                    let registry = config.prometheus_config.as_ref().map(|cfg| &cfg.registry);
-                    let task_manager =
-                        sc_service::TaskManager::new(config.tokio_handle.clone(), registry)
-                            .map_err(|e| {
-                                sc_cli::Error::Service(sc_service::Error::Prometheus(e))
-                            })?;
-                    Ok((
-                        cmd.run::<chainx_runtime::Block, chainx_executor::ChainXExecutor>(config),
-                        task_manager,
-                    ))
-                });
-            }
-        }
-        #[cfg(not(feature = "try-runtime"))]
-        Some(Subcommand::TryRuntime) => Err("TryRuntime wasn't enabled when building the node. \
-            You can enable it with `--features try-runtime`."
-            .into()),
-    }
-}
+             runner.async_run(|config| {
+                 let registry = config.prometheus_config.as_ref().map(|cfg| &cfg.registry);
+                 let task_manager =
+                     sc_service::TaskManager::new(config.tokio_handle.clone(), registry)
+                         .map_err(|e| {
+                             sc_cli::Error::Service(sc_service::Error::Prometheus(e))
+                         })?;
+                 Ok((
+                     cmd.run::<dev_runtime::Block, chainx_executor::DevExecutor>(config),
+                     task_manager,
+                 ))
+             });
+             /*
+             if chain_spec.is_malan() {
+                 return runner.async_run(|config| {
+                     let registry = config.prometheus_config.as_ref().map(|cfg| &cfg.registry);
+                     let task_manager =
+                         sc_service::TaskManager::new(config.tokio_handle.clone(), registry)
+                             .map_err(|e| {
+                                 sc_cli::Error::Service(sc_service::Error::Prometheus(e))
+                             })?;
+                     Ok((
+                         cmd.run::<malan_runtime::Block, chainx_executor::MalanExecutor>(config),
+                         task_manager,
+                     ))
+                 });
+             } else if chain_spec.is_dev() {
+                 return runner.async_run(|config| {
+                     let registry = config.prometheus_config.as_ref().map(|cfg| &cfg.registry);
+                     let task_manager =
+                         sc_service::TaskManager::new(config.tokio_handle.clone(), registry)
+                             .map_err(|e| {
+                                 sc_cli::Error::Service(sc_service::Error::Prometheus(e))
+                             })?;
+                     Ok((
+                         cmd.run::<dev_runtime::Block, chainx_executor::DevExecutor>(config),
+                         task_manager,
+                     ))
+                 });
+             } else {
+                 return runner.async_run(|config| {
+                     let registry = config.prometheus_config.as_ref().map(|cfg| &cfg.registry);
+                     let task_manager =
+                         sc_service::TaskManager::new(config.tokio_handle.clone(), registry)
+                             .map_err(|e| {
+                                 sc_cli::Error::Service(sc_service::Error::Prometheus(e))
+                             })?;
+                     Ok((
+                         cmd.run::<chainx_runtime::Block, chainx_executor::ChainXExecutor>(config),
+                         task_manager,
+                     ))
+                 });
+             }*/
+         }
+         #[cfg(not(feature = "try-runtime"))]
+         Some(Subcommand::TryRuntime) => Err("TryRuntime wasn't enabled when building the node. \
+             You can enable it with `--features try-runtime`."
+             .into()),
+     }
+ }
