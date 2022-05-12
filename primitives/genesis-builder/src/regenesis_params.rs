@@ -40,15 +40,16 @@ pub struct AllParams<AccountId, Balance, AssetBalanceOf, StakingBalanceOf> {
 }
 
 impl<AccountId, Balance, AssetBalanceOf, StakingBalanceOf> Default
-    for AllParams<AccountId, Balance, AssetBalanceOf, StakingBalanceOf> {
+    for AllParams<AccountId, Balance, AssetBalanceOf, StakingBalanceOf>
+{
     fn default() -> Self {
         AllParams {
             balances: vec![],
             xassets: vec![],
             xstaking: XStakingParams {
                 validators: vec![],
-                nominators: vec![]
-            }
+                nominators: vec![],
+            },
         }
     }
 }

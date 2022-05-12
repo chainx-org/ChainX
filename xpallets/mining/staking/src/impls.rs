@@ -8,7 +8,7 @@ use frame_support::weights::Weight;
 use sp_arithmetic::traits::BaseArithmetic;
 use sp_core::crypto::UncheckedFrom;
 use sp_runtime::{traits::Hash, Perbill};
-use sp_staking::offence::{OffenceDetails, OnOffenceHandler, DisableStrategy};
+use sp_staking::offence::{DisableStrategy, OffenceDetails, OnOffenceHandler};
 
 use xp_mining_common::{
     generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight, WeightFactors, WeightType,
@@ -401,7 +401,7 @@ where
         offenders: &[OffenceDetails<Reporter<T>, Offender<T>>],
         slash_fraction: &[Perbill],
         slash_session: SessionIndex,
-        _disable_strategy: DisableStrategy
+        _disable_strategy: DisableStrategy,
     ) -> Weight {
         let offenders_tuple = offenders
             .iter()

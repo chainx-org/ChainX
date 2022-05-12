@@ -25,11 +25,11 @@ use chainx_primitives::{AccountId, AssetId, Balance, ReferralId, Signature};
 use dev_runtime::constants::{currency::DOLLARS, time::DAYS};
 use xp_assets_registrar::Chain;
 use xp_protocol::{NetworkType, PCX, PCX_DECIMALS, X_BTC};
-// use xpallet_gateway_bitcoin::{BtcParams, BtcTxVerifier};
-// use xpallet_gateway_common::types::TrusteeInfoConfig;
+use xpallet_gateway_bitcoin::{BtcParams, BtcTxVerifier};
+use xpallet_gateway_common::types::TrusteeInfoConfig;
 
-// use crate::genesis::assets::{genesis_assets, init_assets, pcx, AssetParams};
-// use crate::genesis::bitcoin::{btc_genesis_params, BtcGenesisParams, BtcTrusteeParams};
+use crate::genesis::assets::{genesis_assets, init_assets, pcx, AssetParams};
+use crate::genesis::bitcoin::{btc_genesis_params, BtcGenesisParams, BtcTrusteeParams};
 
 // use chainx_runtime as chainx;
 use dev_runtime as dev;
@@ -162,15 +162,15 @@ pub fn development_config() -> Result<DevChainSpec, String> {
             wasm_binary,
             vec![authority_keys_from_seed("Alice")],
             get_account_id_from_seed::<sr25519::Public>("Alice"),
-            // genesis_assets(),
-            // endowed_gen![
-            //     ("Alice", endowed_balance),
-            //     ("Bob", endowed_balance),
-            //     ("Alice//stash", endowed_balance),
-            //     ("Bob//stash", endowed_balance),
-            // ],
-            // btc_genesis_params(include_str!("res/btc_genesis_params_testnet.json")),
-            // crate::genesis::bitcoin::local_testnet_trustees(),
+            genesis_assets(),
+            endowed_gen![
+                ("Alice", endowed_balance),
+                ("Bob", endowed_balance),
+                ("Alice//stash", endowed_balance),
+                ("Bob//stash", endowed_balance),
+            ],
+            btc_genesis_params(include_str!("res/btc_genesis_params_testnet.json")),
+            crate::genesis::bitcoin::local_testnet_trustees(),
         )
     };
     Ok(DevChainSpec::from_genesis(
@@ -198,15 +198,15 @@ pub fn benchmarks_config() -> Result<DevChainSpec, String> {
             wasm_binary,
             vec![authority_keys_from_seed("Alice")],
             get_account_id_from_seed::<sr25519::Public>("Alice"),
-            // genesis_assets(),
-            // endowed_gen![
-            //     ("Alice", endowed_balance),
-            //     ("Bob", endowed_balance),
-            //     ("Alice//stash", endowed_balance),
-            //     ("Bob//stash", endowed_balance),
-            // ],
-            // btc_genesis_params(include_str!("res/btc_genesis_params_benchmarks.json")),
-            // crate::genesis::bitcoin::benchmarks_trustees(),
+            genesis_assets(),
+            endowed_gen![
+                ("Alice", endowed_balance),
+                ("Bob", endowed_balance),
+                ("Alice//stash", endowed_balance),
+                ("Bob//stash", endowed_balance),
+            ],
+            btc_genesis_params(include_str!("res/btc_genesis_params_benchmarks.json")),
+            crate::genesis::bitcoin::benchmarks_trustees(),
         )
     };
     Ok(DevChainSpec::from_genesis(
@@ -836,14 +836,13 @@ fn build_dev_genesis(
     wasm_binary: &[u8],
     initial_authorities: Vec<AuthorityKeysTuple>,
     root_key: AccountId,
-    // assets: Vec<AssetParams>,
-    // endowed: BTreeMap<AssetId, Vec<(AccountId, Balance)>>,
-    // bitcoin: BtcGenesisParams,
-    // trustees: Vec<(Chain, TrusteeInfoConfig, Vec<BtcTrusteeParams>)>,
+    assets: Vec<AssetParams>,
+    endowed: BTreeMap<AssetId, Vec<(AccountId, Balance)>>,
+    bitcoin: BtcGenesisParams,
+    trustees: Vec<(Chain, TrusteeInfoConfig, Vec<BtcTrusteeParams>)>,
 ) -> dev::GenesisConfig {
     const ENDOWMENT: Balance = 10_000_000 * DOLLARS;
     const STASH: Balance = 100 * DOLLARS;
-    /*
     let (assets, assets_restrictions) = init_assets(assets);
 
     let endowed_accounts = endowed
@@ -867,14 +866,6 @@ fn build_dev_genesis(
             (k, ENDOWMENT)
         })
         .collect::<Vec<_>>();
-
-    // The value of STASH balance will be reserved per phragmen member.
-    let phragmen_members = endowed_accounts
-        .iter()
-        .take((num_endowed_accounts + 1) / 2)
-        .cloned()
-        .map(|member| (member, STASH))
-        .collect();
 
     let tech_comm_members = endowed_accounts
         .iter()
@@ -902,9 +893,10 @@ fn build_dev_genesis(
             }
         })
         .expect("bitcoin trustees generation can not fail; qed");
-*/
     dev::GenesisConfig {
-        sudo: dev::SudoConfig { key: Some(root_key.clone()) },
+        sudo: dev::SudoConfig {
+            key: Some(root_key.clone()),
+        },
         system: dev::SystemConfig {
             code: wasm_binary.to_vec(),
         },
@@ -923,9 +915,7 @@ fn build_dev_genesis(
         },
         democracy: dev::DemocracyConfig::default(),
         treasury: Default::default(),
-        elections: dev::ElectionsConfig {
-            members: vec![],
-        },
+        elections: Default::default(),
         im_online: dev::ImOnlineConfig { keys: vec![] },
         authority_discovery: dev::AuthorityDiscoveryConfig { keys: vec![] },
         session: dev::SessionConfig {
@@ -945,32 +935,34 @@ fn build_dev_genesis(
                 })
                 .collect::<Vec<_>>(),
         },
-        balances: dev::BalancesConfig { balances: vec![(root_key, ENDOWMENT)] },
+        balances: dev::BalancesConfig {
+            balances: vec![(root_key, ENDOWMENT)],
+        },
         indices: dev::IndicesConfig { indices: vec![] },
         x_system: dev::XSystemConfig {
             network_props: NetworkType::Testnet,
         },
         x_assets_registrar: Default::default(),
         x_assets: Default::default(),
-        // x_gateway_common: dev::XGatewayCommonConfig { trustees },
-        // x_gateway_bitcoin: dev::XGatewayBitcoinConfig {
-        //     genesis_trustees: btc_genesis_trustees,
-        //     network_id: bitcoin.network,
-        //     confirmation_number: bitcoin.confirmation_number,
-        //     genesis_hash: bitcoin.hash(),
-        //     genesis_info: (bitcoin.header(), bitcoin.height),
-        //     params_info: BtcParams::new(
-        //         // for signet and regtest
-        //         545259519,            // max_bits
-        //         2 * 60 * 60,          // block_max_future
-        //         2 * 7 * 24 * 60 * 60, // target_timespan_seconds
-        //         10 * 60,              // target_spacing_seconds
-        //         4,                    // retargeting_factor
-        //     ), // retargeting_factor
-        //     btc_withdrawal_fee: 500000,
-        //     max_withdrawal_count: 100,
-        //     verifier: BtcTxVerifier::Recover,
-        // },
+        x_gateway_common: dev::XGatewayCommonConfig { trustees },
+        x_gateway_bitcoin: dev::XGatewayBitcoinConfig {
+            genesis_trustees: btc_genesis_trustees,
+            network_id: bitcoin.network,
+            confirmation_number: bitcoin.confirmation_number,
+            genesis_hash: bitcoin.hash(),
+            genesis_info: (bitcoin.header(), bitcoin.height),
+            params_info: BtcParams::new(
+                // for signet and regtest
+                545259519,            // max_bits
+                2 * 60 * 60,          // block_max_future
+                2 * 7 * 24 * 60 * 60, // target_timespan_seconds
+                10 * 60,              // target_spacing_seconds
+                4,                    // retargeting_factor
+            ), // retargeting_factor
+            btc_withdrawal_fee: 500000,
+            max_withdrawal_count: 100,
+            verifier: BtcTxVerifier::Recover,
+        },
         x_staking: dev::XStakingConfig {
             validator_count: 40,
             sessions_per_era: 12,

@@ -191,7 +191,7 @@ benchmarks! {
         let chain = Chain::Bitcoin;
     }: _(RawOrigin::Root, who.clone(), chain)
     verify {
-        assert_eq!(Pallet::<T>::trustee_admin(chain), who);
+        assert_eq!(Pallet::<T>::trustee_admin(chain).unwrap(), who);
     }
 
     set_trustee_admin_multiply {

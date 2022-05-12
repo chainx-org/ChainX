@@ -81,12 +81,12 @@ xpallet-assets-registrar = { path = "../../xpallets/assets-registrar", default-f
 xpallet-assets-rpc-runtime-api = { path = "../../xpallets/assets/rpc/runtime-api", default-features = false }
 #xpallet-dex-spot = { path = "../../xpallets/dex/spot", default-features = false }
 #xpallet-dex-spot-rpc-runtime-api = { path = "../../xpallets/dex/spot/rpc/runtime-api", default-features = false }
-#xpallet-gateway-bitcoin = { path = "../../xpallets/gateway/bitcoin", default-features = false }
-#xpallet-gateway-bitcoin-rpc-runtime-api = { path = "../../xpallets/gateway/bitcoin/rpc/runtime-api", default-features = false }
-#xpallet-gateway-common = { path = "../../xpallets/gateway/common", default-features = false }
-#xpallet-gateway-common-rpc-runtime-api = { path = "../../xpallets/gateway/common/rpc/runtime-api", default-features = false }
-#xpallet-gateway-records = { path = "../../xpallets/gateway/records", default-features = false }
-#xpallet-gateway-records-rpc-runtime-api = { path = "../../xpallets/gateway/records/rpc/runtime-api", default-features = false }
+xpallet-gateway-bitcoin = { path = "../../xpallets/gateway/bitcoin", default-features = false }
+xpallet-gateway-bitcoin-rpc-runtime-api = { path = "../../xpallets/gateway/bitcoin/rpc/runtime-api", default-features = false }
+xpallet-gateway-common = { path = "../../xpallets/gateway/common", default-features = false }
+xpallet-gateway-common-rpc-runtime-api = { path = "../../xpallets/gateway/common/rpc/runtime-api", default-features = false }
+xpallet-gateway-records = { path = "../../xpallets/gateway/records", default-features = false }
+xpallet-gateway-records-rpc-runtime-api = { path = "../../xpallets/gateway/records/rpc/runtime-api", default-features = false }
 xpallet-genesis-builder = { path = "../../xpallets/genesis-builder", default-features = false }
 xpallet-mining-asset = { path = "../../xpallets/mining/asset", default-features = false }
 xpallet-mining-asset-rpc-runtime-api = { path = "../../xpallets/mining/asset/rpc/runtime-api", default-features = false }
@@ -166,12 +166,12 @@ std = [
   "xpallet-assets-rpc-runtime-api/std",
 #  "xpallet-dex-spot/std",
 #  "xpallet-dex-spot-rpc-runtime-api/std",
-#  "xpallet-gateway-bitcoin/std",
-#  "xpallet-gateway-bitcoin-rpc-runtime-api/std",
-#  "xpallet-gateway-common/std",
-#  "xpallet-gateway-common-rpc-runtime-api/std",
-#  "xpallet-gateway-records/std",
-#  "xpallet-gateway-records-rpc-runtime-api/std",
+  "xpallet-gateway-bitcoin/std",
+  "xpallet-gateway-bitcoin-rpc-runtime-api/std",
+  "xpallet-gateway-common/std",
+  "xpallet-gateway-common-rpc-runtime-api/std",
+  "xpallet-gateway-records/std",
+  "xpallet-gateway-records-rpc-runtime-api/std",
   "xpallet-genesis-builder/std",
   "xpallet-mining-asset/std",
   "xpallet-mining-asset-rpc-runtime-api/std",
@@ -194,9 +194,9 @@ runtime-benchmarks = [
   "xpallet-assets/runtime-benchmarks",
   "xpallet-assets-registrar/runtime-benchmarks",
 #  "xpallet-dex-spot/runtime-benchmarks",
-#  "xpallet-gateway-bitcoin/runtime-benchmarks",
-#  "xpallet-gateway-common/runtime-benchmarks",
-#  "xpallet-gateway-records/runtime-benchmarks",
+  "xpallet-gateway-bitcoin/runtime-benchmarks",
+  "xpallet-gateway-common/runtime-benchmarks",
+  "xpallet-gateway-records/runtime-benchmarks",
   "xpallet-mining-asset/runtime-benchmarks",
   "xpallet-mining-staking/runtime-benchmarks",
 ]
@@ -235,9 +235,9 @@ try-runtime = [
   "xpallet-assets/try-runtime",
   "xpallet-assets-registrar/try-runtime",
 #  "xpallet-dex-spot/try-runtime",
-#  "xpallet-gateway-bitcoin/try-runtime",
-#  "xpallet-gateway-common/try-runtime",
-#  "xpallet-gateway-records/try-runtime",
+  "xpallet-gateway-bitcoin/try-runtime",
+  "xpallet-gateway-common/try-runtime",
+  "xpallet-gateway-records/try-runtime",
   "xpallet-mining-asset/try-runtime",
   "xpallet-mining-staking/try-runtime",
 ]

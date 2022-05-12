@@ -50,15 +50,15 @@ impl AccountExtractor<AccountId32, ReferralId> for OpReturnExtractor {
 #[test]
 fn test_opreturn_extractor() {
     use sp_core::{
-        crypto::{set_default_ss58_version, Ss58AddressFormat, UncheckedInto},
+        crypto::{set_default_ss58_version, Ss58AddressFormatRegistry, UncheckedInto},
         H256,
     };
 
     let addr = "f778a69d4166401048acb0f7b2625e9680609f8859c78e3d28e2549f84f0269a"
         .parse::<H256>()
         .unwrap();
-    let mainnet = Ss58AddressFormat::ChainXAccount;
-    let testnet = Ss58AddressFormat::SubstrateAccount;
+    let mainnet = Ss58AddressFormatRegistry::ChainxAccount.into();
+    let testnet = Ss58AddressFormatRegistry::SubstrateAccount.into();
 
     {
         set_default_ss58_version(mainnet);
@@ -86,7 +86,7 @@ fn test_opreturn_extractor() {
             "5VEW3R1T4LR3kDhYwXeeCnYrHRwRaH7E9V1KprypBe68XmY4".as_bytes(),
         );
         #[cfg(feature = "ss58check")]
-        assert_eq!(result, None);
+        assert_eq!(result, Some((addr.unchecked_into(), None)));
         #[cfg(not(feature = "ss58check"))]
         assert_eq!(result, Some((addr.unchecked_into(), None)));
     }

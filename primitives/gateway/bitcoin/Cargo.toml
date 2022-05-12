@@ -21,7 +21,7 @@ chainx-primitives = { path = "../../../primitives", default-features = false }
 xp-gateway-common = { path = "../../gateway/common", default-features = false }
 
 # light-bitcoin
-light-bitcoin = { git = "https://github.com/chainx-org/light-bitcoin", branch = "upgrade-2021", default-features = false }
+light-bitcoin = { git = "https://github.com/chainx-org/light-bitcoin", branch = "develop-2022", default-features = false }
 
 [features]
 default = ["std"]

@@ -171,11 +171,11 @@ impl<T: Config> TrusteeInfoUpdate for Pallet<T> {
     fn update_trustee_sig_record(chain: Chain, script: &[u8], withdraw_amount: u64) {
         let signed_trustees = Self::agg_pubkey_info(chain, script);
         signed_trustees.into_iter().for_each(|trustee| {
-            let amount = if trustee == Self::trustee_admin(chain) {
+            let amount = if Some(trustee.clone()) == Self::trustee_admin(chain) {
                 withdraw_amount
                     .saturating_mul(Self::trustee_admin_multiply(chain))
                     .checked_div(10)
-                    .unwrap_or(0)
+                    .unwrap_or(withdraw_amount)
             } else {
                 withdraw_amount
             };

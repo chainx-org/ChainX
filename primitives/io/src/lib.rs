@@ -58,6 +58,7 @@ pub trait Ss58Codec {
 
 #[test]
 fn ss58_check() {
+    use sp_core::crypto::{set_default_ss58_version, Ss58AddressFormat};
     let addr42 = b"5CE864FPj1Z48qrvdCAQ48iTfkcBFMoUWt2UAnR4Np22kZFM";
     let addr44 = b"5PoSc3LCVbJWSxfrSFvSowFJxitmMj4Wtm8jQ9hfJXD1K5vF";
     let pubkey =

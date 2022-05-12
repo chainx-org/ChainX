@@ -9,7 +9,7 @@ mod chain_spec;
 mod cli;
 mod command;
 mod config;
-// mod genesis;
+mod genesis;
 mod logger;
 
 pub use sc_cli::Result;

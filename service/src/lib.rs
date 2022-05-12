@@ -103,7 +103,9 @@ where
     let client = Arc::new(client);
 
     let telemetry = telemetry.map(|(worker, telemetry)| {
-        task_manager.spawn_handle().spawn("telemetry", None, worker.run());
+        task_manager
+            .spawn_handle()
+            .spawn("telemetry", None, worker.run());
         telemetry
     });
 
@@ -271,7 +273,9 @@ where
     config
         .network
         .extra_sets
-        .push(sc_finality_grandpa::grandpa_peers_set_config(grandpa_protocol_name.clone()));
+        .push(sc_finality_grandpa::grandpa_peers_set_config(
+            grandpa_protocol_name.clone(),
+        ));
 
     let warp_sync = Arc::new(sc_finality_grandpa::warp_proof::NetworkProvider::new(
         backend.clone(),
@@ -375,9 +379,11 @@ where
         };
 
         let babe = sc_consensus_babe::start_babe(babe_config)?;
-        task_manager
-            .spawn_essential_handle()
-            .spawn_blocking("babe-proposer", Some("block-authoring"),babe);
+        task_manager.spawn_essential_handle().spawn_blocking(
+            "babe-proposer",
+            Some("block-authoring"),
+            babe,
+        );
     }
 
     // Spawn authority discovery module.
@@ -430,7 +436,7 @@ where
         keystore,
         local_role: role,
         telemetry: telemetry.as_ref().map(|x| x.handle()),
-        protocol_name: grandpa_protocol_name
+        protocol_name: grandpa_protocol_name,
     };
 
     if enable_grandpa {

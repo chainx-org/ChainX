@@ -8,6 +8,7 @@ use codec::{Decode, Encode};
 use frame_support::{
     parameter_types, sp_io,
     traits::{ChangeMembers, GenesisBuild, LockIdentifier, UnixTime},
+    PalletId,
 };
 use frame_system::EnsureSigned;
 use light_bitcoin::keys::{Address, Public};
@@ -18,7 +19,7 @@ use sp_io::hashing::blake2_256;
 use sp_keyring::sr25519;
 use sp_runtime::{
     testing::Header,
-    traits::{BlakeTwo256, IdentityLookup, Saturating},
+    traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, Saturating},
     AccountId32, DispatchError, DispatchResult,
 };
 
@@ -92,6 +93,7 @@ impl frame_system::Config for Test {
     type SystemWeightInfo = ();
     type SS58Prefix = SS58Prefix;
     type OnSetCode = ();
+    type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 parameter_types! {
@@ -209,10 +211,21 @@ impl xpallet_assets_registrar::Config for Test {
     type WeightInfo = ();
 }
 
+parameter_types! {
+    pub const TreasuryPalletId: PalletId = PalletId(*b"pcx/trsy");
+}
+
+pub struct SimpleTreasuryAccount;
+impl xpallet_support::traits::TreasuryAccount<AccountId> for SimpleTreasuryAccount {
+    fn treasury_account() -> AccountId {
+        TreasuryPalletId::get().into_account()
+    }
+}
+
 impl xpallet_assets::Config for Test {
     type Event = ();
     type Currency = Balances;
-    type TreasuryAccount = ();
+    type TreasuryAccount = SimpleTreasuryAccount;
     type OnCreatedAccount = frame_system::Provider<Test>;
     type OnAssetChanged = ();
     type WeightInfo = ();
@@ -262,7 +275,7 @@ pub struct MultisigAddr;
 impl MultisigAddressFor<AccountId> for MultisigAddr {
     fn calc_multisig(who: &[AccountId], threshold: u16) -> AccountId {
         let entropy = (b"modlpy/utilisuba", who, threshold).using_encoded(blake2_256);
-        AccountId::decode(&mut &entropy[..]).unwrap_or_default()
+        AccountId::decode(&mut &entropy[..]).unwrap()
     }
 }
 pub struct AlwaysValidator;
@@ -444,7 +457,7 @@ impl<T: xpallet_gateway_bitcoin::Config>
                     .into_iter()
                     .zip(vec![1u64; trustee_num])
                     .collect::<Vec<_>>(),
-                multi_account: Some(T::AccountId::default()),
+                multi_account: None,
                 start_height: Some(start_height),
                 threshold: sig_num as u16,
                 hot_address: hot_trustee_addr_info,

@@ -88,19 +88,19 @@ where
     C::Api: xpallet_assets_rpc_runtime_api::XAssetsApi<Block, AccountId, Balance>,
     // C::Api:
     //     xpallet_dex_spot_rpc_runtime_api::XSpotApi<Block, AccountId, Balance, BlockNumber, Balance>,
-    // C::Api: xpallet_gateway_bitcoin_rpc_runtime_api::XGatewayBitcoinApi<Block, AccountId>,
-    // C::Api: xpallet_gateway_common_rpc_runtime_api::XGatewayCommonApi<
-    //     Block,
-    //     AccountId,
-    //     Balance,
-    //     BlockNumber,
-    // >,
-    // C::Api: xpallet_gateway_records_rpc_runtime_api::XGatewayRecordsApi<
-    //     Block,
-    //     AccountId,
-    //     Balance,
-    //     BlockNumber,
-    // >,
+    C::Api: xpallet_gateway_bitcoin_rpc_runtime_api::XGatewayBitcoinApi<Block, AccountId>,
+    C::Api: xpallet_gateway_common_rpc_runtime_api::XGatewayCommonApi<
+        Block,
+        AccountId,
+        Balance,
+        BlockNumber,
+    >,
+    C::Api: xpallet_gateway_records_rpc_runtime_api::XGatewayRecordsApi<
+        Block,
+        AccountId,
+        Balance,
+        BlockNumber,
+    >,
     C::Api: xpallet_mining_staking_rpc_runtime_api::XStakingApi<
         Block,
         AccountId,
@@ -125,9 +125,9 @@ where
     use substrate_frame_rpc_system::{FullSystem, SystemApi};
     use xpallet_assets_rpc::{Assets, XAssetsApi};
     // use xpallet_dex_spot_rpc::{XSpot, XSpotApi};
-    // use xpallet_gateway_bitcoin_rpc::{XGatewayBitcoin, XGatewayBitcoinApi};
-    // use xpallet_gateway_common_rpc::{XGatewayCommon, XGatewayCommonApi};
-    // use xpallet_gateway_records_rpc::{XGatewayRecords, XGatewayRecordsApi};
+    use xpallet_gateway_bitcoin_rpc::{XGatewayBitcoin, XGatewayBitcoinApi};
+    use xpallet_gateway_common_rpc::{XGatewayCommon, XGatewayCommonApi};
+    use xpallet_gateway_records_rpc::{XGatewayRecords, XGatewayRecordsApi};
     use xpallet_mining_asset_rpc::{XMiningAsset, XMiningAssetApi};
     use xpallet_mining_staking_rpc::{XStaking, XStakingApi};
     use xpallet_transaction_fee_rpc::{XTransactionFee, XTransactionFeeApi};
@@ -200,13 +200,13 @@ where
     io.extend_with(XMiningAssetApi::to_delegate(XMiningAsset::new(
         client.clone(),
     )));
-    // io.extend_with(XGatewayBitcoinApi::to_delegate(XGatewayBitcoin::new(
-    //     client.clone(),
-    // )));
-    // io.extend_with(XGatewayRecordsApi::to_delegate(XGatewayRecords::new(
-    //     client.clone(),
-    // )));
-    // io.extend_with(XGatewayCommonApi::to_delegate(XGatewayCommon::new(client)));
+    io.extend_with(XGatewayBitcoinApi::to_delegate(XGatewayBitcoin::new(
+        client.clone(),
+    )));
+    io.extend_with(XGatewayRecordsApi::to_delegate(XGatewayRecords::new(
+        client.clone(),
+    )));
+    io.extend_with(XGatewayCommonApi::to_delegate(XGatewayCommon::new(client)));
 
     Ok(io)
 }

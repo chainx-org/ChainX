@@ -567,28 +567,31 @@ impl<T: Config> Pallet<T> {
         let mut exists = false;
 
         let existed = AssetBalance::<T>::contains_key(who, id);
-        AssetBalance::<T>::mutate(who, id, |balances: &mut BTreeMap<AssetType, BalanceOf<T>>| {
-            match balances.entry(type_) {
-                Occupied(mut entry) => {
-                    original = *entry.get();
+        AssetBalance::<T>::mutate(
+            who,
+            id,
+            |balances: &mut BTreeMap<AssetType, BalanceOf<T>>| {
+                match balances.entry(type_) {
+                    Occupied(mut entry) => {
+                        original = *entry.get();
 
-                    if new_balance == Zero::zero() {
-                        // remove Zero balance to save space
-                        entry.remove();
-
-                    } else {
-                        // update balance
+                        if new_balance == Zero::zero() {
+                            // remove Zero balance to save space
+                            entry.remove();
+                        } else {
+                            // update balance
+                            entry.insert(new_balance);
+                        }
+                    }
+                    Vacant(entry) => {
                         entry.insert(new_balance);
                     }
-                }
-                Vacant(entry) => {
-                    entry.insert(new_balance);
-                }
-            };
+                };
 
-            // if is_empty(), means not exists
-            exists = !balances.is_empty();
-        });
+                // if is_empty(), means not exists
+                exists = !balances.is_empty();
+            },
+        );
 
         if !existed && exists {
             Self::try_new_account(who);

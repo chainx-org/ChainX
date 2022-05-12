@@ -23,7 +23,19 @@ const CHAINS: [Chain; 4] = [
 ];
 
 /// The blockchain types.
-#[derive(PartialEq, Eq, Ord, PartialOrd, Clone, Copy, Encode, Decode, RuntimeDebug, MaxEncodedLen, TypeInfo)]
+#[derive(
+    PartialEq,
+    Eq,
+    Ord,
+    PartialOrd,
+    Clone,
+    Copy,
+    Encode,
+    Decode,
+    RuntimeDebug,
+    MaxEncodedLen,
+    TypeInfo,
+)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum Chain {
     /// ChainX

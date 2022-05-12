@@ -53,14 +53,15 @@ use xpallet_support::traits::MultisigAddressFor;
 pub use frame_support::{
     construct_runtime, debug, parameter_types,
     traits::{
-        Contains, Currency, Get, Imbalance, InstanceFilter, KeyOwnerProofSystem, LockIdentifier,
-        OnUnbalanced, Randomness, ConstBool, ConstU32, EnsureOneOf, EqualPrivilegeOnly, OnRuntimeUpgrade
+        ConstBool, ConstU32, Contains, Currency, EnsureOneOf, EqualPrivilegeOnly, Get, Imbalance,
+        InstanceFilter, KeyOwnerProofSystem, LockIdentifier, OnRuntimeUpgrade, OnUnbalanced,
+        Randomness,
     },
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
         Weight,
     },
-    StorageValue, PalletId
+    PalletId, StorageValue,
 };
 pub use pallet_timestamp::Call as TimestampCall;
 
@@ -76,19 +77,19 @@ pub use xp_runtime::Memo;
 pub use xpallet_assets::{
     AssetInfo, AssetRestrictions, AssetType, Chain, TotalAssetInfo, WithdrawalLimit,
 };
-// #[cfg(feature = "std")]
-// pub use xpallet_gateway_bitcoin::h256_rev;
-// pub use xpallet_gateway_bitcoin::{
-//     hash_rev, types::BtcHeaderInfo, BtcHeader, BtcNetwork, BtcParams, BtcTxVerifier,
-//     BtcWithdrawalProposal, H256,
-// };
-// pub use xpallet_gateway_common::{
-//     trustees,
-//     types::{
-//         GenericTrusteeIntentionProps, GenericTrusteeSessionInfo, ScriptInfo, TrusteeInfoConfig,
-//     },
-// };
-// pub use xpallet_gateway_records::{Withdrawal, WithdrawalRecordId};
+#[cfg(feature = "std")]
+pub use xpallet_gateway_bitcoin::h256_rev;
+pub use xpallet_gateway_bitcoin::{
+    hash_rev, types::BtcHeaderInfo, BtcHeader, BtcNetwork, BtcParams, BtcTxVerifier,
+    BtcWithdrawalProposal, Compact, H256,
+};
+pub use xpallet_gateway_common::{
+    trustees,
+    types::{
+        GenericTrusteeIntentionProps, GenericTrusteeSessionInfo, ScriptInfo, TrusteeInfoConfig,
+    },
+};
+pub use xpallet_gateway_records::{Withdrawal, WithdrawalRecordId};
 pub use xpallet_mining_asset::MiningWeight;
 pub use xpallet_mining_staking::VoteWeight;
 
@@ -989,7 +990,7 @@ impl xpallet_assets::Config for Runtime {
     type OnAssetChanged = XMiningAsset;
     type WeightInfo = xpallet_assets::weights::SubstrateWeight<Runtime>;
 }
-/*
+
 impl xpallet_gateway_records::Config for Runtime {
     type Event = Event;
     type WeightInfo = xpallet_gateway_records::weights::SubstrateWeight<Runtime>;
@@ -1007,7 +1008,7 @@ impl xpallet_gateway_common::Config for Runtime {
     type Validator = XStaking;
     type DetermineMultisigAddress = MultisigProvider;
     type CouncilOrigin =
-        pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, CouncilCollective>;
+        pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 2, 3>;
     type Bitcoin = XGatewayBitcoin;
     type BitcoinTrustee = XGatewayBitcoin;
     type BitcoinTrusteeSessionProvider = trustees::bitcoin::BtcTrusteeSessionManager<Runtime>;
@@ -1020,7 +1021,7 @@ impl xpallet_gateway_bitcoin::Config for Runtime {
     type Event = Event;
     type UnixTime = Timestamp;
     type CouncilOrigin =
-        pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, CouncilCollective>;
+        pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 2, 3>;
     type AccountExtractor = xp_gateway_bitcoin::OpReturnExtractor;
     type TrusteeSessionProvider = trustees::bitcoin::BtcTrusteeSessionManager<Runtime>;
     type TrusteeInfoUpdate = XGatewayCommon;
@@ -1029,12 +1030,12 @@ impl xpallet_gateway_bitcoin::Config for Runtime {
     type WeightInfo = xpallet_gateway_bitcoin::weights::SubstrateWeight<Runtime>;
 }
 
-impl xpallet_dex_spot::Config for Runtime {
-    type Event = Event;
-    type Price = Balance;
-    type WeightInfo = xpallet_dex_spot::weights::SubstrateWeight<Runtime>;
-}
-*/
+//impl xpallet_dex_spot::Config for Runtime {
+//    type Event = Event;
+//    type Price = Balance;
+//    type WeightInfo = xpallet_dex_spot::weights::SubstrateWeight<Runtime>;
+//}
+
 pub struct SimpleTreasuryAccount;
 impl xpallet_support::traits::TreasuryAccount<AccountId> for SimpleTreasuryAccount {
     fn treasury_account() -> AccountId {
@@ -1067,9 +1068,8 @@ impl xpallet_mining_staking::Config for Runtime {
 pub struct ReferralGetter;
 impl xpallet_mining_asset::GatewayInterface<AccountId> for ReferralGetter {
     fn referral_of(who: &AccountId, asset_id: AssetId) -> Option<AccountId> {
-        // use xpallet_gateway_common::traits::ReferralBinding;
-        // XGatewayCommon::referral(&asset_id, who)
-        None
+        use xpallet_gateway_common::traits::ReferralBinding;
+        XGatewayCommon::referral(&asset_id, who)
     }
 }
 
@@ -1138,15 +1138,15 @@ construct_runtime!(
         // Mining, must be after XAssets.
         XStaking: xpallet_mining_staking::{Pallet, Call, Storage, Event<T>, Config<T>} = 27,
         XMiningAsset: xpallet_mining_asset::{Pallet, Call, Storage, Event<T>, Config<T>} = 28,
-/*
+
         // Crypto gateway stuff.
         XGatewayRecords: xpallet_gateway_records::{Pallet, Call, Storage, Event<T>} = 29,
         XGatewayCommon: xpallet_gateway_common::{Pallet, Call, Storage, Event<T>, Config<T>} = 30,
         XGatewayBitcoin: xpallet_gateway_bitcoin::{Pallet, Call, Storage, Event<T>, Config<T>} = 31,
 
         // DEX
-        XSpot: xpallet_dex_spot::{Pallet, Call, Storage, Event<T>, Config<T>} = 32,
-*/
+        // XSpot: xpallet_dex_spot::{Pallet, Call, Storage, Event<T>, Config<T>} = 32,
+
         XGenesisBuilder: xpallet_genesis_builder::{Pallet, Config<T>} = 33,
 
         // It might be possible to merge this module into pallet_transaction_payment in future, thus
@@ -1464,7 +1464,7 @@ impl_runtime_apis! {
             XMiningAsset::miner_ledger(who)
         }
     }
-/*
+
     impl xpallet_gateway_records_rpc_runtime_api::XGatewayRecordsApi<Block, AccountId, Balance, BlockNumber> for Runtime {
         fn withdrawal_list() -> BTreeMap<u32, Withdrawal<AccountId, Balance, BlockNumber>> {
             XGatewayRecords::withdrawal_list()
@@ -1559,7 +1559,7 @@ impl_runtime_apis! {
             Ok(info)
         }
     }
-*/
+
     #[cfg(feature = "try-runtime")]
     impl frame_try_runtime::TryRuntime<Block> for Runtime {
         fn on_runtime_upgrade() -> (Weight, Weight) {
@@ -1629,10 +1629,10 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, xpallet_assets_registrar, XAssetsRegistrar);
             add_benchmark!(params, batches, xpallet_mining_asset, XMiningAsset);
             add_benchmark!(params, batches, xpallet_mining_staking, XStaking);
-            // add_benchmark!(params, batches, xpallet_gateway_records, XGatewayRecords);
-            // add_benchmark!(params, batches, xpallet_gateway_common, XGatewayCommon);
-            // add_benchmark!(params, batches, xpallet_gateway_bitcoin, XGatewayBitcoin);
-            add_benchmark!(params, batches, xpallet_dex_spot, XSpot);
+            add_benchmark!(params, batches, xpallet_gateway_records, XGatewayRecords);
+            add_benchmark!(params, batches, xpallet_gateway_common, XGatewayCommon);
+            add_benchmark!(params, batches, xpallet_gateway_bitcoin, XGatewayBitcoin);
+            // add_benchmark!(params, batches, xpallet_dex_spot, XSpot);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
             Ok(batches)

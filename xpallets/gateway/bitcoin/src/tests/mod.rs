@@ -4,7 +4,7 @@ mod header;
 mod trustee;
 mod tx;
 
-use sp_core::crypto::{set_default_ss58_version, Ss58AddressFormat};
+use sp_core::crypto::{set_default_ss58_version, Ss58AddressFormatRegistry};
 
 use xp_gateway_common::AccountExtractor;
 
@@ -23,7 +23,7 @@ pub fn test_verify_btc_address() {
 
 #[test]
 fn test_account_ss58_version() {
-    set_default_ss58_version(Ss58AddressFormat::ChainXAccount);
+    set_default_ss58_version(Ss58AddressFormatRegistry::ChainxAccount.into());
     let script = Script::from(
         "5Uj3ehamDZWPfgA8iAZenhcAmPDakjf4aMbkBB4dXVvjoW6x@33"
             .as_bytes()

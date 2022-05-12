@@ -812,6 +812,8 @@ dependencies = [
  "xp-assets-registrar",
  "xp-genesis-builder",
  "xp-protocol",
+ "xpallet-gateway-bitcoin",
+ "xpallet-gateway-common",
 ]
 
 [[package]]
@@ -875,6 +877,12 @@ dependencies = [
  "xpallet-assets-rpc-runtime-api",
  "xpallet-dex-spot-rpc",
  "xpallet-dex-spot-rpc-runtime-api",
+ "xpallet-gateway-bitcoin-rpc",
+ "xpallet-gateway-bitcoin-rpc-runtime-api",
+ "xpallet-gateway-common-rpc",
+ "xpallet-gateway-common-rpc-runtime-api",
+ "xpallet-gateway-records-rpc",
+ "xpallet-gateway-records-rpc-runtime-api",
  "xpallet-mining-asset-rpc",
  "xpallet-mining-asset-rpc-runtime-api",
  "xpallet-mining-staking-rpc",
@@ -944,6 +952,9 @@ dependencies = [
  "sp-transaction-pool",
  "xpallet-assets-rpc-runtime-api",
  "xpallet-dex-spot-rpc-runtime-api",
+ "xpallet-gateway-bitcoin-rpc-runtime-api",
+ "xpallet-gateway-common-rpc-runtime-api",
+ "xpallet-gateway-records-rpc-runtime-api",
  "xpallet-mining-asset-rpc-runtime-api",
  "xpallet-mining-staking-rpc-runtime-api",
  "xpallet-transaction-fee-rpc-runtime-api",
@@ -1463,6 +1474,12 @@ dependencies = [
  "xpallet-assets",
  "xpallet-assets-registrar",
  "xpallet-assets-rpc-runtime-api",
+ "xpallet-gateway-bitcoin",
+ "xpallet-gateway-bitcoin-rpc-runtime-api",
+ "xpallet-gateway-common",
+ "xpallet-gateway-common-rpc-runtime-api",
+ "xpallet-gateway-records",
+ "xpallet-gateway-records-rpc-runtime-api",
  "xpallet-genesis-builder",
  "xpallet-mining-asset",
  "xpallet-mining-asset-rpc-runtime-api",
@@ -3662,15 +3679,15 @@ dependencies = [
 [[package]]
 name = "libsecp256k1"
 version = "0.7.0"
-source = "git+https://github.com/chainx-org/libsecp256k1?branch=upgrade-2021#7dc70232c6d8e1d3a746c1eaeb701410b61609c2"
+source = "git+https://github.com/chainx-org/libsecp256k1?branch=develop-2022#7dc70232c6d8e1d3a746c1eaeb701410b61609c2"
 dependencies = [
  "arrayref",
  "base64",
  "digest 0.9.0",
  "hmac-drbg",
- "libsecp256k1-core 0.3.0 (git+https://github.com/chainx-org/libsecp256k1?branch=upgrade-2021)",
- "libsecp256k1-gen-ecmult 0.3.0 (git+https://github.com/chainx-org/libsecp256k1?branch=upgrade-2021)",
- "libsecp256k1-gen-genmult 0.3.0 (git+https://github.com/chainx-org/libsecp256k1?branch=upgrade-2021)",
+ "libsecp256k1-core 0.3.0 (git+https://github.com/chainx-org/libsecp256k1?branch=develop-2022)",
+ "libsecp256k1-gen-ecmult 0.3.0 (git+https://github.com/chainx-org/libsecp256k1?branch=develop-2022)",
+ "libsecp256k1-gen-genmult 0.3.0 (git+https://github.com/chainx-org/libsecp256k1?branch=develop-2022)",
  "rand 0.8.5",
  "serde",
  "sha2 0.9.9",
@@ -3691,7 +3708,7 @@ dependencies = [
 [[package]]
 name = "libsecp256k1-core"
 version = "0.3.0"
-source = "git+https://github.com/chainx-org/libsecp256k1?branch=upgrade-2021#7dc70232c6d8e1d3a746c1eaeb701410b61609c2"
+source = "git+https://github.com/chainx-org/libsecp256k1?branch=develop-2022#7dc70232c6d8e1d3a746c1eaeb701410b61609c2"
 dependencies = [
  "crunchy",
  "digest 0.9.0",
@@ -3712,9 +3729,9 @@ dependencies = [
 [[package]]
 name = "libsecp256k1-gen-ecmult"
 version = "0.3.0"
-source = "git+https://github.com/chainx-org/libsecp256k1?branch=upgrade-2021#7dc70232c6d8e1d3a746c1eaeb701410b61609c2"
+source = "git+https://github.com/chainx-org/libsecp256k1?branch=develop-2022#7dc70232c6d8e1d3a746c1eaeb701410b61609c2"
 dependencies = [
- "libsecp256k1-core 0.3.0 (git+https://github.com/chainx-org/libsecp256k1?branch=upgrade-2021)",
+ "libsecp256k1-core 0.3.0 (git+https://github.com/chainx-org/libsecp256k1?branch=develop-2022)",
 ]
 
 [[package]]
@@ -3729,9 +3746,9 @@ dependencies = [
 [[package]]
 name = "libsecp256k1-gen-genmult"
 version = "0.3.0"
-source = "git+https://github.com/chainx-org/libsecp256k1?branch=upgrade-2021#7dc70232c6d8e1d3a746c1eaeb701410b61609c2"
+source = "git+https://github.com/chainx-org/libsecp256k1?branch=develop-2022#7dc70232c6d8e1d3a746c1eaeb701410b61609c2"
 dependencies = [
- "libsecp256k1-core 0.3.0 (git+https://github.com/chainx-org/libsecp256k1?branch=upgrade-2021)",
+ "libsecp256k1-core 0.3.0 (git+https://github.com/chainx-org/libsecp256k1?branch=develop-2022)",
 ]
 
 [[package]]
@@ -3748,7 +3765,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=upgrade-2021#21fdfaea1ce4788ac96ea620c2026f9ae78b7cdd"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=develop-2022#eb706fa95184b5f05fb4365b79b54e52995d4d6c"
 dependencies = [
  "light-bitcoin-chain",
  "light-bitcoin-crypto",
@@ -3763,7 +3780,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-chain"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=upgrade-2021#21fdfaea1ce4788ac96ea620c2026f9ae78b7cdd"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=develop-2022#eb706fa95184b5f05fb4365b79b54e52995d4d6c"
 dependencies = [
  "hex",
  "light-bitcoin-crypto",
@@ -3777,7 +3794,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-crypto"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=upgrade-2021#21fdfaea1ce4788ac96ea620c2026f9ae78b7cdd"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=develop-2022#eb706fa95184b5f05fb4365b79b54e52995d4d6c"
 dependencies = [
  "digest 0.9.0",
  "light-bitcoin-primitives",
@@ -3790,18 +3807,17 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-keys"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=upgrade-2021#21fdfaea1ce4788ac96ea620c2026f9ae78b7cdd"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=develop-2022#eb706fa95184b5f05fb4365b79b54e52995d4d6c"
 dependencies = [
  "arrayref",
  "bitcoin-bech32",
  "bs58 0.4.0",
  "digest 0.9.0",
  "hex",
- "libsecp256k1 0.7.0 (git+https://github.com/chainx-org/libsecp256k1?branch=upgrade-2021)",
+ "libsecp256k1 0.7.0 (git+https://github.com/chainx-org/libsecp256k1?branch=develop-2022)",
  "light-bitcoin-crypto",
  "light-bitcoin-primitives",
  "light-bitcoin-serialization",
- "musig2",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -3811,7 +3827,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-mast"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=upgrade-2021#21fdfaea1ce4788ac96ea620c2026f9ae78b7cdd"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=develop-2022#eb706fa95184b5f05fb4365b79b54e52995d4d6c"
 dependencies = [
  "arrayref",
  "bitcoin-bech32",
@@ -3819,20 +3835,23 @@ dependencies = [
  "core2",
  "digest 0.9.0",
  "hex",
+ "lazy_static",
+ "libsecp256k1 0.7.0 (git+https://github.com/chainx-org/libsecp256k1?branch=develop-2022)",
  "light-bitcoin-keys",
  "light-bitcoin-script",
  "light-bitcoin-serialization",
- "musig2",
  "parity-scale-codec",
+ "rand_core 0.6.3",
  "rayon",
  "scale-info",
+ "serde",
  "sha2 0.9.9",
 ]
 
 [[package]]
 name = "light-bitcoin-merkle"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=upgrade-2021#21fdfaea1ce4788ac96ea620c2026f9ae78b7cdd"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=develop-2022#eb706fa95184b5f05fb4365b79b54e52995d4d6c"
 dependencies = [
  "light-bitcoin-chain",
  "light-bitcoin-primitives",
@@ -3844,7 +3863,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-primitives"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=upgrade-2021#21fdfaea1ce4788ac96ea620c2026f9ae78b7cdd"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=develop-2022#eb706fa95184b5f05fb4365b79b54e52995d4d6c"
 dependencies = [
  "byteorder",
  "fixed-hash",
@@ -3860,10 +3879,10 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-script"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=upgrade-2021#21fdfaea1ce4788ac96ea620c2026f9ae78b7cdd"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=develop-2022#eb706fa95184b5f05fb4365b79b54e52995d4d6c"
 dependencies = [
  "hex",
- "libsecp256k1 0.7.0 (git+https://github.com/chainx-org/libsecp256k1?branch=upgrade-2021)",
+ "libsecp256k1 0.7.0 (git+https://github.com/chainx-org/libsecp256k1?branch=develop-2022)",
  "light-bitcoin-chain",
  "light-bitcoin-crypto",
  "light-bitcoin-keys",
@@ -3877,7 +3896,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-serialization"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=upgrade-2021#21fdfaea1ce4788ac96ea620c2026f9ae78b7cdd"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=develop-2022#eb706fa95184b5f05fb4365b79b54e52995d4d6c"
 dependencies = [
  "light-bitcoin-primitives",
  "light-bitcoin-serialization-derive",
@@ -3888,7 +3907,7 @@ dependencies = [
 [[package]]
 name = "light-bitcoin-serialization-derive"
 version = "0.2.0"
-source = "git+https://github.com/chainx-org/light-bitcoin?branch=upgrade-2021#21fdfaea1ce4788ac96ea620c2026f9ae78b7cdd"
+source = "git+https://github.com/chainx-org/light-bitcoin?branch=develop-2022#eb706fa95184b5f05fb4365b79b54e52995d4d6c"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4314,25 +4333,6 @@ dependencies = [
  "pin-project 1.0.10",
  "smallvec",
  "unsigned-varint 0.7.1",
-]
-
-[[package]]
-name = "musig2"
-version = "0.1.0"
-source = "git+https://github.com/chainx-org/Musig2?branch=upgrade-2021#27f06152c31da210f0c27f06c43dc5bc655e4d93"
-dependencies = [
- "arrayref",
- "digest 0.9.0",
- "hex",
- "lazy_static",
- "libsecp256k1 0.7.0 (git+https://github.com/chainx-org/libsecp256k1?branch=upgrade-2021)",
- "log",
- "parity-scale-codec",
- "rand 0.8.5",
- "rand_core 0.6.3",
- "scale-info",
- "serde",
- "sha2 0.9.9",
 ]
 
 [[package]]
@@ -9671,6 +9671,192 @@ dependencies = [
  "sp-api",
  "sp-std",
  "xpallet-dex-spot",
+]
+
+[[package]]
+name = "xpallet-gateway-bitcoin"
+version = "4.3.0"
+dependencies = [
+ "bs58 0.3.1",
+ "chainx-primitives",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex",
+ "hex-literal",
+ "lazy_static",
+ "light-bitcoin",
+ "pallet-balances",
+ "pallet-elections-phragmen",
+ "pallet-multisig",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "serde_json",
+ "sp-core",
+ "sp-io",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std",
+ "xp-assets-registrar",
+ "xp-gateway-bitcoin",
+ "xp-gateway-common",
+ "xp-protocol",
+ "xpallet-assets",
+ "xpallet-assets-registrar",
+ "xpallet-gateway-common",
+ "xpallet-gateway-records",
+ "xpallet-support",
+]
+
+[[package]]
+name = "xpallet-gateway-bitcoin-rpc"
+version = "4.3.0"
+dependencies = [
+ "hex",
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "parity-scale-codec",
+ "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-runtime",
+ "xp-rpc",
+ "xpallet-gateway-bitcoin-rpc-runtime-api",
+]
+
+[[package]]
+name = "xpallet-gateway-bitcoin-rpc-runtime-api"
+version = "4.3.0"
+dependencies = [
+ "chainx-primitives",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-runtime",
+ "sp-std",
+ "xp-assets-registrar",
+ "xp-runtime",
+ "xpallet-gateway-bitcoin",
+]
+
+[[package]]
+name = "xpallet-gateway-common"
+version = "4.3.0"
+dependencies = [
+ "chainx-primitives",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex",
+ "lazy_static",
+ "light-bitcoin",
+ "pallet-balances",
+ "pallet-elections-phragmen",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "serde_json",
+ "sp-core",
+ "sp-io",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std",
+ "xp-assets-registrar",
+ "xp-gateway-bitcoin",
+ "xp-protocol",
+ "xp-rpc",
+ "xp-runtime",
+ "xpallet-assets",
+ "xpallet-assets-registrar",
+ "xpallet-gateway-bitcoin",
+ "xpallet-gateway-records",
+ "xpallet-support",
+]
+
+[[package]]
+name = "xpallet-gateway-common-rpc"
+version = "4.3.0"
+dependencies = [
+ "hex",
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "parity-scale-codec",
+ "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-runtime",
+ "xp-rpc",
+ "xpallet-gateway-common-rpc-runtime-api",
+]
+
+[[package]]
+name = "xpallet-gateway-common-rpc-runtime-api"
+version = "4.3.0"
+dependencies = [
+ "chainx-primitives",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-runtime",
+ "sp-std",
+ "xp-assets-registrar",
+ "xp-runtime",
+ "xpallet-assets",
+ "xpallet-gateway-common",
+ "xpallet-gateway-records",
+]
+
+[[package]]
+name = "xpallet-gateway-records"
+version = "4.3.0"
+dependencies = [
+ "chainx-primitives",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xp-protocol",
+ "xp-runtime",
+ "xpallet-assets",
+ "xpallet-assets-registrar",
+ "xpallet-support",
+]
+
+[[package]]
+name = "xpallet-gateway-records-rpc"
+version = "4.3.0"
+dependencies = [
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "parity-scale-codec",
+ "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-runtime",
+ "xp-rpc",
+ "xpallet-gateway-records-rpc-runtime-api",
+]
+
+[[package]]
+name = "xpallet-gateway-records-rpc-runtime-api"
+version = "4.3.0"
+dependencies = [
+ "chainx-primitives",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-std",
+ "xpallet-assets",
+ "xpallet-gateway-records",
 ]
 
 [[package]]

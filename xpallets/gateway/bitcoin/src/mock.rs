@@ -1,6 +1,7 @@
 // Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
 
 #![allow(clippy::type_complexity)]
+use codec::{Decode, Encode};
 use std::{cell::RefCell, collections::BTreeMap, time::Duration};
 
 use hex_literal::hex;
@@ -11,9 +12,10 @@ use frame_support::{
     parameter_types, sp_io,
     traits::{LockIdentifier, UnixTime},
     weights::Weight,
+    PalletId,
 };
 use frame_system::EnsureSigned;
-use sp_core::H256;
+use sp_core::{blake2_256, H256};
 use sp_keyring::sr25519;
 use sp_runtime::{
     testing::Header,
@@ -34,6 +36,8 @@ use light_bitcoin::{
     primitives::{h256_rev, Compact},
     serialization::{self, Reader},
 };
+use sp_runtime::traits::AccountIdConversion;
+use xpallet_support::traits::MultisigAddressFor;
 
 use crate::{
     self as xpallet_gateway_bitcoin,
@@ -98,6 +102,7 @@ impl frame_system::Config for Test {
     type SystemWeightInfo = ();
     type SS58Prefix = SS58Prefix;
     type OnSetCode = ();
+    type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 parameter_types! {
@@ -161,10 +166,21 @@ impl xpallet_assets_registrar::Config for Test {
     type WeightInfo = ();
 }
 
+parameter_types! {
+    pub const TreasuryPalletId: PalletId = PalletId(*b"pcx/trsy");
+}
+
+pub struct SimpleTreasuryAccount;
+impl xpallet_support::traits::TreasuryAccount<AccountId> for SimpleTreasuryAccount {
+    fn treasury_account() -> AccountId {
+        TreasuryPalletId::get().into_account()
+    }
+}
+
 impl xpallet_assets::Config for Test {
     type Event = ();
     type Currency = Balances;
-    type TreasuryAccount = ();
+    type TreasuryAccount = SimpleTreasuryAccount;
     type OnCreatedAccount = frame_system::Provider<Test>;
     type OnAssetChanged = ();
     type WeightInfo = ();
@@ -180,10 +196,18 @@ impl xpallet_gateway_records::Config for Test {
     type WeightInfo = ();
 }
 
+pub struct MultisigAddr;
+impl MultisigAddressFor<AccountId> for MultisigAddr {
+    fn calc_multisig(who: &[AccountId], threshold: u16) -> AccountId {
+        let entropy = (b"modlpy/utilisuba", who, threshold).using_encoded(blake2_256);
+        AccountId::decode(&mut &entropy[..]).unwrap()
+    }
+}
+
 impl xpallet_gateway_common::Config for Test {
     type Event = ();
     type Validator = ();
-    type DetermineMultisigAddress = ();
+    type DetermineMultisigAddress = MultisigAddr;
     type CouncilOrigin = EnsureSigned<AccountId>;
     type Bitcoin = XGatewayBitcoin;
     type BitcoinTrustee = XGatewayBitcoin;
