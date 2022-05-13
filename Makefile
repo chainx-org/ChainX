@@ -49,6 +49,9 @@ format: pre-format
 benchmark:
 	cargo test --release --no-run --features runtime-benchmarks
 
+benchmarks:
+	@cargo build --release --features="runtime-benchmarks"
+
 try-runtime:
 	cargo check --release --features try-runtime
 

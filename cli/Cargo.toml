@@ -54,9 +54,9 @@ pallet-im-online = { git = "https://github.com/paritytech/substrate", branch = "
 chainx-executor = { path = "../executor" }
 chainx-primitives = { path = "../primitives" }
 chainx-service = { path = "../service" }
-#chainx-runtime = { path = "../runtime/chainx" }
+chainx-runtime = { path = "../runtime/chainx" }
 dev-runtime = { path = "../runtime/dev" }
-#malan-runtime = { path = "../runtime/malan" }
+malan-runtime = { path = "../runtime/malan" }
 
 xp-assets-registrar = { path = "../primitives/assets-registrar" }
 xp-genesis-builder = { path = "../primitives/genesis-builder" }
@@ -83,13 +83,13 @@ wasmtime = [
   "chainx-executor/wasmtime",
 ]
 runtime-benchmarks = [
-#  "chainx-runtime/runtime-benchmarks",
+  "chainx-runtime/runtime-benchmarks",
   "dev-runtime/runtime-benchmarks",
-#  "malan-runtime/runtime-benchmarks",
+  "malan-runtime/runtime-benchmarks",
 ]
 try-runtime = [
   "try-runtime-cli",
-#  "chainx-runtime/try-runtime",
+  "chainx-runtime/try-runtime",
   "dev-runtime/try-runtime",
-#  "malan-runtime/try-runtime"
+  "malan-runtime/try-runtime"
 ]

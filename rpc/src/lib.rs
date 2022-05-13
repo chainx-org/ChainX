@@ -19,7 +19,7 @@ use sp_consensus::SelectChain;
 use sp_consensus_babe::BabeApi;
 
 use chainx_primitives::Block;
-use dev_runtime::{AccountId, Balance, BlockNumber, Hash, Index};
+use chainx_runtime::{AccountId, Balance, BlockNumber, Hash, Index};
 
 use xpallet_mining_asset_rpc_runtime_api::MiningWeight;
 use xpallet_mining_staking_rpc_runtime_api::VoteWeight;
@@ -86,8 +86,8 @@ where
     C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>,
     C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
     C::Api: xpallet_assets_rpc_runtime_api::XAssetsApi<Block, AccountId, Balance>,
-    // C::Api:
-    //     xpallet_dex_spot_rpc_runtime_api::XSpotApi<Block, AccountId, Balance, BlockNumber, Balance>,
+    C::Api:
+        xpallet_dex_spot_rpc_runtime_api::XSpotApi<Block, AccountId, Balance, BlockNumber, Balance>,
     C::Api: xpallet_gateway_bitcoin_rpc_runtime_api::XGatewayBitcoinApi<Block, AccountId>,
     C::Api: xpallet_gateway_common_rpc_runtime_api::XGatewayCommonApi<
         Block,
@@ -124,7 +124,7 @@ where
     use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
     use substrate_frame_rpc_system::{FullSystem, SystemApi};
     use xpallet_assets_rpc::{Assets, XAssetsApi};
-    // use xpallet_dex_spot_rpc::{XSpot, XSpotApi};
+    use xpallet_dex_spot_rpc::{XSpot, XSpotApi};
     use xpallet_gateway_bitcoin_rpc::{XGatewayBitcoin, XGatewayBitcoinApi};
     use xpallet_gateway_common_rpc::{XGatewayCommon, XGatewayCommonApi};
     use xpallet_gateway_records_rpc::{XGatewayRecords, XGatewayRecordsApi};
@@ -196,7 +196,7 @@ where
     )));
     io.extend_with(XAssetsApi::to_delegate(Assets::new(client.clone())));
     io.extend_with(XStakingApi::to_delegate(XStaking::new(client.clone())));
-    // io.extend_with(XSpotApi::to_delegate(XSpot::new(client.clone())));
+    io.extend_with(XSpotApi::to_delegate(XSpot::new(client.clone())));
     io.extend_with(XMiningAssetApi::to_delegate(XMiningAsset::new(
         client.clone(),
     )));

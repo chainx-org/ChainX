@@ -2,16 +2,13 @@
 
 use std::collections::BTreeMap;
 
-use frame_support::{assert_noop, assert_ok, traits::Currency};
-use frame_system::{EventRecord, Phase};
-
+use frame_support::{assert_noop, assert_ok};
 use xp_protocol::X_BTC;
 
 pub use super::mock::{ExtBuilder, Test};
 use crate::{
-    mock::{Balance, Event, Origin, System, XAssets, XAssetsErr},
-    AssetBalance, AssetErr, AssetInfo, AssetRestrictions, AssetType, Chain, Config,
-    TotalAssetBalance,
+    mock::{Balance, Origin, XAssets, XAssetsErr},
+    AssetBalance, AssetErr, AssetInfo, AssetRestrictions, AssetType, Chain, TotalAssetBalance,
 };
 
 #[test]

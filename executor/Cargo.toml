@@ -9,9 +9,9 @@ frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch =
 sc-executor = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
 
 # ChainX runtime
-#chainx-runtime = { path = "../runtime/chainx" }
+chainx-runtime = { path = "../runtime/chainx" }
 dev-runtime = { path = "../runtime/dev" }
-#malan-runtime = { path = "../runtime/malan" }
+malan-runtime = { path = "../runtime/malan" }
 
 # ChainX primitives
 xp-io = { path = "../primitives/io" }

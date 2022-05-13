@@ -22,7 +22,7 @@ use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 use sp_core::crypto::AccountId32;
 
 use chainx_primitives::{AccountId, AssetId, Balance, ReferralId, Signature};
-use dev_runtime::constants::{currency::DOLLARS, time::DAYS};
+use chainx_runtime::constants::{currency::DOLLARS, time::DAYS};
 use xp_assets_registrar::Chain;
 use xp_protocol::{NetworkType, PCX, PCX_DECIMALS, X_BTC};
 use xpallet_gateway_bitcoin::{BtcParams, BtcTxVerifier};
@@ -31,9 +31,9 @@ use xpallet_gateway_common::types::TrusteeInfoConfig;
 use crate::genesis::assets::{genesis_assets, init_assets, pcx, AssetParams};
 use crate::genesis::bitcoin::{btc_genesis_params, BtcGenesisParams, BtcTrusteeParams};
 
-// use chainx_runtime as chainx;
+use chainx_runtime as chainx;
 use dev_runtime as dev;
-// use malan_runtime as malan;
+use malan_runtime as malan;
 
 // Note this is the URL for the telemetry server
 #[allow(unused)]
@@ -57,11 +57,11 @@ pub struct Extensions {
 }
 
 /// The `ChainSpec` parameterised for the chainx mainnet runtime.
-// pub type ChainXChainSpec = sc_service::GenericChainSpec<chainx::GenesisConfig, Extensions>;
+pub type ChainXChainSpec = sc_service::GenericChainSpec<chainx::GenesisConfig, Extensions>;
 /// The `ChainSpec` parameterised for the chainx development runtime.
 pub type DevChainSpec = sc_service::GenericChainSpec<dev::GenesisConfig, Extensions>;
 /// The `ChainSpec` parameterised for the chainx testnet runtime.
-// pub type MalanChainSpec = sc_service::GenericChainSpec<malan::GenesisConfig, Extensions>;
+pub type MalanChainSpec = sc_service::GenericChainSpec<malan::GenesisConfig, Extensions>;
 
 type AccountPublic = <Signature as Verify>::Signer;
 
@@ -223,7 +223,6 @@ pub fn benchmarks_config() -> Result<DevChainSpec, String> {
     ))
 }
 
-/*
 pub fn local_testnet_config() -> Result<DevChainSpec, String> {
     let wasm_binary =
         dev::WASM_BINARY.ok_or_else(|| "Development wasm binary not available".to_string())?;
@@ -264,6 +263,7 @@ pub fn local_testnet_config() -> Result<DevChainSpec, String> {
         vec![],
         None,
         Some("pcx"),
+        None,
         Some(as_properties(NetworkType::Testnet)),
         Default::default(),
     ))
@@ -400,6 +400,7 @@ pub fn new_mainnet_config() -> Result<ChainXChainSpec, String> {
             .expect("ChainX telemetry url is valid; qed"),
         ),
         Some("pcx1"),
+        None,
         Some(as_properties(NetworkType::Mainnet)),
         Default::default(),
     ))
@@ -457,7 +458,6 @@ fn mainnet_genesis(
     chainx::GenesisConfig {
         system: chainx::SystemConfig {
             code: wasm_binary.to_vec(),
-            changes_trie_config: Default::default(),
         },
         babe: chainx::BabeConfig {
             authorities: vec![],
@@ -677,6 +677,7 @@ pub fn new_malan_config() -> Result<MalanChainSpec, String> {
                 .expect("ChainX telemetry url is valid; qed"),
         ),
         Some("pcx1"),
+        None,
         Some(as_properties(NetworkType::Testnet)),
         Default::default(),
     ))
@@ -733,11 +734,12 @@ fn malan_genesis(
 
     malan::GenesisConfig {
         sudo: malan::SudoConfig {
-            key: hex!["b0ca18cce5c51f51655acf683453aa1ff319e3c3edd00b43b36a686a3ae34341"].into(),
+            key: Some(
+                hex!["b0ca18cce5c51f51655acf683453aa1ff319e3c3edd00b43b36a686a3ae34341"].into(),
+            ),
         },
         system: malan::SystemConfig {
             code: wasm_binary.to_vec(),
-            changes_trie_config: Default::default(),
         },
         babe: malan::BabeConfig {
             authorities: vec![],
@@ -830,7 +832,6 @@ fn malan_genesis(
         },
     }
 }
-*/
 
 fn build_dev_genesis(
     wasm_binary: &[u8],
@@ -867,6 +868,14 @@ fn build_dev_genesis(
         })
         .collect::<Vec<_>>();
 
+    // The value of STASH balance will be reserved per phragmen member.
+    let phragmen_members = endowed_accounts
+        .iter()
+        .take((num_endowed_accounts + 1) / 2)
+        .cloned()
+        .map(|member| (member, STASH))
+        .collect();
+
     let tech_comm_members = endowed_accounts
         .iter()
         .take((num_endowed_accounts + 1) / 2)
@@ -895,7 +904,7 @@ fn build_dev_genesis(
         .expect("bitcoin trustees generation can not fail; qed");
     dev::GenesisConfig {
         sudo: dev::SudoConfig {
-            key: Some(root_key.clone()),
+            key: Some(root_key),
         },
         system: dev::SystemConfig {
             code: wasm_binary.to_vec(),
@@ -910,12 +919,14 @@ fn build_dev_genesis(
         council: dev::CouncilConfig::default(),
         technical_committee: Default::default(),
         technical_membership: dev::TechnicalMembershipConfig {
-            members: vec![],
+            members: tech_comm_members,
             phantom: Default::default(),
         },
         democracy: dev::DemocracyConfig::default(),
         treasury: Default::default(),
-        elections: Default::default(),
+        elections: dev::ElectionsConfig {
+            members: phragmen_members,
+        },
         im_online: dev::ImOnlineConfig { keys: vec![] },
         authority_discovery: dev::AuthorityDiscoveryConfig { keys: vec![] },
         session: dev::SessionConfig {
@@ -935,15 +946,16 @@ fn build_dev_genesis(
                 })
                 .collect::<Vec<_>>(),
         },
-        balances: dev::BalancesConfig {
-            balances: vec![(root_key, ENDOWMENT)],
-        },
+        balances: dev::BalancesConfig { balances },
         indices: dev::IndicesConfig { indices: vec![] },
         x_system: dev::XSystemConfig {
             network_props: NetworkType::Testnet,
         },
-        x_assets_registrar: Default::default(),
-        x_assets: Default::default(),
+        x_assets_registrar: dev::XAssetsRegistrarConfig { assets },
+        x_assets: dev::XAssetsConfig {
+            assets_restrictions,
+            endowed: assets_endowed,
+        },
         x_gateway_common: dev::XGatewayCommonConfig { trustees },
         x_gateway_bitcoin: dev::XGatewayBitcoinConfig {
             genesis_trustees: btc_genesis_trustees,
@@ -976,9 +988,15 @@ fn build_dev_genesis(
             claim_restrictions: vec![(X_BTC, (10, DAYS * 7))],
             mining_power_map: vec![(X_BTC, 400)],
         },
-        // x_spot: dev::XSpotConfig {
-        //     trading_pairs: vec![(PCX, X_BTC, 9, 2, 100000, true)],
-        // },
-        x_genesis_builder: Default::default(),
+        x_spot: dev::XSpotConfig {
+            trading_pairs: vec![(PCX, X_BTC, 9, 2, 100000, true)],
+        },
+        x_genesis_builder: dev::XGenesisBuilderConfig {
+            params: crate::genesis::genesis_builder_params(),
+            initial_authorities: initial_authorities
+                .iter()
+                .map(|i| (i.0).1.clone())
+                .collect(),
+        },
     }
 }

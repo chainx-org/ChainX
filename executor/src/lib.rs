@@ -1,7 +1,7 @@
 // Copyright 2019-2021 ChainX Project Authors. Licensed under GPL-3.0.
 
 pub use sc_executor::NativeElseWasmExecutor;
-/*
+
 pub struct ChainXExecutor;
 impl sc_executor::NativeExecutionDispatch for ChainXExecutor {
     type ExtendHostFunctions = (
@@ -17,7 +17,7 @@ impl sc_executor::NativeExecutionDispatch for ChainXExecutor {
         chainx_runtime::native_version()
     }
 }
-*/
+
 pub struct DevExecutor;
 impl sc_executor::NativeExecutionDispatch for DevExecutor {
     type ExtendHostFunctions = (
@@ -33,7 +33,7 @@ impl sc_executor::NativeExecutionDispatch for DevExecutor {
         dev_runtime::native_version()
     }
 }
-/*
+
 pub struct MalanExecutor;
 impl sc_executor::NativeExecutionDispatch for MalanExecutor {
     type ExtendHostFunctions = (
@@ -49,4 +49,3 @@ impl sc_executor::NativeExecutionDispatch for MalanExecutor {
         malan_runtime::native_version()
     }
 }
-*/

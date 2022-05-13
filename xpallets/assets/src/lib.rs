@@ -595,15 +595,12 @@ impl<T: Config> Pallet<T> {
 
         if !existed && exists {
             Self::try_new_account(who);
-            match frame_system::Pallet::<T>::inc_consumers(who) {
-                Err(e) => {
-                    frame_support::log::error!(
-                        target: "runtime::xassets",
-                        "inc_consumers: {:?}",
-                        e
-                    );
-                }
-                _ => {}
+            if let Err(e) = frame_system::Pallet::<T>::inc_consumers(who) {
+                frame_support::log::error!(
+                    target: "runtime::xassets",
+                    "inc_consumers: {:?}",
+                    e
+                );
             }
         } else if existed && !exists {
             frame_system::Pallet::<T>::dec_consumers(who);

@@ -27,9 +27,9 @@ members = [
   "primitives/rpc",
   "primitives/runtime",
   "rpc",
-#  "runtime/chainx",
+  "runtime/chainx",
   "runtime/dev",
-#  "runtime/malan",
+  "runtime/malan",
   "service",
 
   "xpallets/assets",

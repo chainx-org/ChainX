@@ -46,10 +46,9 @@ pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/parityt
 chainx-executor = { path = "../executor" }
 chainx-primitives = { path = "../primitives" }
 chainx-rpc = { path = "../rpc" }
-#chainx-runtime = { path = "../runtime/chainx" }
-# TODO: use chainx-runtime
+chainx-runtime = { path = "../runtime/chainx" }
 dev-runtime = { path = "../runtime/dev" }
-#malan-runtime = { path = "../runtime/malan" }
+malan-runtime = { path = "../runtime/malan" }
 
 xpallet-assets-rpc-runtime-api = { path = "../xpallets/assets/rpc/runtime-api" }
 xpallet-dex-spot-rpc-runtime-api = { path = "../xpallets/dex/spot/rpc/runtime-api" }

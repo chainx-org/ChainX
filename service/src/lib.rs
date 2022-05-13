@@ -230,11 +230,17 @@ where
         RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
     Executor: NativeExecutionDispatch + 'static,
 {
+    /// The task manager of the node.
     pub task_manager: TaskManager,
+    /// The client instance of the node.
     pub client: Arc<FullClient<RuntimeApi, Executor>>,
+    /// The networking service of the node.
     pub network: Arc<NetworkService<Block, <Block as BlockT>::Hash>>,
+    /// The transaction pool of the node.
     pub transaction_pool:
         Arc<sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, Executor>>>,
+    /// The rpc handlers of the node.
+    pub rpc_handlers: RpcHandlers,
 }
 
 /// Creates a full service from the configuration.
@@ -314,7 +320,7 @@ where
     let enable_grandpa = !config.disable_grandpa;
     let prometheus_registry = config.prometheus_registry().cloned();
 
-    let _rpc_handlers = sc_service::spawn_tasks(sc_service::SpawnTasksParams {
+    let rpc_handlers = sc_service::spawn_tasks(sc_service::SpawnTasksParams {
         config,
         backend,
         client: client.clone(),
@@ -472,6 +478,7 @@ where
         client,
         network,
         transaction_pool,
+        rpc_handlers,
     })
 }
 

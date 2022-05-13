@@ -79,8 +79,8 @@ xp-runtime = { path = "../../primitives/runtime", default-features = false }
 xpallet-assets = { path = "../../xpallets/assets", default-features = false }
 xpallet-assets-registrar = { path = "../../xpallets/assets-registrar", default-features = false }
 xpallet-assets-rpc-runtime-api = { path = "../../xpallets/assets/rpc/runtime-api", default-features = false }
-#xpallet-dex-spot = { path = "../../xpallets/dex/spot", default-features = false }
-#xpallet-dex-spot-rpc-runtime-api = { path = "../../xpallets/dex/spot/rpc/runtime-api", default-features = false }
+xpallet-dex-spot = { path = "../../xpallets/dex/spot", default-features = false }
+xpallet-dex-spot-rpc-runtime-api = { path = "../../xpallets/dex/spot/rpc/runtime-api", default-features = false }
 xpallet-gateway-bitcoin = { path = "../../xpallets/gateway/bitcoin", default-features = false }
 xpallet-gateway-bitcoin-rpc-runtime-api = { path = "../../xpallets/gateway/bitcoin/rpc/runtime-api", default-features = false }
 xpallet-gateway-common = { path = "../../xpallets/gateway/common", default-features = false }
@@ -164,8 +164,8 @@ std = [
   "xpallet-assets/std",
   "xpallet-assets-registrar/std",
   "xpallet-assets-rpc-runtime-api/std",
-#  "xpallet-dex-spot/std",
-#  "xpallet-dex-spot-rpc-runtime-api/std",
+  "xpallet-dex-spot/std",
+  "xpallet-dex-spot-rpc-runtime-api/std",
   "xpallet-gateway-bitcoin/std",
   "xpallet-gateway-bitcoin-rpc-runtime-api/std",
   "xpallet-gateway-common/std",
@@ -193,7 +193,7 @@ runtime-benchmarks = [
   "pallet-collective/runtime-benchmarks",
   "xpallet-assets/runtime-benchmarks",
   "xpallet-assets-registrar/runtime-benchmarks",
-#  "xpallet-dex-spot/runtime-benchmarks",
+  "xpallet-dex-spot/runtime-benchmarks",
   "xpallet-gateway-bitcoin/runtime-benchmarks",
   "xpallet-gateway-common/runtime-benchmarks",
   "xpallet-gateway-records/runtime-benchmarks",
@@ -234,7 +234,7 @@ try-runtime = [
   # ChainX pallets
   "xpallet-assets/try-runtime",
   "xpallet-assets-registrar/try-runtime",
-#  "xpallet-dex-spot/try-runtime",
+  "xpallet-dex-spot/try-runtime",
   "xpallet-gateway-bitcoin/try-runtime",
   "xpallet-gateway-common/try-runtime",
   "xpallet-gateway-records/try-runtime",

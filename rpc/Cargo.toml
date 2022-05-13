@@ -40,8 +40,7 @@ pallet-transaction-payment-rpc = { git = "https://github.com/paritytech/substrat
 substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
 
 # ChainX runtime
-# TODO: use chainx runtime
-dev-runtime = { path = "../runtime/dev" }
+chainx-runtime = { path = "../runtime/chainx" }
 
 # ChainX primitives
 chainx-primitives = { path = "../primitives" }

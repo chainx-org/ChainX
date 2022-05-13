@@ -2,8 +2,8 @@
 
 //! Weights for xpallet_mining_asset
 //! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 4.0.0-dev
-//! DATE: 2022-03-16, STEPS: 50, REPEAT: 20, LOW RANGE: [], HIGH RANGE: []
-//! EXECUTION: Some(Wasm), WASM-EXECUTION: Compiled, CHAIN: Some("benchmarks"), DB CACHE: 128
+//! DATE: 2022-05-13, STEPS: 50, REPEAT: 20, LOW RANGE: [], HIGH RANGE: []
+//! EXECUTION: Some(Wasm), WASM-EXECUTION: Compiled, CHAIN: Some("benchmarks"), DB CACHE: 1024
 
 // Executed Command:
 // ./target/release/chainx
@@ -41,43 +41,43 @@ pub trait WeightInfo {
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
     fn claim() -> Weight {
-        (166_747_000 as Weight)
+        (184_016_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(12 as Weight))
             .saturating_add(T::DbWeight::get().writes(5 as Weight))
     }
     fn set_claim_staking_requirement() -> Weight {
-        (7_188_000 as Weight)
+        (7_224_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(1 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     fn set_claim_frequency_limit() -> Weight {
-        (6_957_000 as Weight)
+        (7_456_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(1 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     fn set_asset_power() -> Weight {
-        (3_593_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
+        (3_043_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
     fn claim() -> Weight {
-        (166_747_000 as Weight)
+        (184_016_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(12 as Weight))
             .saturating_add(RocksDbWeight::get().writes(5 as Weight))
     }
     fn set_claim_staking_requirement() -> Weight {
-        (7_188_000 as Weight)
+        (7_224_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(1 as Weight))
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
     fn set_claim_frequency_limit() -> Weight {
-        (6_957_000 as Weight)
+        (7_456_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(1 as Weight))
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
     fn set_asset_power() -> Weight {
-        (3_593_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
+        (3_043_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
 }

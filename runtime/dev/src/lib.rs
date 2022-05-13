@@ -44,7 +44,7 @@ use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use sp_consensus_babe::AllowedSlots::PrimaryAndSecondaryPlainSlots;
 
 use chainx_runtime_common::{BlockLength, BlockWeights};
-// use xpallet_dex_spot::{Depth, FullPairInfo, RpcOrder, TradingPairId};
+use xpallet_dex_spot::{Depth, FullPairInfo, RpcOrder, TradingPairId};
 use xpallet_mining_asset::{MinerLedger, MiningAssetInfo, MiningDividendInfo};
 use xpallet_mining_staking::{NominatorInfo, NominatorLedger, ValidatorInfo};
 use xpallet_support::traits::MultisigAddressFor;
@@ -97,7 +97,7 @@ pub use xpallet_mining_staking::VoteWeight;
 pub mod constants;
 /// Implementations of some helper traits passed into runtime modules as associated types.
 pub mod impls;
-// mod migrations;
+mod migrations;
 
 use self::constants::{currency::*, time::*};
 use self::impls::{ChargeExtraFee, DealWithFees, SlowAdjustingFeeUpdate};
@@ -732,7 +732,7 @@ parameter_types! {
     // 10 PCX
     pub const ProposalBondMinimum: Balance = 1000 * DOLLARS;
     // 100 PCX
-    pub const ProposalBondMaximum: Balance = 1000 * DOLLARS;
+    pub const ProposalBondMaximum: Balance = 10000 * DOLLARS;
     pub const SpendPeriod: BlockNumber = 6 * MINUTES;
     pub const NoBurn: Permill = Permill::from_percent(0);
     pub const TipCountdown: BlockNumber = 3 * MINUTES;
@@ -1030,11 +1030,11 @@ impl xpallet_gateway_bitcoin::Config for Runtime {
     type WeightInfo = xpallet_gateway_bitcoin::weights::SubstrateWeight<Runtime>;
 }
 
-//impl xpallet_dex_spot::Config for Runtime {
-//    type Event = Event;
-//    type Price = Balance;
-//    type WeightInfo = xpallet_dex_spot::weights::SubstrateWeight<Runtime>;
-//}
+impl xpallet_dex_spot::Config for Runtime {
+    type Event = Event;
+    type Price = Balance;
+    type WeightInfo = xpallet_dex_spot::weights::SubstrateWeight<Runtime>;
+}
 
 pub struct SimpleTreasuryAccount;
 impl xpallet_support::traits::TreasuryAccount<AccountId> for SimpleTreasuryAccount {
@@ -1145,7 +1145,7 @@ construct_runtime!(
         XGatewayBitcoin: xpallet_gateway_bitcoin::{Pallet, Call, Storage, Event<T>, Config<T>} = 31,
 
         // DEX
-        // XSpot: xpallet_dex_spot::{Pallet, Call, Storage, Event<T>, Config<T>} = 32,
+        XSpot: xpallet_dex_spot::{Pallet, Call, Storage, Event<T>, Config<T>} = 32,
 
         XGenesisBuilder: xpallet_genesis_builder::{Pallet, Config<T>} = 33,
 
@@ -1437,19 +1437,19 @@ impl_runtime_apis! {
         }
     }
 
-    // impl xpallet_dex_spot_rpc_runtime_api::XSpotApi<Block, AccountId, Balance, BlockNumber, Balance> for Runtime {
-    //     fn trading_pairs() -> Vec<FullPairInfo<Balance, BlockNumber>> {
-    //         XSpot::trading_pairs()
-    //     }
-    //
-    //     fn orders(who: AccountId, page_index: u32, page_size: u32) -> Vec<RpcOrder<TradingPairId, AccountId, Balance, Balance, BlockNumber>> {
-    //         XSpot::orders(who, page_index, page_size)
-    //     }
-    //
-    //     fn depth(pair_id: TradingPairId, depth_size: u32) -> Option<Depth<Balance, Balance>> {
-    //         XSpot::depth(pair_id, depth_size)
-    //     }
-    // }
+    impl xpallet_dex_spot_rpc_runtime_api::XSpotApi<Block, AccountId, Balance, BlockNumber, Balance> for Runtime {
+        fn trading_pairs() -> Vec<FullPairInfo<Balance, BlockNumber>> {
+            XSpot::trading_pairs()
+        }
+
+        fn orders(who: AccountId, page_index: u32, page_size: u32) -> Vec<RpcOrder<TradingPairId, AccountId, Balance, Balance, BlockNumber>> {
+            XSpot::orders(who, page_index, page_size)
+        }
+
+        fn depth(pair_id: TradingPairId, depth_size: u32) -> Option<Depth<Balance, Balance>> {
+            XSpot::depth(pair_id, depth_size)
+        }
+    }
 
     impl xpallet_mining_asset_rpc_runtime_api::XMiningAssetApi<Block, AccountId, Balance, MiningWeight, BlockNumber> for Runtime {
         fn mining_assets() -> Vec<MiningAssetInfo<AccountId, Balance, MiningWeight, BlockNumber>> {
@@ -1603,9 +1603,13 @@ impl_runtime_apis! {
         fn dispatch_benchmark(
             config: frame_benchmarking::BenchmarkConfig
         ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, RuntimeString> {
-            use frame_benchmarking::{Benchmarking, BenchmarkBatch, add_benchmark, TrackedStorageKey};
+            use frame_benchmarking::{baseline, Benchmarking, BenchmarkBatch, TrackedStorageKey};
+
+            use frame_system_benchmarking::Pallet as SystemBench;
+            use baseline::Pallet as BaselineBench;
 
             impl frame_system_benchmarking::Config for Runtime {}
+            impl baseline::Config for Runtime {}
 
             let whitelist: Vec<TrackedStorageKey> = vec![
                 // // Block Number
@@ -1625,18 +1629,30 @@ impl_runtime_apis! {
             let mut batches = Vec::<BenchmarkBatch>::new();
             let params = (&config, &whitelist);
 
-            add_benchmark!(params, batches, xpallet_assets, XAssets);
-            add_benchmark!(params, batches, xpallet_assets_registrar, XAssetsRegistrar);
-            add_benchmark!(params, batches, xpallet_mining_asset, XMiningAsset);
-            add_benchmark!(params, batches, xpallet_mining_staking, XStaking);
-            add_benchmark!(params, batches, xpallet_gateway_records, XGatewayRecords);
-            add_benchmark!(params, batches, xpallet_gateway_common, XGatewayCommon);
-            add_benchmark!(params, batches, xpallet_gateway_bitcoin, XGatewayBitcoin);
-            // add_benchmark!(params, batches, xpallet_dex_spot, XSpot);
+            add_benchmarks!(params, batches);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
             Ok(batches)
         }
     }
+}
 
+#[cfg(feature = "runtime-benchmarks")]
+#[macro_use]
+extern crate frame_benchmarking;
+
+#[cfg(feature = "runtime-benchmarks")]
+mod benches {
+    define_benchmarks!(
+        [frame_benchmarking, BaselineBench::<Runtime>]
+        [frame_system, SystemBench::<Runtime>]
+        [xpallet_assets, XAssets]
+        [xpallet_assets_registrar, XAssetsRegistrar]
+        [xpallet_mining_asset, XMiningAsset]
+        [xpallet_mining_staking, XStaking]
+        [xpallet_gateway_records, XGatewayRecords]
+        [xpallet_gateway_common,  XGatewayCommon]
+        [xpallet_gateway_bitcoin, XGatewayBitcoin]
+        [xpallet_dex_spot, XSpot]
+    );
 }
