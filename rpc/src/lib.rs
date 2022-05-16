@@ -18,8 +18,7 @@ use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 use sp_consensus::SelectChain;
 use sp_consensus_babe::BabeApi;
 
-use chainx_primitives::Block;
-use chainx_runtime::{AccountId, Balance, BlockNumber, Hash, Index};
+use chainx_primitives::{AccountId, Balance, Block, BlockNumber, Hash, Index};
 
 use xpallet_mining_asset_rpc_runtime_api::MiningWeight;
 use xpallet_mining_staking_rpc_runtime_api::VoteWeight;
