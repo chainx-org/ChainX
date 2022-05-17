@@ -546,6 +546,14 @@ fn mainnet_genesis(
                 .map(|i| (i.0).1.clone())
                 .collect(),
         },
+        ethereum_chain_id: chainx::EthereumChainIdConfig { chain_id: 1501u64 },
+        evm: Default::default(),
+        ethereum: Default::default(),
+        base_fee: chainx::BaseFeeConfig::new(
+            chainx::DefaultBaseFeePerGas::get(),
+            false,
+            sp_runtime::Permill::from_parts(125_000),
+        ),
     }
 }
 
@@ -830,6 +838,14 @@ fn malan_genesis(
                 .map(|i| (i.0).1.clone())
                 .collect(),
         },
+        ethereum_chain_id: malan::EthereumChainIdConfig { chain_id: 1502u64 },
+        evm: Default::default(),
+        ethereum: Default::default(),
+        base_fee: malan::BaseFeeConfig::new(
+            malan::DefaultBaseFeePerGas::get(),
+            false,
+            sp_runtime::Permill::from_parts(125_000),
+        ),
     }
 }
 
@@ -998,5 +1014,13 @@ fn build_dev_genesis(
                 .map(|i| (i.0).1.clone())
                 .collect(),
         },
+        ethereum_chain_id: dev::EthereumChainIdConfig { chain_id: 1503u64 },
+        evm: Default::default(),
+        ethereum: Default::default(),
+        base_fee: dev::BaseFeeConfig::new(
+            dev::DefaultBaseFeePerGas::get(),
+            false,
+            sp_runtime::Permill::from_parts(125_000),
+        ),
     }
 }

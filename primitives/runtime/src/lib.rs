@@ -77,3 +77,14 @@ impl Memo {
         }
     }
 }
+
+/// Used for evm rpc
+pub enum Never {}
+impl<T> fp_rpc::ConvertTransaction<T> for Never {
+    fn convert_transaction(&self, _transaction: pallet_ethereum::Transaction) -> T {
+        // The Never type is not instantiable, but this method requires the type to be
+        // instantiated to be called (`&self` parameter), so if the code compiles we have the
+        // guarantee that this function will never be called.
+        unreachable!()
+    }
+}

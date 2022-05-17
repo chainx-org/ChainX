@@ -35,10 +35,7 @@ impl DefaultConfigurationValues for Cli {
     }
 }
 
-impl<DCV> CliConfiguration<DCV> for Cli
-where
-    DCV: DefaultConfigurationValues,
-{
+impl CliConfiguration<Self> for Cli {
     fn shared_params(&self) -> &sc_cli::SharedParams {
         self.run.base.shared_params()
     }
@@ -179,7 +176,8 @@ impl SubstrateCli for Cli {
         let cli = Cli::from_iter(crate::config::preprocess_cli_args(raw_cli_args));
 
         let tokio_runtime = sc_cli::build_runtime()?;
-        let config = command.create_configuration(self, tokio_runtime.handle().clone())?;
+        let config =
+            CliConfiguration::create_configuration(&cli, &cli, tokio_runtime.handle().clone())?;
 
         // Try to enable the log rotation function if from config file.
         if cli.run.config_file.is_some() && !cli.run.logger.no_log_rotation {
@@ -249,34 +247,34 @@ macro_rules! construct_async_run {
          let runner = $cli.create_runner($cmd)?;
 
          if runner.config().chain_spec.is_malan() {
-            runner.async_run(|$config| {
+            runner.async_run(|mut $config| {
                 let $components = new_partial::<
                     malan_runtime::RuntimeApi,
                     chainx_executor::MalanExecutor
                 >(
-                    &$config,
+                    &mut $config,
                 )?;
                 let task_manager = $components.task_manager;
                 { $( $code )* }.map(|v| (v, task_manager))
             })
         } else if runner.config().chain_spec.is_dev() {
-            runner.async_run(|$config| {
+            runner.async_run(|mut $config| {
                 let $components = new_partial::<
                     dev_runtime::RuntimeApi,
                     chainx_executor::DevExecutor
                 >(
-                    &$config,
+                    &mut $config,
                 )?;
                 let task_manager = $components.task_manager;
                 { $( $code )* }.map(|v| (v, task_manager))
             })
         } else {
-            runner.async_run(|$config| {
+            runner.async_run(|mut $config| {
                 let $components = new_partial::<
                     chainx_runtime::RuntimeApi,
                     chainx_executor::ChainXExecutor,
                 >(
-                    &$config,
+                    &mut $config,
                 )?;
                 let task_manager = $components.task_manager;
                 { $( $code )* }.map(|v| (v, task_manager))
@@ -297,7 +295,7 @@ pub fn run() -> sc_cli::Result<()> {
 
     match &cli.subcommand {
         None => {
-            let runner = cli.create_runner(&cli)?;
+            let runner = cli.create_runner(&cli.run.base)?;
 
             runner.run_node_until_exit(|config| async move {
                 service::build_full(config).map_err(sc_cli::Error::Service)
