@@ -1,8 +1,8 @@
 [package]
-authors = ['ChainX Developers']
-edition = "2021"
 name = "xpallet-ethereum-chain-id"
 version = "4.3.0"
+authors = ["The ChainX Authors"]
+edition = "2021"
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }

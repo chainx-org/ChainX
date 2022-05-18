@@ -35,6 +35,7 @@ members = [
   "xpallets/assets",
   "xpallets/assets/rpc",
   "xpallets/assets/rpc/runtime-api",
+  "xpallets/assets-bridge",
   "xpallets/assets-registrar",
   "xpallets/dex/spot",
   "xpallets/dex/spot/rpc",

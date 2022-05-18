@@ -1,0 +1,49 @@
+[package]
+name = "xpallet-assets-bridge"
+version = "4.3.0"
+authors = ["The ChainX Authors"]
+edition = "2021"
+
+[dependencies]
+serde = { version = "1.0.136", optional = true }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
+scale-info = { version = "2.0.1", default-features = false, features = ["derive"] }
+
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
+
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
+
+chainx-primitives = { path = "../../primitives", default-features = false }
+xpallet-assets = { path = "../assets", default-features = false }
+pallet-evm = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18", default-features = false }
+
+[dev-dependencies]
+ethabi = { version = "17.0.0" }
+hex-literal = { version = "0.3.1" }
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
+pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
+xpallet-assets-registrar = { path = "../assets-registrar" }
+
+[features]
+default = ["std"]
+std = [
+	"serde",
+	"codec/std",
+	"scale-info/std",
+
+	"sp-core/std",
+	"sp-io/std",
+	"sp-runtime/std",
+	"sp-std/std",
+	"frame-support/std",
+	"frame-system/std",
+
+	"chainx-primitives/std",
+	"xpallet-assets/std",
+	"pallet-evm/std",
+]
+try-runtime = ["frame-support/try-runtime"]

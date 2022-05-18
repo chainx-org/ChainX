@@ -554,6 +554,7 @@ fn mainnet_genesis(
             false,
             sp_runtime::Permill::from_parts(125_000),
         ),
+        x_assets_bridge: chainx::XAssetsBridgeConfig { admin_key: None },
     }
 }
 
@@ -846,6 +847,7 @@ fn malan_genesis(
             false,
             sp_runtime::Permill::from_parts(125_000),
         ),
+        x_assets_bridge: malan::XAssetsBridgeConfig { admin_key: None },
     }
 }
 
@@ -1022,5 +1024,6 @@ fn build_dev_genesis(
             false,
             sp_runtime::Permill::from_parts(125_000),
         ),
+        x_assets_bridge: dev::XAssetsBridgeConfig { admin_key: None },
     }
 }

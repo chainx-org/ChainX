@@ -154,7 +154,8 @@ impl<T: Config> Pallet<T> {
             global_distribution.calc_rewards::<T>(session_reward);
 
         // -> Treasury
-        let treasury_account = T::TreasuryAccount::treasury_account();
+        let treasury_account =
+            T::TreasuryAccount::treasury_account().expect("TreasuryAccount is some; qed");
         if !treasury_reward.is_zero() {
             Self::mint(&treasury_account, treasury_reward);
         }

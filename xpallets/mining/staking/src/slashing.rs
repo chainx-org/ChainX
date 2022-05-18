@@ -15,7 +15,8 @@ impl<T: Config> Pallet<T> {
     ) -> Vec<T::AccountId> {
         let validator_rewards = validator_rewards.into_iter().collect::<BTreeMap<_, _>>();
 
-        let treasury_account = T::TreasuryAccount::treasury_account();
+        let treasury_account =
+            T::TreasuryAccount::treasury_account().expect("TreasuryAccount is some; qed");
         let slasher = Slasher::<T>::new(treasury_account);
 
         let minimum_penalty = Self::minimum_penalty();

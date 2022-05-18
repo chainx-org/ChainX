@@ -217,8 +217,8 @@ parameter_types! {
 
 pub struct SimpleTreasuryAccount;
 impl xpallet_support::traits::TreasuryAccount<AccountId> for SimpleTreasuryAccount {
-    fn treasury_account() -> AccountId {
-        TreasuryPalletId::get().into_account()
+    fn treasury_account() -> Option<AccountId> {
+        Some(TreasuryPalletId::get().into_account())
     }
 }
 

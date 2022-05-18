@@ -1,4 +1,4 @@
-// Copyright 2021 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
 
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 #![allow(clippy::type_complexity)]

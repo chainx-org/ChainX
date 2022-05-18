@@ -174,8 +174,8 @@ impl pallet_session::Config for Test {
 pub struct DummyTreasuryAccount;
 
 impl TreasuryAccount<AccountId> for DummyTreasuryAccount {
-    fn treasury_account() -> AccountId {
-        TREASURY_ACCOUNT
+    fn treasury_account() -> Option<AccountId> {
+        Some(TREASURY_ACCOUNT)
     }
 }
 

@@ -1054,8 +1054,8 @@ impl xpallet_dex_spot::Config for Runtime {
 
 pub struct SimpleTreasuryAccount;
 impl xpallet_support::traits::TreasuryAccount<AccountId> for SimpleTreasuryAccount {
-    fn treasury_account() -> AccountId {
-        TreasuryPalletId::get().into_account()
+    fn treasury_account() -> Option<AccountId> {
+        Some(TreasuryPalletId::get().into_account())
     }
 }
 
@@ -1181,6 +1181,17 @@ impl pallet_base_fee::Config for Runtime {
     type DefaultBaseFeePerGas = DefaultBaseFeePerGas;
 }
 
+parameter_types! {
+    // 0x1111111111111111111111111111111111111111
+    pub EvmCaller: H160 = H160::from_slice(&[17u8;20][..]);
+    pub ClaimBond: Balance = PCXS;
+}
+impl xpallet_assets_bridge::Config for Runtime {
+    type Event = Event;
+    type EvmCaller = EvmCaller;
+    type ClaimBond = ClaimBond;
+}
+
 construct_runtime!(
     pub enum Runtime where
         Block = Block,
@@ -1254,28 +1265,11 @@ construct_runtime!(
         Evm: pallet_evm::{Pallet, Config, Call, Storage, Event<T>} = 41,
         Ethereum: pallet_ethereum::{Pallet, Call, Storage, Event, Config, Origin} = 42,
         BaseFee: pallet_base_fee::{Pallet, Call, Storage, Config<T>, Event} = 44,
+
+        // Dependency on xpallet_assets and pallet_evm
+        XAssetsBridge: xpallet_assets_bridge::{Pallet, Call, Storage, Config<T>, Event<T>} = 45,
     }
 );
-
-#[cfg(feature = "runtime-benchmarks")]
-#[macro_use]
-extern crate frame_benchmarking;
-
-#[cfg(feature = "runtime-benchmarks")]
-mod benches {
-    define_benchmarks!(
-        [frame_benchmarking, BaselineBench::<Runtime>]
-        [frame_system, SystemBench::<Runtime>]
-        [xpallet_assets, XAssets]
-        [xpallet_assets_registrar, XAssetsRegistrar]
-        [xpallet_mining_asset, XMiningAsset]
-        [xpallet_mining_staking, XStaking]
-        [xpallet_gateway_records, XGatewayRecords]
-        [xpallet_gateway_common,  XGatewayCommon]
-        [xpallet_gateway_bitcoin, XGatewayBitcoin]
-        [xpallet_dex_spot, XSpot]
-    );
-}
 
 /// The address format for describing accounts.
 pub type Address = <Indices as StaticLookup>::Source;
@@ -1965,4 +1959,24 @@ impl_runtime_apis! {
             Ok(batches)
         }
     }
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+#[macro_use]
+extern crate frame_benchmarking;
+
+#[cfg(feature = "runtime-benchmarks")]
+mod benches {
+    define_benchmarks!(
+        [frame_benchmarking, BaselineBench::<Runtime>]
+        [frame_system, SystemBench::<Runtime>]
+        [xpallet_assets, XAssets]
+        [xpallet_assets_registrar, XAssetsRegistrar]
+        [xpallet_mining_asset, XMiningAsset]
+        [xpallet_mining_staking, XStaking]
+        [xpallet_gateway_records, XGatewayRecords]
+        [xpallet_gateway_common,  XGatewayCommon]
+        [xpallet_gateway_bitcoin, XGatewayBitcoin]
+        [xpallet_dex_spot, XSpot]
+    );
 }

@@ -101,6 +101,8 @@ pallet-evm = { git = "https://github.com/chainx-org/frontier", branch = "polkado
 pallet-ethereum = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18", default-features = false }
 pallet-base-fee = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18", default-features = false }
 xpallet-ethereum-chain-id = { path = "../../xpallets/ethereum-chain-id", default-features = false }
+xpallet-assets-bridge = { path = "../../xpallets/assets-bridge", default-features = false }
+
 # EVM precompile
 fp-evm = { git = "https://github.com/chainx-org/frontier", default-features = false, branch = "polkadot-v0.9.18" }
 pallet-evm-precompile-bn128 = { git = "https://github.com/chainx-org/frontier", default-features = false, branch = "polkadot-v0.9.18" }
@@ -201,6 +203,7 @@ std = [
   "pallet-ethereum/std",
   "pallet-base-fee/std",
   "xpallet-ethereum-chain-id/std",
+  "xpallet-assets-bridge/std",
   "fp-evm/std",
   "fp-rpc/std",
   "fp-self-contained/std",
@@ -267,4 +270,5 @@ try-runtime = [
 
   # EVM
   "pallet-ethereum/try-runtime",
+  "xpallet-assets-bridge/try-runtime"
 ]

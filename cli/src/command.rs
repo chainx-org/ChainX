@@ -176,8 +176,12 @@ impl SubstrateCli for Cli {
         let cli = Cli::from_iter(crate::config::preprocess_cli_args(raw_cli_args));
 
         let tokio_runtime = sc_cli::build_runtime()?;
-        let config =
-            CliConfiguration::create_configuration(&cli, &cli, tokio_runtime.handle().clone())?;
+
+        let config = if cli.subcommand.is_some() {
+            command.create_configuration(self, tokio_runtime.handle().clone())?
+        } else {
+            CliConfiguration::create_configuration(&cli, self, tokio_runtime.handle().clone())?
+        };
 
         // Try to enable the log rotation function if from config file.
         if cli.run.config_file.is_some() && !cli.run.logger.no_log_rotation {

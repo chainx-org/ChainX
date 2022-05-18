@@ -989,6 +989,7 @@ dependencies = [
  "xp-protocol",
  "xp-runtime",
  "xpallet-assets",
+ "xpallet-assets-bridge",
  "xpallet-assets-registrar",
  "xpallet-assets-rpc-runtime-api",
  "xpallet-dex-spot",
@@ -1617,6 +1618,7 @@ dependencies = [
  "xp-protocol",
  "xp-runtime",
  "xpallet-assets",
+ "xpallet-assets-bridge",
  "xpallet-assets-registrar",
  "xpallet-assets-rpc-runtime-api",
  "xpallet-dex-spot",
@@ -1870,6 +1872,23 @@ checksum = "aa68f1b12764fab894d2755d2518754e71b4fd80ecfb822714a1206c2aab39bf"
 dependencies = [
  "cc",
  "libc",
+]
+
+[[package]]
+name = "ethabi"
+version = "17.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b69517146dfab88e9238c00c724fd8e277951c3cc6f22b016d72f422a832213e"
+dependencies = [
+ "ethereum-types",
+ "hex",
+ "once_cell",
+ "regex",
+ "serde",
+ "serde_json",
+ "sha3 0.10.1",
+ "thiserror",
+ "uint",
 ]
 
 [[package]]
@@ -4577,6 +4596,7 @@ dependencies = [
  "xp-protocol",
  "xp-runtime",
  "xpallet-assets",
+ "xpallet-assets-bridge",
  "xpallet-assets-registrar",
  "xpallet-assets-rpc-runtime-api",
  "xpallet-dex-spot",
@@ -10374,6 +10394,29 @@ dependencies = [
  "xp-protocol",
  "xpallet-assets-registrar",
  "xpallet-support",
+]
+
+[[package]]
+name = "xpallet-assets-bridge"
+version = "4.3.0"
+dependencies = [
+ "chainx-primitives",
+ "ethabi",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "pallet-balances",
+ "pallet-evm",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xpallet-assets",
+ "xpallet-assets-registrar",
 ]
 
 [[package]]

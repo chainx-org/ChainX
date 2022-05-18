@@ -219,8 +219,8 @@ pub struct DummyTreasuryAccount;
 pub(crate) const TREASURY_ACCOUNT: AccountId = 100_000;
 
 impl xpallet_support::traits::TreasuryAccount<AccountId> for DummyTreasuryAccount {
-    fn treasury_account() -> AccountId {
-        TREASURY_ACCOUNT
+    fn treasury_account() -> Option<AccountId> {
+        Some(TREASURY_ACCOUNT)
     }
 }
 

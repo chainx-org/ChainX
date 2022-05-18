@@ -1,3 +1,5 @@
+// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
+
 //! Minimal Pallet that stores the numeric Ethereum-style chain id in the runtime.
 
 #![cfg_attr(not(feature = "std"), no_std)]
