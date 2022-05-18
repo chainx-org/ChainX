@@ -1316,15 +1316,47 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
+    (
     SchedulerMigrationV3,
+        BaseFeeMigration,
+        XAssetsBridgeMigration,
+    ),
 >;
 
 // Migration for scheduler pallet to move from a plain Call to a CallOrHash.
 pub struct SchedulerMigrationV3;
 
 impl OnRuntimeUpgrade for SchedulerMigrationV3 {
-    fn on_runtime_upgrade() -> frame_support::weights::Weight {
-        Scheduler::migrate_v2_to_v3()
+    fn on_runtime_upgrade() -> Weight {
+        frame_support::log::info!("🔍️ SchedulerMigrationV3 start");
+        let w = Scheduler::migrate_v2_to_v3();
+        frame_support::log::info!("🚀 SchedulerMigrationV3 end");
+        w
+    }
+}
+
+pub struct BaseFeeMigration;
+impl OnRuntimeUpgrade for BaseFeeMigration {
+    fn on_runtime_upgrade() -> Weight {
+        frame_support::log::info!("🔍️ BaseFeeMigration start");
+        let w = BaseFee::set_base_fee_per_gas_inner(DefaultBaseFeePerGas::get());
+        frame_support::log::info!("🚀 BaseFeeMigration end");
+        w
+    }
+}
+
+pub struct XAssetsBridgeMigration;
+impl OnRuntimeUpgrade for XAssetsBridgeMigration {
+    fn on_runtime_upgrade() -> Weight {
+        frame_support::log::info!("🔍️ XAssetsBridgeMigration start");
+        let admin = [
+            166u8, 42, 221, 26, 243, 188, 249, 37, 106, 162, 222, 240, 254, 161, 185, 100, 140,
+            183, 37, 23, 204, 238, 146, 168, 145, 220, 41, 3, 169, 9, 62, 82,
+        ];
+
+        let w = XAssetsBridge::set_admin_inner(admin.into());
+        frame_support::log::info!("🚀 XAssetsBridgeMigration end with initialization");
+        w
     }
 }
 
