@@ -1320,6 +1320,7 @@ pub type Executive = frame_executive::Executive<
     AllPalletsWithSystem,
     (
         SchedulerMigrationV3,
+        EthereumChainIdMigration,
         BaseFeeMigration,
         XAssetsBridgeMigration,
     ),
@@ -1332,6 +1333,16 @@ impl OnRuntimeUpgrade for SchedulerMigrationV3 {
         frame_support::log::info!("🔍️ SchedulerMigrationV3 start");
         let w = Scheduler::migrate_v2_to_v3();
         frame_support::log::info!("🚀 SchedulerMigrationV3 end");
+        w
+    }
+}
+
+pub struct EthereumChainIdMigration;
+impl OnRuntimeUpgrade for EthereumChainIdMigration {
+    fn on_runtime_upgrade() -> Weight {
+        frame_support::log::info!("🔍️ EthereumChainIdMigration(1503) start");
+        let w = EthereumChainId::set_chain_id_inner(1503u64);
+        frame_support::log::info!("🔍️ EthereumChainIdMigration(1503) end");
         w
     }
 }

@@ -4,7 +4,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::pallet;
+use frame_support::{pallet, traits::Get, weights::Weight};
 
 pub use pallet::*;
 
@@ -59,9 +59,16 @@ pub mod pallet {
         ) -> DispatchResult {
             ensure_root(origin)?;
 
-            ChainId::<T>::mutate(|chain_id| *chain_id = new_chain_id);
+            let _ = Self::set_chain_id_inner(new_chain_id);
 
             Ok(())
         }
+    }
+}
+
+impl<T: Config> Pallet<T> {
+    pub fn set_chain_id_inner(new_chain_id: u64) -> Weight {
+        ChainId::<T>::mutate(|chain_id| *chain_id = new_chain_id);
+        T::DbWeight::get().write
     }
 }
