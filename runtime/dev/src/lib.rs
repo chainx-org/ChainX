@@ -43,7 +43,7 @@ use pallet_session::historical as pallet_session_historical;
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use sp_consensus_babe::AllowedSlots::PrimaryAndSecondaryPlainSlots;
 
-use chainx_runtime_common::{BlockLength, BlockWeights};
+use chainx_runtime_common::{BlockLength, BlockWeights, BASE_FEE};
 use xpallet_dex_spot::{Depth, FullPairInfo, RpcOrder, TradingPairId};
 use xpallet_mining_asset::{MinerLedger, MiningAssetInfo, MiningDividendInfo};
 use xpallet_mining_staking::{NominatorInfo, NominatorLedger, ValidatorInfo};
@@ -1160,8 +1160,10 @@ impl pallet_ethereum::Config for Runtime {
     type StateRoot = pallet_ethereum::IntermediateStateRoot<Self>;
 }
 
+// Make sure that DefaultBaseFeePerGas more than CHAINS_VALUE_ADAPTOR in pallet_evm.
+const_assert!(BASE_FEE >= pallet_evm::CHAINS_VALUE_ADAPTOR);
 parameter_types! {
-    pub DefaultBaseFeePerGas: U256 = U256::from(45u128);
+    pub DefaultBaseFeePerGas: U256 = U256::from(BASE_FEE);
 }
 
 pub struct BaseFeeThreshold;
@@ -1325,7 +1327,6 @@ pub type Executive = frame_executive::Executive<
 
 // Migration for scheduler pallet to move from a plain Call to a CallOrHash.
 pub struct SchedulerMigrationV3;
-
 impl OnRuntimeUpgrade for SchedulerMigrationV3 {
     fn on_runtime_upgrade() -> Weight {
         frame_support::log::info!("🔍️ SchedulerMigrationV3 start");

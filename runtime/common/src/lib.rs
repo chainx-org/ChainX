@@ -94,3 +94,6 @@ pub type SlowAdjustingFeeUpdate<R> =
 ///
 /// This must only be used as long as the balance type is u128.
 pub type CurrencyToVote = frame_support::traits::U128CurrencyToVote;
+
+// EVM
+pub const BASE_FEE: u128 = 45_000_000_000u128;
