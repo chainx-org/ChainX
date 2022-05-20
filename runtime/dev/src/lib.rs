@@ -1342,7 +1342,7 @@ impl OnRuntimeUpgrade for EthereumChainIdMigration {
     fn on_runtime_upgrade() -> Weight {
         frame_support::log::info!("🔍️ EthereumChainIdMigration(1503) start");
         let w = EthereumChainId::set_chain_id_inner(1503u64);
-        frame_support::log::info!("🔍️ EthereumChainIdMigration(1503) end");
+        frame_support::log::info!("🚀 EthereumChainIdMigration(1503) end");
         w
     }
 }
