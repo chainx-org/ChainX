@@ -44,4 +44,4 @@ jobs:
         run: make test
 
       - name: 4-Benchmark
-        run: make benchmark
+        run: make pre-benchmarks
