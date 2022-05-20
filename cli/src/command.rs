@@ -352,7 +352,15 @@ pub fn run() -> sc_cli::Result<()> {
         Some(Subcommand::PurgeChain(cmd)) => {
             let runner = cli.create_runner(cmd)?;
 
-            runner.sync_run(|config| cmd.run(config.database))
+            runner.sync_run(|config| {
+                // Remove Frontier offchain db
+                let frontier_database_config = sc_service::DatabaseSource::RocksDb {
+                    path: service::frontier_database_dir(&config),
+                    cache_size: 0,
+                };
+                cmd.run(frontier_database_config)?;
+                cmd.run(config.database)
+            })
         }
         Some(Subcommand::Revert(cmd)) => {
             construct_async_run!(|components, cli, cmd, config| {
