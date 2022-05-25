@@ -1,0 +1,9 @@
+node_modules
+artifacts
+cache
+gasreport-*
+.env
+*.DS_Store
+build
+.deps
+.idea
