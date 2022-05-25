@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./ERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
 contract ClockAuctionBase {
 
@@ -78,7 +78,7 @@ contract ClockAuctionBase {
         ERC721 nonFungibleContract = _getNft(_nft);
 
         // it will throw if transfer fails
-        nonFungibleContract.transfer(_receiver, _tokenId);
+        nonFungibleContract.transferFrom(address(this), _receiver, _tokenId);
     }
 
     /// @dev Adds an auction to the list of open auctions. Also fires the
