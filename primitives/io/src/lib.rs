@@ -33,6 +33,29 @@ pub enum Ss58CheckError {
 #[runtime_interface]
 pub trait Ss58Codec {
     fn from_ss58check(addr: &[u8]) -> Result<AccountId32, Ss58CheckError> {
+        use sp_core::crypto::{PublicError, Ss58AddressFormat, Ss58Codec};
+        let s = String::from_utf8_lossy(addr).into_owned();
+        AccountId32::from_ss58check_with_version(&s)
+            .map_err(|err| match err {
+                PublicError::BadBase58 => Ss58CheckError::BadBase58,
+                PublicError::BadLength => Ss58CheckError::BadLength,
+                PublicError::UnknownSs58AddressFormat(_) => {
+                    Ss58CheckError::UnknownSs58AddressFormat
+                }
+                PublicError::InvalidChecksum => Ss58CheckError::InvalidChecksum,
+                PublicError::InvalidPrefix => Ss58CheckError::InvalidPrefix,
+                PublicError::InvalidFormat => Ss58CheckError::InvalidFormat,
+                PublicError::InvalidPath => Ss58CheckError::InvalidPath,
+                PublicError::FormatNotAllowed => Ss58CheckError::FormatNotAllowed,
+            })
+            .and_then(|(account, ver)| match ver {
+                ver if ver == Ss58AddressFormat::from(44u16) => Ok(account),
+                _ => Err(Ss58CheckError::MismatchVersion),
+            })
+    }
+
+    #[version(2)]
+    fn from_ss58check(addr: &[u8]) -> Result<AccountId32, Ss58CheckError> {
         use sp_core::crypto::{PublicError, Ss58Codec};
         let s = String::from_utf8_lossy(addr).into_owned();
         AccountId32::from_ss58check_with_version(&s)
