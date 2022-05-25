@@ -1,4 +1,4 @@
-// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
 
 #![allow(unused)]
 use std::collections::BTreeMap;
@@ -181,6 +181,7 @@ pub fn development_config() -> Result<DevChainSpec, String> {
         vec![],
         None,
         Some("chainx-dev"),
+        None,
         Some(as_properties(NetworkType::Testnet)),
         Default::default(),
     ))
@@ -216,6 +217,7 @@ pub fn benchmarks_config() -> Result<DevChainSpec, String> {
         vec![],
         None,
         Some("chainx-dev"),
+        None,
         Some(as_properties(NetworkType::Testnet)),
         Default::default(),
     ))
@@ -261,6 +263,7 @@ pub fn local_testnet_config() -> Result<DevChainSpec, String> {
         vec![],
         None,
         Some("pcx"),
+        None,
         Some(as_properties(NetworkType::Testnet)),
         Default::default(),
     ))
@@ -397,6 +400,7 @@ pub fn new_mainnet_config() -> Result<ChainXChainSpec, String> {
             .expect("ChainX telemetry url is valid; qed"),
         ),
         Some("pcx1"),
+        None,
         Some(as_properties(NetworkType::Mainnet)),
         Default::default(),
     ))
@@ -454,7 +458,6 @@ fn mainnet_genesis(
     chainx::GenesisConfig {
         system: chainx::SystemConfig {
             code: wasm_binary.to_vec(),
-            changes_trie_config: Default::default(),
         },
         babe: chainx::BabeConfig {
             authorities: vec![],
@@ -543,6 +546,15 @@ fn mainnet_genesis(
                 .map(|i| (i.0).1.clone())
                 .collect(),
         },
+        ethereum_chain_id: chainx::EthereumChainIdConfig { chain_id: 1501u64 },
+        evm: Default::default(),
+        ethereum: Default::default(),
+        base_fee: chainx::BaseFeeConfig::new(
+            chainx::DefaultBaseFeePerGas::get(),
+            false,
+            sp_runtime::Permill::from_parts(125_000),
+        ),
+        x_assets_bridge: chainx::XAssetsBridgeConfig { admin_key: None },
     }
 }
 
@@ -674,6 +686,7 @@ pub fn new_malan_config() -> Result<MalanChainSpec, String> {
                 .expect("ChainX telemetry url is valid; qed"),
         ),
         Some("pcx1"),
+        None,
         Some(as_properties(NetworkType::Testnet)),
         Default::default(),
     ))
@@ -730,11 +743,12 @@ fn malan_genesis(
 
     malan::GenesisConfig {
         sudo: malan::SudoConfig {
-            key: hex!["b0ca18cce5c51f51655acf683453aa1ff319e3c3edd00b43b36a686a3ae34341"].into(),
+            key: Some(
+                hex!["b0ca18cce5c51f51655acf683453aa1ff319e3c3edd00b43b36a686a3ae34341"].into(),
+            ),
         },
         system: malan::SystemConfig {
             code: wasm_binary.to_vec(),
-            changes_trie_config: Default::default(),
         },
         babe: malan::BabeConfig {
             authorities: vec![],
@@ -825,6 +839,15 @@ fn malan_genesis(
                 .map(|i| (i.0).1.clone())
                 .collect(),
         },
+        ethereum_chain_id: malan::EthereumChainIdConfig { chain_id: 1502u64 },
+        evm: Default::default(),
+        ethereum: Default::default(),
+        base_fee: malan::BaseFeeConfig::new(
+            malan::DefaultBaseFeePerGas::get(),
+            false,
+            sp_runtime::Permill::from_parts(125_000),
+        ),
+        x_assets_bridge: malan::XAssetsBridgeConfig { admin_key: None },
     }
 }
 
@@ -897,12 +920,12 @@ fn build_dev_genesis(
             }
         })
         .expect("bitcoin trustees generation can not fail; qed");
-
     dev::GenesisConfig {
-        sudo: dev::SudoConfig { key: root_key },
+        sudo: dev::SudoConfig {
+            key: Some(root_key),
+        },
         system: dev::SystemConfig {
             code: wasm_binary.to_vec(),
-            changes_trie_config: Default::default(),
         },
         babe: dev::BabeConfig {
             authorities: vec![],
@@ -993,5 +1016,14 @@ fn build_dev_genesis(
                 .map(|i| (i.0).1.clone())
                 .collect(),
         },
+        ethereum_chain_id: dev::EthereumChainIdConfig { chain_id: 1503u64 },
+        evm: Default::default(),
+        ethereum: Default::default(),
+        base_fee: dev::BaseFeeConfig::new(
+            dev::DefaultBaseFeePerGas::get(),
+            false,
+            sp_runtime::Permill::from_parts(125_000),
+        ),
+        x_assets_bridge: dev::XAssetsBridgeConfig { admin_key: None },
     }
 }

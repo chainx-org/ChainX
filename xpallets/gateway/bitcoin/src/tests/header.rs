@@ -1,4 +1,4 @@
-// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
 
 use frame_support::{assert_noop, assert_ok};
 
@@ -8,6 +8,7 @@ use light_bitcoin::{
     serialization,
 };
 
+use crate::mock::alice;
 use crate::{
     mock::{
         generate_blocks_478557_478563, generate_blocks_63290_63310, ExtBuilder, XGatewayBitcoin,
@@ -212,7 +213,7 @@ fn test_change_difficulty() {
 fn test_call() {
     ExtBuilder::default().build_and_execute(|| {
         let headers = generate_blocks_63290_63310();
-        let origin = frame_system::RawOrigin::Signed(Default::default()).into();
+        let origin = frame_system::RawOrigin::Signed(alice()).into();
         let v = serialization::serialize(&headers[&(63290 + 1)]);
         let v = v.take();
         assert_ok!(XGatewayBitcoin::push_header(origin, v));

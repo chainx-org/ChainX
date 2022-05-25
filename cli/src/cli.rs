@@ -1,24 +1,24 @@
-// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
 
 use sc_cli::{CliConfiguration, KeySubcommand, SignCmd, VanityCmd, VerifyCmd};
-use structopt::StructOpt;
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, clap::Parser)]
 pub struct Cli {
-    #[structopt(subcommand)]
+    #[clap(subcommand)]
     pub subcommand: Option<Subcommand>,
 
-    #[structopt(flatten)]
+    #[clap(flatten)]
     pub run: RunCmd,
 }
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, clap::Subcommand)]
 pub enum Subcommand {
     /// Key management cli utilities
+    #[clap(subcommand)]
     Key(KeySubcommand),
 
     /// The custom benchmark subcommmand benchmarking runtime pallets.
-    #[structopt(name = "benchmark", about = "Benchmark runtime pallets.")]
+    #[clap(name = "benchmark", about = "Benchmark runtime pallets.")]
     Benchmark(frame_benchmarking_cli::BenchmarkCmd),
 
     /// Try some command against runtime state.
@@ -61,10 +61,10 @@ pub enum Subcommand {
 }
 
 #[allow(missing_docs)]
-#[derive(Debug, StructOpt)]
+#[derive(Debug, clap::Parser)]
 pub struct RunCmd {
     #[allow(missing_docs)]
-    #[structopt(flatten)]
+    #[clap(flatten)]
     pub base: sc_cli::RunCmd,
 
     /// Pass `foo` option starting with `--` via a JSON config file
@@ -73,10 +73,10 @@ pub struct RunCmd {
     /// can use `base-path` in the config file but `d` is not allowed. For the options like
     /// `-d` you have to pass them from the command line. Any options in the config file
     /// can be overrided by the same one passed from the command line.
-    #[structopt(long = "config", value_name = "PATH", parse(from_os_str))]
+    #[clap(long = "config", value_name = "PATH", parse(from_os_str))]
     pub config_file: Option<std::path::PathBuf>,
 
-    #[structopt(flatten)]
+    #[clap(flatten)]
     pub logger: crate::logger::LoggerParams,
 }
 

@@ -1,4 +1,4 @@
-// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
 
 //! this module is for bridge common parts
 //! define trait and type for
@@ -113,6 +113,7 @@ pub mod pallet {
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
+    #[pallet::without_storage_info]
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::call]
@@ -550,7 +551,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn trustee_multisig_addr)]
     pub(crate) type TrusteeMultiSigAddr<T: Config> =
-        StorageMap<_, Twox64Concat, Chain, T::AccountId, ValueQuery>;
+        StorageMap<_, Twox64Concat, Chain, T::AccountId, OptionQuery>;
 
     /// Trustee info config of the corresponding chain.
     #[pallet::storage]
@@ -638,7 +639,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn trustee_admin)]
     pub(crate) type TrusteeAdmin<T: Config> =
-        StorageMap<_, Twox64Concat, Chain, T::AccountId, ValueQuery>;
+        StorageMap<_, Twox64Concat, Chain, T::AccountId, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn trustee_admin_multiply)]
@@ -1231,7 +1232,7 @@ impl<T: Config> Pallet<T> {
     fn try_ensure_trustee_admin(origin: OriginFor<T>, chain: Chain) -> Result<(), OriginFor<T>> {
         match ensure_signed(origin.clone()) {
             Ok(who) => {
-                if who != Self::trustee_admin(chain) {
+                if Some(who) != Self::trustee_admin(chain) {
                     return Err(origin);
                 }
             }

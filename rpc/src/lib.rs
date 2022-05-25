@@ -1,4 +1,4 @@
-// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
 
 use std::sync::Arc;
 
@@ -18,23 +18,28 @@ use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 use sp_consensus::SelectChain;
 use sp_consensus_babe::BabeApi;
 
-use chainx_primitives::Block;
-use chainx_runtime::{AccountId, Balance, BlockNumber, Hash, Index};
+use chainx_primitives::{AccountId, Balance, Block, BlockNumber, Hash, Index};
 
 use xpallet_mining_asset_rpc_runtime_api::MiningWeight;
 use xpallet_mining_staking_rpc_runtime_api::VoteWeight;
 
-/// Light client extra dependencies.
-pub struct LightDeps<C, F, P> {
-    /// The client instance to use.
-    pub client: Arc<C>,
-    /// Transaction pool instance.
-    pub pool: Arc<P>,
-    /// Remote access to the blockchain (async).
-    pub remote_blockchain: Arc<dyn sc_client_api::light::RemoteBlockchain<Block>>,
-    /// Fetcher instance.
-    pub fetcher: Arc<F>,
-}
+// EVM
+use fc_rpc::{
+    EthBlockDataCacheTask, OverrideHandle, RuntimeApiStorageOverride, SchemaV1Override,
+    SchemaV2Override, SchemaV3Override, StorageOverride,
+};
+use fc_rpc_core::types::{FeeHistoryCache, FilterPool};
+use fp_storage::EthereumStorageSchema;
+use jsonrpc_pubsub::manager::SubscriptionManager;
+use sc_client_api::{
+    backend::{Backend, StateBackend, StorageProvider},
+    client::BlockchainEvents,
+};
+use sc_network::NetworkService;
+use sc_transaction_pool::{ChainApi, Pool};
+use sp_runtime::traits::BlakeTwo256;
+use std::collections::BTreeMap;
+use xp_runtime::Never;
 
 /// Extra dependencies for BABE.
 pub struct BabeDeps {
@@ -60,8 +65,32 @@ pub struct GrandpaDeps<B> {
     pub finality_provider: Arc<FinalityProofProvider<B, Block>>,
 }
 
+/// Frontier client dependencies
+pub struct FrontierDeps<A: sc_transaction_pool::ChainApi> {
+    /// Graph pool instance.
+    pub graph: Arc<Pool<A>>,
+    /// The Node authority flag
+    pub is_authority: bool,
+    /// Network service
+    pub network: Arc<NetworkService<Block, Hash>>,
+    /// EthFilterApi pool.
+    pub filter_pool: Option<FilterPool>,
+    /// Backend.
+    pub backend: Arc<fc_db::Backend<Block>>,
+    /// Maximum number of logs in a query.
+    pub max_past_logs: u32,
+    /// Maximum fee history cache size.
+    pub fee_history_limit: u64,
+    /// Fee history cache.
+    pub fee_history_cache: FeeHistoryCache,
+    /// Ethereum data access overrides.
+    pub overrides: Arc<OverrideHandle<Block>>,
+    /// Cache for Ethereum block data.
+    pub block_data_cache: Arc<EthBlockDataCacheTask<Block>>,
+}
+
 /// Full client dependencies.
-pub struct FullDeps<C, P, SC, B> {
+pub struct FullDeps<C, P, SC, B, A: sc_transaction_pool::ChainApi> {
     /// The client instance to use.
     pub client: Arc<C>,
     /// Transaction pool instance.
@@ -76,20 +105,60 @@ pub struct FullDeps<C, P, SC, B> {
     pub babe: BabeDeps,
     /// GRANDPA specific dependencies.
     pub grandpa: GrandpaDeps<B>,
+    /// Frontier specific dependencies.
+    pub frontier: FrontierDeps<A>,
+}
+
+pub fn overrides_handle<C, B>(client: Arc<C>) -> Arc<OverrideHandle<Block>>
+where
+    C: ProvideRuntimeApi<Block> + StorageProvider<Block, B> + AuxStore,
+    C: HeaderBackend<Block> + HeaderMetadata<Block, Error = BlockChainError>,
+    C: Send + Sync + 'static,
+    C::Api: sp_api::ApiExt<Block>
+        + fp_rpc::EthereumRuntimeRPCApi<Block>
+        + fp_rpc::ConvertTransactionRuntimeApi<Block>,
+    B: Backend<Block> + 'static,
+    B::State: StateBackend<BlakeTwo256>,
+{
+    let mut overrides_map = BTreeMap::new();
+    overrides_map.insert(
+        EthereumStorageSchema::V1,
+        Box::new(SchemaV1Override::new(client.clone()))
+            as Box<dyn StorageOverride<_> + Send + Sync>,
+    );
+    overrides_map.insert(
+        EthereumStorageSchema::V2,
+        Box::new(SchemaV2Override::new(client.clone()))
+            as Box<dyn StorageOverride<_> + Send + Sync>,
+    );
+
+    overrides_map.insert(
+        EthereumStorageSchema::V3,
+        Box::new(SchemaV3Override::new(client.clone()))
+            as Box<dyn StorageOverride<_> + Send + Sync>,
+    );
+
+    Arc::new(OverrideHandle {
+        schemas: overrides_map,
+        fallback: Box::new(RuntimeApiStorageOverride::new(client)),
+    })
 }
 
 /// A IO handler that uses all Full RPC extensions.
-pub type IoHandler = jsonrpc_core::IoHandler<sc_rpc::Metadata>;
+pub type RpcExtension = jsonrpc_core::IoHandler<sc_rpc::Metadata>;
 
 /// Instantiate all Full RPC extensions.
-pub fn create_full<C, P, SC, B>(
-    deps: FullDeps<C, P, SC, B>,
-) -> Result<jsonrpc_core::IoHandler<sc_rpc_api::Metadata>, Box<dyn std::error::Error + Send + Sync>>
+pub fn create_full<C, P, SC, B, A>(
+    deps: FullDeps<C, P, SC, B, A>,
+    subscription_task_executor: SubscriptionTaskExecutor,
+) -> Result<RpcExtension, Box<dyn std::error::Error + Send + Sync>>
 where
     C: ProvideRuntimeApi<Block>
         + AuxStore
         + HeaderBackend<Block>
         + HeaderMetadata<Block, Error = BlockChainError>
+        + StorageProvider<Block, B>
+        + BlockchainEvents<Block>
         + Send
         + Sync
         + 'static,
@@ -128,10 +197,13 @@ where
         BlockNumber,
     >,
     C::Api: xpallet_transaction_fee_rpc_runtime_api::XTransactionFeeApi<Block, Balance>,
-    P: TransactionPool + 'static,
+    C::Api: fp_rpc::EthereumRuntimeRPCApi<Block>,
+    C::Api: fp_rpc::ConvertTransactionRuntimeApi<Block>,
+    P: TransactionPool<Block = Block> + Sync + Send + 'static,
     SC: SelectChain<Block> + 'static,
     B: sc_client_api::Backend<Block> + Send + Sync + 'static,
     B::State: sc_client_api::backend::StateBackend<sp_runtime::traits::HashFor<Block>>,
+    A: ChainApi<Block = Block> + 'static,
 {
     use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
     use substrate_frame_rpc_system::{FullSystem, SystemApi};
@@ -153,7 +225,9 @@ where
         deny_unsafe,
         grandpa,
         babe,
+        frontier,
     } = deps;
+
     let BabeDeps {
         keystore,
         babe_config,
@@ -169,7 +243,7 @@ where
 
     io.extend_with(SystemApi::to_delegate(FullSystem::new(
         client.clone(),
-        pool,
+        pool.clone(),
         deny_unsafe,
     )));
     io.extend_with(TransactionPaymentApi::to_delegate(TransactionPayment::new(
@@ -200,7 +274,6 @@ where
             client.clone(),
             shared_authority_set,
             shared_epoch_changes,
-            deny_unsafe,
         )?,
     ));
 
@@ -219,32 +292,80 @@ where
     io.extend_with(XGatewayRecordsApi::to_delegate(XGatewayRecords::new(
         client.clone(),
     )));
-    io.extend_with(XGatewayCommonApi::to_delegate(XGatewayCommon::new(client)));
+    io.extend_with(XGatewayCommonApi::to_delegate(XGatewayCommon::new(
+        client.clone(),
+    )));
+
+    // EVM
+    {
+        use fc_rpc::{
+            EthApi, EthApiServer, EthFilterApi, EthFilterApiServer, EthPubSubApi,
+            EthPubSubApiServer, HexEncodedIdProvider, NetApi, NetApiServer, Web3Api, Web3ApiServer,
+        };
+
+        let FrontierDeps {
+            graph,
+            is_authority,
+            network,
+            filter_pool,
+            backend,
+            max_past_logs,
+            fee_history_limit,
+            fee_history_cache,
+            overrides,
+            block_data_cache,
+        } = frontier;
+
+        let convert_transaction: Option<Never> = None;
+
+        io.extend_with(EthApiServer::to_delegate(EthApi::new(
+            client.clone(),
+            pool.clone(),
+            graph,
+            convert_transaction,
+            network.clone(),
+            Vec::new(),
+            overrides.clone(),
+            backend.clone(),
+            is_authority,
+            max_past_logs,
+            block_data_cache.clone(),
+            fc_rpc::format::Geth,
+            fee_history_limit,
+            fee_history_cache,
+        )));
+
+        if let Some(filter_pool) = filter_pool {
+            io.extend_with(EthFilterApiServer::to_delegate(EthFilterApi::new(
+                client.clone(),
+                backend,
+                filter_pool,
+                500_usize, // max stored filters
+                max_past_logs,
+                block_data_cache,
+            )));
+        }
+
+        io.extend_with(NetApiServer::to_delegate(NetApi::new(
+            client.clone(),
+            network.clone(),
+            // Whether to format the `peer_count` response as Hex (default) or not.
+            true,
+        )));
+
+        io.extend_with(Web3ApiServer::to_delegate(Web3Api::new(client.clone())));
+
+        io.extend_with(EthPubSubApiServer::to_delegate(EthPubSubApi::new(
+            pool,
+            client,
+            network,
+            SubscriptionManager::<HexEncodedIdProvider>::with_id_provider(
+                HexEncodedIdProvider::default(),
+                Arc::new(subscription_task_executor),
+            ),
+            overrides,
+        )));
+    }
 
     Ok(io)
-}
-
-/// Instantiate all Light RPC extensions.
-pub fn create_light<C, P, M, F>(deps: LightDeps<C, F, P>) -> jsonrpc_core::IoHandler<M>
-where
-    C: sc_client_api::blockchain::HeaderBackend<Block>,
-    C: Send + Sync + 'static,
-    F: sc_client_api::light::Fetcher<Block> + 'static,
-    P: TransactionPool + 'static,
-    M: jsonrpc_core::Metadata + Default,
-{
-    use substrate_frame_rpc_system::{LightSystem, SystemApi};
-
-    let LightDeps {
-        client,
-        pool,
-        remote_blockchain,
-        fetcher,
-    } = deps;
-    let mut io = jsonrpc_core::IoHandler::default();
-    io.extend_with(SystemApi::<Hash, AccountId, Index>::to_delegate(
-        LightSystem::new(client, remote_blockchain, fetcher, pool),
-    ));
-
-    io
 }

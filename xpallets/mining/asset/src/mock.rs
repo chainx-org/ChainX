@@ -1,4 +1,4 @@
-// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
 
 use std::{
     cell::RefCell,
@@ -29,7 +29,6 @@ pub const INIT_TIMESTAMP: u64 = 30_000;
 pub(crate) type AccountId = u64;
 pub(crate) type BlockNumber = u64;
 pub(crate) type Balance = u128;
-pub(crate) type Amount = i128;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -80,6 +79,7 @@ impl frame_system::Config for Test {
     type SystemWeightInfo = ();
     type SS58Prefix = SS58Prefix;
     type OnSetCode = ();
+    type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 parameter_types! {
@@ -129,7 +129,6 @@ impl xpallet_assets_registrar::Config for Test {
 impl xpallet_assets::Config for Test {
     type Event = Event;
     type Currency = Balances;
-    type Amount = Amount;
     type TreasuryAccount = ();
     type OnCreatedAccount = frame_system::Provider<Test>;
     type OnAssetChanged = XMiningAsset;
@@ -156,10 +155,10 @@ impl frame_support::traits::OneSessionHandler<AccountId> for OtherSessionHandler
         SESSION.with(|x| *x.borrow_mut() = (validators.map(|x| *x.0).collect(), HashSet::new()));
     }
 
-    fn on_disabled(validator_index: usize) {
+    fn on_disabled(validator_index: u32) {
         SESSION.with(|d| {
             let mut d = d.borrow_mut();
-            let value = d.0[validator_index];
+            let value = d.0[validator_index as usize];
             d.1.insert(value);
         })
     }
@@ -211,7 +210,6 @@ impl pallet_session::Config for Test {
     type Event = Event;
     type ValidatorId = AccountId;
     type ValidatorIdOf = ();
-    type DisabledValidatorsThreshold = DisabledValidatorsThreshold;
     type NextSessionRotation = pallet_session::PeriodicSessions<Period, Offset>;
     type WeightInfo = ();
 }
@@ -221,8 +219,8 @@ pub struct DummyTreasuryAccount;
 pub(crate) const TREASURY_ACCOUNT: AccountId = 100_000;
 
 impl xpallet_support::traits::TreasuryAccount<AccountId> for DummyTreasuryAccount {
-    fn treasury_account() -> AccountId {
-        TREASURY_ACCOUNT
+    fn treasury_account() -> Option<AccountId> {
+        Some(TREASURY_ACCOUNT)
     }
 }
 

@@ -1,4 +1,4 @@
-// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -40,7 +40,7 @@ pub type Hash = sp_core::H256;
 pub type Timestamp = u64;
 
 /// Digest item type.
-pub type DigestItem = generic::DigestItem<Hash>;
+pub type DigestItem = generic::DigestItem;
 
 /// Header type.
 pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
@@ -78,34 +78,3 @@ pub type ReferralId = Vec<u8>;
 
 pub type AddrStr = Vec<u8>;
 pub type ChainAddress = Vec<u8>;
-
-/// App-specific crypto used for reporting equivocation/misbehavior in BABE and
-/// GRANDPA. Any rewards for misbehavior reporting will be paid out to this
-/// account.
-pub mod report {
-    use super::{Signature, Verify};
-    use frame_system::offchain::AppCrypto;
-    use sp_core::crypto::{key_types, KeyTypeId};
-
-    /// Key type for the reporting module. Used for reporting BABE and GRANDPA
-    /// equivocations.
-    pub const KEY_TYPE: KeyTypeId = key_types::REPORTING;
-
-    mod app {
-        use sp_application_crypto::{app_crypto, sr25519};
-        app_crypto!(sr25519, super::KEY_TYPE);
-    }
-
-    /// Identity of the equivocation/misbehavior reporter.
-    pub type ReporterId = app::Public;
-
-    /// An `AppCrypto` type to allow submitting signed transactions using the reporting
-    /// application key as signer.
-    pub struct ReporterAppCrypto;
-
-    impl AppCrypto<<Signature as Verify>::Signer, Signature> for ReporterAppCrypto {
-        type RuntimeAppPublic = ReporterId;
-        type GenericPublic = sp_core::sr25519::Public;
-        type GenericSignature = sp_core::sr25519::Signature;
-    }
-}

@@ -1,9 +1,9 @@
-// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
 
 //! Weights for xpallet_assets_registrar
 //! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 4.0.0-dev
-//! DATE: 2022-03-16, STEPS: 50, REPEAT: 20, LOW RANGE: [], HIGH RANGE: []
-//! EXECUTION: Some(Wasm), WASM-EXECUTION: Compiled, CHAIN: Some("benchmarks"), DB CACHE: 128
+//! DATE: 2022-05-13, STEPS: 50, REPEAT: 20, LOW RANGE: [], HIGH RANGE: []
+//! EXECUTION: Some(Wasm), WASM-EXECUTION: Compiled, CHAIN: Some("benchmarks"), DB CACHE: 1024
 
 // Executed Command:
 // ./target/release/chainx
@@ -41,22 +41,22 @@ pub trait WeightInfo {
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
     fn register() -> Weight {
-        (65_046_000 as Weight)
+        (54_607_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(3 as Weight))
             .saturating_add(T::DbWeight::get().writes(6 as Weight))
     }
     fn deregister() -> Weight {
-        (33_203_000 as Weight)
+        (35_301_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
             .saturating_add(T::DbWeight::get().writes(2 as Weight))
     }
     fn recover() -> Weight {
-        (43_419_000 as Weight)
+        (45_382_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(3 as Weight))
             .saturating_add(T::DbWeight::get().writes(3 as Weight))
     }
     fn update_asset_info() -> Weight {
-        (14_237_000 as Weight)
+        (13_710_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(1 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
@@ -65,22 +65,22 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 // For backwards compatibility and tests
 impl WeightInfo for () {
     fn register() -> Weight {
-        (65_046_000 as Weight)
+        (54_607_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(3 as Weight))
             .saturating_add(RocksDbWeight::get().writes(6 as Weight))
     }
     fn deregister() -> Weight {
-        (33_203_000 as Weight)
+        (35_301_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(2 as Weight))
             .saturating_add(RocksDbWeight::get().writes(2 as Weight))
     }
     fn recover() -> Weight {
-        (43_419_000 as Weight)
+        (45_382_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(3 as Weight))
             .saturating_add(RocksDbWeight::get().writes(3 as Weight))
     }
     fn update_asset_info() -> Weight {
-        (14_237_000 as Weight)
+        (13_710_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(1 as Weight))
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }

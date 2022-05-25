@@ -1,8 +1,8 @@
 [package]
 name = "chainx"
-version = "4.2.0"
+version = "4.3.0"
 authors = ["The ChainX Authors"]
-edition = "2018"
+edition = "2021"
 description = "Fully Decentralized Interchain Crypto Asset Management on Polkadot"
 
 [dependencies]
@@ -35,6 +35,7 @@ members = [
   "xpallets/assets",
   "xpallets/assets/rpc",
   "xpallets/assets/rpc/runtime-api",
+  "xpallets/assets-bridge",
   "xpallets/assets-registrar",
   "xpallets/dex/spot",
   "xpallets/dex/spot/rpc",

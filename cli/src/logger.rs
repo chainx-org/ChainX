@@ -1,4 +1,4 @@
-// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
 
 use std::str::FromStr;
 
@@ -18,31 +18,31 @@ use log4rs::{
     encode::pattern::PatternEncoder,
 };
 
-#[derive(Debug, structopt::StructOpt)]
+#[derive(Debug, clap::Parser)]
 pub struct LoggerParams {
     /// Disable the log rotation.
     //  Use `log4rs` as `env_logger` can't print the message into file directly.
-    #[structopt(long)]
+    #[clap(long)]
     pub no_log_rotation: bool,
 
     /// Print the log message to the console aside from the log file.
-    #[structopt(long)]
+    #[clap(long)]
     pub enable_console_log: bool,
 
     /// Specify the path of directory which will contain the log files.
     ///
     /// The directory will be created if it does not exist.
-    #[structopt(long, default_value = "./log")]
+    #[clap(long, default_value = "./log")]
     pub log_dir: String,
 
     /// Specify the name of log file.
     ///
     /// The latest log file would be created at ./log/chainx.log.
-    #[structopt(long, default_value = "chainx.log")]
+    #[clap(long, default_value = "chainx.log")]
     pub log_filename: String,
 
     /// Rotate the log file when it exceeds this size (in MB).
-    #[structopt(long, default_value = "300")]
+    #[clap(long, default_value = "300")]
     pub log_size: u64,
 
     /// The maximum number of log rorations.
@@ -50,13 +50,13 @@ pub struct LoggerParams {
     /// By default the generated log files would be like `chainx.log.0`,
     /// `chainx.log.1`, ... `chainx.log.10`. Once the number of generated log files
     /// are larger than this variable, the oldest one will be removed.
-    #[structopt(long, default_value = "10")]
+    #[clap(long, default_value = "10")]
     pub log_roll_count: u32,
 
     /// Compress the old log file to save some disk space.
     ///
     /// The compressed log file would be like `chainx.log.gz.0` by default.
-    #[structopt(long)]
+    #[clap(long)]
     pub log_compression: bool,
 }
 

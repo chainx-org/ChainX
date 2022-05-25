@@ -1,4 +1,4 @@
-// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
 
 use sp_std::cmp::Ordering;
 use sp_std::vec::Vec;
@@ -8,7 +8,7 @@ use frame_support::weights::Weight;
 use sp_arithmetic::traits::BaseArithmetic;
 use sp_core::crypto::UncheckedFrom;
 use sp_runtime::{traits::Hash, Perbill};
-use sp_staking::offence::{OffenceDetails, OnOffenceHandler};
+use sp_staking::offence::{DisableStrategy, OffenceDetails, OnOffenceHandler};
 
 use xp_mining_common::{
     generic_weight_factors, BaseMiningWeight, Claim, ComputeMiningWeight, WeightFactors, WeightType,
@@ -401,6 +401,7 @@ where
         offenders: &[OffenceDetails<Reporter<T>, Offender<T>>],
         slash_fraction: &[Perbill],
         slash_session: SessionIndex,
+        _disable_strategy: DisableStrategy,
     ) -> Weight {
         let offenders_tuple = offenders
             .iter()

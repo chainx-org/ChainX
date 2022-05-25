@@ -1,24 +1,24 @@
 [package]
 name = "xpallet-dex-spot"
-version = "4.2.0"
+version = "4.3.0"
 authors = ["The ChainX Authors"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "2.3.1", default-features = false, features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 serde = { version = "1.0", optional = true }
-scale-info = { version = "1.0", default-features = false, features = ["derive"] }
+scale-info = { version = "2.0.1", default-features = false, features = ["derive"] }
 
 # Substrate primitives
-sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
+sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
 
 # Substrate pallets
-frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false, optional = true }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
-frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
-pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
+frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false, optional = true }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
 
 # ChainX primitives
 chainx-primitives = { path = "../../../primitives", default-features = false }
@@ -31,9 +31,9 @@ xpallet-support = { path = "../../support", default-features = false }
 
 [dev-dependencies]
 env_logger = "0.7.1"
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11" }
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11" }
-frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
+frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
 xp-protocol = { path = "../../../primitives/protocol" }
 
 [features]

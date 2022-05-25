@@ -1,4 +1,4 @@
-// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
 
 use std::convert::TryFrom;
 
@@ -8,6 +8,7 @@ use serde::Deserialize;
 use sp_core::sr25519;
 
 use chainx_primitives::AccountId;
+
 use chainx_runtime::{
     h256_rev, trustees, BtcHeader, BtcNetwork, Chain, Compact as BtcCompact, TrusteeInfoConfig,
     H256 as BtcHash,

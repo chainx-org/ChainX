@@ -1,4 +1,4 @@
-// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
 
 use codec::Encode;
 use sp_core::crypto::UncheckedFrom;
@@ -179,8 +179,11 @@ impl<T: Config> Pallet<T> {
         dividend: BalanceOf<T>,
     ) -> Result<(), Error<T>> {
         let to_referral_or_treasury = dividend / 10u32.saturated_into();
-        let reward_splitter = T::GatewayInterface::referral_of(claimer, *claimee)
-            .unwrap_or_else(<T as Config>::TreasuryAccount::treasury_account);
+        let reward_splitter =
+            T::GatewayInterface::referral_of(claimer, *claimee).unwrap_or_else(|| {
+                <T as Config>::TreasuryAccount::treasury_account()
+                    .expect("TreasuryAccount is some; qed")
+            });
         Self::transfer(
             claimee_reward_pot,
             &reward_splitter,

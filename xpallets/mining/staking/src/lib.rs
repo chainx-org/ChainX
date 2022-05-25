@@ -1,4 +1,4 @@
-// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
 
 //! # Staking Pallet
 //!
@@ -112,6 +112,7 @@ pub mod pallet {
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
+    #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
     #[pallet::call]
@@ -433,6 +434,8 @@ pub mod pallet {
     pub enum Event<T: Config> {
         /// Issue new balance to this account. [account, reward_amount]
         Minted(T::AccountId, BalanceOf<T>),
+        /// Issue new balance to validator and pot. [validator, reward_amount, validator_pot, reward_amount]
+        MintedForValidator(T::AccountId, BalanceOf<T>, T::AccountId, BalanceOf<T>),
         /// A validator (and its reward pot) was slashed. [validator, slashed_amount]
         Slashed(T::AccountId, BalanceOf<T>),
         /// A nominator bonded to the validator this amount. [nominator, validator, amount]
@@ -807,7 +810,7 @@ pub trait SessionInterface<AccountId>: frame_system::Config {
     /// Returns `true` if new era should be forced at the end of this session.
     /// This allows preventing a situation where there is too many validators
     /// disabled and block production stalls.
-    fn disable_validator(validator: &AccountId) -> Result<bool, ()>;
+    fn disable_validator(validator: &AccountId) -> bool;
 
     /// Get the validators from session.
     fn validators() -> Vec<AccountId>;
@@ -823,7 +826,7 @@ where
         Option<<T as frame_system::Config>::AccountId>,
     >,
 {
-    fn disable_validator(validator: &<T as frame_system::Config>::AccountId) -> Result<bool, ()> {
+    fn disable_validator(validator: &<T as frame_system::Config>::AccountId) -> bool {
         <pallet_session::Pallet<T>>::disable(validator)
     }
 

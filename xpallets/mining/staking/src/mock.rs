@@ -1,4 +1,4 @@
-// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
 
 use std::{cell::RefCell, collections::HashSet};
 
@@ -70,6 +70,7 @@ impl frame_system::Config for Test {
     type SystemWeightInfo = ();
     type SS58Prefix = SS58Prefix;
     type OnSetCode = ();
+    type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 pub struct ExistentialDeposit;
@@ -126,10 +127,10 @@ impl frame_support::traits::OneSessionHandler<AccountId> for OtherSessionHandler
         SESSION.with(|x| *x.borrow_mut() = (validators.map(|x| *x.0).collect(), HashSet::new()));
     }
 
-    fn on_disabled(validator_index: usize) {
+    fn on_disabled(validator_index: u32) {
         SESSION.with(|d| {
             let mut d = d.borrow_mut();
-            let value = d.0[validator_index];
+            let value = d.0[validator_index as usize];
             d.1.insert(value);
         })
     }
@@ -166,7 +167,6 @@ impl pallet_session::Config for Test {
     type Event = Event;
     type ValidatorId = AccountId;
     type ValidatorIdOf = ();
-    type DisabledValidatorsThreshold = DisabledValidatorsThreshold;
     type NextSessionRotation = pallet_session::PeriodicSessions<Period, Offset>;
     type WeightInfo = ();
 }
@@ -174,8 +174,8 @@ impl pallet_session::Config for Test {
 pub struct DummyTreasuryAccount;
 
 impl TreasuryAccount<AccountId> for DummyTreasuryAccount {
-    fn treasury_account() -> AccountId {
-        TREASURY_ACCOUNT
+    fn treasury_account() -> Option<AccountId> {
+        Some(TREASURY_ACCOUNT)
     }
 }
 

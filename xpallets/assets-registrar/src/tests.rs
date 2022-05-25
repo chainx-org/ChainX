@@ -1,4 +1,4 @@
-// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
 
 use frame_support::{assert_noop, assert_ok, parameter_types, sp_io, traits::GenesisBuild};
 use sp_core::H256;
@@ -58,6 +58,7 @@ impl frame_system::Config for Test {
     type SystemWeightInfo = ();
     type SS58Prefix = SS58Prefix;
     type OnSetCode = ();
+    type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 parameter_types! {

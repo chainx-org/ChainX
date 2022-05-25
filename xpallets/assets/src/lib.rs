@@ -1,4 +1,4 @@
-// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
 
 //! Assets: Handles token asset balances.
 
@@ -12,18 +12,15 @@ mod benchmarking;
 mod mock;
 #[cfg(test)]
 mod tests;
-#[cfg(test)]
-mod tests_multicurrency;
 
-mod multicurrency;
 pub mod traits;
 mod trigger;
 pub mod types;
 pub mod weights;
 
-use sp_std::{
-    collections::btree_map::BTreeMap,
-    convert::{TryFrom, TryInto},
+use sp_std::collections::btree_map::{
+    BTreeMap,
+    Entry::{Occupied, Vacant},
 };
 
 use frame_support::{
@@ -32,11 +29,9 @@ use frame_support::{
     inherent::Vec,
     log::{debug, error, info},
     traits::{Currency, Get, HandleLifetime, LockableCurrency, ReservableCurrency},
-    Parameter,
 };
 
 use frame_system::{ensure_root, ensure_signed, AccountInfo};
-use orml_traits::arithmetic::{Signed, SimpleArithmetic};
 use sp_runtime::traits::{CheckedAdd, CheckedSub, Saturating, StaticLookup, Zero};
 
 use self::trigger::AssetChangedTrigger;
@@ -73,17 +68,6 @@ pub mod pallet {
         type Currency: ReservableCurrency<Self::AccountId>
             + LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
 
-        /// The amount type, should be signed version of `Balance`
-        type Amount: Parameter
-            + Member
-            + Default
-            + Copy
-            + MaybeSerializeDeserialize
-            + Signed
-            + SimpleArithmetic
-            + TryInto<BalanceOf<Self>>
-            + TryFrom<BalanceOf<Self>>;
-
         /// The treasury account.
         type TreasuryAccount: TreasuryAccount<Self::AccountId>;
 
@@ -99,6 +83,7 @@ pub mod pallet {
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
+    #[pallet::without_storage_info]
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::call]
@@ -214,6 +199,10 @@ pub mod pallet {
         ActionNotAllowed,
         /// Account still has active reserved
         StillHasActiveReserved,
+        /// Unable to increment the consumer reference counters on the account. Either no provider
+        /// reference exists to allow a non-zero balance of a non-self-sufficient asset, or the
+        /// maximum number of consumers has been reached.
+        NoProvider,
     }
 
     /// asset extend limit properties, set asset "can do", example, `CanTransfer`, `CanDestroyWithdrawal`
@@ -234,20 +223,6 @@ pub mod pallet {
         Twox64Concat,
         AssetId,
         BTreeMap<AssetType, BalanceOf<T>>,
-        ValueQuery,
-    >;
-
-    /// Any liquidity locks of a token type under an account.
-    /// NOTE: Should only be accessed when setting, changing and freeing a lock.
-    #[pallet::storage]
-    #[pallet::getter(fn locks)]
-    pub type Locks<T: Config> = StorageDoubleMap<
-        _,
-        Blake2_128Concat,
-        T::AccountId,
-        Twox64Concat,
-        AssetId,
-        Vec<BalanceLock<BalanceOf<T>>>,
         ValueQuery,
     >;
 
@@ -589,32 +564,44 @@ impl<T: Config> Pallet<T> {
         new_balance: BalanceOf<T>,
     ) {
         let mut original: BalanceOf<T> = Zero::zero();
-        // todo change to try_mutate when update to rc5
+        let mut exists = false;
+
         let existed = AssetBalance::<T>::contains_key(who, id);
-        let exists = AssetBalance::<T>::mutate(
+        AssetBalance::<T>::mutate(
             who,
             id,
-            |balance_map: &mut BTreeMap<AssetType, BalanceOf<T>>| {
-                if new_balance == Zero::zero() {
-                    // remove Zero balance to save space
-                    if let Some(old) = balance_map.remove(&type_) {
-                        original = old;
+            |balances: &mut BTreeMap<AssetType, BalanceOf<T>>| {
+                match balances.entry(type_) {
+                    Occupied(mut entry) => {
+                        original = *entry.get();
+
+                        if new_balance == Zero::zero() {
+                            // remove Zero balance to save space
+                            entry.remove();
+                        } else {
+                            // update balance
+                            entry.insert(new_balance);
+                        }
                     }
-                    // if is_empty(), means not exists
-                    !balance_map.is_empty()
-                } else {
-                    let balance = balance_map.entry(type_).or_default();
-                    original = *balance;
-                    // modify to new balance
-                    *balance = new_balance;
-                    true
-                }
+                    Vacant(entry) => {
+                        entry.insert(new_balance);
+                    }
+                };
+
+                // if is_empty(), means not exists
+                exists = !balances.is_empty();
             },
         );
+
         if !existed && exists {
             Self::try_new_account(who);
-            // FIXME: handle the result properly
-            let _ = frame_system::Pallet::<T>::inc_consumers(who);
+            if let Err(e) = frame_system::Pallet::<T>::inc_consumers(who) {
+                frame_support::log::error!(
+                    target: "runtime::xassets",
+                    "inc_consumers: {:?}",
+                    e
+                );
+            }
         } else if existed && !exists {
             frame_system::Pallet::<T>::dec_consumers(who);
             AssetBalance::<T>::remove(who, id);
@@ -681,58 +668,5 @@ impl<T: Config> Pallet<T> {
 
         AssetChangedTrigger::<T>::on_destroy_post(id, who, value)?;
         Ok(())
-    }
-
-    fn update_locks(currency_id: AssetId, who: &T::AccountId, locks: &[BalanceLock<BalanceOf<T>>]) {
-        // update locked balance
-        if let Some(max_locked) = locks.iter().map(|lock| lock.amount).max() {
-            use sp_std::cmp::Ordering;
-            let current_locked = Self::asset_balance_of(who, &currency_id, AssetType::Locked);
-
-            let result = match max_locked.cmp(&current_locked) {
-                Ordering::Greater => {
-                    // new lock more than current locked, move usable to locked
-                    Self::move_balance(
-                        &currency_id,
-                        who,
-                        AssetType::Usable,
-                        who,
-                        AssetType::Locked,
-                        max_locked - current_locked,
-                    )
-                }
-                Ordering::Less => {
-                    // new lock less then current locked, release locked to usable
-                    Self::move_balance(
-                        &currency_id,
-                        who,
-                        AssetType::Locked,
-                        who,
-                        AssetType::Usable,
-                        current_locked - max_locked,
-                    )
-                }
-                Ordering::Equal => {
-                    // if max_locked == locked, need do nothing
-                    Ok(())
-                }
-            };
-            if let Err(err) = result {
-                // should not fail, for set lock need to check free_balance, free_balance = usable + free
-                error!(
-                    target: "runtime::assets",
-                    "[update_locks] Should not be failed when move asset (usable <=> locked), \
-                    who:{:?}, asset:[id:{}, max_locked:{:?}, current_locked:{:?}], err:{:?}",
-                    who, currency_id, max_locked, current_locked, err
-                );
-            }
-        }
-
-        // update locks
-        if locks.is_empty() {
-            <Locks<T>>::remove(who, currency_id);
-        } else {
-            <Locks<T>>::insert(who, currency_id, locks);
-        }
     }
 }

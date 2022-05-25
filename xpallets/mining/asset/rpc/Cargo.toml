@@ -1,22 +1,22 @@
 [package]
 name = "xpallet-mining-asset-rpc"
-version = "4.2.0"
+version = "4.3.0"
 authors = ["The ChainX Authors"]
-edition = "2018"
+edition = "2021"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "2.3.1" }
+codec = { package = "parity-scale-codec", version = "3.0.0" }
 jsonrpc-core = "18.0.0"
 jsonrpc-core-client = "18.0.0"
 jsonrpc-derive = "18.0.0"
 
 # Substrate primitives
-sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11" }
-sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11" }
+sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
+sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
 
 # ChainX primitives
 xp-rpc = { path = "../../../../primitives/rpc" }

@@ -1,4 +1,4 @@
-// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
 
 use sp_std::fmt::Debug;
 
@@ -229,7 +229,7 @@ impl BtcTxTypeDetector {
 
 #[cfg(test)]
 mod tests {
-    use sp_core::crypto::{set_default_ss58_version, Ss58AddressFormat};
+    use sp_core::crypto::{set_default_ss58_version, Ss58AddressFormatRegistry};
     use sp_runtime::AccountId32;
 
     use super::{Address, BtcTxTypeDetector, Network, Transaction};
@@ -241,7 +241,7 @@ mod tests {
 
     #[test]
     fn test_parse_deposit_transaction_outputs() {
-        set_default_ss58_version(Ss58AddressFormat::ChainXAccount);
+        set_default_ss58_version(Ss58AddressFormatRegistry::ChainxAccount.into());
 
         // tx from MathWallet test
         let cases = vec![

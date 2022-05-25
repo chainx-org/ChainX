@@ -1,8 +1,8 @@
 [package]
 name = "xp-rpc"
-version = "4.2.0"
+version = "4.3.0"
 authors = ["The ChainX Authors"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 hex = "0.4"

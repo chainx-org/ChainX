@@ -1,4 +1,4 @@
-// Copyright 2019-2021 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
 #![allow(clippy::ptr_arg)]
 extern crate alloc;
 use alloc::string::ToString;

@@ -1,4 +1,4 @@
-// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
 
 use codec::{Decode, Encode};
 use frame_benchmarking::benchmarks;
@@ -191,7 +191,7 @@ benchmarks! {
         let chain = Chain::Bitcoin;
     }: _(RawOrigin::Root, who.clone(), chain)
     verify {
-        assert_eq!(Pallet::<T>::trustee_admin(chain), who);
+        assert_eq!(Pallet::<T>::trustee_admin(chain).unwrap(), who);
     }
 
     set_trustee_admin_multiply {

@@ -1,18 +1,18 @@
 [package]
 name = "xpallet-transaction-fee-rpc-runtime-api"
-version = "4.2.0"
+version = "4.3.0"
 authors = ["The ChainX Authors"]
-edition = "2018"
+edition = "2021"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "2.3.1", default-features = false, features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 
 # Substrate primtives
-sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
+sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
 
 # ChainX pallets
 xpallet-transaction-fee = { path = "../..", default-features = false }

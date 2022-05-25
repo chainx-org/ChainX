@@ -1,4 +1,4 @@
-// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::type_complexity)]
@@ -18,11 +18,10 @@ use frame_support::{
     dispatch::{DispatchError, DispatchResult},
     ensure,
     log::{error, info},
+    transactional,
 };
 use frame_system::ensure_root;
 use sp_runtime::traits::StaticLookup;
-
-use orml_utilities::with_transaction_result;
 
 use chainx_primitives::{AddrStr, AssetId};
 use xp_runtime::Memo;
@@ -57,6 +56,7 @@ pub mod pallet {
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(crate) trait Store)]
+    #[pallet::without_storage_info]
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::call]
@@ -298,13 +298,12 @@ impl<T: Config> Pallet<T> {
     }
 
     /// Process withdrawal in batches.
+    #[transactional]
     pub fn process_withdrawals(ids: &[WithdrawalRecordId], chain: Chain) -> DispatchResult {
-        with_transaction_result(|| {
-            for id in ids {
-                Self::process_withdrawal(*id, chain)?;
-            }
-            Ok(())
-        })
+        for id in ids {
+            Self::process_withdrawal(*id, chain)?;
+        }
+        Ok(())
     }
 
     /// Recover withdrawal.
@@ -429,16 +428,15 @@ impl<T: Config> Pallet<T> {
     }
 
     /// Finish withdrawal in batches.
+    #[transactional]
     pub fn finish_withdrawals(
         ids: &[WithdrawalRecordId],
         expected_chain: Option<Chain>,
     ) -> DispatchResult {
-        with_transaction_result(|| {
-            for id in ids {
-                Self::finish_withdrawal(*id, expected_chain)?;
-            }
-            Ok(())
-        })
+        for id in ids {
+            Self::finish_withdrawal(*id, expected_chain)?;
+        }
+        Ok(())
     }
 
     pub fn set_withdrawal_state_by_root(

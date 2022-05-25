@@ -1,4 +1,4 @@
-// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
 
 //! New minted PCX distribution logic for ChainX Proposal 09.
 
@@ -154,7 +154,8 @@ impl<T: Config> Pallet<T> {
             global_distribution.calc_rewards::<T>(session_reward);
 
         // -> Treasury
-        let treasury_account = T::TreasuryAccount::treasury_account();
+        let treasury_account =
+            T::TreasuryAccount::treasury_account().expect("TreasuryAccount is some; qed");
         if !treasury_reward.is_zero() {
             Self::mint(&treasury_account, treasury_reward);
         }

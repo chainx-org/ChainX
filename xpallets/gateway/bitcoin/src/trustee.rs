@@ -1,4 +1,4 @@
-// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
 extern crate alloc;
 
 use alloc::string::ToString;
@@ -14,7 +14,7 @@ use light_bitcoin::{
     chain::Transaction,
     crypto::dhash160,
     keys::{Address, AddressTypes, Public, Type},
-    mast::{compute_min_threshold, Mast},
+    mast::{compute_min_threshold, key::PublicKey, Mast},
     primitives::Bytes,
     script::{Builder, Opcode},
 };
@@ -114,7 +114,7 @@ impl<T: Config> TrusteeForChain<T::AccountId, T::BlockNumber, BtcTrusteeType, Bt
         let trustee_type = BtcTrusteeType::try_from(raw_addr.to_vec())
             .map_err(|_| Error::<T>::InvalidPublicKey)?;
         let public = trustee_type.0;
-        let public: musig2::PublicKey = public
+        let public: PublicKey = public
             .try_into()
             .map_err(|_| Error::<T>::InvalidPublicKey)?;
 

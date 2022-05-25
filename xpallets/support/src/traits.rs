@@ -1,4 +1,4 @@
-// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
 
 pub trait MultisigAddressFor<AccountId> {
     fn calc_multisig(accounts: &[AccountId], threshold: u16) -> AccountId;
@@ -32,11 +32,11 @@ impl<AccountId> Validator<AccountId> for () {
 
 /// This trait provides a simple way to get the treasury account.
 pub trait TreasuryAccount<AccountId> {
-    fn treasury_account() -> AccountId;
+    fn treasury_account() -> Option<AccountId>;
 }
 
-impl<AccountId: Default> TreasuryAccount<AccountId> for () {
-    fn treasury_account() -> AccountId {
-        Default::default()
+impl<AccountId> TreasuryAccount<AccountId> for () {
+    fn treasury_account() -> Option<AccountId> {
+        None
     }
 }

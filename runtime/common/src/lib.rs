@@ -30,7 +30,7 @@ pub type NegativeImbalance<T> = <pallet_balances::Pallet<T> as Currency<
 pub const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_perthousand(25);
 /// We allow `Normal` extrinsics to fill up the block up to 75%, the rest can be used
 /// by  Operational  extrinsics.
-const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
+pub const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 /// We allow for 2 seconds of compute with a 6 second average block time.
 pub const MAXIMUM_BLOCK_WEIGHT: Weight = 2 * WEIGHT_PER_SECOND;
 
@@ -94,3 +94,6 @@ pub type SlowAdjustingFeeUpdate<R> =
 ///
 /// This must only be used as long as the balance type is u128.
 pub type CurrencyToVote = frame_support::traits::U128CurrencyToVote;
+
+// EVM
+pub const BASE_FEE: u128 = 45_000_000_000u128;

@@ -1,4 +1,4 @@
-// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
 
 use frame_support::{parameter_types, sp_io, traits::GenesisBuild};
 use sp_core::H256;
@@ -19,7 +19,6 @@ use crate::{self as xpallet_gateway_records, *};
 pub(crate) type AccountId = u64;
 pub(crate) type BlockNumber = u64;
 pub(crate) type Balance = u128;
-pub(crate) type Amount = i128;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -67,6 +66,7 @@ impl frame_system::Config for Test {
     type SystemWeightInfo = ();
     type SS58Prefix = SS58Prefix;
     type OnSetCode = ();
+    type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 parameter_types! {
@@ -100,7 +100,6 @@ impl xpallet_assets_registrar::Config for Test {
 impl xpallet_assets::Config for Test {
     type Event = ();
     type Currency = Balances;
-    type Amount = Amount;
     type TreasuryAccount = ();
     type OnCreatedAccount = frame_system::Provider<Test>;
     type OnAssetChanged = ();

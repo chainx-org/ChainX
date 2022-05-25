@@ -1,10 +1,10 @@
-// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
 
 #![allow(non_upper_case_globals)]
 
 use codec::Encode;
 use frame_support::{assert_noop, assert_ok};
-use sp_core::crypto::{set_default_ss58_version, Ss58AddressFormat};
+use sp_core::crypto::{set_default_ss58_version, Ss58AddressFormatRegistry};
 
 use light_bitcoin::{
     chain::Transaction,
@@ -81,7 +81,7 @@ fn mock_detect_transaction_type<T: Config>(
 
 #[test]
 fn test_detect_tx_type() {
-    set_default_ss58_version(Ss58AddressFormat::ChainXAccount);
+    set_default_ss58_version(Ss58AddressFormatRegistry::ChainxAccount.into());
     match mock_detect_transaction_type::<Test>(&deposit_taproot1, None) {
         BtcTxMetaType::Deposit(info) => {
             assert!(info.input_addr.is_none() && info.op_return.is_none())
@@ -170,7 +170,7 @@ fn mock_process_tx<T: Config>(tx: Transaction, prev_tx: Option<Transaction>) -> 
 
 #[test]
 fn test_process_tx() {
-    set_default_ss58_version(Ss58AddressFormat::ChainXAccount);
+    set_default_ss58_version(Ss58AddressFormatRegistry::ChainxAccount.into());
     ExtBuilder::default().build_and_execute(|| {
         // without op return and input address
         let r = mock_process_tx::<Test>(deposit_taproot1.clone(), None);
@@ -245,7 +245,7 @@ fn test_process_tx() {
 
 #[test]
 fn test_push_tx_call() {
-    set_default_ss58_version(Ss58AddressFormat::ChainXAccount);
+    set_default_ss58_version(Ss58AddressFormatRegistry::ChainxAccount.into());
     // https://blockchain.info/rawtx/f1a9161a045a01db7ae02b8c0531e2fe2e9740efe30afe6d84a12e3cac251344?format=hex
     let normal_deposit: Transaction = "02000000000101aeee49e0bbf7a36f78ea4321b5c8bae0b8c72bdf2c024d2484b137fa7d0f8e1f01000000000000000003a0860100000000002251209a9ea267884f5549c206b2aec2bd56d98730f90532ea7f7154d4d4f923b7e3bb0000000000000000326a3035516a706f3772516e7751657479736167477a6334526a376f737758534c6d4d7141754332416255364c464646476a38801a060000000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f01409e325889515ed47099fdd7098e6fafdc880b21456d3f368457de923f4229286e34cef68816348a0581ae5885ede248a35ac4b09da61a7b9b90f34c200872d2e300000000".parse().unwrap();
     let tx = serialization::serialize(&normal_deposit);
@@ -268,7 +268,7 @@ fn test_push_tx_call() {
         .encode();
 
         assert_ok!(XGatewayBitcoin::push_transaction(
-            frame_system::RawOrigin::Signed(Default::default()).into(),
+            frame_system::RawOrigin::Signed(alice()).into(),
             tx.clone().into(),
             info.clone(),
             None,
@@ -277,7 +277,7 @@ fn test_push_tx_call() {
         // reject replay
         assert_noop!(
             XGatewayBitcoin::push_transaction(
-                frame_system::RawOrigin::Signed(Default::default()).into(),
+                frame_system::RawOrigin::Signed(alice()).into(),
                 tx.clone().into(),
                 info,
                 None,

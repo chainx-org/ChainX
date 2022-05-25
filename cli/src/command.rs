@@ -1,16 +1,16 @@
-// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
 #![allow(clippy::borrowed_box)]
 
 use std::net::SocketAddr;
 
 use sc_cli::{
-    ChainSpec, CliConfiguration, DefaultConfigurationValues, Role, RuntimeVersion, SubstrateCli,
+    ChainSpec, CliConfiguration, DefaultConfigurationValues, RuntimeVersion, SubstrateCli,
 };
 use sc_service::{
     config::{PrometheusConfig, TelemetryEndpoints},
     BasePath, TransactionPoolOptions,
 };
-use sp_core::crypto::{set_default_ss58_version, Ss58AddressFormat::ChainXAccount};
+use sp_core::crypto::{set_default_ss58_version, Ss58AddressFormat};
 
 use chainx_service::{self as service, new_partial, IdentifyVariant};
 
@@ -35,10 +35,7 @@ impl DefaultConfigurationValues for Cli {
     }
 }
 
-impl<DCV> CliConfiguration<DCV> for Cli
-where
-    DCV: DefaultConfigurationValues,
-{
+impl CliConfiguration<Self> for Cli {
     fn shared_params(&self) -> &sc_cli::SharedParams {
         self.run.base.shared_params()
     }
@@ -102,8 +99,11 @@ where
     fn prometheus_config(
         &self,
         default_listen_port: u16,
+        chain_spec: &Box<dyn ChainSpec>,
     ) -> sc_cli::Result<Option<PrometheusConfig>> {
-        self.run.base.prometheus_config(default_listen_port)
+        self.run
+            .base
+            .prometheus_config(default_listen_port, chain_spec)
     }
 
     fn telemetry_endpoints(
@@ -175,14 +175,27 @@ impl SubstrateCli for Cli {
         let raw_cli_args = std::env::args().collect::<Vec<_>>();
         let cli = Cli::from_iter(crate::config::preprocess_cli_args(raw_cli_args));
 
+        let tokio_runtime = sc_cli::build_runtime()?;
+
+        let config = if cli.subcommand.is_some() {
+            command.create_configuration(self, tokio_runtime.handle().clone())?
+        } else {
+            CliConfiguration::create_configuration(&cli, self, tokio_runtime.handle().clone())?
+        };
+
         // Try to enable the log rotation function if from config file.
         if cli.run.config_file.is_some() && !cli.run.logger.no_log_rotation {
             cli.try_init_logger()?;
         } else {
-            command.init::<Self>()?;
+            command.init(
+                &Self::support_url(),
+                &Self::impl_version(),
+                |_, _| {},
+                &config,
+            )?;
         }
 
-        sc_cli::Runner::new(self, command)
+        sc_cli::Runner::new(config, tokio_runtime)
     }
 
     fn native_runtime_version(chain_spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
@@ -226,7 +239,6 @@ fn load_spec(id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
         path => {
             let p = std::path::PathBuf::from(path);
             if !p.exists() {
-                // TODO more better hint
                 return Err("invalid path or just use --chain={dev, local, testnet, mainnet, malan, benchmarks}".into());
             }
             Box::new(chain_spec::ChainXChainSpec::from_json_file(p)?)
@@ -235,45 +247,45 @@ fn load_spec(id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
 }
 
 macro_rules! construct_async_run {
-    (|$components:ident, $cli:ident, $cmd:ident, $config:ident| $( $code:tt )* ) => {{
-        let runner = $cli.create_runner($cmd)?;
+     (|$components:ident, $cli:ident, $cmd:ident, $config:ident| $( $code:tt )* ) => {{
+         let runner = $cli.create_runner($cmd)?;
 
-        if runner.config().chain_spec.is_malan() {
-            runner.async_run(|$config| {
+         if runner.config().chain_spec.is_malan() {
+            runner.async_run(|mut $config| {
                 let $components = new_partial::<
                     malan_runtime::RuntimeApi,
                     chainx_executor::MalanExecutor
                 >(
-                    &$config,
+                    &mut $config,
                 )?;
                 let task_manager = $components.task_manager;
                 { $( $code )* }.map(|v| (v, task_manager))
             })
         } else if runner.config().chain_spec.is_dev() {
-            runner.async_run(|$config| {
+            runner.async_run(|mut $config| {
                 let $components = new_partial::<
                     dev_runtime::RuntimeApi,
                     chainx_executor::DevExecutor
                 >(
-                    &$config,
+                    &mut $config,
                 )?;
                 let task_manager = $components.task_manager;
                 { $( $code )* }.map(|v| (v, task_manager))
             })
         } else {
-            runner.async_run(|$config| {
+            runner.async_run(|mut $config| {
                 let $components = new_partial::<
                     chainx_runtime::RuntimeApi,
                     chainx_executor::ChainXExecutor,
                 >(
-                    &$config,
+                    &mut $config,
                 )?;
                 let task_manager = $components.task_manager;
                 { $( $code )* }.map(|v| (v, task_manager))
             })
         }
     }}
-}
+ }
 
 /// Parse and run command line arguments
 pub fn run() -> sc_cli::Result<()> {
@@ -282,27 +294,16 @@ pub fn run() -> sc_cli::Result<()> {
     let raw_cli_args = std::env::args().collect::<Vec<_>>();
     let cli = <Cli as SubstrateCli>::from_iter(crate::config::preprocess_cli_args(raw_cli_args));
 
-    set_default_ss58_version(ChainXAccount);
+    // Set ChainX account
+    set_default_ss58_version(Ss58AddressFormat::from(44u16));
 
     match &cli.subcommand {
         None => {
-            let runner = cli.create_runner(&cli)?;
+            let runner = cli.create_runner(&cli.run.base)?;
 
-            runner
-                .run_node_until_exit(|config| async move {
-                    let config = SubstrateCli::create_configuration::<Cli, Cli>(
-                        &cli,
-                        &cli,
-                        config.tokio_handle.clone(),
-                    )
-                    .map_err(|err| format!("chain argument error: {:?}", err))?;
-
-                    match config.role {
-                        Role::Light => service::build_light(config),
-                        _ => service::build_full(config),
-                    }
-                })
-                .map_err(sc_cli::Error::Service)
+            runner.run_node_until_exit(|config| async move {
+                service::build_full(config).map_err(sc_cli::Error::Service)
+            })
         }
         Some(Subcommand::Benchmark(cmd)) => {
             if cfg!(feature = "runtime-benchmarks") {
@@ -314,7 +315,7 @@ pub fn run() -> sc_cli::Result<()> {
             } else {
                 println!(
                     "Benchmarking wasn't enabled when building the node. \
-                    You can enable it with `--features runtime-benchmarks`."
+                     You can enable it with `--features runtime-benchmarks`."
                 );
                 Ok(())
             }
@@ -351,7 +352,15 @@ pub fn run() -> sc_cli::Result<()> {
         Some(Subcommand::PurgeChain(cmd)) => {
             let runner = cli.create_runner(cmd)?;
 
-            runner.sync_run(|config| cmd.run(config.database))
+            runner.sync_run(|config| {
+                // Remove Frontier offchain db
+                let frontier_database_config = sc_service::DatabaseSource::RocksDb {
+                    path: service::frontier_database_dir(&config),
+                    cache_size: 0,
+                };
+                cmd.run(frontier_database_config)?;
+                cmd.run(config.database)
+            })
         }
         Some(Subcommand::Revert(cmd)) => {
             construct_async_run!(|components, cli, cmd, config| {
@@ -406,7 +415,7 @@ pub fn run() -> sc_cli::Result<()> {
         }
         #[cfg(not(feature = "try-runtime"))]
         Some(Subcommand::TryRuntime) => Err("TryRuntime wasn't enabled when building the node. \
-            You can enable it with `--features try-runtime`."
+             You can enable it with `--features try-runtime`."
             .into()),
     }
 }

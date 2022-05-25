@@ -1,4 +1,4 @@
-// Copyright 2019-2020 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
 
 use sp_std::ops::Mul;
 use sp_std::vec::Vec;
@@ -15,7 +15,8 @@ impl<T: Config> Pallet<T> {
     ) -> Vec<T::AccountId> {
         let validator_rewards = validator_rewards.into_iter().collect::<BTreeMap<_, _>>();
 
-        let treasury_account = T::TreasuryAccount::treasury_account();
+        let treasury_account =
+            T::TreasuryAccount::treasury_account().expect("TreasuryAccount is some; qed");
         let slasher = Slasher::<T>::new(treasury_account);
 
         let minimum_penalty = Self::minimum_penalty();

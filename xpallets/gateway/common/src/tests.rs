@@ -65,7 +65,7 @@ fn test_claim_not_native_asset_reward() {
             0
         );
 
-        let multi_address = XGatewayCommon::trustee_multisig_addr(Chain::Bitcoin);
+        let multi_address = XGatewayCommon::trustee_multisig_addr(Chain::Bitcoin).unwrap();
 
         assert_ok!(XGatewayRecords::deposit(&multi_address, X_BTC, 10));
 
