@@ -39,7 +39,9 @@ pub trait Ss58Codec {
             .map_err(|err| match err {
                 PublicError::BadBase58 => Ss58CheckError::BadBase58,
                 PublicError::BadLength => Ss58CheckError::BadLength,
-                PublicError::UnknownSs58AddressFormat(_) => Ss58CheckError::UnknownSs58AddressFormat,
+                PublicError::UnknownSs58AddressFormat(_) => {
+                    Ss58CheckError::UnknownSs58AddressFormat
+                }
                 PublicError::InvalidChecksum => Ss58CheckError::InvalidChecksum,
                 PublicError::InvalidPrefix => Ss58CheckError::InvalidPrefix,
                 PublicError::InvalidFormat => Ss58CheckError::InvalidFormat,
