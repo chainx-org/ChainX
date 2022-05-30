@@ -13,33 +13,28 @@ contract StablePriceOracle is Ownable {
     // Rent in base price units by length. Element 0 is for 1-length names, and so on.
     uint256 public rentPrices;
     uint256 public premiumPrices;
+    uint256 public renewPrice;
 
-    event RentPriceChanged(uint rentPrices,uint premiumPrices);
+    event RentPriceChanged(uint rentPrices,uint premiumPrices,uint renewPrices);
 
     bytes4 constant private INTERFACE_META_ID = bytes4(keccak256("supportsInterface(bytes4)"));
-    bytes4 constant private ORACLE_ID = bytes4(keccak256("price(uint256)"));
+    bytes4 constant private ORACLE_ID = bytes4(keccak256("registerPrice(uint256)"));
 
-    constructor(uint256  _rentPrices,uint _premiumPrices) {
-        setPrices(_rentPrices,_premiumPrices);
+    constructor(uint256  _rentPrices,uint256 _premiumPrices,uint256 _renewPrices) {
+        setPrices(_rentPrices,_premiumPrices,_renewPrices);
     }
 
-    function price(uint expires,uint256 duration) external view returns(uint) {
+    function registerPrice(uint256 duration) external view returns(uint) {
         uint basePrice = rentPrices.mul(duration);
-        basePrice = basePrice.add(premium(expires));
+        basePrice = basePrice.add(premiumPrices);
         return basePrice;
     }
 
-    function premium(uint expires) internal view returns(uint) {
-        if(block.timestamp > expires){
-            return premiumPrices;
-        }
-        return 0;
-    }
-
-    function setPrices(uint256 _rentPrices,uint256 _premiumPrices) public onlyOwner {
+    function setPrices(uint256 _rentPrices,uint256 _premiumPrices,uint256 _renewPrices) public onlyOwner {
         rentPrices = _rentPrices;
         premiumPrices = _premiumPrices;
-        emit RentPriceChanged(_rentPrices,_premiumPrices);
+        renewPrice = _renewPrices;
+        emit RentPriceChanged(_rentPrices,_premiumPrices,_renewPrices);
     }
 
     function supportsInterface(bytes4 interfaceID) public view virtual returns (bool) {

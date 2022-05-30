@@ -29,7 +29,7 @@ contract ClockAuctionBase {
     // Map from token ID to their corresponding auction.
     mapping (address => mapping(uint256 => Auction)) nftToTokenIdToAuction;
 
-    event AuctionCreated(address nftAddress, uint256 tokenId, uint256 startingPrice, uint256 endingPrice, uint256 duration);
+    event AuctionCreated(address nftAddress, uint256 tokenId, uint256 startingPrice, uint256 endingPrice, uint256 duration,uint256 startedAt);
     event AuctionSuccessful(address nftAddress, uint256 tokenId, uint256 totalPrice, address winner);
     event AuctionCancelled(address nftAddress, uint256 tokenId);
 
@@ -97,7 +97,8 @@ contract ClockAuctionBase {
             uint256(_tokenId),
             uint256(_auction.startingPrice),
             uint256(_auction.endingPrice),
-            uint256(_auction.duration)
+            uint256(_auction.duration),
+            uint256(block.timestamp)
         );
     }
 
