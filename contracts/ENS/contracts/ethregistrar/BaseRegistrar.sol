@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 abstract contract BaseRegistrar is Ownable, IERC721 {
-    uint constant public GRACE_PERIOD = 90 days;
+    uint constant public GRACE_PERIOD = 0;
 
     event ControllerAdded(address indexed controller);
     event ControllerRemoved(address indexed controller);

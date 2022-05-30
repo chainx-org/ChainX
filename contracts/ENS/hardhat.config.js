@@ -1,16 +1,4 @@
-require("@nomiclabs/hardhat-truffle5");
 require("@nomiclabs/hardhat-waffle");
-require("hardhat-abi-exporter");
-require("@nomiclabs/hardhat-solhint");
-require("hardhat-gas-reporter");
-require("hardhat-deploy");
-require("hardhat-deploy-ethers");
-
-// Load environment variables from .env file. Suppress warnings using silent
-// if this file is missing. dotenv will never modify any environment variables
-// that have already been set.
-// https://github.com/motdotla/dotenv
-require('dotenv').config({silent: true});
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -42,7 +30,7 @@ module.exports = {
       tags: ["test", "legacy", "use_root"],
     },
     localhost: {
-      url: "http://127.0.0.1:9545",
+      url: "http://127.0.0.1:8545",
       saveDeployments: false,
       tags: ["test", "legacy", "use_root"],
     },
@@ -57,6 +45,11 @@ module.exports = {
       tags: ["legacy", "use_root"],
       chainId: 1,
       accounts: real_accounts,
+    },
+    chainx_testnet: {
+      url: `https://testnet3.chainx.org/rpc`,
+      chainId: 1502,
+      accounts: [process.env.privateKey],
     }
   },
   mocha: {
