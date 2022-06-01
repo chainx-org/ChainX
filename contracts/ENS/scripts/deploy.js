@@ -23,7 +23,6 @@ async function main() {
     await ens.deployed()
     console.log("ENSRegistry",ens.address)
 
-    //注册10分钟10+5=15个pcx,续租10分钟15个pcx
     const price = await StablePriceOracle.deploy("317097919837","5000000000000000000","475646879756")
     await price.deployed()
     console.log("StablePriceOracle",price.address)
