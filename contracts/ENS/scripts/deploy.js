@@ -24,7 +24,7 @@ async function main() {
     console.log("ENSRegistry",ens.address)
 
     //注册10分钟10+5=15个pcx,续租10分钟15个pcx
-    const price = await StablePriceOracle.deploy("16666666666666666","5000000000000000000","25000000000000000")
+    const price = await StablePriceOracle.deploy("317097919837","5000000000000000000","475646879756")
     await price.deployed()
     console.log("StablePriceOracle",price.address)
 
@@ -50,7 +50,7 @@ async function main() {
             StringUtils: stringUtils.address
         }
     })
-    const controller = await  ETHRegistrarController.deploy(base.address, price.address,60,600);
+    const controller = await  ETHRegistrarController.deploy(base.address, price.address,60,86400);
     await controller.deployed()
     await resolver.setInterface(namehash.hash("btc"),"0x018fac06",controller.address)
     await ens.setSubnodeOwner(ZERO_HASH, labelhash("btc"), base.address);

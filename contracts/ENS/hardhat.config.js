@@ -50,6 +50,11 @@ module.exports = {
       url: `https://testnet3.chainx.org/rpc`,
       chainId: 1502,
       accounts: [process.env.privateKey],
+    },
+    chainx_mainnet: {
+      url: `https://mainnet.chainx.org/rpc`,
+      chainId: 1501,
+      accounts: [process.env.privateKey],
     }
   },
   mocha: {
