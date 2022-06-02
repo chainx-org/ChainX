@@ -624,44 +624,6 @@ pub fn new_malan_config() -> Result<MalanChainSpec, String> {
             hex!["dc097bedcd2c06e87054f644a4cbe7f78470687a03fe019af6fffe775390d641"]
                 .unchecked_into(),
         ),
-        (
-            (
-                // 5RXaXGcz84KQ1XZeAMbjbexXRPNAaPdt3st5QDG3H6VegwD6
-                hex!["538df88774a48e4ec759cfb3d25f12e343d8048a4bfa92643070b73cbb4be843"].into(),
-                b"BiHODL".to_vec(),
-            ),
-            // 5CyFAnrP5nrgtrFL5nV8L78u2wRRzqebftcHgLkmqSNHkYEX
-            hex!["28122b0c7781c8c151348a71981e82095dddca65a04c97394be7a9cbfb24cc55"]
-                .unchecked_into(),
-            // 5Gv4i3TnzM6LrJTS4ssBRHn1PhggyvJEdwXapiuA4eDP2jNE
-            hex!["d696267a82fad34996ff9b8e9de1495e0fdceb3516f7f61a2b7452f81bcbc236"]
-                .unchecked_into(),
-            // 5Dr5Jt5zKMfCAaHazn7vr3ft4VpUxyrn7YQAwWSRqykimBTp
-            hex!["4ed67d86aaf12d7b9e05ecd1e7f5f3406f8ee9537a2bf1ffa7513bd9ecba3e0d"]
-                .unchecked_into(),
-            // 5Gjzu9kCd37jdZkyNLRAvDnfAvVx1fAMkGELTGz2cKGvJXNc
-            hex!["cee8e033890610bfdae1145469d93a81300fe0f92ae5a4b54deb3f6da958a467"]
-                .unchecked_into(),
-        ),
-        (
-            (
-                // 5RAZf8UHcbS5RBRpP9zptQJm84tpfnxcJ64ctSyxNJeLLxtq
-                hex!["4386e83d66fbdf9ebe72af81d453f41fb8f877287f04823665fc81b58cab6e6b"].into(),
-                b"XPool".to_vec(),
-            ),
-            // 5Co3EQJfM5tnTHDjxzKAWDiLUtiJu2g86mp6vjGXopbzfJjA
-            hex!["20498732449e249d32c27f415083004cf045cb33e740f0e8e9a2b656e11cba73"]
-                .unchecked_into(),
-            // 5FeNZC89WyB3KW6an2WMpyYgpMmDoyvuHKiqQuuDMJPsUG1E
-            hex!["9e6211f1cb9cadc180c189bcce9e70158dc9ee1df15a0bfb147c6c91fe432655"]
-                .unchecked_into(),
-            // 5HGJjjAQSfXvyyjMADjmZVq6bP6ouHPQPsfXQ9VMX4r6AZXy
-            hex!["e60648cbf567f22f5ca7b5c9897f4869e6015413ecdc4bca325f8773439efd63"]
-                .unchecked_into(),
-            // 5Ey51L18oBfwepK6XCKPd48G433jZN9pSMzEcgH62rEYLUTp
-            hex!["80686c3f3b6b83143ec462269e63a4cefd86d2bed6ad1717610e5ba965ca0a5a"]
-                .unchecked_into(),
-        ),
     ];
     let constructor = move || {
         malan_genesis(
@@ -821,8 +783,7 @@ fn malan_genesis(
             mining_ratio: (10, 90),    // (Asset Mining, Staking) = (10, 90)
             minimum_penalty: 100 * DOLLARS,
             candidate_requirement: (100 * DOLLARS, 1_000 * DOLLARS), // Minimum value (self_bonded, total_bonded) to be a validator candidate
-            minimum_validator_count: 4,
-            maximum_validator_count: 5,
+            minimum_validator_count: 2,
             ..Default::default()
         },
         x_mining_asset: malan::XMiningAssetConfig {
