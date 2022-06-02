@@ -1077,6 +1077,7 @@ impl xpallet_mining_staking::Config for Runtime {
     type AssetMining = XMiningAsset;
     type DetermineRewardPotAccount =
         xpallet_mining_staking::SimpleValidatorRewardPotAccountDeterminer<Runtime>;
+    type ValidatorRegistration = Session;
     type WeightInfo = xpallet_mining_staking::weights::SubstrateWeight<Runtime>;
 }
 
