@@ -59,7 +59,7 @@ impl AccountExtractor<AccountId32, ReferralId> for OpReturnExtractor {
 fn test_opreturn_extractor() {
     use sp_core::{
         crypto::{set_default_ss58_version, Ss58AddressFormatRegistry, UncheckedInto},
-        H256,
+        H160, H256,
     };
 
     let addr = "f778a69d4166401048acb0f7b2625e9680609f8859c78e3d28e2549f84f0269a"
@@ -75,7 +75,10 @@ fn test_opreturn_extractor() {
         let result = OpReturnExtractor::extract_account(
             "5VEW3R1T4LR3kDhYwXeeCnYrHRwRaH7E9V1KprypBe68XmY4".as_bytes(),
         );
-        assert_eq!(result, Some((addr.unchecked_into(), None)));
+        assert_eq!(
+            result,
+            Some((OpReturnAccount::Wasm(addr.unchecked_into()), None))
+        );
 
         // test for account and referral
         let result = OpReturnExtractor::extract_account(
@@ -117,9 +120,15 @@ fn test_opreturn_extractor() {
             "5VEW3R1T4LR3kDhYwXeeCnYrHRwRaH7E9V1KprypBe68XmY4".as_bytes(),
         );
         #[cfg(feature = "ss58check")]
-        assert_eq!(result, Some((addr.unchecked_into(), None)));
+        assert_eq!(
+            result,
+            Some((OpReturnAccount::Wasm(addr.unchecked_into()), None))
+        );
         #[cfg(not(feature = "ss58check"))]
-        assert_eq!(result, Some((addr.unchecked_into(), None)));
+        assert_eq!(
+            result,
+            Some((OpReturnAccount::Wasm(addr.unchecked_into()), None))
+        );
     }
     {
         // test for checksum
@@ -139,12 +148,18 @@ fn test_opreturn_extractor() {
         assert_eq!(result, None);
         // would not check ss58 version and hash checksum
         #[cfg(not(feature = "ss58check"))]
-        assert_eq!(result, Some((addr.unchecked_into(), None)));
+        assert_eq!(
+            result,
+            Some((OpReturnAccount::Wasm(addr.unchecked_into()), None))
+        );
 
         // new checksum
         let result = OpReturnExtractor::extract_account(
             "5C4xGQZwoNEM5mdk2U3vJbFZPr6ZKFSiqWnc9JRDcJ3w334p".as_bytes(),
         );
-        assert_eq!(result, Some((addr.unchecked_into(), None)));
+        assert_eq!(
+            result,
+            Some((OpReturnAccount::Wasm(addr.unchecked_into()), None))
+        );
     }
 }
