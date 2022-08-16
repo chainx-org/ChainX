@@ -184,7 +184,7 @@ fn deposit_evm<T: Config>(txid: H256, who: &H160, balance: u64) -> DispatchResul
     let id: AssetId = <Pallet<T> as ChainT<_>>::ASSET_ID;
 
     let value: BalanceOf<T> = balance.saturated_into();
-    match <xpallet_assets_bridge::Pallet<T>>::apply_direct_deposit(who.clone(), id, value) {
+    match xpallet_assets_bridge::Pallet::<T>::apply_direct_deposit(who.clone(), id, value) {
         Ok(_) => {
             Pallet::<T>::deposit_event(Event::<T>::DepositedEvm(txid, who.clone(), value));
             Ok(())
