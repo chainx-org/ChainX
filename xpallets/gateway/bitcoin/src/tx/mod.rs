@@ -29,7 +29,7 @@ use xpallet_support::try_str;
 pub use self::validator::validate_transaction;
 use crate::{
     types::{AccountInfo, BtcAddress, BtcDepositCache, BtcTxResult, BtcTxState},
-    BalanceOf, Config, Error, Event, Pallet, PendingDeposits, WithdrawalProposal,
+    BalanceOf, Config, Event, Pallet, PendingDeposits, WithdrawalProposal,
 };
 
 pub fn process_tx<T: Config>(
@@ -110,7 +110,7 @@ fn deposit<T: Config>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) ->
 
     match account_info {
         AccountInfo::<_>::Account((account, referral)) => {
-            match account {
+            match account.clone() {
                 OpReturnAccount::Wasm(w) => {
                     T::ReferralBinding::update_binding(
                         &<Pallet<T> as ChainT<_>>::ASSET_ID,
@@ -189,7 +189,14 @@ fn deposit_evm<T: Config>(txid: H256, who: &H160, balance: u64) -> DispatchResul
             Pallet::<T>::deposit_event(Event::<T>::DepositedEvm(txid, who.clone(), value));
             Ok(())
         }
-        Err(_) => Err(Error::<T>::DepositEvmFail.into()),
+        Err(err) => {
+            error!(
+                target: "runtime::bitcoin",
+                "[deposit_token] Deposit error:{:?}, must use root to fix it",
+                err
+            );
+            Err(err)
+        }
     }
 }
 

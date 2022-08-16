@@ -81,7 +81,7 @@ impl<T: Config, Address: Into<Vec<u8>>> AddressBinding<T::AccountId, Address> fo
 
 // export for runtime-api
 impl<T: Config> Pallet<T> {
-    // todo! evm address
+    // todo! Add find of evm address
     pub fn bound_addrs(who: &T::AccountId) -> BTreeMap<Chain, Vec<ChainAddress>> {
         BoundAddressOf::<T>::iter_prefix(&who).collect()
     }

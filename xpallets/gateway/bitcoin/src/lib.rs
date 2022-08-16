@@ -360,8 +360,6 @@ pub mod pallet {
         TxOutputNotColdAddr,
         /// The total amount of the trust must be transferred out in full
         TxNotFullAmount,
-        /// Deposit into evm fail
-        DepositEvmFail,
     }
 
     #[pallet::event]
