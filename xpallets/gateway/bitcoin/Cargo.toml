@@ -22,6 +22,11 @@ frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch =
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
+pallet-evm = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18", default-features = false, features = ["chainx-adaptor"] }
+
+# Asset bridge
+xpallet-assets-bridge = { path = "../../assets-bridge", default-features = false }
+
 
 # ChainX primitives
 chainx-primitives = { path = "../../../primitives", default-features = false }
@@ -51,6 +56,7 @@ pallet-elections-phragmen = { git = "https://github.com/paritytech/substrate", b
 xp-assets-registrar = { path = "../../../primitives/assets-registrar" }
 xpallet-assets-registrar = { path = "../../assets-registrar" }
 
+
 [features]
 default = ["std"]
 std = [
@@ -68,7 +74,9 @@ std = [
     "frame-support/std",
     "frame-system/std",
     "pallet-timestamp/std",
-
+    "pallet-evm/std",
+    # Asset bridge
+    "xpallet-assets-bridge/std",
     # ChainX primitives
     "chainx-primitives/std",
     "xp-gateway-bitcoin/std",

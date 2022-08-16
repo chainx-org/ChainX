@@ -4,22 +4,51 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![deny(missing_docs)]
-
-use sp_core::crypto::AccountId32;
+use codec::{Decode, Encode};
+use scale_info::TypeInfo;
+use sp_core::{crypto::AccountId32, RuntimeDebug, H160};
 
 use frame_support::log::error;
+
+/// OpReturn supports evm and substrate addresses
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+pub enum OpReturnAccount<AccountId> {
+    /// Evm address
+    Evm(H160),
+    /// Wasm address
+    Wasm(AccountId),
+}
 
 /// Trait for extracting the account and possible extra data (e.g. referral) from
 /// the external world data (e.g. btc op_return).
 pub trait AccountExtractor<Account, Extra: AsRef<[u8]>> {
     /// Extract the account and possible extra from the data.
-    fn extract_account(data: &[u8]) -> Option<(Account, Option<Extra>)>;
+    fn extract_account(data: &[u8]) -> Option<(OpReturnAccount<Account>, Option<Extra>)>;
 }
 
 impl<Account, Extra: AsRef<[u8]>> AccountExtractor<Account, Extra> for () {
-    fn extract_account(_data: &[u8]) -> Option<(Account, Option<Extra>)> {
+    fn extract_account(_data: &[u8]) -> Option<(OpReturnAccount<Account>, Option<Extra>)> {
         None
     }
+}
+
+/// Transfer slice into unchecked evm address
+pub fn transfer_evm_uncheck(raw_account: &[u8]) -> Option<H160> {
+    let data = if raw_account.len() == 20 {
+        raw_account.to_vec()
+    } else if raw_account.len() == 40 {
+        hex::decode(raw_account).ok()?
+    } else if raw_account.len() == 42 {
+        let mut key = [0u8; 40];
+        key.copy_from_slice(&raw_account);
+        key.to_vec()
+    } else {
+        return None;
+    };
+
+    let mut key = [0u8; 20];
+    key.copy_from_slice(&data);
+    H160::try_from(key).ok()
 }
 
 /// Verify if the raw account is a properly encoded SS58Check address.

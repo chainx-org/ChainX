@@ -141,7 +141,7 @@ pub mod pallet {
     }
 
     #[pallet::event]
-    #[pallet::generate_deposit(fn deposit_event)]
+    #[pallet::generate_deposit(pub fn deposit_event)]
     pub enum Event<T: Config> {
         /// (account_id, evm_address)
         ClaimAccount(T::AccountId, H160),
@@ -618,6 +618,23 @@ where
     pub fn set_admin_inner(new_admin: T::AccountId) -> Weight {
         Admin::<T>::mutate(|admin| *admin = Some(new_admin));
         T::DbWeight::get().write
+    }
+
+    pub fn apply_direct_deposit(
+        evm_account: H160,
+        asset_id: AssetId,
+        amount: BalanceOf<T>,
+    ) -> DispatchResultWithPostInfo {
+        ensure!(!Self::is_in_emergency(asset_id), Error::<T>::InEmergency);
+        ensure!(!amount.is_zero(), Error::<T>::ZeroBalance);
+
+        let erc20 = Self::erc20s(asset_id).ok_or(Error::<T>::ContractAddressHasNotMapped)?;
+
+        let inputs = mint_into_encode(evm_account, amount.unique_saturated_into());
+
+        Self::call_evm(erc20, inputs)?;
+
+        Ok(Pays::No.into())
     }
 
     fn call_evm(erc20: H160, inputs: Vec<u8>) -> DispatchResult {

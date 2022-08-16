@@ -13,7 +13,7 @@ use light_bitcoin::{
 };
 
 use crate::{
-    types::{BtcDepositInfo, BtcTxMetaType, TrusteePair},
+    types::{BtcDepositInfo, BtcTxMetaType, OpReturnAccount, TrusteePair},
     utils::{
         extract_addr_from_transaction, extract_opreturn_data, extract_output_addr, is_trustee_addr,
     },
@@ -62,7 +62,7 @@ impl BtcTxTypeDetector {
     ) -> BtcTxMetaType<AccountId>
     where
         AccountId: Debug,
-        Extractor: Fn(&[u8]) -> Option<(AccountId, Option<ReferralId>)>,
+        Extractor: Fn(&[u8]) -> Option<(OpReturnAccount<AccountId>, Option<ReferralId>)>,
     {
         // extract input addr from the output of previous transaction
         let input_addr = prev_tx.and_then(|prev_tx| {
@@ -154,7 +154,7 @@ impl BtcTxTypeDetector {
     ) -> BtcTxMetaType<AccountId>
     where
         AccountId: Debug,
-        Extractor: Fn(&[u8]) -> Option<(AccountId, Option<ReferralId>)>,
+        Extractor: Fn(&[u8]) -> Option<(OpReturnAccount<AccountId>, Option<ReferralId>)>,
     {
         let (op_return, deposit_value) =
             self.parse_deposit_transaction_outputs(tx, extract_account, current_trustee_pair);
@@ -183,24 +183,27 @@ impl BtcTxTypeDetector {
         tx: &Transaction,
         extract_account: Extractor,
         current_trustee_pair: TrusteePair,
-    ) -> (Option<(AccountId, Option<ReferralId>)>, u64)
+    ) -> (
+        Option<(OpReturnAccount<AccountId>, Option<ReferralId>)>,
+        u64,
+    )
     where
         AccountId: Debug,
-        Extractor: Fn(&[u8]) -> Option<(AccountId, Option<ReferralId>)>,
+        Extractor: Fn(&[u8]) -> Option<(OpReturnAccount<AccountId>, Option<ReferralId>)>,
     {
         let mut account_info = None;
         // only handle first valid opreturn with account info, other opreturn would be dropped
-        for opreturn_script in tx
+        for op_return_script in tx
             .outputs
             .iter()
             .map(|output| Script::new(output.script_pubkey.clone()))
             .filter(|script| script.is_null_data_script())
         {
             debug!(
-                "[parse_deposit_transaction_outputs] opreturn_script:{:?}",
-                opreturn_script
+                "[parse_deposit_transaction_outputs] op_return_script:{:?}",
+                op_return_script
             );
-            if let Some(info) = extract_opreturn_data(&opreturn_script)
+            if let Some(info) = extract_opreturn_data(&op_return_script)
                 .and_then(|opreturn| extract_account(&opreturn))
             {
                 account_info = Some(info);

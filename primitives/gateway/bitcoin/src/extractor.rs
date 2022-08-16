@@ -1,11 +1,12 @@
 // Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
 
+use crate::types::OpReturnAccount;
 use frame_support::log::{debug, error};
 use sp_core::crypto::AccountId32;
 use sp_std::prelude::Vec;
 
 use chainx_primitives::ReferralId;
-use xp_gateway_common::from_ss58_check;
+use xp_gateway_common::{from_ss58_check, transfer_evm_uncheck};
 
 pub use xp_gateway_common::AccountExtractor;
 
@@ -18,7 +19,7 @@ pub use xp_gateway_common::AccountExtractor;
 pub struct OpReturnExtractor;
 
 impl AccountExtractor<AccountId32, ReferralId> for OpReturnExtractor {
-    fn extract_account(data: &[u8]) -> Option<(AccountId32, Option<ReferralId>)> {
+    fn extract_account(data: &[u8]) -> Option<(OpReturnAccount<AccountId32>, Option<ReferralId>)> {
         let account_and_referral = data
             .split(|x| *x == b'@')
             .map(|d| d.to_vec())
@@ -32,7 +33,14 @@ impl AccountExtractor<AccountId32, ReferralId> for OpReturnExtractor {
             return None;
         }
 
-        let account = from_ss58_check(account_and_referral[0].as_slice())?;
+        let wasm_account = from_ss58_check(account_and_referral[0].as_slice());
+
+        let account = if let Some(v) = wasm_account {
+            OpReturnAccount::Wasm(v)
+        } else {
+            OpReturnAccount::Evm(transfer_evm_uncheck(account_and_referral[0].as_slice())?)
+        };
+
         let referral = if account_and_referral.len() > 1 {
             Some(account_and_referral[1].to_vec())
         } else {

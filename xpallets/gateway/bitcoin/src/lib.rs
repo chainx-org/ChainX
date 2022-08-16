@@ -80,7 +80,9 @@ pub mod pallet {
         dispatch::DispatchResult, pallet_prelude::*, traits::UnixTime, transactional,
     };
     use frame_system::pallet_prelude::*;
+    use sp_core::H160;
     use sp_runtime::traits::Saturating;
+    use xp_gateway_bitcoin::OpReturnAccount;
 
     use super::*;
 
@@ -91,7 +93,10 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config:
-        frame_system::Config + xpallet_assets::Config + xpallet_gateway_records::Config
+        frame_system::Config
+        + xpallet_assets::Config
+        + xpallet_gateway_records::Config
+        + xpallet_assets_bridge::Config
     {
         /// The overarching event type.
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
@@ -212,7 +217,7 @@ pub mod pallet {
         pub fn remove_pending(
             origin: OriginFor<T>,
             addr: BtcAddress,
-            who: Option<T::AccountId>,
+            who: Option<OpReturnAccount<T::AccountId>>,
         ) -> DispatchResult {
             T::CouncilOrigin::try_origin(origin)
                 .map(|_| ())
@@ -355,6 +360,8 @@ pub mod pallet {
         TxOutputNotColdAddr,
         /// The total amount of the trust must be transferred out in full
         TxNotFullAmount,
+        /// Deposit into evm fail
+        DepositEvmFail,
     }
 
     #[pallet::event]
@@ -370,7 +377,7 @@ pub mod pallet {
         Withdrawn(H256, Vec<u32>, BalanceOf<T>),
         /// A new record of unclaimed deposit. [tx_hash, btc_address]
         UnclaimedDeposit(H256, BtcAddress),
-        /// A unclaimed deposit record was removed. [depositor, deposit_amount, tx_hash, btc_address]
+        /// A unclaimed deposit record was removed for wasm address. [depositor, deposit_amount, tx_hash, btc_address]
         PendingDepositRemoved(T::AccountId, BalanceOf<T>, H256, BtcAddress),
         /// A new withdrawal proposal was created. [proposer, withdrawal_ids]
         WithdrawalProposalCreated(T::AccountId, Vec<u32>),
@@ -378,6 +385,10 @@ pub mod pallet {
         WithdrawalProposalVoted(T::AccountId, bool),
         /// A fatal error happened during the withdrwal process. [tx_hash, proposal_hash]
         WithdrawalFatalErr(H256, H256),
+        /// An account deposited some token for evm address. [tx_hash, who, amount]
+        DepositedEvm(H256, H160, BalanceOf<T>),
+        /// A unclaimed deposit record was removed for evm address. [depositor, deposit_amount, tx_hash, btc_address]
+        PendingDepositEvmRemoved(H160, BalanceOf<T>, H256, BtcAddress),
     }
 
     /// best header info
