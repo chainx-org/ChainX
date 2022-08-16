@@ -4,6 +4,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![deny(missing_docs)]
+#![allow(clippy::type_complexity)]
 
 mod detector;
 mod extractor;

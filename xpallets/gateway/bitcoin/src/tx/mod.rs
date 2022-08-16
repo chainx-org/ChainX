@@ -110,15 +110,12 @@ fn deposit<T: Config>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) ->
 
     match account_info {
         AccountInfo::<_>::Account((account, referral)) => {
-            match account.clone() {
-                OpReturnAccount::Wasm(w) => {
-                    T::ReferralBinding::update_binding(
-                        &<Pallet<T> as ChainT<_>>::ASSET_ID,
-                        &w,
-                        referral,
-                    );
-                }
-                _ => (),
+            if let OpReturnAccount::Wasm(w) = account.clone() {
+                T::ReferralBinding::update_binding(
+                    &<Pallet<T> as ChainT<_>>::ASSET_ID,
+                    &w,
+                    referral,
+                );
             }
 
             match deposit_token::<T>(txid, &account, deposit_info.deposit_value) {
@@ -184,9 +181,9 @@ fn deposit_evm<T: Config>(txid: H256, who: &H160, balance: u64) -> DispatchResul
     let id: AssetId = <Pallet<T> as ChainT<_>>::ASSET_ID;
 
     let value: BalanceOf<T> = balance.saturated_into();
-    match xpallet_assets_bridge::Pallet::<T>::apply_direct_deposit(who.clone(), id, value) {
+    match xpallet_assets_bridge::Pallet::<T>::apply_direct_deposit(*who, id, value) {
         Ok(_) => {
-            Pallet::<T>::deposit_event(Event::<T>::DepositedEvm(txid, who.clone(), value));
+            Pallet::<T>::deposit_event(Event::<T>::DepositedEvm(txid, *who, value));
             Ok(())
         }
         Err(err) => {
@@ -215,10 +212,10 @@ pub fn remove_pending_deposit<T: Config>(
             who, record.balance, record.txid,
         );
 
-        match who {
+        match who.clone() {
             OpReturnAccount::Evm(w) => {
                 Pallet::<T>::deposit_event(Event::<T>::PendingDepositEvmRemoved(
-                    w.clone(),
+                    w,
                     record.balance.saturated_into(),
                     record.txid,
                     input_address.clone(),
@@ -226,7 +223,7 @@ pub fn remove_pending_deposit<T: Config>(
             }
             OpReturnAccount::Wasm(w) => {
                 Pallet::<T>::deposit_event(Event::<T>::PendingDepositRemoved(
-                    w.clone(),
+                    w,
                     record.balance.saturated_into(),
                     record.txid,
                     input_address.clone(),

@@ -83,7 +83,30 @@ fn test_opreturn_extractor() {
         );
         assert_eq!(
             result,
-            Some((addr.unchecked_into(), Some(b"referral1".to_vec())))
+            Some((
+                OpReturnAccount::Wasm(addr.unchecked_into()),
+                Some(b"referral1".to_vec())
+            ))
+        );
+
+        let mut key = [0u8; 20];
+        key.copy_from_slice(&hex::decode("3800501939F9385CB044F9FB992b97442Cc45e47").unwrap());
+        let evm_addr = H160::try_from(key).unwrap();
+
+        let result = OpReturnExtractor::extract_account(
+            "0x3800501939F9385CB044F9FB992b97442Cc45e47@referral1".as_bytes(),
+        );
+        assert_eq!(
+            result,
+            Some((OpReturnAccount::Evm(evm_addr), Some(b"referral1".to_vec())))
+        );
+
+        let result = OpReturnExtractor::extract_account(
+            "3800501939F9385CB044F9FB992b97442Cc45e47@referral1".as_bytes(),
+        );
+        assert_eq!(
+            result,
+            Some((OpReturnAccount::Evm(evm_addr), Some(b"referral1".to_vec())))
         );
     }
     {
