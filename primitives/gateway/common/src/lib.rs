@@ -40,8 +40,9 @@ pub fn transfer_evm_uncheck(raw_account: &[u8]) -> Option<H160> {
         hex::decode(raw_account).ok()?
     } else if raw_account.len() == 42 {
         let mut key = [0u8; 40];
-        key.copy_from_slice(raw_account);
-        key.to_vec()
+        // remove 0x prefix
+        key.copy_from_slice(&raw_account[2..42]);
+        hex::decode(key).ok()?
     } else {
         return None;
     };
