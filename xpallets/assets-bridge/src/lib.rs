@@ -30,7 +30,7 @@ use sp_runtime::traits::{StaticLookup, UniqueSaturatedInto, Zero};
 use sp_std::vec::Vec;
 
 pub use chainx_primitives::AssetId;
-use pallet_evm::{AddressMapping, ExitReason, Runner, CallInfo};
+use pallet_evm::{AddressMapping, CallInfo, ExitReason, Runner};
 
 pub type EcdsaSignature = ecdsa::Signature;
 pub type AddressMappingOf<T> = <T as pallet_evm::Config>::AddressMapping;
@@ -646,7 +646,10 @@ impl<T: Config> Pallet<T> {
             false,
             T::config(),
         ) {
-            Ok(CallInfo{exit_reason: ExitReason::Succeed(_), .. })  => Ok(()),
+            Ok(CallInfo {
+                exit_reason: ExitReason::Succeed(_),
+                ..
+            }) => Ok(()),
             _ => Err(Error::<T>::ExecutedFailed.into()),
         }
     }
