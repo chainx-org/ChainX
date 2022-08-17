@@ -211,7 +211,7 @@ pub mod pallet {
         }
 
         /// Allow root or trustees could remove pending deposits for an address and decide whether
-        /// deposit to an account id. if pass `None` to `who`, would just remove pendings, if pass
+        /// deposit to an account id. if pass `None` to `who`, would just remove pending, if pass
         /// Some, would deposit to this account id.
         #[pallet::weight(<T as Config>::WeightInfo::remove_pending())]
         pub fn remove_pending(

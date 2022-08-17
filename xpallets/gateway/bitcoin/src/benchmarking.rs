@@ -6,7 +6,7 @@ use frame_system::RawOrigin;
 use sp_runtime::AccountId32;
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
-use xp_gateway_bitcoin::BtcTxType;
+use xp_gateway_bitcoin::{BtcTxType, OpReturnAccount};
 use xp_protocol::X_BTC;
 use xpallet_assets::BalanceOf;
 use xpallet_gateway_records::{Pallet as XGatewayRecords, WithdrawalState};
@@ -194,7 +194,7 @@ benchmarks! {
         ];
         PendingDeposits::<T>::insert(&addr, v);
         let receiver: T::AccountId = whitelisted_caller();
-    }: _(RawOrigin::Root, addr.clone(), Some(receiver))
+    }: _(RawOrigin::Root, addr.clone(), Some(OpReturnAccount::Wasm(receiver)))
     verify {
         assert!(Pallet::<T>::pending_deposits(&addr).is_empty());
         // assert_eq!(XAssets::<T>::usable_balance(&receiver, &AssetId::default()), (100000000u32 + 200000000u32 + 300000000u32).into());

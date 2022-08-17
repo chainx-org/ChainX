@@ -37,7 +37,6 @@ use light_bitcoin::{
     serialization::{self, Reader},
 };
 use sp_runtime::traits::AccountIdConversion;
-use xpallet_assets_bridge::Event;
 use xpallet_support::traits::MultisigAddressFor;
 
 use crate::{
