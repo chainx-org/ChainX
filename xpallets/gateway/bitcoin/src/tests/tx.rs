@@ -4,7 +4,10 @@
 
 use codec::Encode;
 use frame_support::{assert_noop, assert_ok};
-use sp_core::crypto::{set_default_ss58_version, Ss58AddressFormatRegistry};
+use sp_core::{
+    crypto::{set_default_ss58_version, Ss58AddressFormatRegistry},
+    H160,
+};
 
 use light_bitcoin::{
     chain::Transaction,
@@ -29,6 +32,8 @@ use crate::{
 const DEPOSIT_HOT_ADDR: &str = "bc1pn202yeugfa25nssxk2hv902kmxrnp7g9xt487u256n20jgahuwas6syxhp";
 // Tyoe is p2sh. Address farmat is Mainnet.
 const DEPOSIT_COLD_ADDR: &str = "3Ac85hjgeyNX96Q4BqUoAH5bh6gARxRDJm";
+
+const ERC20_1: [u8; 20] = [1u8; 20];
 
 lazy_static::lazy_static! {
     // deposit without op return, output addr is DEPOSIT_HOT_ADDR. Withdraw is an example of spending from the script path.
@@ -100,7 +105,6 @@ fn test_detect_tx_type() {
         _ => unreachable!("wrong type"),
     }
 
-    // todo!
     match mock_detect_transaction_type::<Test>(&deposit_taproot2_evm1, None) {
         BtcTxMetaType::Deposit(info) => {
             assert!(info.input_addr.is_none() && info.op_return.is_some())
@@ -108,7 +112,6 @@ fn test_detect_tx_type() {
         _ => unreachable!("wrong type"),
     }
 
-    // todo!
     match mock_detect_transaction_type::<Test>(&deposit_taproot2_evm2, None) {
         BtcTxMetaType::Deposit(info) => {
             assert!(info.input_addr.is_none() && info.op_return.is_some())
@@ -130,7 +133,6 @@ fn test_detect_tx_type() {
         _ => unreachable!("wrong type"),
     }
 
-    // todo!
     match mock_detect_transaction_type::<Test>(&deposit_taproot2_evm1, Some(&deposit_taproot2_prev))
     {
         BtcTxMetaType::Deposit(info) => {
@@ -139,7 +141,6 @@ fn test_detect_tx_type() {
         _ => unreachable!("wrong type"),
     }
 
-    // todo!
     match mock_detect_transaction_type::<Test>(&deposit_taproot2_evm2, Some(&deposit_taproot2_prev))
     {
         BtcTxMetaType::Deposit(info) => {
@@ -211,6 +212,12 @@ fn mock_process_tx<T: Config>(tx: Transaction, prev_tx: Option<Transaction>) -> 
 fn test_process_tx() {
     set_default_ss58_version(Ss58AddressFormatRegistry::ChainxAccount.into());
     ExtBuilder::default().build_and_execute(|| {
+        assert_ok!(XAssetsBridge::register(
+            Origin::signed(alice()),
+            1,
+            H160::from_slice(&ERC20_1)
+        ));
+
         // without op return and input address
         let r = mock_process_tx::<Test>(deposit_taproot1.clone(), None);
         assert_eq!(r.result, BtcTxResult::Failure);
@@ -250,10 +257,13 @@ fn test_process_tx() {
         assert_eq!(XAssets::usable_balance(&op_account, &X_BTC), 100000);
         assert_eq!(XGatewayCommon::bound_addrs(&op_account), Default::default());
 
-        // todo!
+        // with evm op return(no 0x) and without input address
         let r = mock_process_tx::<Test>(deposit_taproot2_evm1.clone(), None);
-        // todo!
+        assert_eq!(r.result, BtcTxResult::Success);
+
+        // with evm op return(with 0x) and without input address
         let r = mock_process_tx::<Test>(deposit_taproot2_evm2.clone(), None);
+        assert_eq!(r.result, BtcTxResult::Success);
 
         // with op return and input address
         let r = mock_process_tx::<Test>(
@@ -263,17 +273,19 @@ fn test_process_tx() {
         assert_eq!(r.result, BtcTxResult::Success);
         assert_eq!(XAssets::usable_balance(&op_account, &X_BTC), 300000);
 
-        // todo!
+        // with evm op return(no 0x) and input address
         let r = mock_process_tx::<Test>(
             deposit_taproot2_evm1.clone(),
             Some(deposit_taproot2_prev.clone()),
         );
+        assert_eq!(r.result, BtcTxResult::Success);
 
-        // todo!
+        // with evm op return(with 0x) and input address
         let r = mock_process_tx::<Test>(
             deposit_taproot2_evm2.clone(),
             Some(deposit_taproot2_prev.clone()),
         );
+        assert_eq!(r.result, BtcTxResult::Success);
 
         // withdraw
         WithdrawalProposal::<Test>::put(BtcWithdrawalProposal {

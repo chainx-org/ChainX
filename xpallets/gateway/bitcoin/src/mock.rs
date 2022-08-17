@@ -409,6 +409,12 @@ impl ExtBuilder {
         }
         .assimilate_storage(&mut storage);
 
+        xpallet_assets_bridge::GenesisConfig::<Test> {
+            admin_key: Some(alice().into()),
+        }
+        .assimilate_storage(&mut storage)
+        .unwrap();
+
         let info = trustees_info();
         let genesis_trustees = info
             .iter()
