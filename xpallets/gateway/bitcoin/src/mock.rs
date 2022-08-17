@@ -410,7 +410,7 @@ impl ExtBuilder {
         .assimilate_storage(&mut storage);
 
         xpallet_assets_bridge::GenesisConfig::<Test> {
-            admin_key: Some(alice().into()),
+            admin_key: Some(alice()),
         }
         .assimilate_storage(&mut storage)
         .unwrap();
