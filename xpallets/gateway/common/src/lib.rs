@@ -33,6 +33,7 @@ use frame_support::{
 };
 use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
 
+use sp_core::H160;
 use sp_runtime::{
     traits::{CheckedDiv, Saturating, StaticLookup, UniqueSaturatedInto, Zero},
     SaturatedConversion,
@@ -610,6 +611,23 @@ pub mod pallet {
         _,
         Blake2_128Concat,
         T::AccountId,
+        Twox64Concat,
+        Chain,
+        Vec<ChainAddress>,
+        ValueQuery,
+    >;
+
+    /// The evm address of the corresponding chain and chain address .
+    #[pallet::storage]
+    pub(crate) type AddressBindingOfEvm<T: Config> =
+        StorageDoubleMap<_, Twox64Concat, Chain, Blake2_128Concat, ChainAddress, H160>;
+
+    /// The bound evm address of the corresponding account and chain.
+    #[pallet::storage]
+    pub(crate) type BoundAddressOfEvm<T: Config> = StorageDoubleMap<
+        _,
+        Blake2_128Concat,
+        H160,
         Twox64Concat,
         Chain,
         Vec<ChainAddress>,

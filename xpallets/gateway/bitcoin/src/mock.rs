@@ -2,9 +2,9 @@
 
 #![allow(clippy::type_complexity)]
 use codec::{Decode, Encode};
-use std::{cell::RefCell, collections::BTreeMap, time::Duration};
-
 use hex_literal::hex;
+use sp_core::H160;
+use std::{cell::RefCell, collections::BTreeMap, time::Duration};
 
 #[cfg(feature = "std")]
 use frame_support::traits::GenesisBuild;
@@ -60,10 +60,13 @@ frame_support::construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        Timestamp: pallet_timestamp::{Pallet, Call, Storage},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
         Elections: pallet_elections_phragmen::{Pallet, Call, Storage, Event<T>, Config<T>},
+        Evm: pallet_evm::{Pallet, Call, Storage, Config, Event<T>},
         XAssetsRegistrar: xpallet_assets_registrar::{Pallet, Call, Storage, Event<T>, Config},
         XAssets: xpallet_assets::{Pallet, Call, Storage, Event<T>, Config<T>},
+        XAssetsBridge: xpallet_assets_bridge::{Pallet, Call, Storage, Config<T>, Event<T>},
         XGatewayRecords: xpallet_gateway_records::{Pallet, Call, Storage, Event<T>},
         XGatewayCommon: xpallet_gateway_common::{Pallet, Call, Storage, Event<T>, Config<T>},
         XGatewayBitcoin: xpallet_gateway_bitcoin::{Pallet, Call, Storage, Event<T>, Config<T>},
@@ -221,8 +224,8 @@ thread_local! {
     pub static NOW: RefCell<Option<Duration>> = RefCell::new(None);
 }
 
-pub struct Timestamp;
-impl UnixTime for Timestamp {
+pub struct CustomTimestamp;
+impl UnixTime for CustomTimestamp {
     fn now() -> Duration {
         NOW.with(|m| {
             m.borrow().unwrap_or_else(|| {
@@ -236,9 +239,51 @@ impl UnixTime for Timestamp {
     }
 }
 
+parameter_types! {
+    pub const MinimumPeriod: u64 = 1000;
+}
+
+impl pallet_timestamp::Config for Test {
+    type Moment = u64;
+    type OnTimestampSet = ();
+    type MinimumPeriod = MinimumPeriod;
+    type WeightInfo = ();
+}
+
+parameter_types! {
+    // 0x1111111111111111111111111111111111111111
+    pub EvmCaller: H160 = H160::from_slice(&[17u8;20][..]);
+    pub ClaimBond: Balance = 100_000_000;
+}
+
+impl pallet_evm::Config for Test {
+    type FeeCalculator = ();
+    type GasWeightMapping = ();
+    type CallOrigin = pallet_evm::EnsureAddressRoot<Self::AccountId>;
+    type WithdrawOrigin = pallet_evm::EnsureAddressNever<Self::AccountId>;
+    type AddressMapping = pallet_evm::HashedAddressMapping<BlakeTwo256>;
+    type Currency = Balances;
+    type Runner = pallet_evm::runner::stack::Runner<Self>;
+    type Event = ();
+    type PrecompilesType = ();
+    type PrecompilesValue = ();
+    type ChainId = ();
+    type BlockGasLimit = ();
+    type OnChargeTransaction = ();
+    type BlockHashMapping = pallet_evm::SubstrateBlockHashMapping<Self>;
+    type FindAuthor = ();
+    type WeightInfo = ();
+}
+
+impl xpallet_assets_bridge::Config for Test {
+    type Event = ();
+    type EvmCaller = EvmCaller;
+    type ClaimBond = ClaimBond;
+}
+
 impl Config for Test {
     type Event = ();
-    type UnixTime = Timestamp;
+    type UnixTime = CustomTimestamp;
     type AccountExtractor = xp_gateway_bitcoin::OpReturnExtractor;
     type TrusteeSessionProvider =
         xpallet_gateway_common::trustees::bitcoin::BtcTrusteeSessionManager<Test>;
@@ -363,6 +408,12 @@ impl ExtBuilder {
             endowed: Default::default(),
         }
         .assimilate_storage(&mut storage);
+
+        xpallet_assets_bridge::GenesisConfig::<Test> {
+            admin_key: Some(alice()),
+        }
+        .assimilate_storage(&mut storage)
+        .unwrap();
 
         let info = trustees_info();
         let genesis_trustees = info

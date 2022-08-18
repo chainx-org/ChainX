@@ -10,6 +10,7 @@ use sp_runtime::RuntimeDebug;
 use chainx_primitives::ReferralId;
 
 use light_bitcoin::keys::Address;
+pub use xp_gateway_common::OpReturnAccount;
 
 /// (hot trustee address, cold trustee address)
 pub type TrusteePair = (Address, Address);
@@ -62,7 +63,7 @@ pub struct BtcDepositInfo<AccountId> {
     /// The deposit value.
     pub deposit_value: u64,
     /// The parsed op_return data.
-    pub op_return: Option<(AccountId, Option<ReferralId>)>,
+    pub op_return: Option<(OpReturnAccount<AccountId>, Option<ReferralId>)>,
     /// The input address of deposit transaction.
     pub input_addr: Option<Address>,
 }

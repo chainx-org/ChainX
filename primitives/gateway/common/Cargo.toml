@@ -6,7 +6,9 @@ edition = "2021"
 
 [dependencies]
 bs58 = { version = "0.3", default-features = false, features = ["alloc"] }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 hex = { version = "0.4", default-features = false }
+scale-info = { version = "2.0.1", default-features = false, features = ["derive"] }
 
 # Substrate primitives
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
@@ -19,7 +21,9 @@ xp-io = { path = "../../io", default-features = false, optional = true }
 default = ["std"]
 std = [
     "bs58/std",
+    "codec/std",
     "hex/std",
+    "scale-info/std",
     # Substrate primitives
     "sp-core/std",
     "frame-support/std",

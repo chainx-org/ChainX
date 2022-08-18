@@ -30,7 +30,7 @@ use sp_runtime::traits::{StaticLookup, UniqueSaturatedInto, Zero};
 use sp_std::vec::Vec;
 
 pub use chainx_primitives::AssetId;
-use pallet_evm::{AddressMapping, ExitReason, Runner};
+use pallet_evm::{AddressMapping, CallInfo, ExitReason, Runner};
 
 pub type EcdsaSignature = ecdsa::Signature;
 pub type AddressMappingOf<T> = <T as pallet_evm::Config>::AddressMapping;
@@ -141,7 +141,7 @@ pub mod pallet {
     }
 
     #[pallet::event]
-    #[pallet::generate_deposit(fn deposit_event)]
+    #[pallet::generate_deposit(pub fn deposit_event)]
     pub enum Event<T: Config> {
         /// (account_id, evm_address)
         ClaimAccount(T::AccountId, H160),
@@ -611,17 +611,29 @@ pub mod pallet {
     }
 }
 
-impl<T: Config> Pallet<T>
-where
-    DispatchError: From<<<T as pallet_evm::Config>::Runner as pallet_evm::Runner<T>>::Error>,
-{
+impl<T: Config> Pallet<T> {
     pub fn set_admin_inner(new_admin: T::AccountId) -> Weight {
         Admin::<T>::mutate(|admin| *admin = Some(new_admin));
         T::DbWeight::get().write
     }
 
+    pub fn apply_direct_deposit(
+        evm_account: H160,
+        asset_id: AssetId,
+        amount: BalanceOf<T>,
+    ) -> DispatchResult {
+        ensure!(!Self::is_in_emergency(asset_id), Error::<T>::InEmergency);
+        ensure!(!amount.is_zero(), Error::<T>::ZeroBalance);
+
+        let erc20 = Self::erc20s(asset_id).ok_or(Error::<T>::ContractAddressHasNotMapped)?;
+
+        let inputs = mint_into_encode(evm_account, amount.unique_saturated_into());
+
+        Self::call_evm(erc20, inputs)
+    }
+
     fn call_evm(erc20: H160, inputs: Vec<u8>) -> DispatchResult {
-        let info = T::Runner::call(
+        match T::Runner::call(
             T::EvmCaller::get(),
             erc20,
             inputs,
@@ -633,10 +645,11 @@ where
             Vec::new(),
             false,
             T::config(),
-        )?;
-
-        match info.exit_reason {
-            ExitReason::Succeed(_) => Ok(()),
+        ) {
+            Ok(CallInfo {
+                exit_reason: ExitReason::Succeed(_),
+                ..
+            }) => Ok(()),
             _ => Err(Error::<T>::ExecutedFailed.into()),
         }
     }

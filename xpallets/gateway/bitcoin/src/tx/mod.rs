@@ -17,9 +17,10 @@ use light_bitcoin::{
     keys::{Address, Network},
     primitives::{hash_rev, H256},
 };
+use sp_core::H160;
 
 use chainx_primitives::AssetId;
-use xp_gateway_bitcoin::{BtcDepositInfo, BtcTxMetaType, BtcTxTypeDetector};
+use xp_gateway_bitcoin::{BtcDepositInfo, BtcTxMetaType, BtcTxTypeDetector, OpReturnAccount};
 use xp_gateway_common::AccountExtractor;
 use xpallet_assets::ChainT;
 use xpallet_gateway_common::traits::{AddressBinding, ReferralBinding, TrusteeInfoUpdate};
@@ -109,11 +110,14 @@ fn deposit<T: Config>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) ->
 
     match account_info {
         AccountInfo::<_>::Account((account, referral)) => {
-            T::ReferralBinding::update_binding(
-                &<Pallet<T> as ChainT<_>>::ASSET_ID,
-                &account,
-                referral,
-            );
+            if let OpReturnAccount::Wasm(w) = account.clone() {
+                T::ReferralBinding::update_binding(
+                    &<Pallet<T> as ChainT<_>>::ASSET_ID,
+                    &w,
+                    referral,
+                );
+            }
+
             match deposit_token::<T>(txid, &account, deposit_info.deposit_value) {
                 Ok(_) => {
                     info!(
@@ -142,7 +146,18 @@ fn deposit<T: Config>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) ->
     }
 }
 
-fn deposit_token<T: Config>(txid: H256, who: &T::AccountId, balance: u64) -> DispatchResult {
+fn deposit_token<T: Config>(
+    txid: H256,
+    who: &OpReturnAccount<T::AccountId>,
+    balance: u64,
+) -> DispatchResult {
+    match who {
+        OpReturnAccount::Evm(w) => deposit_evm::<T>(txid, w, balance),
+        OpReturnAccount::Wasm(w) => deposit_wasm::<T>(txid, w, balance),
+    }
+}
+
+fn deposit_wasm<T: Config>(txid: H256, who: &T::AccountId, balance: u64) -> DispatchResult {
     let id: AssetId = <Pallet<T> as ChainT<_>>::ASSET_ID;
 
     let value: BalanceOf<T> = balance.saturated_into();
@@ -162,7 +177,30 @@ fn deposit_token<T: Config>(txid: H256, who: &T::AccountId, balance: u64) -> Dis
     }
 }
 
-pub fn remove_pending_deposit<T: Config>(input_address: &BtcAddress, who: &T::AccountId) {
+fn deposit_evm<T: Config>(txid: H256, who: &H160, balance: u64) -> DispatchResult {
+    let id: AssetId = <Pallet<T> as ChainT<_>>::ASSET_ID;
+
+    let value: BalanceOf<T> = balance.saturated_into();
+    match xpallet_assets_bridge::Pallet::<T>::apply_direct_deposit(*who, id, value) {
+        Ok(_) => {
+            Pallet::<T>::deposit_event(Event::<T>::DepositedEvm(txid, *who, value));
+            Ok(())
+        }
+        Err(err) => {
+            error!(
+                target: "runtime::bitcoin",
+                "[deposit_token] Deposit error:{:?}, must use root to fix it",
+                err
+            );
+            Err(err)
+        }
+    }
+}
+
+pub fn remove_pending_deposit<T: Config>(
+    input_address: &BtcAddress,
+    who: &OpReturnAccount<T::AccountId>,
+) {
     // notice this would delete this cache
     let records = PendingDeposits::<T>::take(input_address);
     for record in records {
@@ -174,12 +212,24 @@ pub fn remove_pending_deposit<T: Config>(input_address: &BtcAddress, who: &T::Ac
             who, record.balance, record.txid,
         );
 
-        Pallet::<T>::deposit_event(Event::<T>::PendingDepositRemoved(
-            who.clone(),
-            record.balance.saturated_into(),
-            record.txid,
-            input_address.clone(),
-        ));
+        match who.clone() {
+            OpReturnAccount::Evm(w) => {
+                Pallet::<T>::deposit_event(Event::<T>::PendingDepositEvmRemoved(
+                    w,
+                    record.balance.saturated_into(),
+                    record.txid,
+                    input_address.clone(),
+                ));
+            }
+            OpReturnAccount::Wasm(w) => {
+                Pallet::<T>::deposit_event(Event::<T>::PendingDepositRemoved(
+                    w,
+                    record.balance.saturated_into(),
+                    record.txid,
+                    input_address.clone(),
+                ));
+            }
+        }
     }
 }
 

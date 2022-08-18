@@ -4,7 +4,10 @@
 
 use codec::Encode;
 use frame_support::{assert_noop, assert_ok};
-use sp_core::crypto::{set_default_ss58_version, Ss58AddressFormatRegistry};
+use sp_core::{
+    crypto::{set_default_ss58_version, Ss58AddressFormatRegistry},
+    H160,
+};
 
 use light_bitcoin::{
     chain::Transaction,
@@ -30,6 +33,8 @@ const DEPOSIT_HOT_ADDR: &str = "bc1pn202yeugfa25nssxk2hv902kmxrnp7g9xt487u256n20
 // Tyoe is p2sh. Address farmat is Mainnet.
 const DEPOSIT_COLD_ADDR: &str = "3Ac85hjgeyNX96Q4BqUoAH5bh6gARxRDJm";
 
+const ERC20_1: [u8; 20] = [1u8; 20];
+
 lazy_static::lazy_static! {
     // deposit without op return, output addr is DEPOSIT_HOT_ADDR. Withdraw is an example of spending from the script path.
     static ref deposit_taproot1_input_account: Vec<u8> = b"bc1pexff2s7l58sthpyfrtx500ax234stcnt0gz2lr4kwe0ue95a2e0s5wxhqg".to_vec();
@@ -47,6 +52,11 @@ lazy_static::lazy_static! {
     static ref deposit_taproot2_prev: Transaction = "020000000001014be640313b023c3c731b7e89c3f97bebcebf9772ea2f7747e5604f4483a447b601000000000000000002a0860100000000002251209a9ea267884f5549c206b2aec2bd56d98730f90532ea7f7154d4d4f923b7e3bbc027090000000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f01404dc68b31efc1468f84db7e9716a84c19bbc53c2d252fd1d72fa6469e860a74486b0990332b69718dbcb5acad9d48634d23ee9c215ab15fb16f4732bed1770fdf00000000".parse().unwrap();
     // https://signet.bitcoinexplorer.org/tx/8e5d37c768acc4f3e794a10ad27bf0256237c80c22fa67117e3e3e1aec22ea5f#JSON
     static ref deposit_taproot2: Transaction = "02000000000101aeee49e0bbf7a36f78ea4321b5c8bae0b8c72bdf2c024d2484b137fa7d0f8e1f01000000000000000003a0860100000000002251209a9ea267884f5549c206b2aec2bd56d98730f90532ea7f7154d4d4f923b7e3bb0000000000000000326a3035516a706f3772516e7751657479736167477a6334526a376f737758534c6d4d7141754332416255364c464646476a38801a060000000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f01409e325889515ed47099fdd7098e6fafdc880b21456d3f368457de923f4229286e34cef68816348a0581ae5885ede248a35ac4b09da61a7b9b90f34c200872d2e300000000".parse().unwrap();
+    // op_return is the evm address with 0x
+    static ref deposit_taproot2_evm1: Transaction = "02000000000101aeee49e0bbf7a36f78ea4321b5c8bae0b8c72bdf2c024d2484b137fa7d0f8e1f01000000000000000003a0860100000000002251209a9ea267884f5549c206b2aec2bd56d98730f90532ea7f7154d4d4f923b7e3bb00000000000000002c6a2a307833383030353031393339463933383543423034344639464239393262393734343243633435653437801a060000000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f014088aa2593c1f53b9529da56484eff2228beb7b18dd45288823010da260e9fa80ce506c80d06751b4c236d75f8ef25574ce0aaa06d0ae9f7ddbd19507ea50eab8e00000000".parse().unwrap();
+    // op_return is the evm address without 0x
+    static ref deposit_taproot2_evm2: Transaction = "02000000000101aeee49e0bbf7a36f78ea4321b5c8bae0b8c72bdf2c024d2484b137fa7d0f8e1f01000000000000000003a0860100000000002251209a9ea267884f5549c206b2aec2bd56d98730f90532ea7f7154d4d4f923b7e3bb0000000000000000166a143800501939f9385cb044f9fb992b97442cc45e47801a060000000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f01402e0b88c9a142d8a5aedc0590b1f21be89e0db75cf97daf9e3e04c10d925058f65284ab86e64088d6058e6df94e64c498957878b20d85f6de9ee84fec973408f300000000".parse().unwrap();
+
     static ref withdraw_taproot2_prev: Transaction = "02000000000101aeee49e0bbf7a36f78ea4321b5c8bae0b8c72bdf2c024d2484b137fa7d0f8e1f01000000000000000003a0860100000000002251209a9ea267884f5549c206b2aec2bd56d98730f90532ea7f7154d4d4f923b7e3bb0000000000000000326a3035516a706f3772516e7751657479736167477a6334526a376f737758534c6d4d7141754332416255364c464646476a38801a060000000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f01409e325889515ed47099fdd7098e6fafdc880b21456d3f368457de923f4229286e34cef68816348a0581ae5885ede248a35ac4b09da61a7b9b90f34c200872d2e300000000".parse().unwrap();
     // https://signet.bitcoinexplorer.org/tx/0f592933b493bedab209851cb2cf07871558ff57d86d645877b16651479b51a2#JSON
     static ref withdraw_taproot2: Transaction = "020000000001015fea22ec1a3e3e7e1167fa220cc8376225f07bd20aa194e7f3c4ac68c7375d8e0000000000000000000250c3000000000000225120c9929543dfa1e0bb84891acd47bfa6546b05e26b7a04af8eb6765fcc969d565f409c0000000000002251209a9ea267884f5549c206b2aec2bd56d98730f90532ea7f7154d4d4f923b7e3bb03402639d4d9882f6e7e42db38dbd2845c87b131737bf557643ef575c49f8fc6928869d9edf5fd61606fb07cced365fdc2c7b637e6ecc85b29906c16d314e7543e94222086a60c7d5dd3f4931cc8ad77a614402bdb591c042347c89281c48c7e9439be9dac61c0e56a1792f348690cdeebe60e3db6c4e94d94e742c619f7278e52f6cbadf5efe96a528ba3f61a5b0d4fbceea425a9028381458b32492bccc3f1faa473a649e23605554f5ea4b4044229173719228a35635eeffbd8a8fe526270b737ad523b99f600000000".parse().unwrap();
@@ -95,6 +105,20 @@ fn test_detect_tx_type() {
         _ => unreachable!("wrong type"),
     }
 
+    match mock_detect_transaction_type::<Test>(&deposit_taproot2_evm1, None) {
+        BtcTxMetaType::Deposit(info) => {
+            assert!(info.input_addr.is_none() && info.op_return.is_some())
+        }
+        _ => unreachable!("wrong type"),
+    }
+
+    match mock_detect_transaction_type::<Test>(&deposit_taproot2_evm2, None) {
+        BtcTxMetaType::Deposit(info) => {
+            assert!(info.input_addr.is_none() && info.op_return.is_some())
+        }
+        _ => unreachable!("wrong type"),
+    }
+
     match mock_detect_transaction_type::<Test>(&deposit_taproot1, Some(&deposit_taproot1_prev)) {
         BtcTxMetaType::Deposit(info) => {
             assert!(info.input_addr.is_some() && info.op_return.is_none())
@@ -103,6 +127,22 @@ fn test_detect_tx_type() {
     }
 
     match mock_detect_transaction_type::<Test>(&deposit_taproot2, Some(&deposit_taproot2_prev)) {
+        BtcTxMetaType::Deposit(info) => {
+            assert!(info.input_addr.is_some() && info.op_return.is_some())
+        }
+        _ => unreachable!("wrong type"),
+    }
+
+    match mock_detect_transaction_type::<Test>(&deposit_taproot2_evm1, Some(&deposit_taproot2_prev))
+    {
+        BtcTxMetaType::Deposit(info) => {
+            assert!(info.input_addr.is_some() && info.op_return.is_some())
+        }
+        _ => unreachable!("wrong type"),
+    }
+
+    match mock_detect_transaction_type::<Test>(&deposit_taproot2_evm2, Some(&deposit_taproot2_prev))
+    {
         BtcTxMetaType::Deposit(info) => {
             assert!(info.input_addr.is_some() && info.op_return.is_some())
         }
@@ -172,6 +212,12 @@ fn mock_process_tx<T: Config>(tx: Transaction, prev_tx: Option<Transaction>) -> 
 fn test_process_tx() {
     set_default_ss58_version(Ss58AddressFormatRegistry::ChainxAccount.into());
     ExtBuilder::default().build_and_execute(|| {
+        assert_ok!(XAssetsBridge::register(
+            Origin::signed(alice()),
+            1,
+            H160::from_slice(&ERC20_1)
+        ));
+
         // without op return and input address
         let r = mock_process_tx::<Test>(deposit_taproot1.clone(), None);
         assert_eq!(r.result, BtcTxResult::Failure);
@@ -210,6 +256,15 @@ fn test_process_tx() {
         assert_eq!(r.result, BtcTxResult::Success);
         assert_eq!(XAssets::usable_balance(&op_account, &X_BTC), 100000);
         assert_eq!(XGatewayCommon::bound_addrs(&op_account), Default::default());
+
+        // with evm op return(no 0x) and without input address
+        let r = mock_process_tx::<Test>(deposit_taproot2_evm1.clone(), None);
+        assert_eq!(r.result, BtcTxResult::Success);
+
+        // with evm op return(with 0x) and without input address
+        let r = mock_process_tx::<Test>(deposit_taproot2_evm2.clone(), None);
+        assert_eq!(r.result, BtcTxResult::Success);
+
         // with op return and input address
         let r = mock_process_tx::<Test>(
             deposit_taproot2.clone(),
@@ -217,6 +272,20 @@ fn test_process_tx() {
         );
         assert_eq!(r.result, BtcTxResult::Success);
         assert_eq!(XAssets::usable_balance(&op_account, &X_BTC), 300000);
+
+        // with evm op return(no 0x) and input address
+        let r = mock_process_tx::<Test>(
+            deposit_taproot2_evm1.clone(),
+            Some(deposit_taproot2_prev.clone()),
+        );
+        assert_eq!(r.result, BtcTxResult::Success);
+
+        // with evm op return(with 0x) and input address
+        let r = mock_process_tx::<Test>(
+            deposit_taproot2_evm2.clone(),
+            Some(deposit_taproot2_prev.clone()),
+        );
+        assert_eq!(r.result, BtcTxResult::Success);
 
         // withdraw
         WithdrawalProposal::<Test>::put(BtcWithdrawalProposal {

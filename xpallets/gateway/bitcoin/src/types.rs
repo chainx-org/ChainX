@@ -16,7 +16,7 @@ use light_bitcoin::{
 };
 
 use chainx_primitives::ReferralId;
-use xp_gateway_bitcoin::BtcTxType;
+use xp_gateway_bitcoin::{BtcTxType, OpReturnAccount};
 
 /// BtcAddress is an bitcoin address encoded in base58
 /// like: "1Nekoo5VTe7yQQ8WFqrva2UbdyRMVYCP1t" or "3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy"
@@ -74,7 +74,7 @@ pub enum BtcTxResult {
 
 pub enum AccountInfo<AccountId> {
     /// A value of type `L`.
-    Account((AccountId, Option<ReferralId>)),
+    Account((OpReturnAccount<AccountId>, Option<ReferralId>)),
     /// A value of type `R`.
     Address(Address),
 }

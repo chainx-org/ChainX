@@ -7,6 +7,7 @@ use chainx_primitives::{AssetId, ReferralId};
 use xpallet_assets::Chain;
 
 use crate::types::{ScriptInfo, TrusteeInfoConfig, TrusteeIntentionProps, TrusteeSessionInfo};
+use xp_gateway_bitcoin::OpReturnAccount;
 
 pub trait BytesLike: Into<Vec<u8>> + TryFrom<Vec<u8>> {}
 impl<T: Into<Vec<u8>> + TryFrom<Vec<u8>>> BytesLike for T {}
@@ -129,13 +130,13 @@ impl<AccountId> ReferralBinding<AccountId> for () {
 }
 
 pub trait AddressBinding<AccountId, Address: Into<Vec<u8>>> {
-    fn update_binding(chain: Chain, address: Address, who: AccountId);
-    fn address(chain: Chain, address: Address) -> Option<AccountId>;
+    fn update_binding(chain: Chain, address: Address, who: OpReturnAccount<AccountId>);
+    fn address(chain: Chain, address: Address) -> Option<OpReturnAccount<AccountId>>;
 }
 
 impl<AccountId, Address: Into<Vec<u8>>> AddressBinding<AccountId, Address> for () {
-    fn update_binding(_: Chain, _: Address, _: AccountId) {}
-    fn address(_: Chain, _: Address) -> Option<AccountId> {
+    fn update_binding(_: Chain, _: Address, _: OpReturnAccount<AccountId>) {}
+    fn address(_: Chain, _: Address) -> Option<OpReturnAccount<AccountId>> {
         None
     }
 }
