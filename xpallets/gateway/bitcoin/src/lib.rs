@@ -387,6 +387,14 @@ pub mod pallet {
         DepositedEvm(H256, H160, BalanceOf<T>),
         /// A unclaimed deposit record was removed for evm address. [depositor, deposit_amount, tx_hash, btc_address]
         PendingDepositEvmRemoved(H160, BalanceOf<T>, H256, BtcAddress),
+        /// An account deposited some token for evm address. [tx_hash, who, amount]
+        DepositedAptos(H256, H256, BalanceOf<T>),
+        /// A unclaimed deposit record was removed for evm address. [depositor, deposit_amount, tx_hash, btc_address]
+        PendingDepositAptosRemoved(H256, BalanceOf<T>, H256, BtcAddress),
+        /// An account deposited some token for evm address. [tx_hash, prefix, who, amount]
+        DepositedNamed(H256, Vec<u8>, Vec<u8>, BalanceOf<T>),
+        /// A unclaimed deposit record was removed for evm address. [prefix, depositor, deposit_amount, tx_hash, btc_address]
+        PendingDepositNamedRemoved(Vec<u8>, Vec<u8>, BalanceOf<T>, H256, BtcAddress),
     }
 
     /// best header info

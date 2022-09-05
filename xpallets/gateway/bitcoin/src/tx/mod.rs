@@ -154,6 +154,8 @@ fn deposit_token<T: Config>(
     match who {
         OpReturnAccount::Evm(w) => deposit_evm::<T>(txid, w, balance),
         OpReturnAccount::Wasm(w) => deposit_wasm::<T>(txid, w, balance),
+        OpReturnAccount::Aptos(w) => deposit_aptos::<T>(txid, w, balance),
+        OpReturnAccount::Named(w1, w2) => deposit_named(txid, w1.clone(), w2.clone(), balance),
     }
 }
 
@@ -197,6 +199,23 @@ fn deposit_evm<T: Config>(txid: H256, who: &H160, balance: u64) -> DispatchResul
     }
 }
 
+fn deposit_aptos<T: Config>(txid: H256, who: &H256, balance: u64) -> DispatchResult {
+    let value: BalanceOf<T> = balance.saturated_into();
+    Pallet::<T>::deposit_event(Event::<T>::DepositedAptos(txid, *who, value));
+    OK(())
+}
+
+fn deposit_named<T: Config>(
+    txid: H256,
+    prefix: Vec<u8>,
+    who: Vec<u8>,
+    balance: u64,
+) -> DispatchResult {
+    let value: BalanceOf<T> = balance.saturated_into();
+    Pallet::<T>::deposit_event(Event::<T>::DepositedNamed(txid, prefix, who, value));
+    OK(())
+}
+
 pub fn remove_pending_deposit<T: Config>(
     input_address: &BtcAddress,
     who: &OpReturnAccount<T::AccountId>,
@@ -224,6 +243,23 @@ pub fn remove_pending_deposit<T: Config>(
             OpReturnAccount::Wasm(w) => {
                 Pallet::<T>::deposit_event(Event::<T>::PendingDepositRemoved(
                     w,
+                    record.balance.saturated_into(),
+                    record.txid,
+                    input_address.clone(),
+                ));
+            }
+            OpReturnAccount::Aptos(w) => {
+                Pallet::<T>::deposit_event(Event::<T>::PendingDepositAptosRemoved(
+                    w,
+                    record.balance.saturated_into(),
+                    record.txid,
+                    input_address.clone(),
+                ));
+            }
+            OpReturnAccount::Named(w1, w2) => {
+                Pallet::<T>::deposit_event(Event::<T>::PendingDepositNamedRemoved(
+                    w1.clone(),
+                    w2.clone(),
                     record.balance.saturated_into(),
                     record.txid,
                     input_address.clone(),

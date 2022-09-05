@@ -4,9 +4,10 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![deny(missing_docs)]
+
 use codec::{Decode, Encode};
 use scale_info::TypeInfo;
-use sp_core::{crypto::AccountId32, RuntimeDebug, H160};
+use sp_core::{crypto::AccountId32, RuntimeDebug, H160, H256};
 
 use frame_support::log::error;
 
@@ -17,6 +18,12 @@ pub enum OpReturnAccount<AccountId> {
     Evm(H160),
     /// Wasm address
     Wasm(AccountId),
+    /// Aptos address
+    Aptos(H256),
+    /// Named address: `[prefix]:(0x)[hex]`.
+    /// eg: `sui:0x1dcba11f07596152cf96a9bd358b675d5d5f9506`;
+    /// eg: `sui:1dcba11f07596152cf96a9bd358b675d5d5f9506`;
+    Named(Vec<u8>, Vec<u8>),
 }
 
 /// Trait for extracting the account and possible extra data (e.g. referral) from
@@ -50,6 +57,49 @@ pub fn transfer_evm_uncheck(raw_account: &[u8]) -> Option<H160> {
     let mut key = [0u8; 20];
     key.copy_from_slice(&data);
     H160::try_from(key).ok()
+}
+
+/// Transfer slice into unchecked aptos address
+pub fn transfer_aptos_uncheck(raw_account: &[u8]) -> Option<H256> {
+    let data = if raw_account.len() == 32 {
+        raw_account.to_vec()
+    } else if raw_account.len() == 64 {
+        hex::decode(raw_account).ok()?
+    } else if raw_account.len() == 66 {
+        let mut key = [0u8; 64];
+        // remove 0x prefix
+        key.copy_from_slice(&raw_account[2..66]);
+        hex::decode(key).ok()?
+    } else {
+        return None;
+    };
+
+    let mut key = [0u8; 32];
+    key.copy_from_slice(&data);
+    H256::try_from(key).ok()
+}
+
+/// Transfer slice into unchecked named address
+pub fn transfer_named_uncheck(raw_account: &[u8]) -> Option<(Vec<u8>, Vec<u8>)> {
+    let name_and_account = raw_account
+        .split(|x| *x == b':')
+        .map(|d| d.to_vec())
+        .collect::<Vec<_>>();
+
+    if name_and_account.is_empty() && name_and_account.len() != 2 && name_and_account[1].len() > 2 {
+        error!(
+            "[transfer_named_uncheck] Can't transfer_named_uncheck:{:?}",
+            raw_account
+        );
+        return None;
+    }
+    let name = name_and_account[0].clone();
+    let account = if name_and_account[1][0] == b'0' && name_and_account[1][1] == b'x' {
+        hex::decode(name_and_account[1][2..name_and_account[1].len()].to_vec()).ok()?
+    } else {
+        hex::decode(name_and_account[1].clone()).ok()?
+    };
+    return Some((name, account));
 }
 
 /// Verify if the raw account is a properly encoded SS58Check address.

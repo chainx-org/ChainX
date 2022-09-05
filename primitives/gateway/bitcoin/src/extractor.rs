@@ -6,7 +6,9 @@ use sp_core::crypto::AccountId32;
 use sp_std::prelude::Vec;
 
 use chainx_primitives::ReferralId;
-use xp_gateway_common::{from_ss58_check, transfer_evm_uncheck};
+use xp_gateway_common::{
+    from_ss58_check, transfer_aptos_uncheck, transfer_evm_uncheck, transfer_named_uncheck,
+};
 
 pub use xp_gateway_common::AccountExtractor;
 
@@ -37,8 +39,13 @@ impl AccountExtractor<AccountId32, ReferralId> for OpReturnExtractor {
 
         let account = if let Some(v) = wasm_account {
             OpReturnAccount::Wasm(v)
+        } else if let Some(v) = transfer_evm_uncheck(account_and_referral[0].as_slice()) {
+            OpReturnAccount::Evm(v)
+        } else if let Some(v) = transfer_aptos_uncheck(account_and_referral[0].as_slice()) {
+            OpReturnAccount::Aptos(v)
         } else {
-            OpReturnAccount::Evm(transfer_evm_uncheck(account_and_referral[0].as_slice())?)
+            let data = transfer_named_uncheck(account_and_referral[0].as_slice())?;
+            OpReturnAccount::Named(data.0, data.1)
         };
 
         let referral = if account_and_referral.len() > 1 {
@@ -110,6 +117,61 @@ fn test_opreturn_extractor() {
         assert_eq!(
             result,
             Some((OpReturnAccount::Evm(evm_addr), Some(b"referral1".to_vec())))
+        );
+
+        let mut key = [0u8; 32];
+        key.copy_from_slice(
+            &hex::decode("eeff357ea5c1a4e7bc11b2b17ff2dc2dcca69750bfef1e1ebcaccf8c8018175b")
+                .unwrap(),
+        );
+        let aptos_addr = H256::try_from(key).unwrap();
+
+        let result = OpReturnExtractor::extract_account(
+            "0xeeff357ea5c1a4e7bc11b2b17ff2dc2dcca69750bfef1e1ebcaccf8c8018175b@referral1"
+                .as_bytes(),
+        );
+        assert_eq!(
+            result,
+            Some((
+                OpReturnAccount::Aptos(aptos_addr),
+                Some(b"referral1".to_vec())
+            ))
+        );
+
+        let result = OpReturnExtractor::extract_account(
+            "eeff357ea5c1a4e7bc11b2b17ff2dc2dcca69750bfef1e1ebcaccf8c8018175b@referral1".as_bytes(),
+        );
+        assert_eq!(
+            result,
+            Some((
+                OpReturnAccount::Aptos(aptos_addr),
+                Some(b"referral1".to_vec())
+            ))
+        );
+
+        let name = vec![b's', b'u', b'i'];
+        let addr = hex::decode("1dcba11f07596152cf96a9bd358b675d5d5f9506").unwrap();
+
+        let result = OpReturnExtractor::extract_account(
+            "sui:0x1dcba11f07596152cf96a9bd358b675d5d5f9506@referral1".as_bytes(),
+        );
+        assert_eq!(
+            result,
+            Some((
+                OpReturnAccount::Named(name.clone(), addr.clone()),
+                Some(b"referral1".to_vec())
+            ))
+        );
+
+        let result = OpReturnExtractor::extract_account(
+            "sui:1dcba11f07596152cf96a9bd358b675d5d5f9506@referral1".as_bytes(),
+        );
+        assert_eq!(
+            result,
+            Some((
+                OpReturnAccount::Named(name, addr),
+                Some(b"referral1".to_vec())
+            ))
         );
     }
     {
