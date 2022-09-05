@@ -66,6 +66,7 @@ pub use weights::WeightInfo;
 pub mod pallet {
     use super::*;
     use frame_support::{pallet_prelude::*, transactional};
+    use sp_core::H256;
 
     #[pallet::config]
     pub trait Config:
@@ -617,7 +618,7 @@ pub mod pallet {
         ValueQuery,
     >;
 
-    /// The evm address of the corresponding chain and chain address .
+    /// The evm address of the corresponding chain and chain address.
     #[pallet::storage]
     pub(crate) type AddressBindingOfEvm<T: Config> =
         StorageDoubleMap<_, Twox64Concat, Chain, Blake2_128Concat, ChainAddress, H160>;
@@ -628,6 +629,23 @@ pub mod pallet {
         _,
         Blake2_128Concat,
         H160,
+        Twox64Concat,
+        Chain,
+        Vec<ChainAddress>,
+        ValueQuery,
+    >;
+
+    /// The aptos address of the corresponding chain and chain address.
+    #[pallet::storage]
+    pub(crate) type AddressBindingOfAptos<T: Config> =
+        StorageDoubleMap<_, Twox64Concat, Chain, Blake2_128Concat, ChainAddress, H256>;
+
+    /// The bound aptos address of the corresponding account and chain.
+    #[pallet::storage]
+    pub(crate) type BoundAddressOfAptos<T: Config> = StorageDoubleMap<
+        _,
+        Blake2_128Concat,
+        H256,
         Twox64Concat,
         Chain,
         Vec<ChainAddress>,

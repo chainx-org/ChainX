@@ -381,7 +381,7 @@ pub mod pallet {
         WithdrawalProposalCreated(T::AccountId, Vec<u32>),
         /// A trustee voted/vetoed a withdrawal proposal. [trustee, vote_status]
         WithdrawalProposalVoted(T::AccountId, bool),
-        /// A fatal error happened during the withdrwal process. [tx_hash, proposal_hash]
+        /// A fatal error happened during the withdrawal process. [tx_hash, proposal_hash]
         WithdrawalFatalErr(H256, H256),
         /// An account deposited some token for evm address. [tx_hash, who, amount]
         DepositedEvm(H256, H160, BalanceOf<T>),

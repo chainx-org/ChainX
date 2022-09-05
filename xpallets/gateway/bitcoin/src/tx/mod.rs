@@ -155,7 +155,7 @@ fn deposit_token<T: Config>(
         OpReturnAccount::Evm(w) => deposit_evm::<T>(txid, w, balance),
         OpReturnAccount::Wasm(w) => deposit_wasm::<T>(txid, w, balance),
         OpReturnAccount::Aptos(w) => deposit_aptos::<T>(txid, w, balance),
-        OpReturnAccount::Named(w1, w2) => deposit_named(txid, w1.clone(), w2.clone(), balance),
+        OpReturnAccount::Named(w1, w2) => deposit_named::<T>(txid, w1.clone(), w2.clone(), balance),
     }
 }
 
@@ -202,7 +202,7 @@ fn deposit_evm<T: Config>(txid: H256, who: &H160, balance: u64) -> DispatchResul
 fn deposit_aptos<T: Config>(txid: H256, who: &H256, balance: u64) -> DispatchResult {
     let value: BalanceOf<T> = balance.saturated_into();
     Pallet::<T>::deposit_event(Event::<T>::DepositedAptos(txid, *who, value));
-    OK(())
+    Ok(())
 }
 
 fn deposit_named<T: Config>(
@@ -213,7 +213,7 @@ fn deposit_named<T: Config>(
 ) -> DispatchResult {
     let value: BalanceOf<T> = balance.saturated_into();
     Pallet::<T>::deposit_event(Event::<T>::DepositedNamed(txid, prefix, who, value));
-    OK(())
+    Ok(())
 }
 
 pub fn remove_pending_deposit<T: Config>(
