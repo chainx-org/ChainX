@@ -1,18 +1,19 @@
 // Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
 
 use frame_support::log::{debug, error, info, warn};
-use sp_core::{H160, H256};
+use scale_info::prelude::string::String;
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
 use chainx_primitives::{AssetId, ChainAddress, ReferralId};
 use xp_gateway_bitcoin::OpReturnAccount;
+use xp_gateway_common::{transfer_aptos_uncheck, transfer_evm_uncheck, DstChain};
 use xpallet_assets::Chain;
 use xpallet_support::{traits::Validator, try_addr, try_str};
 
 use crate::traits::{AddressBinding, ReferralBinding};
 use crate::{
-    AddressBindingOf, AddressBindingOfAptos, AddressBindingOfEvm, BoundAddressOf,
-    BoundAddressOfAptos, BoundAddressOfEvm, Config, Pallet,
+    AddressBindingOf, AddressBindingOfDstChain, BoundAddressOf, BoundAddressOfDstChain, Config,
+    Pallet,
 };
 
 impl<T: Config> ReferralBinding<T::AccountId> for Pallet<T> {
@@ -63,29 +64,68 @@ impl<T: Config> ReferralBinding<T::AccountId> for Pallet<T> {
 impl<T: Config, Address: Into<Vec<u8>>> AddressBinding<T::AccountId, Address> for Pallet<T> {
     fn update_binding(chain: Chain, address: Address, who: OpReturnAccount<T::AccountId>) {
         match who {
-            OpReturnAccount::Evm(w) => Pallet::<T>::update_evm_binding(chain, address, w),
+            OpReturnAccount::Evm(w) => Pallet::<T>::update_dst_chain_binding(
+                chain,
+                DstChain::ChainXEvm,
+                address,
+                w.as_bytes().to_vec(),
+            ),
             OpReturnAccount::Wasm(w) => Pallet::<T>::update_wasm_binding(chain, address, w),
-            OpReturnAccount::Aptos(w) => Pallet::<T>::update_aptos_binding(chain, address, w),
-            OpReturnAccount::Named(p, w) => Pallet::<T>::update_named_binding(),
+            OpReturnAccount::Aptos(w) => Pallet::<T>::update_dst_chain_binding(
+                chain,
+                DstChain::Aptos,
+                address,
+                w.as_bytes().to_vec(),
+            ),
+            OpReturnAccount::Named(prefix, w) => {
+                // If there are multiple named types, consider replacing it to match
+                if String::from_utf8_lossy(&prefix)
+                    .to_ascii_lowercase()
+                    .as_str()
+                    == "sui"
+                {
+                    Pallet::<T>::update_dst_chain_binding(chain, DstChain::Sui, address, w)
+                }
+            }
         }
     }
 
     fn address(chain: Chain, address: Address) -> Option<OpReturnAccount<T::AccountId>> {
         let addr_bytes: ChainAddress = address.into();
-        match addr_bytes.len() {
-            20 => Some(OpReturnAccount::Evm(AddressBindingOfEvm::<T>::get(
-                chain,
-                &addr_bytes,
-            )?)),
-            32 => Some(OpReturnAccount::Aptos(AddressBindingOfAptos::<T>::get(
-                chain,
-                &addr_bytes,
-            )?)),
-            _ => Some(OpReturnAccount::Wasm(AddressBindingOf::<T>::get(
-                chain,
-                &addr_bytes,
-            )?)),
+
+        if AddressBindingOf::<T>::contains_key(chain, &addr_bytes) {
+            if let Some(wasm_addr) = AddressBindingOf::<T>::get(chain, &addr_bytes) {
+                return Some(OpReturnAccount::Wasm(wasm_addr));
+            }
         }
+
+        if AddressBindingOfDstChain::<T>::contains_key((chain, DstChain::ChainXEvm, &addr_bytes)) {
+            if let Some(evm_raw_addr) =
+                AddressBindingOfDstChain::<T>::get((chain, DstChain::ChainXEvm, &addr_bytes))
+            {
+                let evm_addr = transfer_evm_uncheck(&evm_raw_addr)?;
+                return Some(OpReturnAccount::Evm(evm_addr));
+            }
+        }
+
+        if AddressBindingOfDstChain::<T>::contains_key((chain, DstChain::Aptos, &addr_bytes)) {
+            if let Some(aptos_raw_addr) =
+                AddressBindingOfDstChain::<T>::get((chain, DstChain::Aptos, &addr_bytes))
+            {
+                let aptos_addr = transfer_aptos_uncheck(&aptos_raw_addr)?;
+                return Some(OpReturnAccount::Aptos(aptos_addr));
+            }
+        }
+
+        if AddressBindingOfDstChain::<T>::contains_key((chain, DstChain::Sui, &addr_bytes)) {
+            if let Some(sui_addr) =
+                AddressBindingOfDstChain::<T>::get((chain, DstChain::Sui, &addr_bytes))
+            {
+                return Some(OpReturnAccount::Named("sui".as_bytes().to_vec(), sui_addr));
+            }
+        }
+
+        None
     }
 }
 
@@ -132,12 +172,16 @@ impl<T: Config> Pallet<T> {
         AddressBindingOf::<T>::insert(chain, address, who);
     }
 
-    fn update_evm_binding<Address>(chain: Chain, address: Address, who: H160)
-    where
+    fn update_dst_chain_binding<Address>(
+        chain: Chain,
+        dst_chain: DstChain,
+        address: Address,
+        who: ChainAddress,
+    ) where
         Address: Into<Vec<u8>>,
     {
         let address = address.into();
-        if let Some(accountid) = AddressBindingOfEvm::<T>::get(chain, &address) {
+        if let Some(accountid) = AddressBindingOfDstChain::<T>::get((chain, dst_chain, &address)) {
             if accountid != who {
                 debug!(
                     target: "runtime::gateway::common",
@@ -146,13 +190,13 @@ impl<T: Config> Pallet<T> {
                 );
                 // old accountid is not equal to new accountid, means should change this addr bind to new account
                 // remove this addr for old accounid's CrossChainBindOf
-                BoundAddressOfEvm::<T>::mutate(accountid, chain, |addr_list| {
+                BoundAddressOfDstChain::<T>::mutate((accountid, chain, dst_chain), |addr_list| {
                     addr_list.retain(|addr| addr != &address);
                 });
             }
         }
         // insert or override binding relationship
-        BoundAddressOfEvm::<T>::mutate(&who, chain, |addr_list| {
+        BoundAddressOfDstChain::<T>::mutate((&who, chain, dst_chain), |addr_list| {
             if !addr_list.contains(&address) {
                 addr_list.push(address.clone());
             }
@@ -165,46 +209,6 @@ impl<T: Config> Pallet<T> {
             try_addr(&address),
             who,
         );
-        AddressBindingOfEvm::<T>::insert(chain, address, who);
-    }
-
-    fn update_aptos_binding<Address>(chain: Chain, address: Address, who: H256)
-    where
-        Address: Into<Vec<u8>>,
-    {
-        let address = address.into();
-        if let Some(accountid) = AddressBindingOfAptos::<T>::get(chain, &address) {
-            if accountid != who {
-                debug!(
-                    target: "runtime::gateway::common",
-                    "[update_address_binding] Current address binding need to changed (old:{:?} => new:{:?})",
-                    accountid, who
-                );
-                // old accountid is not equal to new accountid, means should change this addr bind to new account
-                // remove this addr for old accounid's CrossChainBindOf
-                BoundAddressOfAptos::<T>::mutate(accountid, chain, |addr_list| {
-                    addr_list.retain(|addr| addr != &address);
-                });
-            }
-        }
-        // insert or override binding relationship
-        BoundAddressOfAptos::<T>::mutate(&who, chain, |addr_list| {
-            if !addr_list.contains(&address) {
-                addr_list.push(address.clone());
-            }
-        });
-
-        info!(
-            target: "runtime::gateway::common",
-            "[update_address_binding] Update address binding:[chain:{:?}, addr:{:?}, who:{:?}]",
-            chain,
-            try_addr(&address),
-            who,
-        );
-        AddressBindingOfAptos::<T>::insert(chain, address, who);
-    }
-
-    fn update_named_binding() {
-        todo!()
+        AddressBindingOfDstChain::<T>::insert((chain, dst_chain, address), who);
     }
 }

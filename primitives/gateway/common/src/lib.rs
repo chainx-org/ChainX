@@ -6,7 +6,7 @@
 #![deny(missing_docs)]
 
 use codec::{Decode, Encode};
-use scale_info::TypeInfo;
+use scale_info::{prelude::vec::Vec, TypeInfo};
 use sp_core::{crypto::AccountId32, RuntimeDebug, H160, H256};
 
 use frame_support::log::error;
@@ -24,6 +24,19 @@ pub enum OpReturnAccount<AccountId> {
     /// eg: `sui:0x1dcba11f07596152cf96a9bd358b675d5d5f9506`;
     /// eg: `sui:1dcba11f07596152cf96a9bd358b675d5d5f9506`;
     Named(Vec<u8>, Vec<u8>),
+}
+
+/// The tokens may not be issued in Chainx, but issued to other chains
+#[derive(PartialEq, Eq, Ord, PartialOrd, Clone, Copy, Encode, Decode, RuntimeDebug, TypeInfo)]
+pub enum DstChain {
+    /// ChainX Wasm
+    ChainX,
+    /// ChainX Evm
+    ChainXEvm,
+    /// Aptos Move
+    Aptos,
+    /// Sui Move
+    Sui,
 }
 
 /// Trait for extracting the account and possible extra data (e.g. referral) from
@@ -99,7 +112,7 @@ pub fn transfer_named_uncheck(raw_account: &[u8]) -> Option<(Vec<u8>, Vec<u8>)> 
     } else {
         hex::decode(name_and_account[1].clone()).ok()?
     };
-    return Some((name, account));
+    Some((name, account))
 }
 
 /// Verify if the raw account is a properly encoded SS58Check address.

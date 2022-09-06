@@ -10626,6 +10626,7 @@ dependencies = [
  "sp-std",
  "xp-assets-registrar",
  "xp-gateway-bitcoin",
+ "xp-gateway-common",
  "xp-protocol",
  "xp-rpc",
  "xp-runtime",

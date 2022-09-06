@@ -33,7 +33,6 @@ use frame_support::{
 };
 use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
 
-use sp_core::H160;
 use sp_runtime::{
     traits::{CheckedDiv, Saturating, StaticLookup, UniqueSaturatedInto, Zero},
     SaturatedConversion,
@@ -42,6 +41,7 @@ use sp_std::{collections::btree_map::BTreeMap, convert::TryFrom, prelude::*};
 
 /// ChainX primitives
 use chainx_primitives::{AddrStr, AssetId, ChainAddress, Text};
+use xp_gateway_common::DstChain;
 use xp_protocol::X_BTC;
 use xp_runtime::Memo;
 
@@ -66,7 +66,6 @@ pub use weights::WeightInfo;
 pub mod pallet {
     use super::*;
     use frame_support::{pallet_prelude::*, transactional};
-    use sp_core::H256;
 
     #[pallet::config]
     pub trait Config:
@@ -618,36 +617,29 @@ pub mod pallet {
         ValueQuery,
     >;
 
-    /// The evm address of the corresponding chain and chain address.
+    /// Record the source chain address to the destination chain address.
+    /// (src_chain, dst_chain, src_address) -> dst_address
     #[pallet::storage]
-    pub(crate) type AddressBindingOfEvm<T: Config> =
-        StorageDoubleMap<_, Twox64Concat, Chain, Blake2_128Concat, ChainAddress, H160>;
-
-    /// The bound evm address of the corresponding account and chain.
-    #[pallet::storage]
-    pub(crate) type BoundAddressOfEvm<T: Config> = StorageDoubleMap<
+    pub(crate) type AddressBindingOfDstChain<T: Config> = StorageNMap<
         _,
-        Blake2_128Concat,
-        H160,
-        Twox64Concat,
-        Chain,
-        Vec<ChainAddress>,
-        ValueQuery,
+        (
+            NMapKey<Twox64Concat, Chain>,
+            NMapKey<Twox64Concat, DstChain>,
+            NMapKey<Blake2_128Concat, ChainAddress>,
+        ),
+        ChainAddress,
     >;
 
-    /// The aptos address of the corresponding chain and chain address.
+    /// Record all source chain addresses corresponding to the destination chain address
+    /// (dst_address, src_address, dst_address) -> src_addresses
     #[pallet::storage]
-    pub(crate) type AddressBindingOfAptos<T: Config> =
-        StorageDoubleMap<_, Twox64Concat, Chain, Blake2_128Concat, ChainAddress, H256>;
-
-    /// The bound aptos address of the corresponding account and chain.
-    #[pallet::storage]
-    pub(crate) type BoundAddressOfAptos<T: Config> = StorageDoubleMap<
+    pub(crate) type BoundAddressOfDstChain<T: Config> = StorageNMap<
         _,
-        Blake2_128Concat,
-        H256,
-        Twox64Concat,
-        Chain,
+        (
+            NMapKey<Blake2_128Concat, ChainAddress>,
+            NMapKey<Twox64Concat, Chain>,
+            NMapKey<Twox64Concat, DstChain>,
+        ),
         Vec<ChainAddress>,
         ValueQuery,
     >;
