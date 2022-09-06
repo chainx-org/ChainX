@@ -107,7 +107,7 @@ pub fn transfer_named_uncheck(raw_account: &[u8]) -> Option<(Vec<u8>, Vec<u8>)> 
         return None;
     }
     let name = name_and_account[0].clone();
-    let account = if name_and_account[1][0] == b'0' && name_and_account[1][1] == b'x' {
+    let account = if name_and_account[0].starts_with(&"0x".as_bytes().to_vec()) {
         hex::decode(name_and_account[1][2..name_and_account[1].len()].to_vec()).ok()?
     } else {
         hex::decode(name_and_account[1].clone()).ok()?

@@ -13,9 +13,10 @@ use xpallet_support::{traits::Validator, try_addr, try_str};
 use crate::traits::{AddressBinding, ReferralBinding};
 use crate::{
     AddressBindingOf, AddressBindingOfDstChain, BoundAddressOf, BoundAddressOfDstChain, Config,
-    Pallet,
+    DefaultDstChain, Pallet,
 };
 
+/// Update the referrer's binding
 impl<T: Config> ReferralBinding<T::AccountId> for Pallet<T> {
     fn update_binding(asset_id: &AssetId, who: &T::AccountId, referral_name: Option<ReferralId>) {
         let chain = match xpallet_assets_registrar::Pallet::<T>::chain_of(asset_id) {
@@ -61,6 +62,7 @@ impl<T: Config> ReferralBinding<T::AccountId> for Pallet<T> {
     }
 }
 
+/// Update the binding of user deposit address
 impl<T: Config, Address: Into<Vec<u8>>> AddressBinding<T::AccountId, Address> for Pallet<T> {
     fn update_binding(chain: Chain, address: Address, who: OpReturnAccount<T::AccountId>) {
         match who {
@@ -92,40 +94,31 @@ impl<T: Config, Address: Into<Vec<u8>>> AddressBinding<T::AccountId, Address> fo
 
     fn address(chain: Chain, address: Address) -> Option<OpReturnAccount<T::AccountId>> {
         let addr_bytes: ChainAddress = address.into();
+        let default_dst_chain = DefaultDstChain::<T>::get(&addr_bytes)?;
 
-        if AddressBindingOf::<T>::contains_key(chain, &addr_bytes) {
-            if let Some(wasm_addr) = AddressBindingOf::<T>::get(chain, &addr_bytes) {
-                return Some(OpReturnAccount::Wasm(wasm_addr));
+        match default_dst_chain {
+            DstChain::ChainX => {
+                let wasm_addr = AddressBindingOf::<T>::get(chain, &addr_bytes)?;
+                Some(OpReturnAccount::Wasm(wasm_addr))
             }
-        }
-
-        if AddressBindingOfDstChain::<T>::contains_key((chain, DstChain::ChainXEvm, &addr_bytes)) {
-            if let Some(evm_raw_addr) =
-                AddressBindingOfDstChain::<T>::get((chain, DstChain::ChainXEvm, &addr_bytes))
-            {
+            DstChain::ChainXEvm => {
+                let evm_raw_addr =
+                    AddressBindingOfDstChain::<T>::get((chain, DstChain::ChainXEvm, &addr_bytes))?;
                 let evm_addr = transfer_evm_uncheck(&evm_raw_addr)?;
-                return Some(OpReturnAccount::Evm(evm_addr));
+                Some(OpReturnAccount::Evm(evm_addr))
             }
-        }
-
-        if AddressBindingOfDstChain::<T>::contains_key((chain, DstChain::Aptos, &addr_bytes)) {
-            if let Some(aptos_raw_addr) =
-                AddressBindingOfDstChain::<T>::get((chain, DstChain::Aptos, &addr_bytes))
-            {
+            DstChain::Aptos => {
+                let aptos_raw_addr =
+                    AddressBindingOfDstChain::<T>::get((chain, DstChain::Aptos, &addr_bytes))?;
                 let aptos_addr = transfer_aptos_uncheck(&aptos_raw_addr)?;
-                return Some(OpReturnAccount::Aptos(aptos_addr));
+                Some(OpReturnAccount::Aptos(aptos_addr))
+            }
+            DstChain::Sui => {
+                let sui_addr =
+                    AddressBindingOfDstChain::<T>::get((chain, DstChain::Sui, &addr_bytes))?;
+                Some(OpReturnAccount::Named("sui".as_bytes().to_vec(), sui_addr))
             }
         }
-
-        if AddressBindingOfDstChain::<T>::contains_key((chain, DstChain::Sui, &addr_bytes)) {
-            if let Some(sui_addr) =
-                AddressBindingOfDstChain::<T>::get((chain, DstChain::Sui, &addr_bytes))
-            {
-                return Some(OpReturnAccount::Named("sui".as_bytes().to_vec(), sui_addr));
-            }
-        }
-
-        None
     }
 }
 
@@ -169,7 +162,8 @@ impl<T: Config> Pallet<T> {
             try_addr(&address),
             who,
         );
-        AddressBindingOf::<T>::insert(chain, address, who);
+        AddressBindingOf::<T>::insert(chain, address.clone(), who);
+        DefaultDstChain::<T>::insert(address, DstChain::ChainX);
     }
 
     fn update_dst_chain_binding<Address>(
@@ -209,6 +203,7 @@ impl<T: Config> Pallet<T> {
             try_addr(&address),
             who,
         );
-        AddressBindingOfDstChain::<T>::insert((chain, dst_chain, address), who);
+        AddressBindingOfDstChain::<T>::insert((chain, dst_chain, address.clone()), who);
+        DefaultDstChain::<T>::insert(address, dst_chain);
     }
 }

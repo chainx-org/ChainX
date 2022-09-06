@@ -644,6 +644,12 @@ pub mod pallet {
         ValueQuery,
     >;
 
+    /// Multiple chains of addresses currently exist, so need to determine
+    /// which chain to recharge to by default.
+    #[pallet::storage]
+    pub(crate) type DefaultDstChain<T: Config> =
+        StorageMap<_, Blake2_128Concat, ChainAddress, DstChain>;
+
     /// The referral account of the corresponding account and chain.
     #[pallet::storage]
     #[pallet::getter(fn referral_binding_of)]
