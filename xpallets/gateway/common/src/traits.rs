@@ -4,7 +4,6 @@ use frame_support::dispatch::DispatchError;
 use sp_std::{convert::TryFrom, prelude::Vec};
 
 use chainx_primitives::{AssetId, ReferralId};
-use xp_gateway_common::DstChain;
 use xpallet_assets::Chain;
 
 use crate::types::{ScriptInfo, TrusteeInfoConfig, TrusteeIntentionProps, TrusteeSessionInfo};

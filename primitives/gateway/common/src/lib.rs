@@ -99,7 +99,7 @@ pub fn transfer_named_uncheck(raw_account: &[u8]) -> Option<(Vec<u8>, Vec<u8>)> 
         .map(|d| d.to_vec())
         .collect::<Vec<_>>();
 
-    if name_and_account.is_empty() && name_and_account.len() != 2 && name_and_account[1].len() > 2 {
+    if name_and_account.is_empty() || name_and_account.len() != 2 {
         error!(
             "[transfer_named_uncheck] Can't transfer_named_uncheck:{:?}",
             raw_account
