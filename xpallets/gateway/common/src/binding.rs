@@ -1,7 +1,6 @@
 // Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
 
 use frame_support::log::{debug, error, info, warn};
-use scale_info::prelude::string::String;
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
 use chainx_primitives::{AssetId, ChainAddress, ReferralId};
@@ -81,11 +80,7 @@ impl<T: Config, Address: Into<Vec<u8>>> AddressBinding<T::AccountId, Address> fo
             ),
             OpReturnAccount::Named(prefix, w) => {
                 // If there are multiple named types, consider replacing it to match
-                if String::from_utf8_lossy(&prefix)
-                    .to_ascii_lowercase()
-                    .as_str()
-                    == "sui"
-                {
+                if &prefix == b"sui" {
                     Pallet::<T>::update_dst_chain_binding(chain, DstChain::Sui, address, w)
                 }
             }
