@@ -39,6 +39,23 @@ pub enum DstChain {
     Named(Vec<u8>),
 }
 
+/// Named chain configuration information
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+pub struct DstChainConfig {
+    prefix: Vec<u8>,
+    length: u32,
+}
+
+impl DstChainConfig {
+    /// Create new [`DstChainConfig`]
+    pub fn new(prefix: &[u8], length: u32) -> Self {
+        Self {
+            prefix: prefix.to_vec(),
+            length,
+        }
+    }
+}
+
 /// Trait for extracting the account and possible extra data (e.g. referral) from
 /// the external world data (e.g. btc op_return).
 pub trait AccountExtractor<Account, Extra: AsRef<[u8]>> {

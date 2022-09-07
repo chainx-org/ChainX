@@ -66,6 +66,7 @@ pub use weights::WeightInfo;
 pub mod pallet {
     use super::*;
     use frame_support::{pallet_prelude::*, transactional};
+    use xp_gateway_common::DstChainConfig;
 
     #[pallet::config]
     pub trait Config:
@@ -479,6 +480,41 @@ pub mod pallet {
             TrusteeAdmin::<T>::insert(chain, admin);
             Ok(())
         }
+
+        /// Add named dst chain config
+        #[pallet::weight(0u64)]
+        pub fn register_dst_chain_config(
+            origin: OriginFor<T>,
+            prefix: Vec<u8>,
+            length: u32,
+        ) -> DispatchResult {
+            T::CouncilOrigin::try_origin(origin)
+                .map(|_| ())
+                .or_else(ensure_root)?;
+
+            NamedDstChainConfig::<T>::mutate(|configs| {
+                configs.push(DstChainConfig::new(&prefix, length))
+            });
+            Ok(())
+        }
+
+        /// Remove named dst chain config
+        #[pallet::weight(0u64)]
+        pub fn unregister_dst_chain_config(
+            origin: OriginFor<T>,
+            prefix: Vec<u8>,
+            length: u32,
+        ) -> DispatchResult {
+            T::CouncilOrigin::try_origin(origin)
+                .map(|_| ())
+                .or_else(ensure_root)?;
+
+            let chain_config = DstChainConfig::new(&prefix, length);
+            NamedDstChainConfig::<T>::mutate(|configs| {
+                configs.retain(|config| *config != chain_config)
+            });
+            Ok(())
+        }
     }
 
     #[pallet::event]
@@ -649,6 +685,20 @@ pub mod pallet {
     #[pallet::storage]
     pub(crate) type DefaultDstChain<T: Config> =
         StorageMap<_, Blake2_128Concat, ChainAddress, DstChain>;
+
+    /// Named chain config
+    ///
+    /// For unsupported named chains need to be filtered to store the transactions
+    /// in pending deposit.
+    #[pallet::storage]
+    #[pallet::getter(fn named_dst_chain_config)]
+    pub(crate) type NamedDstChainConfig<T: Config> =
+        StorageValue<_, Vec<DstChainConfig>, ValueQuery, DefaultForNamedDstChainConfig>;
+
+    #[pallet::type_value]
+    pub fn DefaultForNamedDstChainConfig() -> Vec<DstChainConfig> {
+        vec![DstChainConfig::new(b"sui", 20)]
+    }
 
     /// The referral account of the corresponding account and chain.
     #[pallet::storage]

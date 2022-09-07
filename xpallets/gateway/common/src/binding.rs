@@ -4,15 +4,15 @@ use frame_support::log::{debug, error, info, warn};
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
 use chainx_primitives::{AssetId, ChainAddress, ReferralId};
-use xp_gateway_bitcoin::OpReturnAccount;
-use xp_gateway_common::{transfer_aptos_uncheck, transfer_evm_uncheck, DstChain};
+use xp_gateway_bitcoin::{BtcDepositInfo, OpReturnAccount};
+use xp_gateway_common::{transfer_aptos_uncheck, transfer_evm_uncheck, DstChain, DstChainConfig};
 use xpallet_assets::Chain;
 use xpallet_support::{traits::Validator, try_addr, try_str};
 
 use crate::traits::{AddressBinding, ReferralBinding};
 use crate::{
     AddressBindingOf, AddressBindingOfDstChain, BoundAddressOf, BoundAddressOfDstChain, Config,
-    DefaultDstChain, Pallet,
+    DefaultDstChain, NamedDstChainConfig, Pallet,
 };
 
 /// Update the referrer's binding
@@ -82,6 +82,27 @@ impl<T: Config, Address: Into<Vec<u8>>> AddressBinding<T::AccountId, Address> fo
                 Pallet::<T>::update_dst_chain_binding(chain, DstChain::Named(prefix), address, w)
             }
         }
+    }
+
+    fn check_allowed_binding(info: BtcDepositInfo<T::AccountId>) -> BtcDepositInfo<T::AccountId> {
+        let op_return = if let Some((account, refererid)) = info.op_return {
+            match &account {
+                OpReturnAccount::Named(prefix, addr) => {
+                    let deposit_config = DstChainConfig::new(prefix, addr.len() as u32);
+                    let config = NamedDstChainConfig::<T>::get();
+                    if config.contains(&deposit_config) {
+                        Some((account, refererid))
+                    } else {
+                        None
+                    }
+                }
+                _ => Some((account, refererid)),
+            }
+        } else {
+            None
+        };
+        let checked_info = BtcDepositInfo { op_return, ..info };
+        checked_info
     }
 
     fn address(chain: Chain, address: Address) -> Option<OpReturnAccount<T::AccountId>> {

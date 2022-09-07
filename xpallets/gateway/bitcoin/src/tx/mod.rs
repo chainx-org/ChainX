@@ -71,6 +71,8 @@ fn trustee_transition<T: Config>(tx: Transaction) -> BtcTxResult {
 }
 
 fn deposit<T: Config>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) -> BtcTxResult {
+    // check address in op_return whether allow binding
+    let deposit_info = T::AddressBinding::check_allowed_binding(deposit_info);
     let account_info = match (deposit_info.op_return, deposit_info.input_addr) {
         (Some((account, referral)), Some(input_addr)) => {
             let input_addr = input_addr.to_string().into_bytes();
