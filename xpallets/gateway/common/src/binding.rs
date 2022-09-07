@@ -101,8 +101,7 @@ impl<T: Config, Address: Into<Vec<u8>>> AddressBinding<T::AccountId, Address> fo
         } else {
             None
         };
-        let checked_info = BtcDepositInfo { op_return, ..info };
-        checked_info
+        BtcDepositInfo { op_return, ..info }
     }
 
     fn address(chain: Chain, address: Address) -> Option<OpReturnAccount<T::AccountId>> {
