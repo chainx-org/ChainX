@@ -79,10 +79,7 @@ impl<T: Config, Address: Into<Vec<u8>>> AddressBinding<T::AccountId, Address> fo
                 w.as_bytes().to_vec(),
             ),
             OpReturnAccount::Named(prefix, w) => {
-                // If there are multiple named types, consider replacing it to match
-                if &prefix == b"sui" {
-                    Pallet::<T>::update_dst_chain_binding(chain, DstChain::Sui, address, w)
-                }
+                Pallet::<T>::update_dst_chain_binding(chain, DstChain::Named(prefix), address, w)
             }
         }
     }
@@ -108,10 +105,13 @@ impl<T: Config, Address: Into<Vec<u8>>> AddressBinding<T::AccountId, Address> fo
                 let aptos_addr = transfer_aptos_uncheck(&aptos_raw_addr)?;
                 Some(OpReturnAccount::Aptos(aptos_addr))
             }
-            DstChain::Sui => {
-                let sui_addr =
-                    AddressBindingOfDstChain::<T>::get((chain, DstChain::Sui, &addr_bytes))?;
-                Some(OpReturnAccount::Named("sui".as_bytes().to_vec(), sui_addr))
+            DstChain::Named(prefix) => {
+                let named_addr = AddressBindingOfDstChain::<T>::get((
+                    chain,
+                    DstChain::Named(prefix.clone()),
+                    &addr_bytes,
+                ))?;
+                Some(OpReturnAccount::Named(prefix, named_addr))
             }
         }
     }
@@ -170,7 +170,7 @@ impl<T: Config> Pallet<T> {
         Address: Into<Vec<u8>>,
     {
         let address = address.into();
-        if let Some(accountid) = AddressBindingOfDstChain::<T>::get((chain, dst_chain, &address)) {
+        if let Some(accountid) = AddressBindingOfDstChain::<T>::get((chain, &dst_chain, &address)) {
             if accountid != who {
                 debug!(
                     target: "runtime::gateway::common",
@@ -179,13 +179,13 @@ impl<T: Config> Pallet<T> {
                 );
                 // old accountid is not equal to new accountid, means should change this addr bind to new account
                 // remove this addr for old accounid's CrossChainBindOf
-                BoundAddressOfDstChain::<T>::mutate((accountid, chain, dst_chain), |addr_list| {
+                BoundAddressOfDstChain::<T>::mutate((accountid, chain, &dst_chain), |addr_list| {
                     addr_list.retain(|addr| addr != &address);
                 });
             }
         }
         // insert or override binding relationship
-        BoundAddressOfDstChain::<T>::mutate((&who, chain, dst_chain), |addr_list| {
+        BoundAddressOfDstChain::<T>::mutate((&who, chain, &dst_chain), |addr_list| {
             if !addr_list.contains(&address) {
                 addr_list.push(address.clone());
             }
@@ -198,7 +198,7 @@ impl<T: Config> Pallet<T> {
             try_addr(&address),
             who,
         );
-        AddressBindingOfDstChain::<T>::insert((chain, dst_chain, address.clone()), who);
+        AddressBindingOfDstChain::<T>::insert((chain, dst_chain.clone(), address.clone()), who);
         DefaultDstChain::<T>::insert(address, dst_chain);
     }
 }

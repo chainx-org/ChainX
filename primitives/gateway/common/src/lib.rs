@@ -27,7 +27,7 @@ pub enum OpReturnAccount<AccountId> {
 }
 
 /// The tokens may not be issued in Chainx, but issued to other chains
-#[derive(PartialEq, Eq, Ord, PartialOrd, Clone, Copy, Encode, Decode, RuntimeDebug, TypeInfo)]
+#[derive(PartialEq, Eq, Ord, PartialOrd, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub enum DstChain {
     /// ChainX Wasm
     ChainX,
@@ -35,8 +35,8 @@ pub enum DstChain {
     ChainXEvm,
     /// Aptos Move
     Aptos,
-    /// Sui Move
-    Sui,
+    /// Chain prefix
+    Named(Vec<u8>),
 }
 
 /// Trait for extracting the account and possible extra data (e.g. referral) from
