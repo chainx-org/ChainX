@@ -8,6 +8,7 @@ use xpallet_assets::Chain;
 
 use crate::types::{ScriptInfo, TrusteeInfoConfig, TrusteeIntentionProps, TrusteeSessionInfo};
 use xp_gateway_bitcoin::{BtcDepositInfo, OpReturnAccount};
+use xp_gateway_common::DstChain;
 
 pub trait BytesLike: Into<Vec<u8>> + TryFrom<Vec<u8>> {}
 impl<T: Into<Vec<u8>> + TryFrom<Vec<u8>>> BytesLike for T {}
@@ -29,6 +30,7 @@ impl ProposalProvider for () {
         None
     }
 }
+
 pub trait TotalSupply<Balance> {
     fn total_supply() -> Balance;
 }
@@ -132,6 +134,7 @@ impl<AccountId> ReferralBinding<AccountId> for () {
 pub trait AddressBinding<AccountId, Address: Into<Vec<u8>>> {
     fn update_binding(chain: Chain, address: Address, who: OpReturnAccount<AccountId>);
     fn check_allowed_binding(info: BtcDepositInfo<AccountId>) -> BtcDepositInfo<AccountId>;
+    fn dst_chain_proxy_address(dst_chain: DstChain) -> Option<AccountId>;
     fn address(chain: Chain, address: Address) -> Option<OpReturnAccount<AccountId>>;
 }
 
@@ -139,6 +142,9 @@ impl<AccountId, Address: Into<Vec<u8>>> AddressBinding<AccountId, Address> for (
     fn update_binding(_: Chain, _: Address, _: OpReturnAccount<AccountId>) {}
     fn check_allowed_binding(info: BtcDepositInfo<AccountId>) -> BtcDepositInfo<AccountId> {
         info
+    }
+    fn dst_chain_proxy_address(_: DstChain) -> Option<AccountId> {
+        None
     }
     fn address(_: Chain, _: Address) -> Option<OpReturnAccount<AccountId>> {
         None

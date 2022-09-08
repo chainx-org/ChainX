@@ -12,7 +12,7 @@ use xpallet_support::{traits::Validator, try_addr, try_str};
 use crate::traits::{AddressBinding, ReferralBinding};
 use crate::{
     AddressBindingOf, AddressBindingOfDstChain, BoundAddressOf, BoundAddressOfDstChain, Config,
-    DefaultDstChain, NamedDstChainConfig, Pallet,
+    DefaultDstChain, DstChainProxyAddress, NamedDstChainConfig, Pallet,
 };
 
 /// Update the referrer's binding
@@ -90,7 +90,16 @@ impl<T: Config, Address: Into<Vec<u8>>> AddressBinding<T::AccountId, Address> fo
                 OpReturnAccount::Named(prefix, addr) => {
                     let deposit_config = DstChainConfig::new(prefix, addr.len() as u32);
                     let config = NamedDstChainConfig::<T>::get();
-                    if config.contains(&deposit_config) {
+                    if config.contains(&deposit_config)
+                        && DstChainProxyAddress::<T>::get(DstChain::Named(prefix.clone())).is_some()
+                    {
+                        Some((account, refererid))
+                    } else {
+                        None
+                    }
+                }
+                OpReturnAccount::Aptos(_) => {
+                    if DstChainProxyAddress::<T>::get(DstChain::Aptos).is_some() {
                         Some((account, refererid))
                     } else {
                         None
@@ -102,6 +111,14 @@ impl<T: Config, Address: Into<Vec<u8>>> AddressBinding<T::AccountId, Address> fo
             None
         };
         BtcDepositInfo { op_return, ..info }
+    }
+
+    fn dst_chain_proxy_address(dst_chain: DstChain) -> Option<T::AccountId> {
+        if let Some(proxy_account) = DstChainProxyAddress::<T>::get(&dst_chain) {
+            Some(proxy_account)
+        } else {
+            None
+        }
     }
 
     fn address(chain: Chain, address: Address) -> Option<OpReturnAccount<T::AccountId>> {

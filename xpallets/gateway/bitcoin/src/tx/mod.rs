@@ -21,7 +21,7 @@ use sp_core::H160;
 
 use chainx_primitives::AssetId;
 use xp_gateway_bitcoin::{BtcDepositInfo, BtcTxMetaType, BtcTxTypeDetector, OpReturnAccount};
-use xp_gateway_common::AccountExtractor;
+use xp_gateway_common::{AccountExtractor, DstChain};
 use xpallet_assets::ChainT;
 use xpallet_gateway_common::traits::{AddressBinding, ReferralBinding, TrusteeInfoUpdate};
 use xpallet_support::try_str;
@@ -202,8 +202,24 @@ fn deposit_evm<T: Config>(txid: H256, who: &H160, balance: u64) -> DispatchResul
 }
 
 fn deposit_aptos<T: Config>(txid: H256, who: &H256, balance: u64) -> DispatchResult {
+    let id: AssetId = <Pallet<T> as ChainT<_>>::ASSET_ID;
     let value: BalanceOf<T> = balance.saturated_into();
-    Pallet::<T>::deposit_event(Event::<T>::DepositedAptos(txid, *who, value));
+
+    if let Some(proxy_address) = T::AddressBinding::dst_chain_proxy_address(DstChain::Aptos) {
+        match <xpallet_gateway_records::Pallet<T>>::deposit(&proxy_address, id, value) {
+            Ok(()) => {
+                Pallet::<T>::deposit_event(Event::<T>::DepositedAptos(txid, *who, value));
+            }
+            Err(err) => {
+                error!(
+                    target: "runtime::bitcoin",
+                    "[deposit_token] Deposit error:{:?}, must use root to fix it",
+                    err
+                );
+                return Err(err);
+            }
+        }
+    }
     Ok(())
 }
 
@@ -213,8 +229,26 @@ fn deposit_named<T: Config>(
     who: Vec<u8>,
     balance: u64,
 ) -> DispatchResult {
+    let id: AssetId = <Pallet<T> as ChainT<_>>::ASSET_ID;
     let value: BalanceOf<T> = balance.saturated_into();
-    Pallet::<T>::deposit_event(Event::<T>::DepositedNamed(txid, prefix, who, value));
+
+    if let Some(proxy_address) =
+        T::AddressBinding::dst_chain_proxy_address(DstChain::Named(prefix.clone()))
+    {
+        match <xpallet_gateway_records::Pallet<T>>::deposit(&proxy_address, id, value) {
+            Ok(()) => {
+                Pallet::<T>::deposit_event(Event::<T>::DepositedNamed(txid, prefix, who, value));
+            }
+            Err(err) => {
+                error!(
+                    target: "runtime::bitcoin",
+                    "[deposit_token] Deposit error:{:?}, must use root to fix it",
+                    err
+                );
+                return Err(err);
+            }
+        }
+    }
     Ok(())
 }
 

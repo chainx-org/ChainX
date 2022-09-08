@@ -481,6 +481,28 @@ pub mod pallet {
             Ok(())
         }
 
+        /// Set dst chain proxy address
+        ///
+        /// Used to proxy the address of a certain target chain and help
+        /// users to deposit and withdraw from that chain.
+        ///
+        /// In earlier schemes, the proxy address was a multi-signature address to
+        /// ensure basic security. Removed after subsequent use of ultra-light node
+        /// scheme.
+        #[pallet::weight(0u64)]
+        pub fn set_dst_chain_proxy_address(
+            origin: OriginFor<T>,
+            dst_chain: DstChain,
+            proxy_account: T::AccountId,
+        ) -> DispatchResult {
+            T::CouncilOrigin::try_origin(origin)
+                .map(|_| ())
+                .or_else(ensure_root)?;
+
+            DstChainProxyAddress::<T>::insert(dst_chain, proxy_account);
+            Ok(())
+        }
+
         /// Add named dst chain config
         #[pallet::weight(0u64)]
         pub fn register_dst_chain_config(
@@ -699,6 +721,11 @@ pub mod pallet {
     pub fn DefaultForNamedDstChainConfig() -> Vec<DstChainConfig> {
         vec![DstChainConfig::new(b"sui", 20)]
     }
+
+    /// Dst chain's cross-chain proxy address
+    #[pallet::storage]
+    pub(crate) type DstChainProxyAddress<T: Config> =
+        StorageMap<_, Twox64Concat, DstChain, T::AccountId>;
 
     /// The referral account of the corresponding account and chain.
     #[pallet::storage]
