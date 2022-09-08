@@ -26,6 +26,7 @@ pallet-elections-phragmen = { git = "https://github.com/paritytech/substrate", b
 chainx-primitives = { path = "../../../primitives", default-features = false }
 xp-assets-registrar = { path = "../../../primitives/assets-registrar", default-features = false }
 xp-gateway-bitcoin = { path = "../../../primitives/gateway/bitcoin", default-features = false }
+xp-gateway-common = { path = "../../../primitives/gateway/common", default-features = false }
 # xp-logging = { path = "../../../primitives/logging", default-features = false }
 xp-protocol = { path = "../../../primitives/protocol", default-features = false }
 xp-rpc = { path = "../../../primitives/rpc", optional = true }
@@ -71,6 +72,7 @@ std = [
   "chainx-primitives/std",
   "xp-assets-registrar/std",
   "xp-gateway-bitcoin/std",
+  "xp-gateway-common/std",
   "xp-protocol/std",
   "xp-rpc",
   "xp-runtime/std",

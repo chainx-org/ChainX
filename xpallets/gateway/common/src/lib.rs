@@ -33,7 +33,6 @@ use frame_support::{
 };
 use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
 
-use sp_core::H160;
 use sp_runtime::{
     traits::{CheckedDiv, Saturating, StaticLookup, UniqueSaturatedInto, Zero},
     SaturatedConversion,
@@ -42,6 +41,7 @@ use sp_std::{collections::btree_map::BTreeMap, convert::TryFrom, prelude::*};
 
 /// ChainX primitives
 use chainx_primitives::{AddrStr, AssetId, ChainAddress, Text};
+use xp_gateway_common::DstChain;
 use xp_protocol::X_BTC;
 use xp_runtime::Memo;
 
@@ -66,6 +66,7 @@ pub use weights::WeightInfo;
 pub mod pallet {
     use super::*;
     use frame_support::{pallet_prelude::*, transactional};
+    use xp_gateway_common::DstChainConfig;
 
     #[pallet::config]
     pub trait Config:
@@ -479,6 +480,63 @@ pub mod pallet {
             TrusteeAdmin::<T>::insert(chain, admin);
             Ok(())
         }
+
+        /// Set dst chain proxy address
+        ///
+        /// Used to proxy the address of a certain target chain and help
+        /// users to deposit and withdraw from that chain.
+        ///
+        /// In earlier schemes, the proxy address was a multi-signature address to
+        /// ensure basic security. Removed after subsequent use of ultra-light node
+        /// scheme.
+        #[pallet::weight(0u64)]
+        pub fn set_dst_chain_proxy_address(
+            origin: OriginFor<T>,
+            dst_chain: DstChain,
+            proxy_account: T::AccountId,
+        ) -> DispatchResult {
+            T::CouncilOrigin::try_origin(origin)
+                .map(|_| ())
+                .or_else(ensure_root)?;
+
+            DstChainProxyAddress::<T>::insert(dst_chain, proxy_account);
+            Ok(())
+        }
+
+        /// Add named dst chain config
+        #[pallet::weight(0u64)]
+        pub fn register_dst_chain_config(
+            origin: OriginFor<T>,
+            prefix: Vec<u8>,
+            length: u32,
+        ) -> DispatchResult {
+            T::CouncilOrigin::try_origin(origin)
+                .map(|_| ())
+                .or_else(ensure_root)?;
+
+            NamedDstChainConfig::<T>::mutate(|configs| {
+                configs.push(DstChainConfig::new(&prefix, length))
+            });
+            Ok(())
+        }
+
+        /// Remove named dst chain config
+        #[pallet::weight(0u64)]
+        pub fn unregister_dst_chain_config(
+            origin: OriginFor<T>,
+            prefix: Vec<u8>,
+            length: u32,
+        ) -> DispatchResult {
+            T::CouncilOrigin::try_origin(origin)
+                .map(|_| ())
+                .or_else(ensure_root)?;
+
+            let chain_config = DstChainConfig::new(&prefix, length);
+            NamedDstChainConfig::<T>::mutate(|configs| {
+                configs.retain(|config| *config != chain_config)
+            });
+            Ok(())
+        }
     }
 
     #[pallet::event]
@@ -617,22 +675,57 @@ pub mod pallet {
         ValueQuery,
     >;
 
-    /// The evm address of the corresponding chain and chain address .
+    /// Record the source chain address to the destination chain address.
+    /// (src_chain, dst_chain, src_address) -> dst_address
     #[pallet::storage]
-    pub(crate) type AddressBindingOfEvm<T: Config> =
-        StorageDoubleMap<_, Twox64Concat, Chain, Blake2_128Concat, ChainAddress, H160>;
-
-    /// The bound evm address of the corresponding account and chain.
-    #[pallet::storage]
-    pub(crate) type BoundAddressOfEvm<T: Config> = StorageDoubleMap<
+    pub(crate) type AddressBindingOfDstChain<T: Config> = StorageNMap<
         _,
-        Blake2_128Concat,
-        H160,
-        Twox64Concat,
-        Chain,
+        (
+            NMapKey<Twox64Concat, Chain>,
+            NMapKey<Twox64Concat, DstChain>,
+            NMapKey<Blake2_128Concat, ChainAddress>,
+        ),
+        ChainAddress,
+    >;
+
+    /// Record all source chain addresses corresponding to the destination chain address
+    /// (dst_address, src_address, dst_address) -> src_addresses
+    #[pallet::storage]
+    pub(crate) type BoundAddressOfDstChain<T: Config> = StorageNMap<
+        _,
+        (
+            NMapKey<Blake2_128Concat, ChainAddress>,
+            NMapKey<Twox64Concat, Chain>,
+            NMapKey<Twox64Concat, DstChain>,
+        ),
         Vec<ChainAddress>,
         ValueQuery,
     >;
+
+    /// Multiple chains of addresses currently exist, so need to determine
+    /// which chain to recharge to by default.
+    #[pallet::storage]
+    pub(crate) type DefaultDstChain<T: Config> =
+        StorageMap<_, Blake2_128Concat, ChainAddress, DstChain>;
+
+    /// Named chain config
+    ///
+    /// For unsupported named chains need to be filtered to store the transactions
+    /// in pending deposit.
+    #[pallet::storage]
+    #[pallet::getter(fn named_dst_chain_config)]
+    pub(crate) type NamedDstChainConfig<T: Config> =
+        StorageValue<_, Vec<DstChainConfig>, ValueQuery, DefaultForNamedDstChainConfig>;
+
+    #[pallet::type_value]
+    pub fn DefaultForNamedDstChainConfig() -> Vec<DstChainConfig> {
+        vec![DstChainConfig::new(b"sui", 20)]
+    }
+
+    /// Dst chain's cross-chain proxy address
+    #[pallet::storage]
+    pub(crate) type DstChainProxyAddress<T: Config> =
+        StorageMap<_, Twox64Concat, DstChain, T::AccountId>;
 
     /// The referral account of the corresponding account and chain.
     #[pallet::storage]

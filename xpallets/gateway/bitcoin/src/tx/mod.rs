@@ -21,7 +21,7 @@ use sp_core::H160;
 
 use chainx_primitives::AssetId;
 use xp_gateway_bitcoin::{BtcDepositInfo, BtcTxMetaType, BtcTxTypeDetector, OpReturnAccount};
-use xp_gateway_common::AccountExtractor;
+use xp_gateway_common::{AccountExtractor, DstChain};
 use xpallet_assets::ChainT;
 use xpallet_gateway_common::traits::{AddressBinding, ReferralBinding, TrusteeInfoUpdate};
 use xpallet_support::try_str;
@@ -71,6 +71,8 @@ fn trustee_transition<T: Config>(tx: Transaction) -> BtcTxResult {
 }
 
 fn deposit<T: Config>(txid: H256, deposit_info: BtcDepositInfo<T::AccountId>) -> BtcTxResult {
+    // check address in op_return whether allow binding
+    let deposit_info = T::AddressBinding::check_allowed_binding(deposit_info);
     let account_info = match (deposit_info.op_return, deposit_info.input_addr) {
         (Some((account, referral)), Some(input_addr)) => {
             let input_addr = input_addr.to_string().into_bytes();
@@ -154,6 +156,8 @@ fn deposit_token<T: Config>(
     match who {
         OpReturnAccount::Evm(w) => deposit_evm::<T>(txid, w, balance),
         OpReturnAccount::Wasm(w) => deposit_wasm::<T>(txid, w, balance),
+        OpReturnAccount::Aptos(w) => deposit_aptos::<T>(txid, w, balance),
+        OpReturnAccount::Named(w1, w2) => deposit_named::<T>(txid, w1.clone(), w2.clone(), balance),
     }
 }
 
@@ -197,6 +201,57 @@ fn deposit_evm<T: Config>(txid: H256, who: &H160, balance: u64) -> DispatchResul
     }
 }
 
+fn deposit_aptos<T: Config>(txid: H256, who: &H256, balance: u64) -> DispatchResult {
+    let id: AssetId = <Pallet<T> as ChainT<_>>::ASSET_ID;
+    let value: BalanceOf<T> = balance.saturated_into();
+
+    if let Some(proxy_address) = T::AddressBinding::dst_chain_proxy_address(DstChain::Aptos) {
+        match <xpallet_gateway_records::Pallet<T>>::deposit(&proxy_address, id, value) {
+            Ok(()) => {
+                Pallet::<T>::deposit_event(Event::<T>::DepositedAptos(txid, *who, value));
+            }
+            Err(err) => {
+                error!(
+                    target: "runtime::bitcoin",
+                    "[deposit_token] Deposit error:{:?}, must use root to fix it",
+                    err
+                );
+                return Err(err);
+            }
+        }
+    }
+    Ok(())
+}
+
+fn deposit_named<T: Config>(
+    txid: H256,
+    prefix: Vec<u8>,
+    who: Vec<u8>,
+    balance: u64,
+) -> DispatchResult {
+    let id: AssetId = <Pallet<T> as ChainT<_>>::ASSET_ID;
+    let value: BalanceOf<T> = balance.saturated_into();
+
+    if let Some(proxy_address) =
+        T::AddressBinding::dst_chain_proxy_address(DstChain::Named(prefix.clone()))
+    {
+        match <xpallet_gateway_records::Pallet<T>>::deposit(&proxy_address, id, value) {
+            Ok(()) => {
+                Pallet::<T>::deposit_event(Event::<T>::DepositedNamed(txid, prefix, who, value));
+            }
+            Err(err) => {
+                error!(
+                    target: "runtime::bitcoin",
+                    "[deposit_token] Deposit error:{:?}, must use root to fix it",
+                    err
+                );
+                return Err(err);
+            }
+        }
+    }
+    Ok(())
+}
+
 pub fn remove_pending_deposit<T: Config>(
     input_address: &BtcAddress,
     who: &OpReturnAccount<T::AccountId>,
@@ -224,6 +279,23 @@ pub fn remove_pending_deposit<T: Config>(
             OpReturnAccount::Wasm(w) => {
                 Pallet::<T>::deposit_event(Event::<T>::PendingDepositRemoved(
                     w,
+                    record.balance.saturated_into(),
+                    record.txid,
+                    input_address.clone(),
+                ));
+            }
+            OpReturnAccount::Aptos(w) => {
+                Pallet::<T>::deposit_event(Event::<T>::PendingDepositAptosRemoved(
+                    w,
+                    record.balance.saturated_into(),
+                    record.txid,
+                    input_address.clone(),
+                ));
+            }
+            OpReturnAccount::Named(w1, w2) => {
+                Pallet::<T>::deposit_event(Event::<T>::PendingDepositNamedRemoved(
+                    w1.clone(),
+                    w2.clone(),
                     record.balance.saturated_into(),
                     record.txid,
                     input_address.clone(),

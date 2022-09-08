@@ -6,20 +6,14 @@ use frame_support::{
     dispatch::DispatchError,
     log::{error, warn},
 };
-use sp_runtime::{
-    traits::{CheckedDiv, Saturating, Zero},
-    SaturatedConversion,
-};
 use sp_std::{convert::TryFrom, marker::PhantomData, prelude::*};
 
 use xp_assets_registrar::Chain;
-use xp_protocol::X_BTC;
-use xpallet_assets::BalanceOf;
 
 use crate::{
     traits::{BytesLike, ChainProvider, TrusteeInfoUpdate, TrusteeSession},
     types::TrusteeSessionInfo,
-    Config, Error, Event, Pallet, TrusteeSessionInfoOf, TrusteeSigRecord, TrusteeTransitionStatus,
+    Config, Error, Pallet, TrusteeSessionInfoOf, TrusteeSigRecord, TrusteeTransitionStatus,
 };
 
 pub struct TrusteeSessionManager<T: Config, TrusteeAddress>(
@@ -104,7 +98,7 @@ impl<T: Config, TrusteeAddress: BytesLike + ChainProvider>
 }
 
 impl<T: Config> TrusteeInfoUpdate for Pallet<T> {
-    fn update_transition_status(chain: Chain, status: bool, trans_amount: Option<u64>) {
+    fn update_transition_status(chain: Chain, status: bool, _: Option<u64>) {
         // The renewal of the trustee is completed, the current trustee information is replaced
         // and the number of multiple signings is archived. Currently only supports bitcoin
         if chain == Chain::Bitcoin && Self::trustee_transition_status(chain) && !status {
@@ -122,42 +116,7 @@ impl<T: Config> TrusteeInfoUpdate for Pallet<T> {
                         trustee.0.trustee_list[i].1 =
                             Self::trustee_sig_record(chain, &trustee.0.trustee_list[i].0);
                     }
-                    let total_apply = Self::pre_total_supply(chain, last_session_num);
 
-                    // 60% of the excess part of the withdrawal fee will be distributed to the trust as a reward
-                    let reward_amount = trans_amount
-                        .unwrap_or(0u64)
-                        .saturated_into::<BalanceOf<T>>()
-                        .saturating_sub(total_apply)
-                        .max(0u64.saturated_into())
-                        .saturating_mul(6u64.saturated_into())
-                        .checked_div(&10u64.saturated_into::<BalanceOf<T>>())
-                        .unwrap_or_else(|| 0u64.saturated_into());
-
-                    if let Some(multi_account) = trustee.0.multi_account.clone() {
-                        if !reward_amount.is_zero() {
-                            match xpallet_assets::Pallet::<T>::issue(
-                                &X_BTC,
-                                &multi_account,
-                                reward_amount,
-                            ) {
-                                Ok(()) => {
-                                    Pallet::<T>::deposit_event(Event::<T>::TransferAssetReward(
-                                        multi_account,
-                                        X_BTC,
-                                        reward_amount,
-                                    ));
-                                }
-                                Err(err) => {
-                                    warn!(
-                                        target: "runtime::gateway::common",
-                                        "[update_transition_status] Issue fail:{:?}!",
-                                        err
-                                    );
-                                }
-                            };
-                        }
-                    }
                     let end_height = frame_system::Pallet::<T>::block_number();
                     trustee.0.end_height = Some(end_height);
                 }

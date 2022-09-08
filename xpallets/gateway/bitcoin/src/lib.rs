@@ -381,12 +381,20 @@ pub mod pallet {
         WithdrawalProposalCreated(T::AccountId, Vec<u32>),
         /// A trustee voted/vetoed a withdrawal proposal. [trustee, vote_status]
         WithdrawalProposalVoted(T::AccountId, bool),
-        /// A fatal error happened during the withdrwal process. [tx_hash, proposal_hash]
+        /// A fatal error happened during the withdrawal process. [tx_hash, proposal_hash]
         WithdrawalFatalErr(H256, H256),
         /// An account deposited some token for evm address. [tx_hash, who, amount]
         DepositedEvm(H256, H160, BalanceOf<T>),
         /// A unclaimed deposit record was removed for evm address. [depositor, deposit_amount, tx_hash, btc_address]
         PendingDepositEvmRemoved(H160, BalanceOf<T>, H256, BtcAddress),
+        /// An account deposited some token for aptos address. [tx_hash, who, amount]
+        DepositedAptos(H256, H256, BalanceOf<T>),
+        /// A unclaimed deposit record was removed for aptos address. [depositor, deposit_amount, tx_hash, btc_address]
+        PendingDepositAptosRemoved(H256, BalanceOf<T>, H256, BtcAddress),
+        /// An account deposited some token for named address. [tx_hash, prefix, who, amount]
+        DepositedNamed(H256, Vec<u8>, Vec<u8>, BalanceOf<T>),
+        /// A unclaimed deposit record was removed for named address. [prefix, depositor, deposit_amount, tx_hash, btc_address]
+        PendingDepositNamedRemoved(Vec<u8>, Vec<u8>, BalanceOf<T>, H256, BtcAddress),
     }
 
     /// best header info
