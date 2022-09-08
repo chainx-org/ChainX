@@ -114,11 +114,7 @@ impl<T: Config, Address: Into<Vec<u8>>> AddressBinding<T::AccountId, Address> fo
     }
 
     fn dst_chain_proxy_address(dst_chain: DstChain) -> Option<T::AccountId> {
-        if let Some(proxy_account) = DstChainProxyAddress::<T>::get(&dst_chain) {
-            Some(proxy_account)
-        } else {
-            None
-        }
+        DstChainProxyAddress::<T>::get(&dst_chain)
     }
 
     fn address(chain: Chain, address: Address) -> Option<OpReturnAccount<T::AccountId>> {
