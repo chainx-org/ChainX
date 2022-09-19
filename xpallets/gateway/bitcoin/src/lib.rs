@@ -259,6 +259,14 @@ pub mod pallet {
             Ok(())
         }
 
+        /// Dangerous! Be careful to set ConfirmationNumber
+        #[pallet::weight(0)]
+        pub fn set_confirmation_number(origin: OriginFor<T>, number: u32) -> DispatchResult {
+            ensure_root(origin)?;
+            ConfirmationNumber::<T>::put(number);
+            Ok(())
+        }
+
         /// Set bitcoin withdrawal fee
         #[pallet::weight(<T as Config>::WeightInfo::set_btc_withdrawal_fee())]
         pub fn set_btc_withdrawal_fee(
