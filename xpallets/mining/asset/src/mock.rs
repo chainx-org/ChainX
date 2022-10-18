@@ -7,7 +7,7 @@ use std::{
 
 use frame_support::{
     parameter_types,
-    traits::{GenesisBuild, Get},
+    traits::{GenesisBuild, Get, ValidatorRegistration},
 };
 use sp_core::H256;
 use sp_runtime::{
@@ -240,6 +240,13 @@ impl xp_mining_common::RewardPotAccountFor<AccountId, AccountId>
     }
 }
 
+pub struct Registration;
+impl ValidatorRegistration<u64> for Registration {
+    fn is_registered(_id: &u64) -> bool {
+        true
+    }
+}
+
 impl xpallet_mining_staking::Config for Test {
     type Currency = Balances;
     type Event = Event;
@@ -250,6 +257,7 @@ impl xpallet_mining_staking::Config for Test {
     type SessionInterface = Self;
     type TreasuryAccount = DummyTreasuryAccount;
     type DetermineRewardPotAccount = DummyStakingRewardPotAccountDeterminer;
+    type ValidatorRegistration = Registration;
     type WeightInfo = ();
 }
 

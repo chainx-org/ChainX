@@ -34,7 +34,10 @@ mod tests;
 use frame_support::{
     ensure,
     log::debug,
-    traits::{Currency, ExistenceRequirement, Get, LockableCurrency, WithdrawReasons},
+    traits::{
+        Currency, ExistenceRequirement, Get, LockableCurrency, ValidatorRegistration,
+        WithdrawReasons,
+    },
 };
 use frame_system::{ensure_root, ensure_signed};
 use sp_runtime::{
@@ -105,7 +108,9 @@ pub mod pallet {
         /// since the workers avoids sending them at the very beginning of the session, assuming
         /// there is a chance the authority will produce a block and they won't be necessary.
         type SessionDuration: Get<Self::BlockNumber>;
-
+        /// Provide information about whether or not some
+        /// validator has been registered with them
+        type ValidatorRegistration: ValidatorRegistration<Self::AccountId>;
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
     }

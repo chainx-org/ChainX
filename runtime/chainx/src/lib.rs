@@ -36,8 +36,9 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
 use frame_system::EnsureRoot;
-use pallet_grandpa::fg_primitives;
-use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
+use pallet_grandpa::{
+    fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList,
+};
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 use pallet_session::historical as pallet_session_historical;
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
@@ -362,7 +363,11 @@ impl pallet_grandpa::Config for Runtime {
         GrandpaId,
     )>>::IdentificationTuple;
     type KeyOwnerProofSystem = Historical;
-    type HandleEquivocation = ();
+    type HandleEquivocation = pallet_grandpa::EquivocationHandler<
+        Self::KeyOwnerIdentification,
+        Offences,
+        ReportLongevity,
+    >;
     type WeightInfo = ();
     type MaxAuthorities = MaxAuthorities;
 }
@@ -1078,6 +1083,7 @@ impl xpallet_mining_staking::Config for Runtime {
     type AssetMining = XMiningAsset;
     type DetermineRewardPotAccount =
         xpallet_mining_staking::SimpleValidatorRewardPotAccountDeterminer<Runtime>;
+    type ValidatorRegistration = Session;
     type WeightInfo = xpallet_mining_staking::weights::SubstrateWeight<Runtime>;
 }
 
@@ -1217,7 +1223,7 @@ construct_runtime!(
         Offences: pallet_offences::{Pallet, Storage, Event} = 9,
         Historical: pallet_session_historical::{Pallet} = 10,
         Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 11,
-        Grandpa: pallet_grandpa::{Pallet, Call, Storage, Config, Event} = 12,
+        Grandpa: pallet_grandpa::{Pallet, Call, Storage, Config, Event, ValidateUnsigned} = 12,
         ImOnline: pallet_im_online::{Pallet, Call, Storage, Event<T>, ValidateUnsigned, Config<T>} = 13,
         AuthorityDiscovery: pallet_authority_discovery::{Pallet, Config} = 14,
 

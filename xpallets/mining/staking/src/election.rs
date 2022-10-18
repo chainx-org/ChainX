@@ -27,11 +27,14 @@ impl<T: Config> Pallet<T> {
 
     /// Returns true if the (potential) validator is able to join in the election.
     ///
-    /// Two requirements:
+    /// Three requirements:
     /// 1. has the desire to win the election.
     /// 2. meets the threshold of a valid candidate.
+    /// 3. has set session keys by calling pallet_session set_keys.
     fn is_qualified_candidate(who: &T::AccountId) -> bool {
-        Self::is_active(who) && Self::meet_candidate_threshold(who)
+        Self::is_active(who)
+            && Self::meet_candidate_threshold(who)
+            && T::ValidatorRegistration::is_registered(who)
     }
 
     /// Returns true if the candidate meets the minimum candidate threshold.

@@ -195,6 +195,13 @@ parameter_types! {
     pub const MaximumReferralId: u32 = 12;
 }
 
+pub struct Registration;
+impl ValidatorRegistration<u64> for Registration {
+    fn is_registered(_id: &u64) -> bool {
+        true
+    }
+}
+
 impl Config for Test {
     type Currency = Balances;
     type Event = Event;
@@ -205,6 +212,7 @@ impl Config for Test {
     type SessionInterface = Self;
     type TreasuryAccount = DummyTreasuryAccount;
     type DetermineRewardPotAccount = DummyStakingRewardPotAccountDeterminer;
+    type ValidatorRegistration = Registration;
     type WeightInfo = ();
 }
 
