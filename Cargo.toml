@@ -63,6 +63,10 @@ members = [
   "xpallets/transaction-fee/rpc/runtime-api",
 ]
 
+exclude = [
+  "scripts/chainx-halving"
+]
+
 # make sure dev builds with backtrace do
 # not slow us down
 [profile.dev.package.backtrace]

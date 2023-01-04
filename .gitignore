@@ -12,7 +12,7 @@ node_modules
 *.so
 *.rlib
 *.dll
-/target/
+*/target/
 *.exe
 **/*.rs.bk
 .vs/
