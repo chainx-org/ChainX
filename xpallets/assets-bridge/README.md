@@ -1,10 +1,10 @@
 # AssetsBridge
-A bridge from [substrate assets(wasm)](../assets) into [ERC20 tokens(evm)](../../contracts/AssetsBridgeErc20_istanbul.sol).
+A bridge from [substrate assets(wasm)](../assets) into [ERC20 tokens(evm)](../../contracts/AssetsBridgeErc20.sol).
 
 ## Overview
 
- [How does frontier manage the substrate account and ethereum account](https://github.com/chainx-org/chainx-technical-archive/blob/main/ZhaoJianBing/substrate_account_and_ethereum_account.md)
-  
+[Substrate & EVM address on ChainX](../../docs/substrate_and_evm_address_on_chainx.md)
+
 In AssetsBridge
 - substrate assets `->` erc20 tokens: `deposit`
 - substrate assets `<-` erc20 tokens: `withdraw`
@@ -24,6 +24,10 @@ In AssetsBridge
 - for sudo:
   - `set_admin`: set new the admin of `AssetsBridge`.
   - `force_unregister`: force unbond substrate assets and erc20 contract address.
+
+In the production environment, the admin of assets-bridge must audits whether the erc20 contract
+implements `IAssetsBridge` interface and whether it has the `AssetsBridgeAdmin` modifier.
+
 
 ## Work Flow
 
@@ -52,12 +56,12 @@ the sign data: "evm:d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56d
 ```
 
 ## companion with `relay`
-- `Foreign assets`(on other chain) -> `SherpaX assets` flow:
+- `Foreign assets`(on other chain) -> `ChainX assets` flow:
   - (1) `user` need `transfer` to the account which under the control of `assets-bridge admin` on `foreign chain`
-  - (2) `mint` to `user` by `assets-bridge admin` on `sherpax chain`
+  - (2) `mint` to `user` by `assets-bridge admin` on `ChainX`
 
-- `SherpaX assets` -> `Foreign assets`(on other chain) flow:
-  - (1) `user` need `teleport` with `BackForeign(asset_id)` on `sherpax chain`. 
+- `ChainX assets` -> `Foreign assets`(on other chain) flow:
+  - (1) `user` need `teleport` with `BackForeign(asset_id)` on `ChainX`. 
   - (2) the account which under the control of `assets-bridge admin` on `foreign chain` `transfer` to `user`
 
 - `maintenance` by `admin`: `back_foreign` add or remove `asset_id` which can back foreign chain.
@@ -65,4 +69,4 @@ the sign data: "evm:d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56d
 
 For safety, AssetsBridge now only allows dependent 
 [AssetsBridge assets(wasm)](../assets) and 
-[AssetsBridge tokens(evm)](../../contracts/AssetsBridgeErc20_istanbul.sol).
+[AssetsBridge tokens(evm)](../../contracts/AssetsBridgeErc20.sol).

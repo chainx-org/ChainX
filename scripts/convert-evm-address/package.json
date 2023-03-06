@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@polkadot/util-crypto": "^10.4.2",
+    "commander": "^10.0.0"
+  }
+}
