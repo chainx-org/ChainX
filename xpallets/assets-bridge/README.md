@@ -1,5 +1,5 @@
-# AssetsBridge
-A bridge from [substrate assets(wasm)](../assets) into [ERC20 tokens(evm)](../../contracts/AssetsBridgeErc20.sol).
+# [deprecated]AssetsBridge
+A bridge from [substrate assets(wasm)](../assets) into [ERC20 tokens(evm)](../../contracts/deprecated_AssetsBridgeErc20.sol).
 
 ## Overview
 
@@ -69,4 +69,4 @@ the sign data: "evm:d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56d
 
 For safety, AssetsBridge now only allows dependent 
 [AssetsBridge assets(wasm)](../assets) and 
-[AssetsBridge tokens(evm)](../../contracts/AssetsBridgeErc20.sol).
+[AssetsBridge tokens(evm)](../../contracts/deprecated_AssetsBridgeErc20.sol).
