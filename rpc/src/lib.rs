@@ -196,6 +196,7 @@ where
         MiningWeight,
         BlockNumber,
     >,
+    C::Api: xpallet_btc_ledger_runtime_api::BtcLedgerApi<Block,AccountId,Balance>,
     C::Api: xpallet_transaction_fee_rpc_runtime_api::XTransactionFeeApi<Block, Balance>,
     C::Api: fp_rpc::EthereumRuntimeRPCApi<Block>,
     C::Api: fp_rpc::ConvertTransactionRuntimeApi<Block>,
@@ -215,6 +216,7 @@ where
     use xpallet_mining_asset_rpc::{XMiningAsset, XMiningAssetApi};
     use xpallet_mining_staking_rpc::{XStaking, XStakingApi};
     use xpallet_transaction_fee_rpc::{XTransactionFee, XTransactionFeeApi};
+    use xpallet_btc_ledger_rpc::{BtcLedger, BtcLedgerApi};
 
     let mut io = jsonrpc_core::IoHandler::default();
     let FullDeps {
@@ -293,6 +295,9 @@ where
         client.clone(),
     )));
     io.extend_with(XGatewayCommonApi::to_delegate(XGatewayCommon::new(
+        client.clone(),
+    )));
+    io.extend_with(BtcLedgerApi::to_delegate(BtcLedger::new(
         client.clone(),
     )));
 

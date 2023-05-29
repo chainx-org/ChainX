@@ -60,12 +60,15 @@ xpallet-mining-staking-rpc = { path = "../xpallets/mining/staking/rpc" }
 xpallet-mining-staking-rpc-runtime-api = { path = "../xpallets/mining/staking/rpc/runtime-api" }
 xpallet-transaction-fee-rpc = { path = "../xpallets/transaction-fee/rpc" }
 xpallet-transaction-fee-rpc-runtime-api = { path = "../xpallets/transaction-fee/rpc/runtime-api" }
+xpallet-btc-ledger-rpc = { path = "../xpallets/btc-ledger/rpc" }
+xpallet-btc-ledger-runtime-api = { path = "../xpallets/btc-ledger/rpc/runtime-api" }
+
 
 # EVM
-fc-db = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18" }
-fc-rpc = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18", features = ["rpc_binary_search_estimate"] }
-fc-rpc-core = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18" }
-fp-rpc = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18" }
-fp-storage = { git="https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18" }
+fc-db = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc" }
+fc-rpc = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc", features = ["rpc_binary_search_estimate"] }
+fc-rpc-core = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc" }
+fp-rpc = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc" }
+fp-storage = { git="https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc" }
 sc-transaction-pool = { git = 'https://github.com/paritytech/substrate', branch = "polkadot-v0.9.18" }
 sc-network = { git = 'https://github.com/paritytech/substrate', branch = "polkadot-v0.9.18" }

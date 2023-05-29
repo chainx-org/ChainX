@@ -96,4 +96,4 @@ pub type SlowAdjustingFeeUpdate<R> =
 pub type CurrencyToVote = frame_support::traits::U128CurrencyToVote;
 
 // EVM
-pub const BASE_FEE: u128 = 45_000_000_000u128;
+pub const BASE_FEE: u128 = 50_000_000u128;

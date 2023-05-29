@@ -826,6 +826,7 @@ dependencies = [
  "xp-assets-registrar",
  "xp-genesis-builder",
  "xp-protocol",
+ "xpallet-btc-ledger",
  "xpallet-gateway-bitcoin",
  "xpallet-gateway-common",
 ]
@@ -898,6 +899,8 @@ dependencies = [
  "xp-runtime",
  "xpallet-assets-rpc",
  "xpallet-assets-rpc-runtime-api",
+ "xpallet-btc-ledger-rpc",
+ "xpallet-btc-ledger-runtime-api",
  "xpallet-dex-spot-rpc",
  "xpallet-dex-spot-rpc-runtime-api",
  "xpallet-gateway-bitcoin-rpc",
@@ -992,6 +995,8 @@ dependencies = [
  "xpallet-assets-bridge",
  "xpallet-assets-registrar",
  "xpallet-assets-rpc-runtime-api",
+ "xpallet-btc-ledger",
+ "xpallet-btc-ledger-runtime-api",
  "xpallet-dex-spot",
  "xpallet-dex-spot-rpc-runtime-api",
  "xpallet-ethereum-chain-id",
@@ -1085,6 +1090,7 @@ dependencies = [
  "sp-transaction-pool",
  "substrate-prometheus-endpoint",
  "xpallet-assets-rpc-runtime-api",
+ "xpallet-btc-ledger-runtime-api",
  "xpallet-dex-spot-rpc-runtime-api",
  "xpallet-gateway-bitcoin-rpc-runtime-api",
  "xpallet-gateway-common-rpc-runtime-api",
@@ -1621,6 +1627,8 @@ dependencies = [
  "xpallet-assets-bridge",
  "xpallet-assets-registrar",
  "xpallet-assets-rpc-runtime-api",
+ "xpallet-btc-ledger",
+ "xpallet-btc-ledger-runtime-api",
  "xpallet-dex-spot",
  "xpallet-dex-spot-rpc-runtime-api",
  "xpallet-ethereum-chain-id",
@@ -2038,7 +2046,7 @@ dependencies = [
 [[package]]
 name = "fc-consensus"
 version = "2.0.0-dev"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18#d93f5ffdaafa3471cda17557276df894fa770fc3"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc#34cf7f96b60416e08e80caaca1491fea6ca641cb"
 dependencies = [
  "async-trait",
  "fc-db",
@@ -2057,7 +2065,7 @@ dependencies = [
 [[package]]
 name = "fc-db"
 version = "2.0.0-dev"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18#d93f5ffdaafa3471cda17557276df894fa770fc3"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc#34cf7f96b60416e08e80caaca1491fea6ca641cb"
 dependencies = [
  "fp-storage",
  "kvdb-rocksdb",
@@ -2071,7 +2079,7 @@ dependencies = [
 [[package]]
 name = "fc-mapping-sync"
 version = "2.0.0-dev"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18#d93f5ffdaafa3471cda17557276df894fa770fc3"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc#34cf7f96b60416e08e80caaca1491fea6ca641cb"
 dependencies = [
  "fc-db",
  "fp-consensus",
@@ -2088,7 +2096,7 @@ dependencies = [
 [[package]]
 name = "fc-rpc"
 version = "2.0.0-dev"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18#d93f5ffdaafa3471cda17557276df894fa770fc3"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc#34cf7f96b60416e08e80caaca1491fea6ca641cb"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -2130,7 +2138,7 @@ dependencies = [
 [[package]]
 name = "fc-rpc-core"
 version = "1.1.0-dev"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18#d93f5ffdaafa3471cda17557276df894fa770fc3"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc#34cf7f96b60416e08e80caaca1491fea6ca641cb"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -2237,7 +2245,7 @@ dependencies = [
 [[package]]
 name = "fp-consensus"
 version = "2.0.0-dev"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18#d93f5ffdaafa3471cda17557276df894fa770fc3"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc#34cf7f96b60416e08e80caaca1491fea6ca641cb"
 dependencies = [
  "ethereum",
  "parity-scale-codec",
@@ -2249,7 +2257,7 @@ dependencies = [
 [[package]]
 name = "fp-evm"
 version = "3.0.0-dev"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18#d93f5ffdaafa3471cda17557276df894fa770fc3"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc#34cf7f96b60416e08e80caaca1491fea6ca641cb"
 dependencies = [
  "evm",
  "parity-scale-codec",
@@ -2261,7 +2269,7 @@ dependencies = [
 [[package]]
 name = "fp-rpc"
 version = "3.0.0-dev"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18#d93f5ffdaafa3471cda17557276df894fa770fc3"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc#34cf7f96b60416e08e80caaca1491fea6ca641cb"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -2278,7 +2286,7 @@ dependencies = [
 [[package]]
 name = "fp-self-contained"
 version = "1.0.0-dev"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18#d93f5ffdaafa3471cda17557276df894fa770fc3"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc#34cf7f96b60416e08e80caaca1491fea6ca641cb"
 dependencies = [
  "ethereum",
  "frame-support",
@@ -2294,7 +2302,7 @@ dependencies = [
 [[package]]
 name = "fp-storage"
 version = "2.0.0"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18#d93f5ffdaafa3471cda17557276df894fa770fc3"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc#34cf7f96b60416e08e80caaca1491fea6ca641cb"
 dependencies = [
  "parity-scale-codec",
 ]
@@ -4599,6 +4607,8 @@ dependencies = [
  "xpallet-assets-bridge",
  "xpallet-assets-registrar",
  "xpallet-assets-rpc-runtime-api",
+ "xpallet-btc-ledger",
+ "xpallet-btc-ledger-runtime-api",
  "xpallet-dex-spot",
  "xpallet-dex-spot-rpc-runtime-api",
  "xpallet-ethereum-chain-id",
@@ -5268,7 +5278,7 @@ dependencies = [
 [[package]]
 name = "pallet-base-fee"
 version = "1.0.0"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18#d93f5ffdaafa3471cda17557276df894fa770fc3"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc#34cf7f96b60416e08e80caaca1491fea6ca641cb"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5350,7 +5360,7 @@ dependencies = [
 [[package]]
 name = "pallet-ethereum"
 version = "4.0.0-dev"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18#d93f5ffdaafa3471cda17557276df894fa770fc3"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc#34cf7f96b60416e08e80caaca1491fea6ca641cb"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -5379,7 +5389,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm"
 version = "6.0.0-dev"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18#d93f5ffdaafa3471cda17557276df894fa770fc3"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc#34cf7f96b60416e08e80caaca1491fea6ca641cb"
 dependencies = [
  "evm",
  "fp-evm",
@@ -5405,7 +5415,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-blake2"
 version = "2.0.0-dev"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18#d93f5ffdaafa3471cda17557276df894fa770fc3"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc#34cf7f96b60416e08e80caaca1491fea6ca641cb"
 dependencies = [
  "fp-evm",
 ]
@@ -5413,7 +5423,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-bn128"
 version = "2.0.0-dev"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18#d93f5ffdaafa3471cda17557276df894fa770fc3"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc#34cf7f96b60416e08e80caaca1491fea6ca641cb"
 dependencies = [
  "fp-evm",
  "sp-core",
@@ -5423,7 +5433,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-dispatch"
 version = "2.0.0-dev"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18#d93f5ffdaafa3471cda17557276df894fa770fc3"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc#34cf7f96b60416e08e80caaca1491fea6ca641cb"
 dependencies = [
  "fp-evm",
  "frame-support",
@@ -5433,7 +5443,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-modexp"
 version = "2.0.0-dev"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18#d93f5ffdaafa3471cda17557276df894fa770fc3"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc#34cf7f96b60416e08e80caaca1491fea6ca641cb"
 dependencies = [
  "fp-evm",
  "num",
@@ -5442,7 +5452,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-sha3fips"
 version = "2.0.0-dev"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18#d93f5ffdaafa3471cda17557276df894fa770fc3"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc#34cf7f96b60416e08e80caaca1491fea6ca641cb"
 dependencies = [
  "fp-evm",
  "tiny-keccak",
@@ -5451,7 +5461,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-simple"
 version = "2.0.0-dev"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18#d93f5ffdaafa3471cda17557276df894fa770fc3"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc#34cf7f96b60416e08e80caaca1491fea6ca641cb"
 dependencies = [
  "fp-evm",
  "ripemd",
@@ -10467,6 +10477,45 @@ dependencies = [
  "sp-api",
  "sp-std",
  "xpallet-assets",
+]
+
+[[package]]
+name = "xpallet-btc-ledger"
+version = "4.5.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "xpallet-btc-ledger-rpc"
+version = "4.5.0"
+dependencies = [
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-blockchain",
+ "sp-runtime",
+ "xp-rpc",
+ "xpallet-btc-ledger-runtime-api",
+]
+
+[[package]]
+name = "xpallet-btc-ledger-runtime-api"
+version = "4.5.0"
+dependencies = [
+ "parity-scale-codec",
+ "sp-api",
+ "sp-std",
 ]
 
 [[package]]

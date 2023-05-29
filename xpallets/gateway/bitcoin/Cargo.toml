@@ -22,7 +22,7 @@ frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch =
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
-pallet-evm = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18", default-features = false, features = ["chainx-adaptor"] }
+pallet-evm = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc", default-features = false, features = ["chainx-adaptor"] }
 
 # Asset bridge
 xpallet-assets-bridge = { path = "../../assets-bridge", default-features = false }

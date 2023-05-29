@@ -24,9 +24,11 @@ use xpallet_mining_staking::Call as XStakingCall;
 
 use chainx_primitives::{AccountId, Balance};
 
-use crate::{Authorship, Balances, Call, Runtime};
+use crate::{Authorship, Balances, BtcLedger, Call, Runtime};
 
 type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
+
+type BTCNegativeImbalance = <BtcLedger as Currency<AccountId>>::NegativeImbalance;
 
 pub struct Author;
 impl OnUnbalanced<NegativeImbalance> for Author {
@@ -60,6 +62,29 @@ impl OnUnbalanced<NegativeImbalance> for DealWithFees {
                 ),
             );
         }
+    }
+}
+
+pub struct DealWithBTCFees;
+impl OnUnbalanced<BTCNegativeImbalance> for DealWithBTCFees {
+    fn on_nonzero_unbalanced(fees: BTCNegativeImbalance) {
+        // for btc fees, 100% to the block author
+
+        let fee_amount = fees.peek();
+
+        let beneficiary = if let Some(author) = <pallet_authorship::Pallet<Runtime>>::author() {
+            author
+        } else {
+            <xpallet_btc_ledger::Pallet<Runtime>>::account_id()
+        };
+
+        <xpallet_btc_ledger::Pallet<Runtime>>::resolve_creating(&beneficiary, fees);
+        <frame_system::Pallet<Runtime>>::deposit_event(
+            xpallet_transaction_fee::Event::<Runtime>::BTCFeePaid(
+                beneficiary,
+                fee_amount
+            ),
+        )
     }
 }
 
