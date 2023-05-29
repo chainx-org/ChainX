@@ -9,6 +9,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(unused_imports)]
 #![allow(unused_variables)]
+#![allow(dead_code)]
 
 pub mod abi;
 #[cfg(test)]
@@ -118,6 +119,10 @@ pub mod pallet {
     #[pallet::getter(fn emergencies)]
     pub(super) type Emergencies<T: Config> = StorageValue<_, Vec<AssetId>, ValueQuery>;
 
+    #[pallet::storage]
+    #[pallet::getter(fn hot_account)]
+    pub(super) type HotAccount<T: Config> = StorageValue<_, T::AccountId>;
+
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         /// The `AccountId` of the admin key.
@@ -204,6 +209,12 @@ pub mod pallet {
         BanBackForeign,
         /// Zero balance
         ZeroBalance,
+        /// Deprecated
+        Deprecated,
+        /// Require hot account authority
+        RequireHot,
+        /// Hot account not set
+        HotAccountNotSet,
     }
 
     #[pallet::call]
@@ -224,7 +235,7 @@ pub mod pallet {
             eth_address: H160,
             eth_signature: EcdsaSignature,
         ) -> DispatchResult {
-            Err(Error::<T>::InEmergency.into())
+            Err(Error::<T>::Deprecated.into())
             // let who = ensure_signed(origin)?;
             //
             // // ensure account_id and eth_address has not been mapped
@@ -289,32 +300,33 @@ pub mod pallet {
             asset_id: AssetId,
             amount: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
-            let who = ensure_signed(origin)?;
-            ensure!(!Self::is_in_emergency(asset_id), Error::<T>::InEmergency);
-            ensure!(!amount.is_zero(), Error::<T>::ZeroBalance);
-
-            // 1. check evm account
-            let evm_account = Self::evm_accounts(&who).ok_or(Error::<T>::EthAddressHasNotMapped)?;
-
-            // 2. burn asset
-            let _ = xpallet_assets::Pallet::<T>::destroy_usable(&asset_id, &who, amount)?;
-
-            // 3. mint erc20
-            let erc20 = Self::erc20s(asset_id).ok_or(Error::<T>::ContractAddressHasNotMapped)?;
-
-            let inputs = mint_into_encode(evm_account, amount.unique_saturated_into());
-
-            Self::call_evm(erc20, inputs)?;
-
-            Self::deposit_event(Event::DepositExecuted(
-                asset_id,
-                who,
-                evm_account,
-                amount,
-                erc20,
-            ));
-
-            Ok(Pays::No.into())
+            Err(Error::<T>::Deprecated.into())
+            // let who = ensure_signed(origin)?;
+            // ensure!(!Self::is_in_emergency(asset_id), Error::<T>::InEmergency);
+            // ensure!(!amount.is_zero(), Error::<T>::ZeroBalance);
+            //
+            // // 1. check evm account
+            // let evm_account = Self::evm_accounts(&who).ok_or(Error::<T>::EthAddressHasNotMapped)?;
+            //
+            // // 2. burn asset
+            // let _ = xpallet_assets::Pallet::<T>::destroy_usable(&asset_id, &who, amount)?;
+            //
+            // // 3. mint erc20
+            // let erc20 = Self::erc20s(asset_id).ok_or(Error::<T>::ContractAddressHasNotMapped)?;
+            //
+            // let inputs = mint_into_encode(evm_account, amount.unique_saturated_into());
+            //
+            // Self::call_evm(erc20, inputs)?;
+            //
+            // Self::deposit_event(Event::DepositExecuted(
+            //     asset_id,
+            //     who,
+            //     evm_account,
+            //     amount,
+            //     erc20,
+            // ));
+            //
+            // Ok(Pays::No.into())
         }
 
         /// Withdraw from evm erc20 contracts into substrate assets
@@ -329,32 +341,33 @@ pub mod pallet {
             asset_id: AssetId,
             amount: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
-            let who = ensure_signed(origin)?;
-            ensure!(!Self::is_in_emergency(asset_id), Error::<T>::InEmergency);
-            ensure!(!amount.is_zero(), Error::<T>::ZeroBalance);
-
-            // 1. check evm account
-            let evm_account = Self::evm_accounts(&who).ok_or(Error::<T>::EthAddressHasNotMapped)?;
-
-            // 2. burn erc20
-            let erc20 = Self::erc20s(asset_id).ok_or(Error::<T>::ContractAddressHasNotMapped)?;
-
-            let inputs = burn_from_encode(evm_account, amount.unique_saturated_into());
-
-            Self::call_evm(erc20, inputs)?;
-
-            // 3. mint asset
-            let _ = xpallet_assets::Pallet::<T>::issue(&asset_id, &who, amount)?;
-
-            Self::deposit_event(Event::WithdrawExecuted(
-                asset_id,
-                who,
-                evm_account,
-                amount,
-                erc20,
-            ));
-
-            Ok(Pays::No.into())
+            Err(Error::<T>::Deprecated.into())
+            // let who = ensure_signed(origin)?;
+            // ensure!(!Self::is_in_emergency(asset_id), Error::<T>::InEmergency);
+            // ensure!(!amount.is_zero(), Error::<T>::ZeroBalance);
+            //
+            // // 1. check evm account
+            // let evm_account = Self::evm_accounts(&who).ok_or(Error::<T>::EthAddressHasNotMapped)?;
+            //
+            // // 2. burn erc20
+            // let erc20 = Self::erc20s(asset_id).ok_or(Error::<T>::ContractAddressHasNotMapped)?;
+            //
+            // let inputs = burn_from_encode(evm_account, amount.unique_saturated_into());
+            //
+            // Self::call_evm(erc20, inputs)?;
+            //
+            // // 3. mint asset
+            // let _ = xpallet_assets::Pallet::<T>::issue(&asset_id, &who, amount)?;
+            //
+            // Self::deposit_event(Event::WithdrawExecuted(
+            //     asset_id,
+            //     who,
+            //     evm_account,
+            //     amount,
+            //     erc20,
+            // ));
+            //
+            // Ok(Pays::No.into())
         }
 
         /// Teleport native currency between substrate account and evm address
@@ -547,22 +560,23 @@ pub mod pallet {
             asset_id: AssetId,
             remove: bool,
         ) -> DispatchResultWithPostInfo {
-            let who = ensure_signed(origin)?;
-            ensure!(Some(who) == Self::admin_key(), Error::<T>::RequireAdmin);
-
-            BackForeign::<T>::try_mutate(|foreigns| {
-                if remove {
-                    foreigns.retain(|id| *id != asset_id);
-                } else if !Self::is_in_back_foreign(asset_id) {
-                    foreigns.push(asset_id);
-                } else {
-                    return Ok(Pays::No.into());
-                }
-
-                Self::deposit_event(Event::BackForeign(asset_id, remove));
-
-                Ok(Pays::No.into())
-            })
+            Err(Error::<T>::Deprecated.into())
+            // let who = ensure_signed(origin)?;
+            // ensure!(Some(who) == Self::admin_key(), Error::<T>::RequireAdmin);
+            //
+            // BackForeign::<T>::try_mutate(|foreigns| {
+            //     if remove {
+            //         foreigns.retain(|id| *id != asset_id);
+            //     } else if !Self::is_in_back_foreign(asset_id) {
+            //         foreigns.push(asset_id);
+            //     } else {
+            //         return Ok(Pays::No.into());
+            //     }
+            //
+            //     Self::deposit_event(Event::BackForeign(asset_id, remove));
+            //
+            //     Ok(Pays::No.into())
+            // })
         }
 
         /// Set this pallet admin key
@@ -583,13 +597,14 @@ pub mod pallet {
         }
 
         /// Force unregister substrate assets and erc20 contracts
-        /// Note: for super admin
+        /// Note: for admin
         #[pallet::weight(100_000_000u64)]
         pub fn force_unregister(
             origin: OriginFor<T>,
             asset_id: AssetId,
         ) -> DispatchResultWithPostInfo {
-            ensure_root(origin)?;
+            let who = ensure_signed(origin)?;
+            ensure!(Some(who) == Self::admin_key(), Error::<T>::RequireAdmin);
 
             let erc20 = Self::erc20s(&asset_id).ok_or(Error::<T>::AssetIdHasNotMapped)?;
 
@@ -609,6 +624,101 @@ pub mod pallet {
             }
 
             Self::deposit_event(Event::ForceUnRegister(asset_id, erc20));
+
+            Ok(Pays::No.into())
+        }
+
+        /// Set the hot account who can receive the pcx while calling `deposit_pcx_to_evm`
+        /// Note: for admin
+        #[pallet::weight(0u64)]
+        pub fn set_hot_account(
+            origin: OriginFor<T>,
+            new_hot: <T::Lookup as StaticLookup>::Source,
+        ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin)?;
+            ensure!(Some(who) == Self::admin_key(), Error::<T>::RequireAdmin);
+
+            let hot_account = T::Lookup::lookup(new_hot)?;
+
+            HotAccount::<T>::mutate(|hot| *hot = Some(hot_account));
+
+            Ok(Pays::No.into())
+        }
+
+        /// Deposit PCX from wasm to evm
+        /// Note: for user
+        #[pallet::weight(0u64)]
+        pub fn deposit_pcx_to_evm(
+            origin: OriginFor<T>,
+            amount: BalanceOf<T>,
+            eth_address: H160,
+        ) -> DispatchResultWithPostInfo {
+            let pcx_asset_id = 0;
+            let who = ensure_signed(origin)?;
+            ensure!(
+                !Self::is_in_emergency(pcx_asset_id),
+                Error::<T>::InEmergency
+            );
+            ensure!(!amount.is_zero(), Error::<T>::ZeroBalance);
+            ensure!(Self::hot_account().is_some(), Error::<T>::HotAccountNotSet);
+
+            // 1. transfer pcx to hot address
+            <T as xpallet_assets::Config>::Currency::transfer(
+                &who,
+                &Self::hot_account().unwrap(),
+                amount,
+                ExistenceRequirement::AllowDeath,
+            )?;
+
+            // 2. mint pcx to eth_address in chainx-evm
+            let pcx_contract =
+                Self::erc20s(pcx_asset_id).ok_or(Error::<T>::ContractAddressHasNotMapped)?;
+
+            let inputs = mint_into_encode(eth_address, amount.unique_saturated_into());
+
+            Self::call_evm(pcx_contract, inputs)?;
+
+            Self::deposit_event(Event::DepositExecuted(
+                pcx_asset_id,
+                who,
+                eth_address,
+                amount,
+                pcx_contract,
+            ));
+
+            Ok(Pays::No.into())
+        }
+
+        /// Swap XBTC(assets moudle) to BTC(btc ledger module)
+        /// Note: for user who hold XBTC
+        #[pallet::weight(0u64)]
+        pub fn swap_xbtc_to_btc(
+            origin: OriginFor<T>,
+            amount: u128,
+            eth_address: H160,
+        ) -> DispatchResultWithPostInfo {
+            let xbtc_asset_id = 1;
+
+            let who = ensure_signed(origin)?;
+            ensure!(
+                !Self::is_in_emergency(xbtc_asset_id),
+                Error::<T>::InEmergency
+            );
+            ensure!(amount > 0, Error::<T>::ZeroBalance);
+
+            // 1. burn useable xbtc from account
+            let _ = xpallet_assets::Pallet::<T>::destroy_usable(
+                &xbtc_asset_id,
+                &who,
+                amount.unique_saturated_into(),
+            )?;
+
+            // 2. mint btc to mapping account of the evm address
+            let mapping_account = AddressMappingOf::<T>::into_account_id(eth_address);
+            <T as pallet_evm::Config>::Currency::deposit_creating(
+                &mapping_account,
+                amount.unique_saturated_into(),
+            );
 
             Ok(Pays::No.into())
         }
