@@ -45,7 +45,7 @@ pub trait RuntimeApiCollection:
         MiningWeight,
         BlockNumber,
     > + xpallet_transaction_fee_rpc_runtime_api::XTransactionFeeApi<Block, Balance>
-    + xpallet_btc_ledger_runtime_api::BtcLedgerApi<Block,AccountId,Balance>
+    + xpallet_btc_ledger_runtime_api::BtcLedgerApi<Block, AccountId, Balance>
     + fp_rpc::EthereumRuntimeRPCApi<Block>
     + fp_rpc::ConvertTransactionRuntimeApi<Block>
 where
@@ -92,7 +92,7 @@ where
             MiningWeight,
             BlockNumber,
         > + xpallet_transaction_fee_rpc_runtime_api::XTransactionFeeApi<Block, Balance>
-        + xpallet_btc_ledger_runtime_api::BtcLedgerApi<Block,AccountId,Balance>
+        + xpallet_btc_ledger_runtime_api::BtcLedgerApi<Block, AccountId, Balance>
         + fp_rpc::EthereumRuntimeRPCApi<Block>
         + fp_rpc::ConvertTransactionRuntimeApi<Block>,
     <Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,

@@ -34,6 +34,6 @@ pub mod pallet {
         /// [author, author_fee, reward_pot, reward_pot_fee]
         FeePaid(T::AccountId, BalanceOf<T>, T::AccountId, BalanceOf<T>),
         /// Transaction BTC fee
-        BTCFeePaid(T::AccountId, u128)
+        BTCFeePaid(T::AccountId, u128),
     }
 }

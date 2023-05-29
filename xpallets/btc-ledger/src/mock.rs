@@ -1,12 +1,16 @@
 // Copyright 2019-2023 ChainX Project Authors. Licensed under GPL-3.0.
 
 use frame_support::{
-    construct_runtime, parameter_types, traits::{ConstU32, ConstU64}, PalletId
+    construct_runtime, parameter_types,
+    traits::{ConstU32, ConstU64},
+    PalletId,
 };
 use frame_system::EnsureRoot;
 use sp_core::H256;
 use sp_runtime::{
-    testing::Header, traits::{BlakeTwo256, IdentityLookup}, AccountId32
+    testing::Header,
+    traits::{BlakeTwo256, IdentityLookup},
+    AccountId32,
 };
 
 /// The AccountId alias in this test module.
@@ -78,10 +82,10 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
         .unwrap();
 
     btc_ledger::GenesisConfig::<Test> {
-        balances: vec![(ALICE.into(), 10), (BOB.into(), 20)]
+        balances: vec![(ALICE.into(), 10), (BOB.into(), 20)],
     }
-        .assimilate_storage(&mut t)
-        .unwrap();
+    .assimilate_storage(&mut t)
+    .unwrap();
 
     let mut ext = sp_io::TestExternalities::new(t);
     ext.execute_with(|| {

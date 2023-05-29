@@ -2,15 +2,17 @@
 
 use crate::mock::*;
 
-use sp_runtime::{ArithmeticError, traits::BadOrigin};
 use frame_support::{
-    assert_noop, assert_ok, assert_err,
+    assert_err, assert_noop, assert_ok,
     traits::{
-        WithdrawReasons, Currency, ExistenceRequirement::{AllowDeath, KeepAlive}
-    }
+        Currency,
+        ExistenceRequirement::{AllowDeath, KeepAlive},
+        WithdrawReasons,
+    },
 };
 use frame_system::RawOrigin;
 use sp_core::crypto::AccountId32;
+use sp_runtime::{traits::BadOrigin, ArithmeticError};
 
 #[test]
 fn btc_ledger_account_id() {
@@ -23,13 +25,22 @@ fn btc_ledger_account_id() {
 #[test]
 fn account_zero_balance_should_be_not_reaped() {
     new_test_ext().execute_with(|| {
-        assert!(frame_system::Account::<Test>::contains_key(&AccountId32::from(ALICE)));
+        assert!(frame_system::Account::<Test>::contains_key(
+            &AccountId32::from(ALICE)
+        ));
 
         assert_eq!(BtcLedger::free_balance(AccountId32::from(ALICE)), 10);
-        assert_ok!(<BtcLedger as Currency<_>>::transfer(&ALICE.into(), &BOB.into(), 10, AllowDeath));
+        assert_ok!(<BtcLedger as Currency<_>>::transfer(
+            &ALICE.into(),
+            &BOB.into(),
+            10,
+            AllowDeath
+        ));
 
         // Check that the account is not dead.
-        assert!(frame_system::Account::<Test>::contains_key(&AccountId32::from(ALICE)));
+        assert!(frame_system::Account::<Test>::contains_key(
+            &AccountId32::from(ALICE)
+        ));
     });
 }
 
@@ -46,7 +57,12 @@ fn account_provider_consumer_sufficient() {
 
         assert!(System::account_exists(&ALICE.into()));
         assert!(System::account_exists(&BOB.into()));
-        assert_ok!(<BtcLedger as Currency<_>>::transfer(&ALICE.into(), &BOB.into(), 5, AllowDeath));
+        assert_ok!(<BtcLedger as Currency<_>>::transfer(
+            &ALICE.into(),
+            &BOB.into(),
+            5,
+            AllowDeath
+        ));
         assert!(System::account_exists(&ALICE.into()));
         assert!(System::account_exists(&BOB.into()));
         assert_eq!(BtcLedger::free_balance(AccountId32::from(ALICE)), 5);
@@ -65,7 +81,12 @@ fn account_provider_consumer_sufficient() {
         assert_eq!(System::sufficients(&CHARLIE.into()), 0);
 
         assert!(!System::account_exists(&CHARLIE.into()));
-        assert_ok!(<BtcLedger as Currency<_>>::transfer(&ALICE.into(), &CHARLIE.into(), 5, AllowDeath));
+        assert_ok!(<BtcLedger as Currency<_>>::transfer(
+            &ALICE.into(),
+            &CHARLIE.into(),
+            5,
+            AllowDeath
+        ));
         assert!(System::account_exists(&CHARLIE.into()));
         assert_eq!(BtcLedger::free_balance(AccountId32::from(ALICE)), 0);
         assert_eq!(BtcLedger::free_balance(AccountId32::from(CHARLIE)), 5);
@@ -84,7 +105,10 @@ fn reward_should_work() {
     new_test_ext().execute_with(|| {
         assert_eq!(BtcLedger::total_balance(&ALICE.into()), 10);
         assert_ok!(BtcLedger::deposit_into_existing(&ALICE.into(), 10).map(drop));
-        System::assert_last_event(Event::BtcLedger(crate::Event::Deposit { who: ALICE.into(), amount: 10 }));
+        System::assert_last_event(Event::BtcLedger(crate::Event::Deposit {
+            who: ALICE.into(),
+            amount: 10,
+        }));
         assert_eq!(BtcLedger::total_balance(&ALICE.into()), 20);
         assert_eq!(btc_ledger::TotalIssuance::<Test>::get(), 40);
     });
@@ -94,7 +118,10 @@ fn reward_should_work() {
 fn balance_works() {
     new_test_ext().execute_with(|| {
         let _ = BtcLedger::deposit_creating(&ALICE.into(), 30);
-        System::assert_has_event(Event::BtcLedger(crate::Event::Deposit { who: ALICE.into(), amount: 30 }));
+        System::assert_has_event(Event::BtcLedger(crate::Event::Deposit {
+            who: ALICE.into(),
+            amount: 30,
+        }));
         assert_eq!(BtcLedger::free_balance(&AccountId32::from(ALICE)), 40);
         assert_eq!(BtcLedger::total_balance(&ALICE.into()), 40);
         assert_eq!(BtcLedger::free_balance(AccountId32::from(BOB)), 20);
@@ -106,7 +133,11 @@ fn balance_works() {
 fn balance_transfer_works() {
     new_test_ext().execute_with(|| {
         let _ = BtcLedger::deposit_creating(&ALICE.into(), 40);
-        assert_ok!(BtcLedger::transfer(Some(ALICE.into()).into(), BOB.into(), 20));
+        assert_ok!(BtcLedger::transfer(
+            Some(ALICE.into()).into(),
+            BOB.into(),
+            20
+        ));
         assert_eq!(BtcLedger::total_balance(&ALICE.into()), 30);
         assert_eq!(BtcLedger::total_balance(&BOB.into()), 40);
     });
@@ -121,7 +152,12 @@ fn force_transfer_works() {
             BadOrigin,
         );
 
-        assert_ok!(BtcLedger::force_transfer(RawOrigin::Root.into(), ALICE.into(), BOB.into(), 50));
+        assert_ok!(BtcLedger::force_transfer(
+            RawOrigin::Root.into(),
+            ALICE.into(),
+            BOB.into(),
+            50
+        ));
         assert_eq!(BtcLedger::total_balance(&ALICE.into()), 10);
         assert_eq!(BtcLedger::total_balance(&BOB.into()), 70);
     });
@@ -133,14 +169,20 @@ fn withdrawing_balance_should_work() {
         let _ = BtcLedger::deposit_creating(&BOB.into(), 100);
         let _ = BtcLedger::withdraw(&BOB.into(), 20, WithdrawReasons::TRANSFER, AllowDeath);
 
-        System::assert_last_event(Event::BtcLedger(crate::Event::Withdraw { who: BOB.into(), amount: 20 }));
+        System::assert_last_event(Event::BtcLedger(crate::Event::Withdraw {
+            who: BOB.into(),
+            amount: 20,
+        }));
 
         assert_eq!(BtcLedger::free_balance(AccountId32::from(BOB)), 100);
         assert_eq!(btc_ledger::TotalIssuance::<Test>::get(), 110);
 
         let _ = BtcLedger::withdraw(&ALICE.into(), 10, WithdrawReasons::TRANSFER, KeepAlive);
 
-        System::assert_last_event(Event::BtcLedger(crate::Event::Withdraw { who: ALICE.into(), amount: 10 }));
+        System::assert_last_event(Event::BtcLedger(crate::Event::Withdraw {
+            who: ALICE.into(),
+            amount: 10,
+        }));
 
         assert_eq!(BtcLedger::free_balance(AccountId32::from(BOB)), 100);
         assert_eq!(btc_ledger::TotalIssuance::<Test>::get(), 100);
@@ -163,7 +205,6 @@ fn transferring_too_high_value_should_not_panic() {
     });
 }
 
-
 #[test]
 fn burn_must_work() {
     new_test_ext().execute_with(|| {
@@ -178,17 +219,25 @@ fn burn_must_work() {
 #[test]
 #[should_panic = "duplicate balances in genesis."]
 fn cannot_set_genesis_value_twice() {
-    let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+    let mut t = frame_system::GenesisConfig::default()
+        .build_storage::<Test>()
+        .unwrap();
     let _ = btc_ledger::GenesisConfig::<Test> {
         balances: vec![(ALICE.into(), 10), (BOB.into(), 20), (ALICE.into(), 15)],
-    }.assimilate_storage(&mut t).unwrap();
+    }
+    .assimilate_storage(&mut t)
+    .unwrap();
 }
 
 #[test]
 fn transfer_all_free_succeed() {
     new_test_ext().execute_with(|| {
         assert_ok!(BtcLedger::set_balance(Origin::root(), ALICE.into(), 100));
-        assert_ok!(BtcLedger::transfer(Some(ALICE.into()).into(), BOB.into(), 100));
+        assert_ok!(BtcLedger::transfer(
+            Some(ALICE.into()).into(),
+            BOB.into(),
+            100
+        ));
         assert_eq!(BtcLedger::total_balance(&ALICE.into()), 0);
         assert_eq!(BtcLedger::total_balance(&BOB.into()), 120);
     });
@@ -201,7 +250,11 @@ fn transfer_all_works() {
         assert_ok!(BtcLedger::set_balance(Origin::root(), ALICE.into(), 200));
         assert_ok!(BtcLedger::set_balance(Origin::root(), BOB.into(), 0));
         // transfer all and allow death
-        assert_ok!(BtcLedger::transfer(Some(ALICE.into()).into(), BOB.into(), 200));
+        assert_ok!(BtcLedger::transfer(
+            Some(ALICE.into()).into(),
+            BOB.into(),
+            200
+        ));
         assert_eq!(BtcLedger::total_balance(&ALICE.into()), 0);
         assert_eq!(BtcLedger::total_balance(&BOB.into()), 200);
 
@@ -209,7 +262,11 @@ fn transfer_all_works() {
         assert_ok!(BtcLedger::set_balance(Origin::root(), ALICE.into(), 200));
         assert_ok!(BtcLedger::set_balance(Origin::root(), BOB.into(), 0));
         // transfer all and keep alive
-        assert_ok!(BtcLedger::transfer(Some(ALICE.into()).into(), BOB.into(), 200));
+        assert_ok!(BtcLedger::transfer(
+            Some(ALICE.into()).into(),
+            BOB.into(),
+            200
+        ));
         assert_eq!(BtcLedger::total_balance(&ALICE.into()), 0);
         assert_eq!(BtcLedger::total_balance(&BOB.into()), 200);
     });

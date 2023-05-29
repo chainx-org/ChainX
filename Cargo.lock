@@ -10410,7 +10410,7 @@ dependencies = [
 
 [[package]]
 name = "xpallet-assets-bridge"
-version = "4.4.0"
+version = "4.5.0"
 dependencies = [
  "chainx-primitives",
  "ethabi",

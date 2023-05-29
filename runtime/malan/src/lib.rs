@@ -101,7 +101,7 @@ pub mod impls;
 mod migrations;
 
 use self::constants::{currency::*, time::*};
-use self::impls::{ChargeExtraFee, DealWithFees, DealWithBTCFees, SlowAdjustingFeeUpdate};
+use self::impls::{ChargeExtraFee, DealWithBTCFees, DealWithFees, SlowAdjustingFeeUpdate};
 
 // EVM
 use chainx_runtime_common::NORMAL_DISPATCH_RATIO;
@@ -1116,7 +1116,8 @@ impl xpallet_ethereum_chain_id::Config for Runtime {}
 impl xpallet_btc_ledger::Config for Runtime {
     type Balance = Balance;
     type Event = Event;
-    type CouncilOrigin = pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 2, 3>;
+    type CouncilOrigin =
+        pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 2, 3>;
     type PalletId = TreasuryPalletId;
 }
 
@@ -1331,7 +1332,7 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
-    BaseFeeMigration
+    BaseFeeMigration,
 >;
 
 pub struct BaseFeeMigration;

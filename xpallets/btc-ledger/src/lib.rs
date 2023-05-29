@@ -9,27 +9,28 @@
 #![allow(clippy::comparison_chain)]
 
 #[cfg(test)]
-mod tests;
-#[cfg(test)]
 mod mock;
+#[cfg(test)]
+mod tests;
 
 pub use self::imbalances::{NegativeImbalance, PositiveImbalance};
 use codec::{Codec, Decode, Encode, MaxEncodedLen};
 #[cfg(feature = "std")]
 use frame_support::traits::GenesisBuild;
 use frame_support::{
-    ensure, PalletId,
+    ensure,
     pallet_prelude::{DispatchResult, Get},
     traits::{
-        tokens::{fungible, DepositConsequence, WithdrawConsequence}, WithdrawReasons,
-        Currency, ExistenceRequirement, Imbalance, SignedImbalance, TryDrop,
+        tokens::{fungible, DepositConsequence, WithdrawConsequence},
+        Currency, ExistenceRequirement, Imbalance, SignedImbalance, TryDrop, WithdrawReasons,
     },
+    PalletId,
 };
 use scale_info::TypeInfo;
 use sp_runtime::{
     traits::{
-        AtLeast32BitUnsigned, Bounded, CheckedAdd, CheckedSub, MaybeSerializeDeserialize,
-        Saturating, StaticLookup, Zero, AccountIdConversion
+        AccountIdConversion, AtLeast32BitUnsigned, Bounded, CheckedAdd, CheckedSub,
+        MaybeSerializeDeserialize, Saturating, StaticLookup, Zero,
     },
     ArithmeticError, DispatchError, RuntimeDebug,
 };
@@ -104,7 +105,7 @@ pub mod pallet {
         pub fn set_balance(
             origin: OriginFor<T>,
             who: <T::Lookup as StaticLookup>::Source,
-            #[pallet::compact] new_free: T::Balance
+            #[pallet::compact] new_free: T::Balance,
         ) -> DispatchResultWithPostInfo {
             T::CouncilOrigin::try_origin(origin)
                 .map(|_| ())
@@ -129,7 +130,10 @@ pub mod pallet {
                 mem::drop(NegativeImbalance::<T>::new(old_free - new_free));
             }
 
-            Self::deposit_event(Event::BalanceSet { who, free: new_free });
+            Self::deposit_event(Event::BalanceSet {
+                who,
+                free: new_free,
+            });
 
             Ok(().into())
         }
@@ -164,15 +168,28 @@ pub mod pallet {
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         /// An account was created with some free balance.
-        Endowed { account: T::AccountId, free_balance: T::Balance },
+        Endowed {
+            account: T::AccountId,
+            free_balance: T::Balance,
+        },
         /// Transfer succeeded.
-        Transfer { from: T::AccountId, to: T::AccountId, amount: T::Balance },
+        Transfer {
+            from: T::AccountId,
+            to: T::AccountId,
+            amount: T::Balance,
+        },
         /// A balance was set by root.
         BalanceSet { who: T::AccountId, free: T::Balance },
         /// Some amount was deposited (e.g. for transaction fees).
-        Deposit { who: T::AccountId, amount: T::Balance },
+        Deposit {
+            who: T::AccountId,
+            amount: T::Balance,
+        },
         /// Some amount was withdrawn from the account (e.g. for transaction fees).
-        Withdraw { who: T::AccountId, amount: T::Balance }
+        Withdraw {
+            who: T::AccountId,
+            amount: T::Balance,
+        },
     }
 
     #[pallet::error]
@@ -180,7 +197,7 @@ pub mod pallet {
         /// Balance too low to send value
         InsufficientBalance,
         /// Beneficiary account must pre-exist
-        DeadAccount
+        DeadAccount,
     }
 
     /// The total units issued in the system.
@@ -196,7 +213,7 @@ pub mod pallet {
         T::AccountId,
         AccountData<T::Balance>,
         ValueQuery,
-        GetDefault
+        GetDefault,
     >;
 
     /// Storage version of the pallet.
@@ -212,14 +229,19 @@ pub mod pallet {
     #[cfg(feature = "std")]
     impl<T: Config> Default for GenesisConfig<T> {
         fn default() -> Self {
-            Self { balances: Default::default() }
+            Self {
+                balances: Default::default(),
+            }
         }
     }
 
     #[pallet::genesis_build]
     impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
         fn build(&self) {
-            let total = self.balances.iter().fold(Zero::zero(), |acc: T::Balance, &(_, n)| acc + n);
+            let total = self
+                .balances
+                .iter()
+                .fold(Zero::zero(), |acc: T::Balance, &(_, n)| acc + n);
 
             <TotalIssuance<T>>::put(total);
             <StorageVersion<T>>::put(Releases::V1_0_0);
@@ -280,7 +302,7 @@ impl<Balance: Saturating + Copy + Ord> AccountData<Balance> {
 // storage migration logic. This should match directly with the semantic versions of the Rust crate.
 #[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 enum Releases {
-    V1_0_0
+    V1_0_0,
 }
 
 impl Default for Releases {
@@ -315,11 +337,11 @@ impl<T: Config> Pallet<T> {
         account: &AccountData<T::Balance>,
     ) -> DepositConsequence {
         if amount.is_zero() {
-            return DepositConsequence::Success
+            return DepositConsequence::Success;
         }
 
         if TotalIssuance::<T>::get().checked_add(&amount).is_none() {
-            return DepositConsequence::Overflow
+            return DepositConsequence::Overflow;
         }
 
         match account.total().checked_add(&amount) {
@@ -336,15 +358,15 @@ impl<T: Config> Pallet<T> {
         account: &AccountData<T::Balance>,
     ) -> WithdrawConsequence<T::Balance> {
         if amount.is_zero() {
-            return WithdrawConsequence::Success
+            return WithdrawConsequence::Success;
         }
 
         if TotalIssuance::<T>::get().checked_sub(&amount).is_none() {
-            return WithdrawConsequence::Underflow
+            return WithdrawConsequence::Underflow;
         }
 
         if account.total().checked_sub(&amount).is_none() {
-            return WithdrawConsequence::NoFunds
+            return WithdrawConsequence::NoFunds;
         };
 
         // Enough free funds to have them be reduced.
@@ -379,18 +401,20 @@ impl<T: Config> Pallet<T> {
         AccountStore::<T>::try_mutate_exists(who, |maybe_account| {
             let is_new = maybe_account.is_none();
             let mut account = maybe_account.take().unwrap_or_default();
-            f(&mut account, is_new)
-                .map(move |result| {
-                    if is_new {
-                        frame_system::Pallet::<T>::inc_sufficients(who);
+            f(&mut account, is_new).map(move |result| {
+                if is_new {
+                    frame_system::Pallet::<T>::inc_sufficients(who);
 
-                        Self::deposit_event(Event::Endowed { account: who.clone(), free_balance: account.free });
-                    }
+                    Self::deposit_event(Event::Endowed {
+                        account: who.clone(),
+                        free_balance: account.free,
+                    });
+                }
 
-                    *maybe_account = Some(account);
+                *maybe_account = Some(account);
 
-                    result
-                })
+                result
+            })
         })
     }
 }
@@ -413,7 +437,10 @@ impl<T: Config> fungible::Inspect<T::AccountId> for Pallet<T> {
     fn can_deposit(who: &T::AccountId, amount: Self::Balance) -> DepositConsequence {
         Self::deposit_consequence(who, amount, &Self::account(who))
     }
-    fn can_withdraw(who: &T::AccountId, amount: Self::Balance) -> WithdrawConsequence<Self::Balance> {
+    fn can_withdraw(
+        who: &T::AccountId,
+        amount: Self::Balance,
+    ) -> WithdrawConsequence<Self::Balance> {
         Self::withdraw_consequence(who, amount, &Self::account(who))
     }
 }
@@ -421,7 +448,7 @@ impl<T: Config> fungible::Inspect<T::AccountId> for Pallet<T> {
 impl<T: Config> fungible::Mutate<T::AccountId> for Pallet<T> {
     fn mint_into(who: &T::AccountId, amount: Self::Balance) -> DispatchResult {
         if amount.is_zero() {
-            return Ok(())
+            return Ok(());
         }
 
         Self::try_mutate_account(who, |account, _is_new| -> DispatchResult {
@@ -433,7 +460,10 @@ impl<T: Config> fungible::Mutate<T::AccountId> for Pallet<T> {
 
         TotalIssuance::<T>::mutate(|t| *t += amount);
 
-        Self::deposit_event(Event::Deposit { who: who.clone(), amount });
+        Self::deposit_event(Event::Deposit {
+            who: who.clone(),
+            amount,
+        });
 
         Ok(())
     }
@@ -443,7 +473,7 @@ impl<T: Config> fungible::Mutate<T::AccountId> for Pallet<T> {
         amount: Self::Balance,
     ) -> Result<Self::Balance, DispatchError> {
         if amount.is_zero() {
-            return Ok(Self::Balance::zero())
+            return Ok(Self::Balance::zero());
         }
 
         Self::try_mutate_account(
@@ -458,7 +488,10 @@ impl<T: Config> fungible::Mutate<T::AccountId> for Pallet<T> {
 
         TotalIssuance::<T>::mutate(|t| *t -= amount);
 
-        Self::deposit_event(Event::Withdraw { who: who.clone(), amount });
+        Self::deposit_event(Event::Withdraw {
+            who: who.clone(),
+            amount,
+        });
 
         Ok(amount)
     }
@@ -658,7 +691,7 @@ where
     // Is a no-op if amount to be burned is zero.
     fn burn(mut amount: Self::Balance) -> Self::PositiveImbalance {
         if amount.is_zero() {
-            return PositiveImbalance::zero()
+            return PositiveImbalance::zero();
         }
         <TotalIssuance<T>>::mutate(|issued| {
             *issued = issued.checked_sub(&amount).unwrap_or_else(|| {
@@ -674,7 +707,7 @@ where
     // Is a no-op if amount to be issued it zero.
     fn issue(mut amount: Self::Balance) -> Self::NegativeImbalance {
         if amount.is_zero() {
-            return NegativeImbalance::zero()
+            return NegativeImbalance::zero();
         }
         <TotalIssuance<T>>::mutate(|issued| {
             *issued = issued.checked_add(&amount).unwrap_or_else(|| {
@@ -707,39 +740,33 @@ where
         _existence_requirement: ExistenceRequirement,
     ) -> DispatchResult {
         if value.is_zero() || transactor == dest {
-            return Ok(())
+            return Ok(());
         }
 
-        Self::try_mutate_account(
-            dest,
-            |to_account, _| -> DispatchResult {
-                Self::try_mutate_account(
+        Self::try_mutate_account(dest, |to_account, _| -> DispatchResult {
+            Self::try_mutate_account(transactor, |from_account, _| -> DispatchResult {
+                from_account.free = from_account
+                    .free
+                    .checked_sub(&value)
+                    .ok_or(Error::<T>::InsufficientBalance)?;
+
+                // NOTE: total stake being stored in the same type means that this could
+                // never overflow but better to be safe than sorry.
+                to_account.free = to_account
+                    .free
+                    .checked_add(&value)
+                    .ok_or(ArithmeticError::Overflow)?;
+
+                Self::ensure_can_withdraw(
                     transactor,
-                    |from_account, _| -> DispatchResult {
-                        from_account.free = from_account
-                            .free
-                            .checked_sub(&value)
-                            .ok_or(Error::<T>::InsufficientBalance)?;
+                    value,
+                    WithdrawReasons::TRANSFER,
+                    from_account.free,
+                )?;
 
-                        // NOTE: total stake being stored in the same type means that this could
-                        // never overflow but better to be safe than sorry.
-                        to_account.free = to_account
-                            .free
-                            .checked_add(&value)
-                            .ok_or(ArithmeticError::Overflow)?;
-
-                        Self::ensure_can_withdraw(
-                            transactor,
-                            value,
-                            WithdrawReasons::TRANSFER,
-                            from_account.free,
-                        )?;
-
-                        Ok(())
-                    },
-                )
-            },
-        )?;
+                Ok(())
+            })
+        })?;
 
         // Emit transfer event.
         Self::deposit_event(Event::Transfer {
@@ -751,7 +778,10 @@ where
         Ok(())
     }
 
-    fn slash(_who: &T::AccountId, value: Self::Balance) -> (Self::NegativeImbalance, Self::Balance) {
+    fn slash(
+        _who: &T::AccountId,
+        value: Self::Balance,
+    ) -> (Self::NegativeImbalance, Self::Balance) {
         (Self::NegativeImbalance::zero(), value)
     }
 
@@ -763,15 +793,21 @@ where
         value: Self::Balance,
     ) -> Result<Self::PositiveImbalance, DispatchError> {
         if value.is_zero() {
-            return Ok(PositiveImbalance::zero())
+            return Ok(PositiveImbalance::zero());
         }
 
         Self::try_mutate_account(
             who,
             |account, is_new| -> Result<Self::PositiveImbalance, DispatchError> {
                 ensure!(!is_new, Error::<T>::DeadAccount);
-                account.free = account.free.checked_add(&value).ok_or(ArithmeticError::Overflow)?;
-                Self::deposit_event(Event::Deposit { who: who.clone(), amount: value });
+                account.free = account
+                    .free
+                    .checked_add(&value)
+                    .ok_or(ArithmeticError::Overflow)?;
+                Self::deposit_event(Event::Deposit {
+                    who: who.clone(),
+                    amount: value,
+                });
                 Ok(PositiveImbalance::new(value))
             },
         )
@@ -784,7 +820,7 @@ where
     /// - `value` is so large it would cause the balance of `who` to overflow.
     fn deposit_creating(who: &T::AccountId, value: Self::Balance) -> Self::PositiveImbalance {
         if value.is_zero() {
-            return Self::PositiveImbalance::zero()
+            return Self::PositiveImbalance::zero();
         }
 
         Self::try_mutate_account(
@@ -797,7 +833,10 @@ where
                     None => return Ok(Self::PositiveImbalance::zero()),
                 };
 
-                Self::deposit_event(Event::Deposit { who: who.clone(), amount: value });
+                Self::deposit_event(Event::Deposit {
+                    who: who.clone(),
+                    amount: value,
+                });
 
                 Ok(PositiveImbalance::new(value))
             },
@@ -815,7 +854,7 @@ where
         _liveness: ExistenceRequirement,
     ) -> Result<Self::NegativeImbalance, DispatchError> {
         if value.is_zero() {
-            return Ok(NegativeImbalance::zero())
+            return Ok(NegativeImbalance::zero());
         }
 
         Self::try_mutate_account(
@@ -830,7 +869,10 @@ where
 
                 account.free = new_free_account;
 
-                Self::deposit_event(Event::Withdraw { who: who.clone(), amount: value });
+                Self::deposit_event(Event::Withdraw {
+                    who: who.clone(),
+                    amount: value,
+                });
                 Ok(NegativeImbalance::new(value))
             },
         )
@@ -861,4 +903,3 @@ where
         .unwrap_or_else(|_| SignedImbalance::Positive(Self::PositiveImbalance::zero()))
     }
 }
-

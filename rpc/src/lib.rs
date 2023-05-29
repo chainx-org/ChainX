@@ -196,7 +196,7 @@ where
         MiningWeight,
         BlockNumber,
     >,
-    C::Api: xpallet_btc_ledger_runtime_api::BtcLedgerApi<Block,AccountId,Balance>,
+    C::Api: xpallet_btc_ledger_runtime_api::BtcLedgerApi<Block, AccountId, Balance>,
     C::Api: xpallet_transaction_fee_rpc_runtime_api::XTransactionFeeApi<Block, Balance>,
     C::Api: fp_rpc::EthereumRuntimeRPCApi<Block>,
     C::Api: fp_rpc::ConvertTransactionRuntimeApi<Block>,
@@ -209,6 +209,7 @@ where
     use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
     use substrate_frame_rpc_system::{FullSystem, SystemApi};
     use xpallet_assets_rpc::{Assets, XAssetsApi};
+    use xpallet_btc_ledger_rpc::{BtcLedger, BtcLedgerApi};
     use xpallet_dex_spot_rpc::{XSpot, XSpotApi};
     use xpallet_gateway_bitcoin_rpc::{XGatewayBitcoin, XGatewayBitcoinApi};
     use xpallet_gateway_common_rpc::{XGatewayCommon, XGatewayCommonApi};
@@ -216,7 +217,6 @@ where
     use xpallet_mining_asset_rpc::{XMiningAsset, XMiningAssetApi};
     use xpallet_mining_staking_rpc::{XStaking, XStakingApi};
     use xpallet_transaction_fee_rpc::{XTransactionFee, XTransactionFeeApi};
-    use xpallet_btc_ledger_rpc::{BtcLedger, BtcLedgerApi};
 
     let mut io = jsonrpc_core::IoHandler::default();
     let FullDeps {
@@ -297,9 +297,7 @@ where
     io.extend_with(XGatewayCommonApi::to_delegate(XGatewayCommon::new(
         client.clone(),
     )));
-    io.extend_with(BtcLedgerApi::to_delegate(BtcLedger::new(
-        client.clone(),
-    )));
+    io.extend_with(BtcLedgerApi::to_delegate(BtcLedger::new(client.clone())));
 
     // EVM
     {

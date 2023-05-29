@@ -80,10 +80,7 @@ impl OnUnbalanced<BTCNegativeImbalance> for DealWithBTCFees {
 
         <xpallet_btc_ledger::Pallet<Runtime>>::resolve_creating(&beneficiary, fees);
         <frame_system::Pallet<Runtime>>::deposit_event(
-            xpallet_transaction_fee::Event::<Runtime>::BTCFeePaid(
-                beneficiary,
-                fee_amount
-            ),
+            xpallet_transaction_fee::Event::<Runtime>::BTCFeePaid(beneficiary, fee_amount),
         )
     }
 }

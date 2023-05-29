@@ -16,9 +16,7 @@ use sp_runtime::{
 
 use xp_rpc::{runtime_error_into_rpc_err, Result, RpcBalance};
 
-use xpallet_btc_ledger_runtime_api::{
-    BtcLedgerApi as BtcLedgerRuntimeApi,
-};
+use xpallet_btc_ledger_runtime_api::BtcLedgerApi as BtcLedgerRuntimeApi;
 
 pub struct BtcLedger<C, B> {
     client: Arc<C>,
@@ -42,18 +40,11 @@ where
 {
     /// Return balance for an account
     #[rpc(name = "btc_getBalance")]
-    fn btc_balance(
-        &self,
-        who: AccountId,
-        at: Option<BlockHash>,
-    ) -> Result<RpcBalance<Balance>>;
+    fn btc_balance(&self, who: AccountId, at: Option<BlockHash>) -> Result<RpcBalance<Balance>>;
 
     /// Return total balance of BTC
     #[rpc(name = "btc_getTotal")]
-    fn btc_total(
-        &self,
-        at: Option<BlockHash>,
-    ) -> Result<RpcBalance<Balance>>;
+    fn btc_total(&self, at: Option<BlockHash>) -> Result<RpcBalance<Balance>>;
 }
 
 impl<C, Block, AccountId, Balance> BtcLedgerApi<<Block as BlockT>::Hash, AccountId, Balance>
@@ -72,15 +63,16 @@ where
     ) -> Result<RpcBalance<Balance>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-        api.get_balance(&at, who).map(|b| b.into()).map_err(runtime_error_into_rpc_err)
+        api.get_balance(&at, who)
+            .map(|b| b.into())
+            .map_err(runtime_error_into_rpc_err)
     }
 
-    fn btc_total(
-        &self,
-        at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<RpcBalance<Balance>> {
+    fn btc_total(&self, at: Option<<Block as BlockT>::Hash>) -> Result<RpcBalance<Balance>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-        api.get_total(&at).map(|b| b.into()).map_err(runtime_error_into_rpc_err)
+        api.get_total(&at)
+            .map(|b| b.into())
+            .map_err(runtime_error_into_rpc_err)
     }
 }
