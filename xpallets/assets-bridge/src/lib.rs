@@ -224,7 +224,7 @@ pub mod pallet {
             eth_address: H160,
             eth_signature: EcdsaSignature,
         ) -> DispatchResult {
-            return Err(Error::<T>::InEmergency.into())
+            Err(Error::<T>::InEmergency.into())
             // let who = ensure_signed(origin)?;
             //
             // // ensure account_id and eth_address has not been mapped
@@ -375,7 +375,7 @@ pub mod pallet {
             amount: BalanceOf<T>,
             action: ActionType,
         ) -> DispatchResultWithPostInfo {
-            return Err(Error::<T>::InEmergency.into())
+            Err(Error::<T>::InEmergency.into())
             // let who = ensure_signed(origin)?;
             // ensure!(!amount.is_zero(), Error::<T>::ZeroBalance);
             //

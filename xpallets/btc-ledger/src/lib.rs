@@ -6,6 +6,7 @@
 //!
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::comparison_chain)]
 
 #[cfg(test)]
 mod tests;
@@ -381,7 +382,7 @@ impl<T: Config> Pallet<T> {
             f(&mut account, is_new)
                 .map(move |result| {
                     if is_new {
-                        frame_system::Pallet::<T>::inc_sufficients(&who);
+                        frame_system::Pallet::<T>::inc_sufficients(who);
 
                         Self::deposit_event(Event::Endowed { account: who.clone(), free_balance: account.free });
                     }
@@ -424,7 +425,7 @@ impl<T: Config> fungible::Mutate<T::AccountId> for Pallet<T> {
         }
 
         Self::try_mutate_account(who, |account, _is_new| -> DispatchResult {
-            Self::deposit_consequence(who, amount, &account).into_result()?;
+            Self::deposit_consequence(who, amount, account).into_result()?;
             account.free += amount;
 
             Ok(())
@@ -448,7 +449,7 @@ impl<T: Config> fungible::Mutate<T::AccountId> for Pallet<T> {
         Self::try_mutate_account(
             who,
             |account, _is_new| -> Result<T::Balance, DispatchError> {
-                Self::withdraw_consequence(who, amount, &account).into_result()?;
+                Self::withdraw_consequence(who, amount, account).into_result()?;
                 account.free -= amount;
 
                 Ok(amount)
@@ -551,7 +552,7 @@ mod imbalances {
             }
         }
         fn peek(&self) -> T::Balance {
-            self.0.clone()
+            self.0
         }
     }
 
@@ -610,7 +611,7 @@ mod imbalances {
             }
         }
         fn peek(&self) -> T::Balance {
-            self.0.clone()
+            self.0
         }
     }
 
