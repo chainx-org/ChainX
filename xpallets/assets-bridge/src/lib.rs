@@ -689,7 +689,7 @@ pub mod pallet {
             Ok(Pays::No.into())
         }
 
-        /// Swap XBTC(assets moudle) to BTC(btc ledger module)
+        /// Swap XBTC(assets moudle) to BTC(btc ledger module) by 1:1
         /// Note: for user who hold XBTC
         #[pallet::weight(0u64)]
         pub fn swap_xbtc_to_btc(
@@ -734,16 +734,18 @@ impl<T: Config> Pallet<T> {
     pub fn apply_direct_deposit(
         evm_account: H160,
         asset_id: AssetId,
-        amount: BalanceOf<T>,
+        amount: u128,
     ) -> DispatchResult {
         ensure!(!Self::is_in_emergency(asset_id), Error::<T>::InEmergency);
-        ensure!(!amount.is_zero(), Error::<T>::ZeroBalance);
+        ensure!(amount > 0, Error::<T>::ZeroBalance);
 
-        let erc20 = Self::erc20s(asset_id).ok_or(Error::<T>::ContractAddressHasNotMapped)?;
+        let mapping_account = AddressMappingOf::<T>::into_account_id(evm_account);
+        <T as pallet_evm::Config>::Currency::deposit_creating(
+            &mapping_account,
+            amount.unique_saturated_into(),
+        );
 
-        let inputs = mint_into_encode(evm_account, amount.unique_saturated_into());
-
-        Self::call_evm(erc20, inputs)
+        Ok(())
     }
 
     fn call_evm(erc20: H160, inputs: Vec<u8>) -> DispatchResult {
