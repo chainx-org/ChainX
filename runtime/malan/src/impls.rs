@@ -24,11 +24,11 @@ use xpallet_mining_staking::Call as XStakingCall;
 
 use chainx_primitives::{AccountId, Balance};
 
-use crate::{Authorship, Balances, BtcLedger, Call, Runtime};
+use crate::{Authorship, Balances, Call, Runtime, XBtcLedger};
 
 type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
 
-type BTCNegativeImbalance = <BtcLedger as Currency<AccountId>>::NegativeImbalance;
+type BTCNegativeImbalance = <XBtcLedger as Currency<AccountId>>::NegativeImbalance;
 
 pub struct Author;
 impl OnUnbalanced<NegativeImbalance> for Author {

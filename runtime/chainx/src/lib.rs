@@ -1153,13 +1153,13 @@ impl pallet_evm::Config for Runtime {
     type CallOrigin = EnsureAddressRoot<AccountId>;
     type WithdrawOrigin = EnsureAddressNever<AccountId>;
     type AddressMapping = HashedAddressMapping<BlakeTwo256>;
-    type Currency = BtcLedger;
+    type Currency = XBtcLedger;
     type Event = Event;
     type Runner = pallet_evm::runner::stack::Runner<Self>;
     type PrecompilesType = ChainXPrecompiles<Runtime>;
     type PrecompilesValue = PrecompilesValue;
     type ChainId = EthereumChainId;
-    type OnChargeTransaction = pallet_evm::EVMCurrencyAdapter<BtcLedger, DealWithBTCFees>;
+    type OnChargeTransaction = pallet_evm::EVMCurrencyAdapter<XBtcLedger, DealWithBTCFees>;
     type BlockGasLimit = BlockGasLimit;
     type FindAuthor = ();
     type WeightInfo = pallet_evm::weights::SubstrateWeight<Self>;
@@ -1283,7 +1283,7 @@ construct_runtime!(
         // Dependency on xpallet_assets and pallet_evm
         XAssetsBridge: xpallet_assets_bridge::{Pallet, Call, Storage, Config<T>, Event<T>} = 45,
 
-        BtcLedger: xpallet_btc_ledger::{Pallet, Call, Storage, Config<T>, Event<T>} = 46,
+        XBtcLedger: xpallet_btc_ledger::{Pallet, Call, Storage, Config<T>, Event<T>} = 46,
     }
 );
 
@@ -1695,10 +1695,10 @@ impl_runtime_apis! {
 
     impl xpallet_btc_ledger_runtime_api::BtcLedgerApi<Block, AccountId, Balance> for Runtime {
         fn get_balance(who: AccountId) -> Balance {
-            BtcLedger::free_balance(&who)
+            XBtcLedger::free_balance(&who)
         }
         fn get_total() -> Balance {
-            BtcLedger::get_total()
+            XBtcLedger::get_total()
         }
     }
 
