@@ -99,7 +99,7 @@ pub mod pallet {
         /// Set the balances of a given account.
         ///
         /// This will alter `FreeBalance` in storage. it will
-        /// also alter the total issuance of the system (`TotalIssuance`) appropriately.
+        /// also alter the total issuance of the system (`TotalInComing`) appropriately.
         /// The dispatch origin for this call is `root`.
         #[pallet::weight(0)]
         pub fn set_balance(
@@ -202,8 +202,8 @@ pub mod pallet {
 
     /// The total units issued in the system.
     #[pallet::storage]
-    #[pallet::getter(fn total_issuance)]
-    pub type TotalIssuance<T: Config> = StorageValue<_, T::Balance, ValueQuery>;
+    #[pallet::getter(fn total_incoming)]
+    pub type TotalInComing<T: Config> = StorageValue<_, T::Balance, ValueQuery>;
 
     /// The Balances pallet example of storing the balance of an account.
     #[pallet::storage]
@@ -243,7 +243,7 @@ pub mod pallet {
                 .iter()
                 .fold(Zero::zero(), |acc: T::Balance, &(_, n)| acc + n);
 
-            <TotalIssuance<T>>::put(total);
+            <TotalInComing<T>>::put(total);
             <StorageVersion<T>>::put(Releases::V1_0_0);
 
             // ensure no duplicates exist.
@@ -323,7 +323,7 @@ impl<T: Config> Pallet<T> {
 
     /// Get the total balance
     pub fn get_total() -> T::Balance {
-        TotalIssuance::<T>::get()
+        TotalInComing::<T>::get()
     }
 
     /// Get both the free balances of an account.
@@ -340,7 +340,7 @@ impl<T: Config> Pallet<T> {
             return DepositConsequence::Success;
         }
 
-        if TotalIssuance::<T>::get().checked_add(&amount).is_none() {
+        if TotalInComing::<T>::get().checked_add(&amount).is_none() {
             return DepositConsequence::Overflow;
         }
 
@@ -361,7 +361,7 @@ impl<T: Config> Pallet<T> {
             return WithdrawConsequence::Success;
         }
 
-        if TotalIssuance::<T>::get().checked_sub(&amount).is_none() {
+        if TotalInComing::<T>::get().checked_sub(&amount).is_none() {
             return WithdrawConsequence::Underflow;
         }
 
@@ -423,7 +423,7 @@ impl<T: Config> fungible::Inspect<T::AccountId> for Pallet<T> {
     type Balance = T::Balance;
 
     fn total_issuance() -> Self::Balance {
-        TotalIssuance::<T>::get()
+        TotalInComing::<T>::get()
     }
     fn minimum_balance() -> Self::Balance {
         Self::Balance::default()
@@ -458,7 +458,7 @@ impl<T: Config> fungible::Mutate<T::AccountId> for Pallet<T> {
             Ok(())
         })?;
 
-        TotalIssuance::<T>::mutate(|t| *t += amount);
+        TotalInComing::<T>::mutate(|t| *t += amount);
 
         Self::deposit_event(Event::Deposit {
             who: who.clone(),
@@ -486,7 +486,7 @@ impl<T: Config> fungible::Mutate<T::AccountId> for Pallet<T> {
             },
         )?;
 
-        TotalIssuance::<T>::mutate(|t| *t -= amount);
+        TotalInComing::<T>::mutate(|t| *t -= amount);
 
         Self::deposit_event(Event::Withdraw {
             who: who.clone(),
@@ -651,14 +651,14 @@ mod imbalances {
     impl<T: Config> Drop for PositiveImbalance<T> {
         /// Basic drop handler will just square up the total issuance.
         fn drop(&mut self) {
-            <super::TotalIssuance<T>>::mutate(|v| *v = v.saturating_add(self.0));
+            <super::TotalInComing<T>>::mutate(|v| *v = v.saturating_add(self.0));
         }
     }
 
     impl<T: Config> Drop for NegativeImbalance<T> {
         /// Basic drop handler will just square up the total issuance.
         fn drop(&mut self) {
-            <super::TotalIssuance<T>>::mutate(|v| *v = v.saturating_sub(self.0));
+            <super::TotalInComing<T>>::mutate(|v| *v = v.saturating_sub(self.0));
         }
     }
 }
@@ -680,7 +680,7 @@ where
     }
 
     fn total_issuance() -> Self::Balance {
-        <TotalIssuance<T>>::get()
+        <TotalInComing<T>>::get()
     }
 
     fn minimum_balance() -> Self::Balance {
@@ -693,7 +693,7 @@ where
         if amount.is_zero() {
             return PositiveImbalance::zero();
         }
-        <TotalIssuance<T>>::mutate(|issued| {
+        <TotalInComing<T>>::mutate(|issued| {
             *issued = issued.checked_sub(&amount).unwrap_or_else(|| {
                 amount = *issued;
                 Zero::zero()
@@ -709,7 +709,7 @@ where
         if amount.is_zero() {
             return NegativeImbalance::zero();
         }
-        <TotalIssuance<T>>::mutate(|issued| {
+        <TotalInComing<T>>::mutate(|issued| {
             *issued = issued.checked_add(&amount).unwrap_or_else(|| {
                 amount = Self::Balance::max_value() - *issued;
                 Self::Balance::max_value()

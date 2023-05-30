@@ -39,12 +39,16 @@ where
     Balance: Display + FromStr,
 {
     /// Return balance for an account
-    #[rpc(name = "btc_getBalance")]
-    fn btc_balance(&self, who: AccountId, at: Option<BlockHash>) -> Result<RpcBalance<Balance>>;
+    #[rpc(name = "btcledger_getBalance")]
+    fn btcledger_balance(
+        &self,
+        who: AccountId,
+        at: Option<BlockHash>,
+    ) -> Result<RpcBalance<Balance>>;
 
-    /// Return total balance of BTC
-    #[rpc(name = "btc_getTotal")]
-    fn btc_total(&self, at: Option<BlockHash>) -> Result<RpcBalance<Balance>>;
+    /// Return total incoming balance of BTC
+    #[rpc(name = "btcledger_getTotalInComing")]
+    fn btcledger_total(&self, at: Option<BlockHash>) -> Result<RpcBalance<Balance>>;
 }
 
 impl<C, Block, AccountId, Balance> BtcLedgerApi<<Block as BlockT>::Hash, AccountId, Balance>
@@ -56,7 +60,7 @@ where
     AccountId: Clone + Display + Codec,
     Balance: Clone + Copy + Display + FromStr + Codec + Zero,
 {
-    fn btc_balance(
+    fn btcledger_balance(
         &self,
         who: AccountId,
         at: Option<<Block as BlockT>::Hash>,
@@ -68,7 +72,7 @@ where
             .map_err(runtime_error_into_rpc_err)
     }
 
-    fn btc_total(&self, at: Option<<Block as BlockT>::Hash>) -> Result<RpcBalance<Balance>> {
+    fn btcledger_total(&self, at: Option<<Block as BlockT>::Hash>) -> Result<RpcBalance<Balance>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
         api.get_total(&at)
