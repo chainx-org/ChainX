@@ -722,6 +722,35 @@ pub mod pallet {
 
             Ok(Pays::No.into())
         }
+
+        /// Transfer BTC(btc ledger module) from substrate account to evm address
+        /// Note: for user who hold BTC
+        #[pallet::weight(0u64)]
+        pub fn transfer_btc_to_evm(
+            origin: OriginFor<T>,
+            amount: u128,
+            eth_address: H160,
+        ) -> DispatchResultWithPostInfo {
+            let xbtc_asset_id = 1;
+
+            let who = ensure_signed(origin)?;
+            ensure!(
+                !Self::is_in_emergency(xbtc_asset_id),
+                Error::<T>::InEmergency
+            );
+            ensure!(amount > 0, Error::<T>::ZeroBalance);
+
+            let mapping_account = AddressMappingOf::<T>::into_account_id(eth_address);
+
+            <T as pallet_evm::Config>::Currency::transfer(
+                &who,
+                &mapping_account,
+                amount.unique_saturated_into(),
+                ExistenceRequirement::AllowDeath,
+            )?;
+
+            Ok(Pays::No.into())
+        }
     }
 }
 

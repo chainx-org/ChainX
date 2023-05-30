@@ -2,7 +2,7 @@
 A bridge from [substrate assets(wasm)](../assets) into [ERC20 tokens(evm)](../../contracts/deprecated_AssetsBridgeErc20.sol).
 
 
-## Change Note(for compatibility with previous)
+## Change Note(for ChainX v5.0.0 compatibility with previous)
 After use BTC as chainx-evm gas
 
 - `claim_account`: **deprecated**
@@ -12,6 +12,7 @@ After use BTC as chainx-evm gas
 - `set_hot_account`: **new**
 - `deposit_pcx_to_evm`: **new**
 - `swap_xbtc_to_btc`: **new**
+- `transfer_btc_to_evm`: **new**
 - `force_unregister`: **require admin**
 - other functions are **remained*
 
