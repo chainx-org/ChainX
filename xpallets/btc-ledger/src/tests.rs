@@ -110,7 +110,7 @@ fn reward_should_work() {
             amount: 10,
         }));
         assert_eq!(BtcLedger::total_balance(&ALICE.into()), 20);
-        assert_eq!(btc_ledger::TotalIssuance::<Test>::get(), 40);
+        assert_eq!(btc_ledger::TotalInComing::<Test>::get(), 40);
     });
 }
 
@@ -175,7 +175,7 @@ fn withdrawing_balance_should_work() {
         }));
 
         assert_eq!(BtcLedger::free_balance(AccountId32::from(BOB)), 100);
-        assert_eq!(btc_ledger::TotalIssuance::<Test>::get(), 110);
+        assert_eq!(btc_ledger::TotalInComing::<Test>::get(), 110);
 
         let _ = BtcLedger::withdraw(&ALICE.into(), 10, WithdrawReasons::TRANSFER, KeepAlive);
 
@@ -185,7 +185,7 @@ fn withdrawing_balance_should_work() {
         }));
 
         assert_eq!(BtcLedger::free_balance(AccountId32::from(BOB)), 100);
-        assert_eq!(btc_ledger::TotalIssuance::<Test>::get(), 100);
+        assert_eq!(btc_ledger::TotalInComing::<Test>::get(), 100);
     });
 }
 

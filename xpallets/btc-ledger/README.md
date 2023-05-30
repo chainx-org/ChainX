@@ -11,31 +11,31 @@ The users can see their bitcoin balance on **metamask**.
 ## RPC
 ```json
 "btcledger": {
-        "getBalance": {
-            "description": "get the btc balance of the account",
-            "params": [
-                {
-                    "name": "who",
-                    "type": "AccountId"
-                },
-                {
-                    "name": "at",
-                    "type": "Hash",
-                    "isOptional": true
-                }
-            ],
-            "type": "RpcBalance<Balance>"
-        },
-        "getTotalInComing": {
-            "description": "get the total incoming BTC balance",
-            "params": [
-                {
-                    "name": "at",
-                    "type": "Hash",
-                    "isOptional": true
-                }
-            ],
-            "type": "RpcBalance<Balance>"
-        }
+    "getBalance": {
+        "description": "get the btc balance of the account",
+        "params": [
+            {
+                "name": "who",
+                "type": "AccountId"
+            },
+            {
+                "name": "at",
+                "type": "Hash",
+                "isOptional": true
+            }
+        ],
+        "type": "RpcBalance<Balance>"
+    },
+    "getTotalInComing": {
+        "description": "get the total incoming BTC balance",
+        "params": [
+            {
+                "name": "at",
+                "type": "Hash",
+                "isOptional": true
+            }
+        ],
+        "type": "RpcBalance<Balance>"
     }
+}
 ```
