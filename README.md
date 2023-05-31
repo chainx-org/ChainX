@@ -50,6 +50,15 @@ Please refer to the [docs](https://chainx-org.github.io/documentation) for build
 
 Any kinds of contributions are highly welcome. Feel free to file an issue if you have any question or run into any issues.
 
+## Metamask config for BTC
+```
+Network name: ChainX
+RPC URL: https://mainnet.chainx.org/rpc
+Chain ID: 1501
+Currency symbol: BTC
+Block explorer URL (Optional): https://evm.chainx.org/
+```
+
 ## License
 
 [GPL v3](LICENSE)
