@@ -1,4 +1,4 @@
-// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2023 ChainX Project Authors. Licensed under GPL-3.0.
 
 //! The Substrate Node Template runtime. This can be compiled with `#[no_std]`, ready for Wasm.
 #![allow(clippy::unnecessary_cast)]
@@ -101,7 +101,7 @@ pub mod impls;
 mod migrations;
 
 use self::constants::{currency::*, time::*};
-use self::impls::{ChargeExtraFee, DealWithFees, SlowAdjustingFeeUpdate};
+use self::impls::{ChargeExtraFee, DealWithBTCFees, DealWithFees, SlowAdjustingFeeUpdate};
 
 // EVM
 use chainx_runtime_common::NORMAL_DISPATCH_RATIO;
@@ -123,10 +123,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("chainx"),
     impl_name: create_runtime_str!("chainx-malan"),
     authoring_version: 1,
-    spec_version: 27,
+    spec_version: 29,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 5,
+    transaction_version: 6,
     state_version: 0,
 };
 
@@ -1113,6 +1113,14 @@ impl pallet_sudo::Config for Runtime {
 
 impl xpallet_ethereum_chain_id::Config for Runtime {}
 
+impl xpallet_btc_ledger::Config for Runtime {
+    type Balance = Balance;
+    type Event = Event;
+    type CouncilOrigin =
+        pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 2, 3>;
+    type PalletId = TreasuryPalletId;
+}
+
 /// Current approximation of the gas/s consumption considering
 /// EVM execution over compiled WASM (on 4.4Ghz CPU).
 /// Given the 500ms Weight, from which 75% only are used for transactions,
@@ -1149,13 +1157,13 @@ impl pallet_evm::Config for Runtime {
     type CallOrigin = EnsureAddressRoot<AccountId>;
     type WithdrawOrigin = EnsureAddressNever<AccountId>;
     type AddressMapping = HashedAddressMapping<BlakeTwo256>;
-    type Currency = Balances;
+    type Currency = XBtcLedger;
     type Event = Event;
     type Runner = pallet_evm::runner::stack::Runner<Self>;
     type PrecompilesType = ChainXPrecompiles<Runtime>;
     type PrecompilesValue = PrecompilesValue;
     type ChainId = EthereumChainId;
-    type OnChargeTransaction = pallet_evm::EVMCurrencyAdapter<Balances, impls::DealWithFees>;
+    type OnChargeTransaction = pallet_evm::EVMCurrencyAdapter<XBtcLedger, DealWithBTCFees>;
     type BlockGasLimit = BlockGasLimit;
     type FindAuthor = ();
     type WeightInfo = pallet_evm::weights::SubstrateWeight<Self>;
@@ -1166,8 +1174,6 @@ impl pallet_ethereum::Config for Runtime {
     type StateRoot = pallet_ethereum::IntermediateStateRoot<Self>;
 }
 
-// Make sure that DefaultBaseFeePerGas more than CHAINS_VALUE_ADAPTOR in pallet_evm.
-const_assert!(BASE_FEE >= pallet_evm::CHAINS_VALUE_ADAPTOR);
 parameter_types! {
     pub DefaultBaseFeePerGas: U256 = U256::from(BASE_FEE);
 }
@@ -1283,6 +1289,8 @@ construct_runtime!(
 
         // Dependency on xpallet_assets and pallet_evm
         XAssetsBridge: xpallet_assets_bridge::{Pallet, Call, Storage, Config<T>, Event<T>} = 45,
+
+        XBtcLedger: xpallet_btc_ledger::{Pallet, Call, Storage, Config<T>, Event<T>} = 46,
     }
 );
 
@@ -1324,34 +1332,8 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
-    (
-        SchedulerMigrationV3,
-        EthereumChainIdMigration,
-        BaseFeeMigration,
-        XAssetsBridgeMigration,
-    ),
+    BaseFeeMigration,
 >;
-
-// Migration for scheduler pallet to move from a plain Call to a CallOrHash.
-pub struct SchedulerMigrationV3;
-impl OnRuntimeUpgrade for SchedulerMigrationV3 {
-    fn on_runtime_upgrade() -> Weight {
-        frame_support::log::info!("🔍️ SchedulerMigrationV3 start");
-        let w = Scheduler::migrate_v2_to_v3();
-        frame_support::log::info!("🚀 SchedulerMigrationV3 end");
-        w
-    }
-}
-
-pub struct EthereumChainIdMigration;
-impl OnRuntimeUpgrade for EthereumChainIdMigration {
-    fn on_runtime_upgrade() -> Weight {
-        frame_support::log::info!("🔍️ EthereumChainIdMigration(1502) start");
-        let w = EthereumChainId::set_chain_id_inner(1502u64);
-        frame_support::log::info!("🚀 EthereumChainIdMigration(1502) end");
-        w
-    }
-}
 
 pub struct BaseFeeMigration;
 impl OnRuntimeUpgrade for BaseFeeMigration {
@@ -1359,21 +1341,6 @@ impl OnRuntimeUpgrade for BaseFeeMigration {
         frame_support::log::info!("🔍️ BaseFeeMigration start");
         let w = BaseFee::set_base_fee_per_gas_inner(DefaultBaseFeePerGas::get());
         frame_support::log::info!("🚀 BaseFeeMigration end");
-        w
-    }
-}
-
-pub struct XAssetsBridgeMigration;
-impl OnRuntimeUpgrade for XAssetsBridgeMigration {
-    fn on_runtime_upgrade() -> Weight {
-        frame_support::log::info!("🔍️ XAssetsBridgeMigration start");
-        let admin = [
-            166u8, 42, 221, 26, 243, 188, 249, 37, 106, 162, 222, 240, 254, 161, 185, 100, 140,
-            183, 37, 23, 204, 238, 146, 168, 145, 220, 41, 3, 169, 9, 62, 82,
-        ];
-
-        let w = XAssetsBridge::set_admin_inner(admin.into());
-        frame_support::log::info!("🚀 XAssetsBridgeMigration end with initialization");
         w
     }
 }
@@ -1730,6 +1697,15 @@ impl_runtime_apis! {
 
         fn get_btc_block_header(txid: H256) -> Option<BtcHeaderInfo> {
             XGatewayBitcoin::get_btc_block_header(txid)
+        }
+    }
+
+    impl xpallet_btc_ledger_runtime_api::BtcLedgerApi<Block, AccountId, Balance> for Runtime {
+        fn get_balance(who: AccountId) -> Balance {
+            XBtcLedger::free_balance(&who)
+        }
+        fn get_total() -> Balance {
+            XBtcLedger::get_total()
         }
     }
 

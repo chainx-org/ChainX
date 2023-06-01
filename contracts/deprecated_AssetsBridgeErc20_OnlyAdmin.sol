@@ -9,7 +9,7 @@ import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.4.1/contr
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.4.1/contracts/security/Pausable.sol";
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.4.1/contracts/access/Ownable.sol";
 
-import "./AssetsBridgeAdaptor.sol";
+import "./deprecated_AssetsBridgeAdaptor.sol";
 
 /**
  * @dev Implementation of the {IERC20} interface.

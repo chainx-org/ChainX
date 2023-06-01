@@ -1,6 +1,6 @@
 [package]
 name = "xpallet-assets-bridge"
-version = "4.4.0"
+version = "5.0.0"
 authors = ["The ChainX Authors"]
 edition = "2021"
 
@@ -19,7 +19,7 @@ frame-system = { git = "https://github.com/paritytech/substrate", branch = "polk
 
 chainx-primitives = { path = "../../primitives", default-features = false }
 xpallet-assets = { path = "../assets", default-features = false }
-pallet-evm = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18", default-features = false, features = ["chainx-adaptor"] }
+pallet-evm = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc", default-features = false, features = ["chainx-adaptor"] }
 
 [dev-dependencies]
 ethabi = { version = "17.0.0" }

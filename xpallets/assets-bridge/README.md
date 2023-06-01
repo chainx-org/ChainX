@@ -1,5 +1,20 @@
-# AssetsBridge
-A bridge from [substrate assets(wasm)](../assets) into [ERC20 tokens(evm)](../../contracts/AssetsBridgeErc20.sol).
+# [deprecated]AssetsBridge
+A bridge from [substrate assets(wasm)](../assets) into [ERC20 tokens(evm)](../../contracts/deprecated_AssetsBridgeErc20.sol).
+
+
+## Change Note(for ChainX v5.0.0 compatibility with previous)
+After use BTC as chainx-evm gas
+
+- `claim_account`: **deprecated**
+- `deposit`: **deprecated**
+- `withdraw`: **deprecated**
+- `teleport`: **deprecated**
+- `set_hot_account`: **new**
+- `deposit_pcx_to_evm`: **new**
+- `swap_xbtc_to_btc`: **new**
+- `transfer_btc_to_evm`: **new**
+- `force_unregister`: **require admin**
+- other functions are **remained*
 
 ## Overview
 
@@ -69,4 +84,4 @@ the sign data: "evm:d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56d
 
 For safety, AssetsBridge now only allows dependent 
 [AssetsBridge assets(wasm)](../assets) and 
-[AssetsBridge tokens(evm)](../../contracts/AssetsBridgeErc20.sol).
+[AssetsBridge tokens(evm)](../../contracts/deprecated_AssetsBridgeErc20.sol).

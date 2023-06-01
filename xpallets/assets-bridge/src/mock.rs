@@ -1,4 +1,4 @@
-// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2023 ChainX Project Authors. Licensed under GPL-3.0.
 
 pub use crate as xassets_bridge;
 pub use xassets_bridge::{AssetId, Config, Error, Event as XAssetsBridgeEvent};

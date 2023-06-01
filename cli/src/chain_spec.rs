@@ -1,4 +1,4 @@
-// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2023 ChainX Project Authors. Licensed under GPL-3.0.
 
 #![allow(unused)]
 use std::collections::BTreeMap;
@@ -555,6 +555,7 @@ fn mainnet_genesis(
             sp_runtime::Permill::from_parts(125_000),
         ),
         x_assets_bridge: chainx::XAssetsBridgeConfig { admin_key: None },
+        x_btc_ledger: Default::default(),
     }
 }
 
@@ -809,6 +810,7 @@ fn malan_genesis(
             sp_runtime::Permill::from_parts(125_000),
         ),
         x_assets_bridge: malan::XAssetsBridgeConfig { admin_key: None },
+        x_btc_ledger: Default::default(),
     }
 }
 
@@ -986,5 +988,6 @@ fn build_dev_genesis(
             sp_runtime::Permill::from_parts(125_000),
         ),
         x_assets_bridge: dev::XAssetsBridgeConfig { admin_key: None },
+        x_btc_ledger: Default::default(),
     }
 }

@@ -1,4 +1,4 @@
-// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2023 ChainX Project Authors. Licensed under GPL-3.0.
 
 use sp_runtime::traits::BlakeTwo256;
 
@@ -45,6 +45,7 @@ pub trait RuntimeApiCollection:
         MiningWeight,
         BlockNumber,
     > + xpallet_transaction_fee_rpc_runtime_api::XTransactionFeeApi<Block, Balance>
+    + xpallet_btc_ledger_runtime_api::BtcLedgerApi<Block, AccountId, Balance>
     + fp_rpc::EthereumRuntimeRPCApi<Block>
     + fp_rpc::ConvertTransactionRuntimeApi<Block>
 where
@@ -91,6 +92,7 @@ where
             MiningWeight,
             BlockNumber,
         > + xpallet_transaction_fee_rpc_runtime_api::XTransactionFeeApi<Block, Balance>
+        + xpallet_btc_ledger_runtime_api::BtcLedgerApi<Block, AccountId, Balance>
         + fp_rpc::EthereumRuntimeRPCApi<Block>
         + fp_rpc::ConvertTransactionRuntimeApi<Block>,
     <Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,

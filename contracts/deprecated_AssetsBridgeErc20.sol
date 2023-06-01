@@ -9,7 +9,7 @@ import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.4.1/contr
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.4.1/contracts/security/Pausable.sol";
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.4.1/contracts/access/Ownable.sol";
 
-import "./AssetsBridgeAdaptor.sol";
+import "./deprecated_AssetsBridgeAdaptor.sol";
 
 /**
  * @dev Implementation of the {IERC20} interface.
@@ -36,7 +36,7 @@ import "./AssetsBridgeAdaptor.sol";
  * functions have been added to mitigate the well-known issues around setting
  * allowances. See {IERC20-approve}.
  */
-contract AssetsBridgeErc20 is Context, IERC20, IERC20Metadata, Pausable, Ownable, IAssetsBridge, AssetsBridgeOwner {
+contract AssetsBridgeErc20 is Context, IERC20, IERC20Metadata, Pausable, Ownable, IAssetsBridge, AssetsBridgeAdminOrOwner {
     mapping(address => uint256) private _balances;
 
     mapping(address => mapping(address => uint256)) private _allowances;

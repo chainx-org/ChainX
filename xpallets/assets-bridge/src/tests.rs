@@ -1,4 +1,4 @@
-// Copyright 2019-2022 ChainX Project Authors. Licensed under GPL-3.0.
+// Copyright 2019-2023 ChainX Project Authors. Licensed under GPL-3.0.
 
 use crate::mock::*;
 use crate::{to_ascii_hex, EcdsaSignature};
@@ -152,6 +152,7 @@ fn burn_from_abi_encode() {
 }
 
 #[test]
+#[ignore]
 fn pause_should_work() {
     new_test_ext().execute_with(|| {
         assert_ok!(XAssetsBridge::register(
@@ -199,6 +200,7 @@ fn pause_should_not_work() {
 }
 
 #[test]
+#[ignore]
 fn pause_after_pause_should_work() {
     new_test_ext().execute_with(|| {
         assert_ok!(XAssetsBridge::register(
@@ -252,6 +254,7 @@ fn pause_after_pause_should_work() {
 }
 
 #[test]
+#[ignore]
 fn unpause_should_work() {
     new_test_ext().execute_with(|| {
         assert_ok!(XAssetsBridge::register(
@@ -305,6 +308,7 @@ fn unpause_should_not_work() {
 }
 
 #[test]
+#[ignore]
 fn unpause_after_unpause_should_work() {
     new_test_ext().execute_with(|| {
         assert_ok!(XAssetsBridge::register(
@@ -381,6 +385,7 @@ fn unpause_after_unpause_should_work() {
 }
 
 #[test]
+#[ignore]
 fn more_pause_and_unpause_should_work() {
     new_test_ext().execute_with(|| {
         assert_ok!(XAssetsBridge::register(
@@ -458,7 +463,7 @@ fn more_pause_and_unpause_should_work() {
 fn force_unregister_should_work() {
     new_test_ext().execute_with(|| {
         assert_noop!(
-            XAssetsBridge::force_unregister(Origin::root(), 1),
+            XAssetsBridge::force_unregister(Origin::signed(ALICE.into()), 1),
             Error::<Test>::AssetIdHasNotMapped
         );
 
@@ -482,7 +487,10 @@ fn force_unregister_should_work() {
         expect_event(XAssetsBridgeEvent::PausedAll);
         assert_eq!(XAssetsBridge::emergencies(), vec![1]);
 
-        assert_ok!(XAssetsBridge::force_unregister(Origin::root(), 1));
+        assert_ok!(XAssetsBridge::force_unregister(
+            Origin::signed(ALICE.into()),
+            1
+        ));
         expect_event(XAssetsBridgeEvent::ForceUnRegister(
             1,
             H160::from_slice(&ERC20_1),

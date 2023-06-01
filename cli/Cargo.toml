@@ -1,6 +1,6 @@
 [package]
 name = "chainx-cli"
-version = "4.4.0"
+version = "5.0.0"
 authors = ["The ChainX Authors"]
 description = "Implementation of protocol https://chainx.org in Rust based on the Substrate framework."
 edition = "2021"
@@ -64,6 +64,7 @@ xp-protocol = { path = "../primitives/protocol" }
 
 xpallet-gateway-bitcoin = { path = "../xpallets/gateway/bitcoin" }
 xpallet-gateway-common = { path = "../xpallets/gateway/common" }
+xpallet-btc-ledger = { path = "../xpallets/btc-ledger" }
 
 [build-dependencies]
 substrate-build-script-utils = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }

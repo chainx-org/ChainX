@@ -1,6 +1,6 @@
 [package]
 name = "chainx-runtime"
-version = "4.4.0"
+version = "5.0.0"
 authors = ["The ChainX Authors"]
 edition = "2021"
 
@@ -95,25 +95,27 @@ xpallet-system = { path = "../../xpallets/system", default-features = false }
 xpallet-support = { path = "../../xpallets/support", default-features = false }
 xpallet-transaction-fee = { path = "../../xpallets/transaction-fee", default-features = false }
 xpallet-transaction-fee-rpc-runtime-api = { path = "../../xpallets/transaction-fee/rpc/runtime-api", default-features = false }
+xpallet-btc-ledger = { path = "../../xpallets/btc-ledger", default-features = false }
+xpallet-btc-ledger-runtime-api = { path = "../../xpallets/btc-ledger/rpc/runtime-api", default-features = false }
 
 # Evm
-pallet-evm = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18", default-features = false, features = ["chainx-adaptor"] }
-pallet-ethereum = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18", default-features = false }
-pallet-base-fee = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18", default-features = false }
+pallet-evm = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc", default-features = false, features = ["chainx-adaptor"] }
+pallet-ethereum = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc", default-features = false }
+pallet-base-fee = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc", default-features = false }
 xpallet-ethereum-chain-id = { path = "../../xpallets/ethereum-chain-id", default-features = false }
 xpallet-assets-bridge = { path = "../../xpallets/assets-bridge", default-features = false }
 
 # EVM precompile
-fp-evm = { git = "https://github.com/chainx-org/frontier", default-features = false, branch = "polkadot-v0.9.18" }
-pallet-evm-precompile-bn128 = { git = "https://github.com/chainx-org/frontier", default-features = false, branch = "polkadot-v0.9.18" }
-pallet-evm-precompile-dispatch = { git = "https://github.com/chainx-org/frontier", default-features = false, branch = "polkadot-v0.9.18" }
-pallet-evm-precompile-modexp = { git = "https://github.com/chainx-org/frontier", default-features = false, branch = "polkadot-v0.9.18" }
-pallet-evm-precompile-simple = { git = "https://github.com/chainx-org/frontier", default-features = false, branch = "polkadot-v0.9.18" }
-pallet-evm-precompile-sha3fips = { git = "https://github.com/chainx-org/frontier", default-features = false, branch = "polkadot-v0.9.18" }
-pallet-evm-precompile-blake2 = { git = "https://github.com/chainx-org/frontier", default-features = false, branch = "polkadot-v0.9.18" }
+fp-evm = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc", default-features = false }
+pallet-evm-precompile-bn128 = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc", default-features = false }
+pallet-evm-precompile-dispatch = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc", default-features = false }
+pallet-evm-precompile-modexp = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc", default-features = false }
+pallet-evm-precompile-simple = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc", default-features = false }
+pallet-evm-precompile-sha3fips = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc", default-features = false }
+pallet-evm-precompile-blake2 = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc", default-features = false }
 # ETH API
-fp-rpc = { git = "https://github.com/chainx-org/frontier", default-features = false, branch = "polkadot-v0.9.18" }
-fp-self-contained = { git = "https://github.com/chainx-org/frontier", default-features = false, branch = "polkadot-v0.9.18" }
+fp-rpc = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc", default-features = false }
+fp-self-contained = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc", default-features = false }
 
 [build-dependencies]
 substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
@@ -198,6 +200,8 @@ std = [
   "xpallet-support/std",
   "xpallet-transaction-fee/std",
   "xpallet-transaction-fee-rpc-runtime-api/std",
+  "xpallet-btc-ledger/std",
+  "xpallet-btc-ledger-runtime-api/std",
   # EVM
   "pallet-evm/std",
   "pallet-ethereum/std",
@@ -267,6 +271,7 @@ try-runtime = [
   "xpallet-gateway-records/try-runtime",
   "xpallet-mining-asset/try-runtime",
   "xpallet-mining-staking/try-runtime",
+  "xpallet-btc-ledger/try-runtime",
 
   # EVM
   "pallet-ethereum/try-runtime",
