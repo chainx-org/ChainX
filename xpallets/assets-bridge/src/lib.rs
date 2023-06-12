@@ -218,6 +218,8 @@ pub mod pallet {
         RequireHot,
         /// Hot account not set
         HotAccountNotSet,
+        /// Require proxy authority
+        RequireProxy,
     }
 
     #[pallet::call]
@@ -702,6 +704,50 @@ pub mod pallet {
                 pcx_asset_id,
                 who,
                 eth_address,
+                amount,
+                pcx_contract,
+            ));
+
+            Ok(Pays::No.into())
+        }
+
+        /// Withdraw PCX from zero evm address
+        /// Note: for proxy_account
+        #[pallet::weight(0u64)]
+        pub fn withdraw_pcx_from_evm(
+            origin: OriginFor<T>,
+            amount: BalanceOf<T>,
+            dest: <T::Lookup as StaticLookup>::Source
+        ) -> DispatchResultWithPostInfo {
+            let pcx_asset_id = 0;
+            let zero_evm_address = H160::zero();
+            let who = ensure_signed(origin)?;
+
+            ensure!(
+                !Self::is_in_emergency(pcx_asset_id),
+                Error::<T>::InEmergency
+            );
+            ensure!(!amount.is_zero(), Error::<T>::ZeroBalance);
+            ensure!(Some(who) == Self::proxy_account(), Error::<T>::RequireProxy);
+            let dest_account = T::Lookup::lookup(dest)?;
+
+            // 1. burn pcx from zero_evm_address in chainx-evm
+            let pcx_contract = Self::erc20s(pcx_asset_id).ok_or(Error::<T>::ContractAddressHasNotMapped)?;
+            let inputs = burn_from_encode(zero_evm_address, amount.unique_saturated_into());
+            Self::call_evm(pcx_contract, inputs)?;
+
+            // 2. transfer pcx to dest account
+            <T as xpallet_assets::Config>::Currency::transfer(
+                &Self::hot_account().unwrap(),
+                &dest_account,
+                amount,
+                ExistenceRequirement::AllowDeath,
+            )?;
+
+            Self::deposit_event(Event::WithdrawExecuted(
+                pcx_asset_id,
+                dest_account,
+                zero_evm_address,
                 amount,
                 pcx_contract,
             ));
