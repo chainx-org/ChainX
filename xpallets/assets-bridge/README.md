@@ -10,8 +10,10 @@ After use BTC as chainx-evm gas
 - `withdraw`: **deprecated**
 - `teleport`: **deprecated**
 - `set_hot_account`: **new**
+- `set_proxy_account`: **new**
 - `deposit_pcx_to_evm`: **new**
 - `swap_xbtc_to_btc`: **new**
+- `swap_btc_to_xbtc`: **new**
 - `transfer_btc_to_evm`: **new**
 - `force_unregister`: **require admin**
 - other functions are **remained*

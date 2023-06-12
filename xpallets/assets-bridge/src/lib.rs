@@ -24,7 +24,7 @@ use codec::Encode;
 use frame_support::{
     ensure,
     pallet_prelude::*,
-    traits::{Currency, ExistenceRequirement, IsType},
+    traits::{Currency, ExistenceRequirement, IsType, ReservableCurrency, WithdrawReasons},
     transactional,
 };
 use sp_core::{ecdsa, H160, U256};
@@ -54,7 +54,6 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use frame_support::traits::ReservableCurrency;
     use frame_system::pallet_prelude::*;
 
     #[pallet::pallet]
@@ -122,6 +121,10 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn hot_account)]
     pub(super) type HotAccount<T: Config> = StorageValue<_, T::AccountId>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn proxy_account)]
+    pub(super) type ProxyAccount<T: Config> = StorageValue<_, T::AccountId>;
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
@@ -645,6 +648,23 @@ pub mod pallet {
             Ok(Pays::No.into())
         }
 
+        /// Set the proxy account who can handle the BTC of zero evm-address(0x0) mapping account
+        /// Note: for admin
+        #[pallet::weight(0u64)]
+        pub fn set_proxy_account(
+            origin: OriginFor<T>,
+            new_proxy: <T::Lookup as StaticLookup>::Source,
+        ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin)?;
+            ensure!(Some(who) == Self::admin_key(), Error::<T>::RequireAdmin);
+
+            let proxy_account = T::Lookup::lookup(new_proxy)?;
+
+            ProxyAccount::<T>::mutate(|hot| *hot = Some(proxy_account));
+
+            Ok(Pays::No.into())
+        }
+
         /// Deposit PCX from wasm to evm
         /// Note: for user
         #[pallet::weight(0u64)]
@@ -719,6 +739,47 @@ pub mod pallet {
                 &mapping_account,
                 amount.unique_saturated_into(),
             );
+
+            Ok(Pays::No.into())
+        }
+
+        /// Swap BTC(btc ledger module) to XBTC(assets moudle) by 1:1
+        /// Note: for user who hold BTC
+        #[pallet::weight(0u64)]
+        pub fn swap_btc_to_xbtc(
+            origin: OriginFor<T>,
+            amount: u128
+        ) -> DispatchResultWithPostInfo {
+            let xbtc_asset_id = 1;
+            let zero_evm_address = H160::zero();
+
+            let who = ensure_signed(origin)?;
+            ensure!(
+                !Self::is_in_emergency(xbtc_asset_id),
+                Error::<T>::InEmergency
+            );
+            ensure!(amount > 0, Error::<T>::ZeroBalance);
+
+            let mapping_account = if Some(who.clone()) == Self::proxy_account() {
+                AddressMappingOf::<T>::into_account_id(zero_evm_address)
+            } else {
+                who.clone()
+            };
+
+            // 1. burn btc from account
+            <T as pallet_evm::Config>::Currency::withdraw(
+                &mapping_account,
+                amount.unique_saturated_into(),
+                WithdrawReasons::all(),
+                ExistenceRequirement::AllowDeath
+            )?;
+
+            // 2. mint useable xbtc to account
+            let _ = xpallet_assets::Pallet::<T>::issue(
+                &xbtc_asset_id,
+                &who,
+                amount.unique_saturated_into(),
+            )?;
 
             Ok(Pays::No.into())
         }
