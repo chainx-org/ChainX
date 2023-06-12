@@ -59,6 +59,8 @@ Currency symbol: BTC
 Block explorer URL (Optional): https://evm.chainx.org/
 ```
 
+PCX(ERC20): `0xf3607524cAB05762cB5F0cAb17e4cA3A0F0b4E87`
+
 ## License
 
 [GPL v3](LICENSE)
