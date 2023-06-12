@@ -788,14 +788,15 @@ pub mod pallet {
         }
 
         /// Swap BTC(btc ledger module) to XBTC(assets moudle) by 1:1
-        /// Note: for user who hold BTC
+        /// The proxy account controls the BTC under the evm address(0x1111111111111111111111111111111111111111) mapping account
+        /// Note: for user who hold BTC or proxy account
         #[pallet::weight(0u64)]
         pub fn swap_btc_to_xbtc(
             origin: OriginFor<T>,
             amount: u128
         ) -> DispatchResultWithPostInfo {
             let xbtc_asset_id = 1;
-            let evm_caller = H160::zero();
+            let evm_caller = T::EvmCaller::get();
 
             let who = ensure_signed(origin)?;
             ensure!(
