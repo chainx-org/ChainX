@@ -10,7 +10,7 @@ import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.4.1/contr
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.4.1/contracts/access/Ownable.sol";
 
 /**
- * @dev Interface of the SherpaX AssetsBridge
+ * @dev Interface of the ChainX AssetsBridge
  */
 interface IAssetsBridge {
     /*
