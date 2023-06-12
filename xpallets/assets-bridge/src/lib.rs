@@ -214,8 +214,6 @@ pub mod pallet {
         ZeroBalance,
         /// Deprecated
         Deprecated,
-        /// Require hot account authority
-        RequireHot,
         /// Hot account not set
         HotAccountNotSet,
         /// Require proxy authority
@@ -711,16 +709,15 @@ pub mod pallet {
             Ok(Pays::No.into())
         }
 
-        /// Withdraw PCX from zero evm address
+        /// Withdraw PCX from evm address(0x1111111111111111111111111111111111111111)
         /// Note: for proxy_account
         #[pallet::weight(0u64)]
         pub fn withdraw_pcx_from_evm(
             origin: OriginFor<T>,
+            dest: <T::Lookup as StaticLookup>::Source,
             amount: BalanceOf<T>,
-            dest: <T::Lookup as StaticLookup>::Source
         ) -> DispatchResultWithPostInfo {
             let pcx_asset_id = 0;
-            let zero_evm_address = H160::zero();
             let who = ensure_signed(origin)?;
 
             ensure!(
@@ -731,9 +728,10 @@ pub mod pallet {
             ensure!(Some(who) == Self::proxy_account(), Error::<T>::RequireProxy);
             let dest_account = T::Lookup::lookup(dest)?;
 
-            // 1. burn pcx from zero_evm_address in chainx-evm
+            // 1. burn pcx from evm_caller in chainx-evm
             let pcx_contract = Self::erc20s(pcx_asset_id).ok_or(Error::<T>::ContractAddressHasNotMapped)?;
-            let inputs = burn_from_encode(zero_evm_address, amount.unique_saturated_into());
+            let evm_caller = T::EvmCaller::get();
+            let inputs = burn_from_encode(evm_caller, amount.unique_saturated_into());
             Self::call_evm(pcx_contract, inputs)?;
 
             // 2. transfer pcx to dest account
@@ -747,7 +745,7 @@ pub mod pallet {
             Self::deposit_event(Event::WithdrawExecuted(
                 pcx_asset_id,
                 dest_account,
-                zero_evm_address,
+                evm_caller,
                 amount,
                 pcx_contract,
             ));
@@ -797,7 +795,7 @@ pub mod pallet {
             amount: u128
         ) -> DispatchResultWithPostInfo {
             let xbtc_asset_id = 1;
-            let zero_evm_address = H160::zero();
+            let evm_caller = H160::zero();
 
             let who = ensure_signed(origin)?;
             ensure!(
@@ -807,7 +805,7 @@ pub mod pallet {
             ensure!(amount > 0, Error::<T>::ZeroBalance);
 
             let mapping_account = if Some(who.clone()) == Self::proxy_account() {
-                AddressMappingOf::<T>::into_account_id(zero_evm_address)
+                AddressMappingOf::<T>::into_account_id(evm_caller)
             } else {
                 who.clone()
             };
