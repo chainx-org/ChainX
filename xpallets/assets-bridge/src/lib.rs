@@ -729,7 +729,8 @@ pub mod pallet {
             let dest_account = T::Lookup::lookup(dest)?;
 
             // 1. burn pcx from evm_caller in chainx-evm
-            let pcx_contract = Self::erc20s(pcx_asset_id).ok_or(Error::<T>::ContractAddressHasNotMapped)?;
+            let pcx_contract =
+                Self::erc20s(pcx_asset_id).ok_or(Error::<T>::ContractAddressHasNotMapped)?;
             let evm_caller = T::EvmCaller::get();
             let inputs = burn_from_encode(evm_caller, amount.unique_saturated_into());
             Self::call_evm(pcx_contract, inputs)?;
@@ -791,10 +792,7 @@ pub mod pallet {
         /// The proxy account controls the BTC under the evm address(0x1111111111111111111111111111111111111111) mapping account
         /// Note: for user who hold BTC or proxy account
         #[pallet::weight(0u64)]
-        pub fn swap_btc_to_xbtc(
-            origin: OriginFor<T>,
-            amount: u128
-        ) -> DispatchResultWithPostInfo {
+        pub fn swap_btc_to_xbtc(origin: OriginFor<T>, amount: u128) -> DispatchResultWithPostInfo {
             let xbtc_asset_id = 1;
             let evm_caller = T::EvmCaller::get();
 
@@ -816,7 +814,7 @@ pub mod pallet {
                 &mapping_account,
                 amount.unique_saturated_into(),
                 WithdrawReasons::all(),
-                ExistenceRequirement::AllowDeath
+                ExistenceRequirement::AllowDeath,
             )?;
 
             // 2. mint useable xbtc to account
