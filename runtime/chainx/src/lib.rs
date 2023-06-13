@@ -1325,18 +1325,7 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
-    BaseFeeMigration,
 >;
-
-pub struct BaseFeeMigration;
-impl OnRuntimeUpgrade for BaseFeeMigration {
-    fn on_runtime_upgrade() -> Weight {
-        frame_support::log::info!("🔍️ BaseFeeMigration start");
-        let w = BaseFee::set_base_fee_per_gas_inner(DefaultBaseFeePerGas::get());
-        frame_support::log::info!("🚀 BaseFeeMigration end");
-        w
-    }
-}
 
 pub struct TransactionConverter;
 impl fp_rpc::ConvertTransaction<UncheckedExtrinsic> for TransactionConverter {
