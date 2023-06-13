@@ -9,18 +9,30 @@ import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.4.1/contr
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.4.1/contracts/security/Pausable.sol";
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.4.1/contracts/access/Ownable.sol";
 
-abstract contract MintAdmin is Ownable {
+abstract contract MintBurnAdmin is Ownable {
     address public admin = 0x1111111111111111111111111111111111111111;
+    bool public burnable = false;
 
-    modifier MintAdminRequire() {
-        require(_msgSender() == admin, "MintAdmin: require called by the mint admin");
+    modifier MintBurnAdminRequire() {
+        require(_msgSender() == admin, "MintBurnAdmin: require called by the mintburn admin");
+
+        _;
+    }
+
+    modifier BurnableRequire() {
+        require(burnable, "MintBurnAdmin: require burnable == true");
 
         _;
     }
 
     // set new admin by owner
-    function set_admin(address new_admin) external onlyOwner {
-        admin = new_admin;
+    function set_admin(address _admin) external onlyOwner {
+        admin = _admin;
+    }
+
+    // set burnable flag by owner
+    function set_burnable(bool _burnable) external onlyOwner {
+        burnable = _burnable;
     }
 }
 
@@ -49,7 +61,7 @@ abstract contract MintAdmin is Ownable {
  * functions have been added to mitigate the well-known issues around setting
  * allowances. See {IERC20-approve}.
  */
-contract BitcoinAssetsErc20 is Context, IERC20, IERC20Metadata, Pausable, Ownable, MintAdmin {
+contract BitcoinAssetsErc20 is Context, IERC20, IERC20Metadata, Pausable, Ownable, MintBurnAdmin {
     mapping(address => uint256) private _balances;
 
     mapping(address => mapping(address => uint256)) private _allowances;
@@ -259,7 +271,7 @@ contract BitcoinAssetsErc20 is Context, IERC20, IERC20Metadata, Pausable, Ownabl
         _afterTokenTransfer(sender, recipient, amount);
     }
 
-    function mint(address account, uint256 amount) external MintAdminRequire returns (bool) {
+    function mint(address account, uint256 amount) external MintBurnAdminRequire returns (bool) {
         _mint(account, amount);
 
         return true;
@@ -270,7 +282,7 @@ contract BitcoinAssetsErc20 is Context, IERC20, IERC20Metadata, Pausable, Ownabl
      *
      * See {ERC20-_burn}.
      */
-    function burn(uint256 amount) external returns (bool) {
+    function burn(uint256 amount) external BurnableRequire returns (bool) {
         _burn(_msgSender(), amount);
 
         return true;
