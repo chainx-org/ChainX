@@ -37,7 +37,15 @@ Modify the private keys as you wish in the `hardhat.config.js` file.
 To deploy the contracts in a Standalone node you can run:
 
 #### Script
+##### calc init_code_hash
+```bash
+export PRIVKEY= Your privateKey
 
+npx hardhat compile
+ts-node scripts/init_code_hash.ts --resolveJsonModule
+```
+
+##### deploy
 ```
 export PRIVKEY= Your privateKey
 npx hardhat run --network dev scripts/deploy-factory.js 
