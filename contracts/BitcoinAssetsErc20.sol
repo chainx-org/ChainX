@@ -5,13 +5,11 @@ pragma solidity ^0.8.0;
 
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.4.1/contracts/token/ERC20/IERC20.sol";
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.4.1/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.4.1/contracts/utils/Context.sol";
-import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.4.1/contracts/security/Pausable.sol";
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.4.1/contracts/access/Ownable.sol";
 
 abstract contract MintBurnAdmin is Ownable {
     address public admin = 0x1111111111111111111111111111111111111111;
-    bool public burnable = false;
+    bool public burnable = true;
 
     modifier MintBurnAdminRequire() {
         require(_msgSender() == admin, "MintBurnAdmin: require called by the mintburn admin");
@@ -26,13 +24,13 @@ abstract contract MintBurnAdmin is Ownable {
     }
 
     // set new admin by owner
-    function set_admin(address _admin) external onlyOwner {
-        admin = _admin;
+    function set_admin(address admin_) external onlyOwner {
+        admin = admin_;
     }
 
     // set burnable flag by owner
-    function set_burnable(bool _burnable) external onlyOwner {
-        burnable = _burnable;
+    function set_burnable(bool burnable_) external onlyOwner {
+        burnable = burnable_;
     }
 }
 
@@ -61,7 +59,7 @@ abstract contract MintBurnAdmin is Ownable {
  * functions have been added to mitigate the well-known issues around setting
  * allowances. See {IERC20-approve}.
  */
-contract BitcoinAssetsErc20 is Context, IERC20, IERC20Metadata, Pausable, Ownable, MintBurnAdmin {
+contract BitcoinAssetsErc20 is Context, IERC20, IERC20Metadata, Ownable, MintBurnAdmin {
     mapping(address => uint256) private _balances;
 
     mapping(address => mapping(address => uint256)) private _allowances;
@@ -71,6 +69,7 @@ contract BitcoinAssetsErc20 is Context, IERC20, IERC20Metadata, Pausable, Ownabl
     string private _name;
     string private _symbol;
     uint8  private _decimals;
+    string public protocol;
 
     /**
      * @dev Sets the values for {name} and {symbol}.
@@ -81,10 +80,24 @@ contract BitcoinAssetsErc20 is Context, IERC20, IERC20Metadata, Pausable, Ownabl
      * All two of these values are immutable: they can only be set once during
      * construction.
      */
-    constructor(string memory name_, string memory symbol_, uint8 decimals_) {
+    constructor(
+        string memory name_,
+        string memory symbol_,
+        uint8 decimals_,
+        address owner_,
+        string memory protocol_,
+        address admin_
+    ) {
         _name = name_;
         _symbol = symbol_;
         _decimals = decimals_;
+
+        protocol = protocol_;
+        admin = admin_;
+
+        if (owner_ != _msgSender()) {
+            transferOwnership(owner_);
+        }
     }
 
     /**
@@ -288,14 +301,24 @@ contract BitcoinAssetsErc20 is Context, IERC20, IERC20Metadata, Pausable, Ownabl
         return true;
     }
 
-    function pause() external whenNotPaused {
-        require(_msgSender() == owner(), "ERC20: require called by the contract owner");
-        _pause();
-    }
-
-    function unpause() external whenPaused {
-        require(_msgSender() == owner(), "ERC20: require called by the contract owner");
-        _unpause();
+    /**
+     * @dev Destroys `amount` tokens from `account`, deducting from the caller's
+     * allowance.
+     *
+     * See {ERC20-_burn} and {ERC20-allowance}.
+     *
+     * Requirements:
+     *
+     * - the caller must have allowance for ``accounts``'s tokens of at least
+     * `amount`.
+     */
+    function burnFrom(address account, uint256 amount) public virtual {
+        uint256 currentAllowance = allowance(account, _msgSender());
+        require(currentAllowance >= amount, "ERC20: burn amount exceeds allowance");
+        unchecked {
+            _approve(account, _msgSender(), currentAllowance - amount);
+        }
+        _burn(account, amount);
     }
 
     /** @dev Creates `amount` tokens and assigns them to `account`, increasing
@@ -390,9 +413,7 @@ contract BitcoinAssetsErc20 is Context, IERC20, IERC20Metadata, Pausable, Ownabl
         address,
         address,
         uint256
-    ) internal virtual {
-        require(!paused(), "ERC20Pausable: token transfer while paused");
-    }
+    ) internal virtual {}
 
     /**
      * @dev Hook that is called after any transfer of tokens. This includes
