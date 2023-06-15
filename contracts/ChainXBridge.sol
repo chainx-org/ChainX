@@ -2,7 +2,6 @@
 pragma solidity 0.8.13;
 
 interface IBitcoinAssets {
-    function burn(uint256 amount) external;
     function burnFrom(address account, uint256 amount) external;
 }
 
@@ -15,7 +14,6 @@ contract ChainXBridge {
     event Balance(uint256);
 
     event SwapOut(
-        bytes32 swapId,
         uint64 fromChainId,
         uint64 toChainId,
         address sender,
@@ -45,7 +43,6 @@ contract ChainXBridge {
 
 
     function swap_out(
-        bytes32 swapID,
         uint64 toChainId,
         string calldata receiver,
         address token,
@@ -68,7 +65,6 @@ contract ChainXBridge {
         IBitcoinAssets(token).burnFrom(msg.sender, amount);
 
         emit SwapOut(
-            swapID,
             chainId,
             toChainId,
             msg.sender,
