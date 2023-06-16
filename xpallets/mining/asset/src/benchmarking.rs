@@ -27,7 +27,7 @@ benchmarks! {
         FixedAssetPowerOf::<T>::insert(X_DOT, 100);
 
         let miner = account("miner", 0, SEED);
-        xpallet_assets::Pallet::<T>::issue(&X_DOT, &miner, 1000u32.into())?;
+        xpallet_assets::Pallet::<T>::issue(&X_DOT, &miner, 1000u32.into(), true)?;
 
         let reward_pot = T::DetermineRewardPotAccount::reward_pot_account_for(&X_DOT);
         <T as xpallet_assets::Config>::Currency::make_free_balance_be(&reward_pot, 100u32.into());

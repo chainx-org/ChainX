@@ -21,7 +21,7 @@ pub(crate) fn t_generic_issue(asset_id: AssetId, to: AccountId, value: Balance) 
     if asset_id == xp_protocol::PCX {
         t_issue_pcx(to, value);
     } else {
-        assert_ok!(XAssets::issue(&asset_id, &to, value));
+        assert_ok!(XAssets::issue(&asset_id, &to, value, true));
     }
 }
 
@@ -209,7 +209,7 @@ fn inject_order_should_work() {
     ExtBuilder::default().build_and_execute(|| {
         let trading_pair = XSpot::trading_pair_of(0).unwrap();
         t_set_handicap(0, 1_000_000, 1_100_000);
-        assert_ok!(XAssets::issue(&trading_pair.quote(), &1, 10));
+        assert_ok!(XAssets::issue(&trading_pair.quote(), &1, 10, true));
 
         assert_ok!(t_put_order_buy(1, 0, 1000, 1_000_100,));
         let order = XSpot::order_info_of(1, 0).unwrap();
@@ -236,7 +236,7 @@ fn price_too_high_or_too_low_should_not_work() {
         // Sell: [1_000_000 * (1 - 10%) = 900_000, ~)
         t_set_handicap(0, 1_000_000, 1_100_000);
 
-        assert_ok!(XAssets::issue(&trading_pair.quote(), &1, 10));
+        assert_ok!(XAssets::issue(&trading_pair.quote(), &1, 10, true));
 
         // put order without matching
         assert_ok!(t_put_order_buy(1, 0, 1000, 1_000_200));
@@ -334,7 +334,7 @@ fn cancel_order_should_work() {
 
         t_set_handicap(0, 1_000_000, 1_100_000);
 
-        assert_ok!(XAssets::issue(&trading_pair.quote(), &1, 10));
+        assert_ok!(XAssets::issue(&trading_pair.quote(), &1, 10, true));
         t_issue_pcx(1, 2000);
         t_issue_pcx(2, 2000);
         t_issue_pcx(3, 2000);

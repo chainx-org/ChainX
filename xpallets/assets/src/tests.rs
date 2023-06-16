@@ -136,7 +136,7 @@ fn test_normal_issue_and_destroy() {
         let btc_id = X_BTC;
 
         // issue
-        XAssets::issue(&btc_id, &a, 50).unwrap();
+        XAssets::issue(&btc_id, &a, 50, true).unwrap();
         assert_eq!(XAssets::all_type_asset_balance(&a, &btc_id), 150);
         assert_eq!(XAssets::total_issuance(&btc_id), 1050);
 
@@ -177,7 +177,7 @@ fn test_unlock_issue_and_destroy2() {
         let btc_id = X_BTC;
 
         // issue
-        XAssets::issue(&btc_id, &a, 50).unwrap();
+        XAssets::issue(&btc_id, &a, 50, true).unwrap();
         assert_eq!(XAssets::all_type_asset_balance(&a, &btc_id), 50);
         assert_eq!(XAssets::total_issuance(&btc_id), 50);
 
@@ -225,7 +225,7 @@ fn test_error_issue_and_destroy1() {
         let a: u64 = 1; // accountid
         let btc_id = X_BTC;
         // issue
-        XAssets::issue(&btc_id, &a, 50).unwrap();
+        XAssets::issue(&btc_id, &a, 50, true).unwrap();
         assert_eq!(XAssets::all_type_asset_balance(&a, &btc_id), 50);
         assert_eq!(XAssets::total_issuance(&btc_id), 50);
         // destroy first
@@ -268,7 +268,7 @@ fn test_error_issue_and_destroy2() {
         let a: u64 = 1; // accountid
         let btc_id = X_BTC;
         // issue
-        XAssets::issue(&btc_id, &a, 50).unwrap();
+        XAssets::issue(&btc_id, &a, 50, true).unwrap();
         assert_eq!(XAssets::all_type_asset_balance(&a, &btc_id), 50);
         assert_eq!(XAssets::total_issuance(&btc_id), 50);
         // overflow
@@ -287,7 +287,7 @@ fn test_error_issue_and_destroy2() {
         );
 
         assert_noop!(
-            XAssets::issue(&btc_id, &a, i as Balance),
+            XAssets::issue(&btc_id, &a, i as Balance, true),
             XAssetsErr::Overflow
         );
     })
@@ -316,7 +316,7 @@ fn test_error_issue_and_destroy3() {
             AssetErr::NotEnough
         );
 
-        XAssets::issue(&btc_id, &a, 0).unwrap();
+        XAssets::issue(&btc_id, &a, 0, true).unwrap();
         assert_noop!(
             XAssets::destroy_reserved_withdrawal(&btc_id, &a, 25),
             XAssetsErr::InsufficientBalance
@@ -334,7 +334,7 @@ fn test_error_issue_and_destroy3() {
             AssetErr::NotEnough
         );
 
-        XAssets::issue(&btc_id, &a, 100).unwrap();
+        XAssets::issue(&btc_id, &a, 100, true).unwrap();
 
         XAssets::move_balance(
             &btc_id,
@@ -358,7 +358,7 @@ fn test_balance_btree_map() {
         let btc_id = X_BTC;
         assert_eq!(XAssets::total_issuance(&btc_id), 1000);
 
-        let _ = XAssets::issue(&X_BTC, &a, 100);
+        let _ = XAssets::issue(&X_BTC, &a, 100, true);
         let _ = XAssets::move_balance(
             &X_BTC,
             &a,
@@ -403,7 +403,7 @@ fn test_account_init() {
         assert_eq!(XAssets::total_issuance(&btc_id), 1000);
 
         // issue init
-        let _ = XAssets::issue(&X_BTC, &a, 100);
+        let _ = XAssets::issue(&X_BTC, &a, 100, true);
         assert!(System::events().contains(&EventRecord {
             phase: Phase::Initialization,
             event: Event::System(frame_system::Event::<Test>::NewAccount(a)),
@@ -440,7 +440,7 @@ fn test_transfer_not_init() {
         let a: u64 = 1; // accountid
         let new_id: u64 = 1000;
         let btc_id = X_BTC;
-        XAssets::issue(&btc_id, &a, 50).unwrap();
+        XAssets::issue(&btc_id, &a, 50, true).unwrap();
         assert_ok!(XAssets::transfer(Origin::signed(a), new_id, btc_id, 25,));
         check_only_one_new_account(new_id);
 
@@ -469,7 +469,7 @@ fn test_transfer_token() {
         let b: u64 = 2; // accountid
         let btc_id = X_BTC;
         // issue 50 to account 1
-        XAssets::issue(&btc_id, &a, 50).unwrap();
+        XAssets::issue(&btc_id, &a, 50, true).unwrap();
         // transfer
         XAssets::transfer(Origin::signed(a), b, btc_id, 25).unwrap();
         assert_eq!(XAssets::all_type_asset_balance(&a, &btc_id), 25);
@@ -488,7 +488,7 @@ fn test_transfer_to_self() {
         let a: u64 = 1; // accountid
         let btc_id = X_BTC;
         // issue 50 to account 1
-        XAssets::issue(&btc_id, &a, 50).unwrap();
+        XAssets::issue(&btc_id, &a, 50, true).unwrap();
         // transfer
         assert_ok!(XAssets::transfer(Origin::signed(a), a, btc_id, 25,));
 
@@ -516,7 +516,7 @@ fn test_move() {
             AssetErr::NotEnough
         );
 
-        XAssets::issue(&token, &a, 100).unwrap();
+        XAssets::issue(&token, &a, 100, true).unwrap();
         XAssets::move_usable_balance(&token, &a, &b, 100).unwrap();
         assert_noop!(
             XAssets::move_usable_balance(&token, &a, &b, 1000),

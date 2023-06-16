@@ -223,7 +223,7 @@ impl<T: Config> Pallet<T> {
             who, asset_id, balance
         );
 
-        xpallet_assets::Pallet::<T>::issue(&asset_id, who, balance)?;
+        xpallet_assets::Pallet::<T>::issue(&asset_id, who, balance, true)?;
         Self::deposit_event(Event::<T>::Deposited(who.clone(), asset_id, balance));
         Ok(())
     }

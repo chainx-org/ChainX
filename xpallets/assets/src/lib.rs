@@ -255,7 +255,7 @@ pub mod pallet {
                 for (id, endowed) in &config.endowed {
                     if *id != T::NativeAssetId::get() {
                         for (accountid, value) in endowed.iter() {
-                            Pallet::<T>::issue(id, accountid, *value)
+                            Pallet::<T>::issue(id, accountid, *value, true)
                                 .expect("asset issuance during the genesis can not fail");
                         }
                     }
@@ -416,11 +416,16 @@ impl<T: Config> Pallet<T> {
     }
 
     /// Increases the Usable balance of `who` given the asset `id` by this `value`.
-    pub fn issue(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
+    pub fn issue(
+        id: &AssetId,
+        who: &T::AccountId,
+        value: BalanceOf<T>,
+        reward_pcx: bool,
+    ) -> DispatchResult {
         Self::ensure_not_native_asset(id)?;
         xpallet_assets_registrar::Pallet::<T>::ensure_asset_is_valid(id)?;
 
-        let _imbalance = Self::inner_issue(id, who, AssetType::Usable, value)?;
+        let _imbalance = Self::inner_issue(id, who, AssetType::Usable, value, reward_pcx)?;
         Ok(())
     }
 
@@ -625,13 +630,14 @@ impl<T: Config> Pallet<T> {
         who: &T::AccountId,
         type_: AssetType,
         value: BalanceOf<T>,
+        reward_pcx: bool,
     ) -> Result<(), DispatchError> {
         let current = Self::asset_typed_balance(who, id, type_);
 
         debug!(
             target: "runtime::assets",
-            "[issue] account:{:?}, asset:[id:{}, type:{:?}, current:{:?}, issue:{:?}]",
-            who, id, type_, current, value
+            "[issue] account:{:?}, asset:[id:{}, type:{:?}, current:{:?}, issue:{:?}, reward_pcx:{:?}]",
+            who, id, type_, current, value, reward_pcx
         );
 
         let new = current.checked_add(&value).ok_or(Error::<T>::Overflow)?;
@@ -640,7 +646,7 @@ impl<T: Config> Pallet<T> {
 
         Self::make_type_balance_be(who, id, type_, new);
 
-        AssetChangedTrigger::<T>::on_issue_post(id, who, value)?;
+        AssetChangedTrigger::<T>::on_issue_post(id, who, value, reward_pcx)?;
         Ok(())
     }
 

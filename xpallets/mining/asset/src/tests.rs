@@ -25,7 +25,7 @@ fn t_issue_pcx(who: AccountId, value: Balance) {
 }
 
 fn t_issue_xbtc(to: AccountId, value: Balance) -> DispatchResult {
-    XAssets::issue(&X_BTC, &to, value)
+    XAssets::issue(&X_BTC, &to, value, true)
 }
 
 pub(crate) fn t_register_xbtc() -> DispatchResult {
