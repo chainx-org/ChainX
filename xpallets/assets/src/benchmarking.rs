@@ -14,7 +14,7 @@ benchmarks! {
     transfer {
         let caller = whitelisted_caller();
         let transfer_amount: BalanceOf<T> = (100000000 * 10_u32).into(); // e.g. 10 btc
-        XAssets::<T>::issue(&ASSET_ID, &caller, transfer_amount).unwrap();
+        XAssets::<T>::issue(&ASSET_ID, &caller, transfer_amount, true).unwrap();
 
         let recipient: T::AccountId = account("recipient", 0, SEED);
         let recipient_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(recipient.clone());
@@ -27,7 +27,7 @@ benchmarks! {
     force_transfer {
         let caller = whitelisted_caller();
         let transfer_amount: BalanceOf<T> = (100000000 * 10_u32).into(); // e.g. 10 btc
-        XAssets::<T>::issue(&ASSET_ID, &caller, transfer_amount).unwrap();
+        XAssets::<T>::issue(&ASSET_ID, &caller, transfer_amount, true).unwrap();
 
         let caller_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(caller.clone());
         let recipient: T::AccountId = account("recipient", 0, SEED);
