@@ -1,21 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.13;
 
+import "./SystemWithdraw.sol";
+
 interface IBitcoinAssets {
     function burnFrom(address account, uint256 amount) external;
 }
 
 contract ChainXBridge {
-    uint constant MIN_BTC_TRANSFER_VALUE = 10_000_000_000;
     address public cold;
-    uint64 public chainId;
     uint64 public nonce;
 
-    event Balance(uint256);
-
-    event SwapOut(
-        uint64 fromChainId,
-        uint64 toChainId,
+    event Withdraw(
         address sender,
         string receiver,
         uint256 amount,
@@ -28,22 +24,28 @@ contract ChainXBridge {
         _;
     }
 
-    constructor(
-        address _cold,
-        uint64 _chainId
-    ){
+    constructor(address _cold){
         require(_cold != address(0), "InvalidCold");
-        require(_chainId != 0, "InvalidChainId");
 
         cold = _cold;
-        chainId = _chainId;
         nonce = 0;
     }
 
+    function withdrawBTC(
+        uint256 value,
+        string calldata btcAddr
+    ) external autoIncreaseNonce returns (bool) {
+        return SystemWithdraw.withdrawBTC(value, btcAddr);
+    }
 
+    function withdrawPCX(
+        uint256 value,
+        bytes32 chainxPubkey
+    ) external autoIncreaseNonce returns (bool) {
+        return SystemWithdraw.withdrawPCX(value, chainxPubkey);
+    }
 
-    function swap_out(
-        uint64 toChainId,
+    function withdraw(
         string calldata receiver,
         address token,
         uint256 amount,
@@ -51,8 +53,8 @@ contract ChainXBridge {
     ) external payable autoIncreaseNonce {
         require((cold != address(0)), "InvalidCold");
         // Less than MIN_BTC_TRANSFER_VALUE as 0
+        uint256 MIN_BTC_TRANSFER_VALUE = SystemWithdraw.MIN_BTC_TRANSFER_VALUE;
         estGas = estGas / MIN_BTC_TRANSFER_VALUE * MIN_BTC_TRANSFER_VALUE;
-        emit Balance(estGas);
         require(estGas >= MIN_BTC_TRANSFER_VALUE, "InvalidEstGas");
         require(msg.value >= estGas, "ValueErr");
 
@@ -64,9 +66,7 @@ contract ChainXBridge {
 
         IBitcoinAssets(token).burnFrom(msg.sender, amount);
 
-        emit SwapOut(
-            chainId,
-            toChainId,
+        emit Withdraw(
             msg.sender,
             receiver,
             amount,
