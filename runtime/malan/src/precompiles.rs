@@ -25,7 +25,7 @@ where
     /// Return all addresses that contain precompiles. This can be used to populate dummy code
     /// under the precompile.
     pub fn used_addresses() -> sp_std::vec::Vec<H160> {
-        sp_std::vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 1024, 1025, 1026]
+        sp_std::vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 1024, 1025, 1026, 1027]
             .into_iter()
             .map(hash)
             .collect()
@@ -38,7 +38,9 @@ where
 /// 2048-4095 ChainX specific precompiles
 impl<R> PrecompileSet for ChainXPrecompiles<R>
 where
-    R: pallet_evm::Config,
+    R: xpallet_assets_bridge::Config
+        + xpallet_gateway_common::Config
+        + xpallet_gateway_records::Config,
     Dispatch<R>: Precompile,
 {
     fn execute(
@@ -68,6 +70,9 @@ where
                 input, target_gas, context, is_static,
             )),
             a if a == hash(1026) => Some(ECRecoverPublicKey::execute(
+                input, target_gas, context, is_static,
+            )),
+            a if a == hash(1027) => Some(crate::withdraw::Withdraw::<R>::execute(
                 input, target_gas, context, is_static,
             )),
             _ => None,
