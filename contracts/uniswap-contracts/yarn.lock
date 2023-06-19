@@ -606,10 +606,10 @@
   resolved "https://registry.yarnpkg.com/@nomiclabs/hardhat-ethers/-/hardhat-ethers-2.2.3.tgz#b41053e360c31a32c2640c9a45ee981a7e603fe0"
   integrity sha512-YhzPdzb612X591FOe68q+qXVXGG2ANZRvDo0RRUtimev85rCrAlv/TLMEZw5c+kq9AbzocLTVX/h2jVIFPL9Xg==
 
-"@openzeppelin/contracts@^2.5.0":
-  version "2.5.1"
-  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-2.5.1.tgz#c76e3fc57aa224da3718ec351812a4251289db31"
-  integrity sha512-qIy6tLx8rtybEsIOAlrM4J/85s2q2nPkDqj/Rx46VakBZ0LwtFhXIVub96LXHczQX0vaqmAueDqNPXtbSXSaYQ==
+"@openzeppelin/contracts@^4.9.1":
+  version "4.9.1"
+  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-4.9.1.tgz#afa804d2c68398704b0175acc94d91a54f203645"
+  integrity sha512-aLDTLu/If1qYIFW5g4ZibuQaUsFGWQPBq1mZKp/txaebUnGHDmmiBhRLY1tDNedN0m+fJtKZ1zAODS9Yk+V6uA==
 
 "@scure/base@~1.1.0":
   version "1.1.1"
