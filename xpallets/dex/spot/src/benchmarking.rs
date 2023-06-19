@@ -20,7 +20,7 @@ fn b_prepare_put_order<T: Config>(
     <T as xpallet_assets::Config>::Currency::make_free_balance_be(user, pcx_value.into());
     <T as xpallet_assets::Config>::Currency::issue(pcx_value.into());
 
-    <xpallet_assets::Pallet<T>>::issue(&X_BTC, user, btc_value.into())?;
+    <xpallet_assets::Pallet<T>>::issue(&X_BTC, user, btc_value.into(), true)?;
     Ok(())
 }
 

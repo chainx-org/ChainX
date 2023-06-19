@@ -48,9 +48,17 @@ impl<T: Config> AssetChangedTrigger<T> {
         T::OnAssetChanged::on_issue_pre(id, who);
     }
 
-    pub fn on_issue_post(id: &AssetId, who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
-        Pallet::<T>::deposit_event(Event::<T>::Issued(*id, who.clone(), value));
-        T::OnAssetChanged::on_issue_post(id, who, value)?;
+    pub fn on_issue_post(
+        id: &AssetId,
+        who: &T::AccountId,
+        value: BalanceOf<T>,
+        reward_pcx: bool,
+    ) -> DispatchResult {
+        if reward_pcx {
+            Pallet::<T>::deposit_event(Event::<T>::Issued(*id, who.clone(), value));
+            T::OnAssetChanged::on_issue_post(id, who, value)?;
+        }
+
         Ok(())
     }
 

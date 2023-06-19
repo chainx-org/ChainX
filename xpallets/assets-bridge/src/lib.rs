@@ -24,7 +24,7 @@ use codec::Encode;
 use frame_support::{
     ensure,
     pallet_prelude::*,
-    traits::{Currency, ExistenceRequirement, IsType},
+    traits::{Currency, ExistenceRequirement, IsType, ReservableCurrency, WithdrawReasons},
     transactional,
 };
 use sp_core::{ecdsa, H160, U256};
@@ -54,7 +54,6 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use frame_support::traits::ReservableCurrency;
     use frame_system::pallet_prelude::*;
 
     #[pallet::pallet]
@@ -118,10 +117,6 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn emergencies)]
     pub(super) type Emergencies<T: Config> = StorageValue<_, Vec<AssetId>, ValueQuery>;
-
-    #[pallet::storage]
-    #[pallet::getter(fn hot_account)]
-    pub(super) type HotAccount<T: Config> = StorageValue<_, T::AccountId>;
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
@@ -211,10 +206,6 @@ pub mod pallet {
         ZeroBalance,
         /// Deprecated
         Deprecated,
-        /// Require hot account authority
-        RequireHot,
-        /// Hot account not set
-        HotAccountNotSet,
     }
 
     #[pallet::call]
@@ -628,23 +619,6 @@ pub mod pallet {
             Ok(Pays::No.into())
         }
 
-        /// Set the hot account who can receive the pcx while calling `deposit_pcx_to_evm`
-        /// Note: for admin
-        #[pallet::weight(0u64)]
-        pub fn set_hot_account(
-            origin: OriginFor<T>,
-            new_hot: <T::Lookup as StaticLookup>::Source,
-        ) -> DispatchResultWithPostInfo {
-            let who = ensure_signed(origin)?;
-            ensure!(Some(who) == Self::admin_key(), Error::<T>::RequireAdmin);
-
-            let hot_account = T::Lookup::lookup(new_hot)?;
-
-            HotAccount::<T>::mutate(|hot| *hot = Some(hot_account));
-
-            Ok(Pays::No.into())
-        }
-
         /// Deposit PCX from wasm to evm
         /// Note: for user
         #[pallet::weight(0u64)]
@@ -660,12 +634,14 @@ pub mod pallet {
                 Error::<T>::InEmergency
             );
             ensure!(!amount.is_zero(), Error::<T>::ZeroBalance);
-            ensure!(Self::hot_account().is_some(), Error::<T>::HotAccountNotSet);
 
-            // 1. transfer pcx to hot address
+            let evm_caller = T::EvmCaller::get();
+            let proxy = T::AddressMapping::into_account_id(evm_caller);
+
+            // 1. transfer pcx to proxy account
             <T as xpallet_assets::Config>::Currency::transfer(
                 &who,
-                &Self::hot_account().unwrap(),
+                &proxy,
                 amount,
                 ExistenceRequirement::AllowDeath,
             )?;
@@ -773,6 +749,77 @@ impl<T: Config> Pallet<T> {
             &mapping_account,
             amount.unique_saturated_into(),
         );
+
+        Ok(())
+    }
+
+    pub fn withdraw_pcx_from_evm(from: H160, dest: T::AccountId, amount: u128) -> DispatchResult {
+        let pcx_asset_id = 0;
+
+        if Self::is_in_emergency(pcx_asset_id) {
+            return Err(DispatchError::Other("in emergency"));
+        };
+
+        let evm_caller = T::EvmCaller::get();
+        let proxy = T::AddressMapping::into_account_id(evm_caller);
+
+        // 1. transfer pcx from proxy to dest account
+        <T as xpallet_assets::Config>::Currency::transfer(
+            &proxy,
+            &dest,
+            amount.unique_saturated_into(),
+            ExistenceRequirement::AllowDeath,
+        )?;
+
+        // 2. burn pcx(erc20) in chainx evm
+        let pcx_contract =
+            Self::erc20s(pcx_asset_id).ok_or(Error::<T>::ContractAddressHasNotMapped)?;
+        let inputs = burn_from_encode(from, amount);
+        Self::call_evm(pcx_contract, inputs)?;
+
+        Self::deposit_event(Event::WithdrawExecuted(
+            pcx_asset_id,
+            dest,
+            from,
+            amount.unique_saturated_into(),
+            pcx_contract,
+        ));
+
+        Ok(())
+    }
+
+    pub fn swap_btc_to_xbtc(from: H160, amount: u128) -> DispatchResult {
+        let xbtc_asset_id = 1;
+
+        if Self::is_in_emergency(xbtc_asset_id) {
+            return Err(DispatchError::Other("in emergency"));
+        };
+
+        let mapping_account = AddressMappingOf::<T>::into_account_id(from);
+
+        // 1. burn btc in chainx-wasm
+        <T as pallet_evm::Config>::Currency::withdraw(
+            &mapping_account,
+            amount.unique_saturated_into(),
+            WithdrawReasons::all(),
+            ExistenceRequirement::AllowDeath,
+        )?;
+
+        // 2. mint useable xbtc to dest
+        let _ = xpallet_assets::Pallet::<T>::issue(
+            &xbtc_asset_id,
+            &mapping_account,
+            amount.unique_saturated_into(),
+            false,
+        )?;
+
+        Self::deposit_event(Event::WithdrawExecuted(
+            xbtc_asset_id,
+            mapping_account,
+            from,
+            amount.unique_saturated_into(),
+            Default::default(),
+        ));
 
         Ok(())
     }

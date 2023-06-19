@@ -116,6 +116,8 @@ use pallet_evm::{
 use sp_core::{H160, U256};
 use sp_runtime::traits::{Dispatchable, PostDispatchInfoOf};
 mod precompiles;
+mod withdraw;
+
 pub use precompiles::ChainXPrecompiles;
 
 /// This runtime version.
@@ -123,10 +125,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("chainx"),
     impl_name: create_runtime_str!("chainx-net"),
     authoring_version: 1,
-    spec_version: 29,
+    spec_version: 31,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 6,
+    transaction_version: 7,
     state_version: 0,
 };
 
@@ -1325,16 +1327,22 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
-    BaseFeeMigration,
+    AssetsBridgeMigration,
 >;
 
-pub struct BaseFeeMigration;
-impl OnRuntimeUpgrade for BaseFeeMigration {
+pub struct AssetsBridgeMigration;
+impl OnRuntimeUpgrade for AssetsBridgeMigration {
     fn on_runtime_upgrade() -> Weight {
-        frame_support::log::info!("🔍️ BaseFeeMigration start");
-        let w = BaseFee::set_base_fee_per_gas_inner(DefaultBaseFeePerGas::get());
-        frame_support::log::info!("🚀 BaseFeeMigration end");
-        w
+        use frame_support::storage::migration;
+
+        frame_support::log::info!("🔍️ AssetsBridgeMigration start");
+
+        // Remove the storage value `HotAccount` from  pallet `XAssetsBridge`
+        migration::remove_storage_prefix(b"XAssetsBridge", b"HotAccount", b"");
+
+        frame_support::log::info!("🚀 AssetsBridgeMigration end");
+
+        <Runtime as frame_system::Config>::DbWeight::get().writes(1)
     }
 }
 

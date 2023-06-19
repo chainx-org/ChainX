@@ -1,6 +1,6 @@
 [package]
 name = "xpallet-btc-ledger"
-version = "5.0.0"
+version = "5.1.0"
 authors = ["The ChainX Authors"]
 edition = "2021"
 
