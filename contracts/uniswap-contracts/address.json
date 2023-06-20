@@ -9,11 +9,11 @@
       "init_code_hash": "0x8aec3c211ca998e71e5028e20183ab1e82099cdac5b0ba7e49800f9f17c733c8"
    },
    "chainx-mainnet": {
-      "WETH": "",
-      "Factory": "",
-      "Factory Feeto": "",
-      "RouterV02": "",
-      "Multicall": "",
+      "WETH": "0x09Ff8E49D0EA411A3422ed95E8f5497D4241F532",
+      "Factory": "0x356FD03E73ce821d5F7dFea51d1cB336EeFd67b1",
+      "Factory Feeto": "0xe4401b593DCBA4c057fccD1baa3ab9cFacfa64d8",
+      "RouterV02": "0xC7Dd38D6D161e2a440617508308639B2d701F633",
+      "Multicall": "0x79eA96a9857b3fcf7B037E5EE98D4da63Ff1934A",
       "ENSRegistry": "0x8F8F6B104190a4A24CcFf7B4006Ea7A59baeAf81",
       "init_code_hash": "0x8aec3c211ca998e71e5028e20183ab1e82099cdac5b0ba7e49800f9f17c733c8"
    }
