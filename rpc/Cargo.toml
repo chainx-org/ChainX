@@ -66,7 +66,7 @@ xpallet-btc-ledger-runtime-api = { path = "../xpallets/btc-ledger/rpc/runtime-ap
 
 # EVM
 fc-db = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc" }
-fc-rpc = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc", features = ["rpc_binary_search_estimate"] }
+fc-rpc = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc", features = ["rpc_binary_search_estimate", "chainx-adaptor"] }
 fc-rpc-core = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc" }
 fp-rpc = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc" }
 fp-storage = { git="https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc" }
