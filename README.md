@@ -10,7 +10,7 @@ Based on the LayerZero protocol, the EVM Layer2 ecology on ChainX can share the 
 [website](https://chainx.org)
 
 ## The Fragmented Web3 Crypto World
-There have always been many problems in the crypto world, but there has never been a shortage of reforms and innovations.
+There has always been many problems in the crypto world, but there has never been a shortage of reforms and innovations.
 * In order to solve the payment performance and scalability problems of BTC, various altcoins such as Dogecoin, LTC, and BCH have been introduced.
 * In order to solve the problems of too expensive gas fees in Ethereum and the scalability of dapps, people have successively developed public chains such as BSC, EOS, Polkadot, and Avalanche, which now seem to have a wide users.
 
@@ -48,7 +48,7 @@ Please refer to the [docs](https://chainx-org.github.io/documentation) for build
 
 ## Contribution
 
-Any kinds of contributions are highly welcome. Feel free to file an issue if you have any question or run into any issues.
+Any kinds of contributions are highly welcome. Feel free to submit an issue if you have any question or run into any issues.
 
 ## Metamask config for BTC
 ```
