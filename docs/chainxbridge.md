@@ -30,11 +30,20 @@ metamask wallet
 ### 1.4 XBTC => BTC(chainx -> bevm)
 ChainX wallet: https://dapp.chainx.org/#/chainstate/extrinsics
 
-xAssetsBridge -> transferBtcToEvm
+xAssetsBridge -> swapXbtcToBtc
 
 1000 means 0.00001000 XBTC
 
-![xbtc-to-btc](./xbtc-to-btc.png)
+![btc-to-evm](./btc-to-evm.png)
+
+### 1.5 BTC(chainx -> bevm)
+ChainX wallet: https://dapp.chainx.org/#/chainstate/extrinsics
+
+xAssetsBridge -> transferBtcToEvm
+
+1000 means 0.00001000 BTC
+
+![transfer-btc-to-evm](./transfer-btc-to-evm.png)
 
 ## 2. Withdraw
 
