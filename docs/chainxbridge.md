@@ -55,3 +55,31 @@ TODO
 
 ### 2.3 PCX(bevm -> chainx)
 TODO
+
+## 3. Query balance
+
+### 3.1 BTC(bevm)
+
+![btc-evm](./btc-evm.png)
+
+### 3.2 BTC(wasm)
+
+`0x6CfE5574639Ba46d74b6b67D2651d1470E10BA9a` mapping to `5UKCmTuj5V4wmGnmZYm6RSDbT2mqwf2FUMTJy7phjwmwE51H`
+
+https://evm.chainx.org/tools/SS58
+
+![evm-to-chainx](./evm-to-chainx.png)
+
+https://dapp.chainx.org/#/chainstate/chainstate
+
+![btc-balance](./btc-balance.png)
+
+### 3.3 PCX(bevm)
+
+![pcx-evm](./pcx-evm.png)
+
+### 3.4 PCX(wasm)
+
+https://dapp.chainx.org/#/chainstate/chainstate
+
+![pcx-balance](./pcx-balance.png)
