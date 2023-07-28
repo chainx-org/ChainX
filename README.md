@@ -37,9 +37,7 @@ Aggregation and unification are eternal themes in the crypto world. Aggregation 
 
 ## ChainX Ecological Project：
 * [ComingChat](https://coming.chat/):Integrated web3 portal for encrypted social, digital identity, NFT, digital wallet, smart contract platform portal and other functions. Committed to being a secure and trusted web3 portal. Combining decentralized encryption algorithms and blockchain knowledge to solve trusted information transmission and asset management problems.
-* [SherpaX](https://sherpax.io/): ChainX's EVM & WASM Smart Contract Parachain.
 * [MiniX](https://github.com/MinixChain/MinixChain): ChainX's digital identity, NFT, reputation system parachain.
-* [SoSwap](https://www.soswap.finance/): Omni-chain DEX, a distributed financial platform dedicated to allowing multiple chains to share liquidity.
 * [ComFuture](https://comfuture.coming.chat/): Digital identity, NFT creation auction trading platform.
 * USB: The decentralized expansion of BTC that allows BTC and any EVM ecological chain to be integrated with each other.
 
