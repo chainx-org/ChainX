@@ -5,10 +5,10 @@
 ### Technical features:
 - ***EVM:*** Fully compatible with EVM ecology, wallets such as metamask, development frameworks such as truffle/hardhat, and solidity programming language.
 - ***BTC native gas:*** Use native BTC as the gas fee for EVM. Similar to ETH layer2 OP/Starknet, ETH is used as the gas fee of Layer2.
-- ***Taproot Threshold Signature:*** 
-- bitcoin light node
-- Signal Privacy Distributed Protocol
-- zkstark ultra-light node
+- ***Taproot Threshold Signature:*** On-chain POS nodes to ensure the decentralization of threshold signature verifiers. singal privacy communication protocol to ensure the security of the aggregated schnorr signature pubkey/msg.
+- ***bitcoin light node:*** Light nodes on the BTC chain that support the Wasm version (no_std).
+- ***Signal Privacy Distributed Protocol:*** [Signal protocol](https://en.wikipedia.org/wiki/Signal_Protocol) to ensure the privacy and security of message communication between nodes when schnorr aggregate signature and Mast contract combined threshold signature. 
+- ***zkstark ultra-light node:*** To optimize the light nodes mentioned above, zkstark technology can be used to realize the ultra-light nodes of BTC.
 
 ### Taproot Threshold Signature
 Musig2 is a multi-signature protocol that only needs two rounds of communication to complete communication. It is a continuation and upgrade of Musig, and its practicability is greatly improved. This repo fully reproduces the multi-signature scheme proposed by [Musig2](https://eprint.iacr.org/2020/1261) Paper which the version is `20210706:150749`.At the same time, we implemented versions for secp256k1 and sr25519, respectively, so that we can use the Musig2 protocol in BTC  and Polka.
