@@ -3,9 +3,9 @@
 
 ## A community-driven BTC Layer2 project.
 ### Technical features:
-- EVM
-- BTC native gas
-- Taproot Threshold Signature
+- ***EVM:*** Fully compatible with EVM ecology, wallets such as metamask, development frameworks such as truffle/hardhat, and solidity programming language.
+- ***BTC native gas:*** Use native BTC as the gas fee for EVM. Similar to ETH layer2 OP/Starknet, ETH is used as the gas fee of Layer2.
+- ***Taproot Threshold Signature:*** 
 - bitcoin light node
 - Signal Privacy Distributed Protocol
 - zkstark ultra-light node
