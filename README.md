@@ -10,6 +10,13 @@
 - ***Signal Privacy Distributed Protocol:*** [Signal protocol](https://en.wikipedia.org/wiki/Signal_Protocol) to ensure the privacy and security of message communication between nodes when schnorr aggregate signature and Mast contract combined threshold signature. 
 - ***zkstark ultra-light node:*** To optimize the light nodes mentioned above, zkstark technology can be used to realize the ultra-light nodes of BTC.
 
+### Four advantages compared to other layer2/cross-chain bridges （Take [tBTC](https://www.thresholdusd.org/en/) as an example）
+- 1，There is no need to use sharding private keys to implement distributed threshold signatures, which avoids the security problem of private key leakage caused by sharding private keys.
+- 2， The validators of the distributed threshold network are all block verification nodes on the chain, and the network on the chain increases trust. It avoids the opaque and easy-to-operate defects of the distributed network under the chain.
+- 3， The BTC to Layer2 network uses BTC light nodes. The blockchain logic of fully trusting the code avoids the centralized fraud problem caused by the submission of data oracle to the distributed network under the chain.
+- 4， The Signal protocol is used to complete the communication problem of the BTC taproot threshold signature. Solve the privacy communication problem of distributed network. Avoid the risks of data leakage, collusion or external attacks when threshold signatures appear
+
+
 ### Taproot Threshold Signature
 Musig2 is a multi-signature protocol that only needs two rounds of communication to complete communication. It is a continuation and upgrade of Musig, and its practicability is greatly improved. This repo fully reproduces the multi-signature scheme proposed by [Musig2](https://eprint.iacr.org/2020/1261) Paper which the version is `20210706:150749`.At the same time, we implemented versions for secp256k1 and sr25519, respectively, so that we can use the Musig2 protocol in BTC  and Polka.
 
