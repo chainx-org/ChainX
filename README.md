@@ -1,66 +1,45 @@
-# ChainX
+# BEVM
+<img width="800" alt="WechatIMG475" src="https://github.com/btclayer2/BEVM/assets/9285062/eca6798f-b52c-45d1-8e7a-8d4c5c64890c">
 
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](./LICENSE)
-[![CI](https://github.com/chainx-org/ChainX/workflows/ci/badge.svg)](https://github.com/chainx-org/ChainX/actions?workflow=ci)
+## A community-driven BTC Layer2 project.
+### Technical features:
+- ***EVM:*** Fully compatible with EVM ecology, wallets such as metamask, development frameworks such as truffle/hardhat, and solidity programming language.
+- ***BTC native gas:*** Use native BTC as the gas fee for EVM. Similar to ETH layer2 OP/Starknet, ETH is used as the gas fee of Layer2.
+- ***Taproot Threshold Signature:*** On-chain POS nodes to ensure the decentralization of threshold signature verifiers. singal privacy communication protocol to ensure the security of the aggregated schnorr signature pubkey/msg.
+- ***bitcoin light node:*** Light nodes on the BTC chain that support the Wasm version (no_std).
+- ***Signal Privacy Distributed Protocol:*** [Signal protocol](https://en.wikipedia.org/wiki/Signal_Protocol) to ensure the privacy and security of message communication between nodes when schnorr aggregate signature and Mast contract combined threshold signature. 
+- ***zkstark ultra-light node:*** To optimize the light nodes mentioned above, zkstark technology can be used to realize the ultra-light nodes of BTC.
 
-[ChainX](https://github.com/chainx-org/ChainX) is a community-driven project built on the next-generation blockchain framework [substrate](https://github.com/paritytech/substrate), the largest Layer-2 network of Bitcoin using the Light-client protocol with smart contract support, spawn as the third relay chain besides Polkadot/Kusama. SherpaX and MiniX will be added as a parachain.
+### Taproot Threshold Signature
+Musig2 is a multi-signature protocol that only needs two rounds of communication to complete communication. It is a continuation and upgrade of Musig, and its practicability is greatly improved. This repo fully reproduces the multi-signature scheme proposed by [Musig2](https://eprint.iacr.org/2020/1261) Paper which the version is `20210706:150749`.At the same time, we implemented versions for secp256k1 and sr25519, respectively, so that we can use the Musig2 protocol in BTC  and Polka.
 
-Based on the LayerZero protocol, the EVM Layer2 ecology on ChainX can share the liquidity of the EVM ecology such as ETH/BSC, and the POW payment coin such as BTC/DogeCoin can share the DAPP ecology of the EVM.
-[light white paper](https://chainx.org/static/media/Chainx.3df914fe.pdf).
-[website](https://chainx.org)
+### secp256k1
 
-## The Fragmented Web3 Crypto World
-There has always been many problems in the crypto world, but there has never been a shortage of reforms and innovations.
-* In order to solve the payment performance and scalability problems of BTC, various altcoins such as Dogecoin, LTC, and BCH have been introduced.
-* In order to solve the problems of too expensive gas fees in Ethereum and the scalability of dapps, people have successively developed public chains such as BSC, EOS, Polkadot, and Avalanche, which now seem to have a wide users.
+The naming of the functions, states, and variables are aligned with that of the protocol. At the same time, it is compatible with the schnorr signature process proposed by Bitcoin [bip340](https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki), making it applicable to the Bitcoin network.
 
+### sr25519
 
-However, the establishment of dapps on these mainstream public chains still faces some problems: the ecosystems of different public chains are separated from each other, and the isolation will disperse the value, until the value returns to 0, the aggregation can accumulate the value, making the value like The piles of wood are piled higher and higher.
-Also, we cannot exchange tokens on pancakeswap with those on Uniswap because they come from different ecosystems. This will prevent DEXs from having as much liquidity as CEXs. But we must embrace DEXs, because we all know that decentralization is the fundamental attribute and future of the encrypted world, and the meaning of encryption algorithms and even the whole web3 world is decentralization.
-
-Based on this, ChainX, the layer 2 network of Bitcoin, will be committed to solving the above problems and aggregating these divided communities and ecology.
-
-## How ChainX solves the above problems
-
-### To solve the scalability problem of isolated POW tokens such as Bitcoin and Dogecoin
-First, we adopted the mode of light node + multi-centralized hosting (integrated with Taproot aggregated signature + MAST contract + Signal distributed computing protocol). Then, we will adopt the on chain lightning network model to completely solve the scalability problem of POW tokens such as BTC in a completely decentralized way.
-
-### To solve the isolation problem of EVM public chains such as ETH/BSC
-There are already many solutions for the decentralized cross-chain between EVM chains. We will absorb the LayerZero protocol to realize the cross-chain between decentralized EVM chains.
-
-Later, an aggregation protocol will be deployed on ChainX EVM, so that our DEX can unify liquidity across platforms and chains: for example, pools on UniSwap and pools on PancakeSwap can share liquidity.
-
-In addition, ChainX will realize the consistent mapping between ENS and other various public chain domain name systems. For example, the CID of ComingChat can be mapped with ENS, and ENS can be mapped with BTC addresses.
-
-Aggregation and unification are eternal themes in the crypto world. Aggregation can make the crypto world closer and make web3 competitive enough to replace the web2 world. At the same time, aggregation also prevents LTC, BCH and other DAPP ecologically unprosperous communities from slowly going silent, and the prosperous EVM ecology will also become more prosperous because of aggregation.
-
-
-## ChainX Ecological Project：
-* [ComingChat](https://coming.chat/):Integrated web3 portal for encrypted social, digital identity, NFT, digital wallet, smart contract platform portal and other functions. Committed to being a secure and trusted web3 portal. Combining decentralized encryption algorithms and blockchain knowledge to solve trusted information transmission and asset management problems.
-* [SherpaX](https://sherpax.io/): ChainX's EVM & WASM Smart Contract Parachain.
-* [MiniX](https://github.com/MinixChain/MinixChain): ChainX's digital identity, NFT, reputation system parachain.
-* [SoSwap](https://www.soswap.finance/): Omni-chain DEX, a distributed financial platform dedicated to allowing multiple chains to share liquidity.
-* [ComFuture](https://comfuture.coming.chat/): Digital identity, NFT creation auction trading platform.
-* USB: The decentralized expansion of BTC that allows BTC and any EVM ecological chain to be integrated with each other.
-
-## The crypto world is not perfect, but ChainX is working hard to make it better and better.
-Please refer to the [docs](https://chainx-org.github.io/documentation) for building and developing on ChainX platform.
+Implements musig2 protocol on [Ristretto](https://ristretto.group/) compressed Ed25519 points.
 
 ## Contribution
-
-Any kinds of contributions are highly welcome. Feel free to submit an issue if you have any question or run into any issues.
+Any kinds of contribution are highly welcome. Feel free to submit an issue if you have any question or run into any issues.
 
 ## Metamask config for BTC
 ```
-Network name: ChainX
-RPC URL: https://mainnet.chainx.org/rpc
+Network name: BEVM
+RPC URL: https://mainnet.bevm.io/rpc
 Chain ID: 1501
 Currency symbol: BTC
-Block explorer URL (Optional): https://evm.chainx.org/
+Block explorer URL (Optional): https://evm.bevm.io/
 ```
-
-PCX(ERC20): `0xf3607524cAB05762cB5F0cAb17e4cA3A0F0b4E87`
 
 ## License
 
 [GPL v3](LICENSE)
+
+# References
+
+- [schnorrkel](https://github.com/w3f/schnorrkel)
+- [multi-party-schnorr](https://github.com/ZenGo-X/multi-party-schnorr)
+- [musig2](https://eprint.iacr.org/2020/1261)
+
