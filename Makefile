@@ -27,6 +27,9 @@ build:
 release:
 	@cargo build --release #--features "${ENABLE_FEATURES}"
 
+release-arm64:
+	@cargo build --release --target=aarch64-unknown-linux-gnu
+
 test-opreturn:
 	cargo test --release -p xp-gateway-bitcoin --lib -- --test-threads 1
 

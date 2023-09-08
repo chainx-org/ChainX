@@ -11,6 +11,10 @@ cli = { package = "chainx-cli", path = "cli" }
 [target.'cfg(target_arch="x86_64")'.dependencies]
 cli = { package = "chainx-cli", path = "cli", features = ["wasmtime"] }
 
+[target.'cfg(target_arch="aarch64")'.dependencies]
+cli = { package = "chainx-cli", path = "cli", features = ["wasmtime"] }
+
+
 [workspace]
 members = [
   "cli",
