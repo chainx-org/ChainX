@@ -14,9 +14,9 @@ jsonrpc-core-client = "18.0.0"
 jsonrpc-derive = "18.0.0"
 
 # Substrate primitives
-sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
-sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
+sp-api = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18" }
+sp-blockchain = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18" }
+sp-runtime = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18" }
 
 # ChainX primitives
 xp-rpc = { path = "../../../../primitives/rpc" }

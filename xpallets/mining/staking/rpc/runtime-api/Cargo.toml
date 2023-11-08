@@ -11,8 +11,8 @@ targets = ["x86_64-unknown-linux-gnu"]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
 
 # Substrate primitives
-sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
+sp-api = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18", default-features = false }
+sp-std = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18", default-features = false }
 
 # ChainX pallets
 xpallet-mining-staking = { path = "../..", default-features = false }
