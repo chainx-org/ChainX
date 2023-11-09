@@ -1,12 +1,12 @@
 [package]
 name = "chainx-executor"
-version = "5.1.1"
+version = "5.2.0"
 authors = ["The ChainX Authors"]
 edition = "2021"
 
 [dependencies]
-frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
-sc-executor = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
+frame-benchmarking = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18" }
+sc-executor = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18" }
 
 # ChainX runtime
 chainx-runtime = { path = "../runtime/chainx" }

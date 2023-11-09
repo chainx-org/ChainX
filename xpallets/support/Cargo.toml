@@ -1,6 +1,6 @@
 [package]
 name = "xpallet-support"
-version = "5.1.1"
+version = "5.2.0"
 authors = ["The ChainX Authors"]
 edition = "2021"
 
@@ -8,7 +8,7 @@ edition = "2021"
 hex = { version = "0.4", default-features = false, features = ["alloc"] }
 
 # Substrate primitives
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
+sp-std = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18", default-features = false }
 
 [features]
 default = ["std"]

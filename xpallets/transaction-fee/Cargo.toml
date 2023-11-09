@@ -1,6 +1,6 @@
 [package]
 name = "xpallet-transaction-fee"
-version = "5.1.1"
+version = "5.2.0"
 authors = ["The ChainX Authors"]
 edition = "2021"
 
@@ -13,13 +13,13 @@ serde = { version = "1.0.101", optional = true }
 scale-info = { version = "2.0.1", default-features = false, features = ["derive"] }
 
 # Substrate primitives
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
+sp-runtime = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18", default-features = false }
+sp-std = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18", default-features = false }
 
 # Substrate pallets
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
-frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
-pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
+frame-support = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18", default-features = false }
+frame-system = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18", default-features = false }
+pallet-transaction-payment = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18", default-features = false }
 
 [features]
 default = ["std"]
