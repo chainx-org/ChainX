@@ -1,6 +1,6 @@
 [package]
 name = "xpallet-assets-bridge"
-version = "5.1.1"
+version = "5.2.0"
 authors = ["The ChainX Authors"]
 edition = "2021"
 
