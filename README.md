@@ -1,7 +1,7 @@
 # BEVM
 <img width="800" alt="WechatIMG475" src="https://github.com/btclayer2/BEVM/assets/9285062/eca6798f-b52c-45d1-8e7a-8d4c5c64890c">
 
-## A community-driven BTC Layer2 project.
+## [An EVM-compatible Bitcoin Layer 2 with BTC as gas](https://github.com/btclayer2/BEVM-white-paper)
 ### Technical features:
 - ***EVM:*** Fully compatible with EVM ecology, wallets such as metamask, development frameworks such as truffle/hardhat, and solidity programming language.
 - ***BTC native gas:*** Use native BTC as the gas fee for EVM. Similar to ETH layer2 OP/Starknet, ETH is used as the gas fee of Layer2.
