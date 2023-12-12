@@ -4729,9 +4729,9 @@ dependencies = [
 
 [[package]]
 name = "micromath"
-version = "2.0.0"
+version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "39617bc909d64b068dcffd0e3e31679195b5576d0c83fadc52690268cc2b2b55"
+checksum = "c3c8dda44ff03a2f238717214da50f65d5a53b45cd213a7370424ffdb6fae815"
 
 [[package]]
 name = "minimal-lexical"
@@ -10852,7 +10852,6 @@ name = "xpallet-mining-staking"
 version = "5.2.0"
 dependencies = [
  "chainx-primitives",
- "env_logger 0.7.1",
  "frame-benchmarking",
  "frame-support",
  "frame-system",

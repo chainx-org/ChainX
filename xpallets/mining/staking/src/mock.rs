@@ -248,7 +248,6 @@ impl ExtBuilder {
         PERIOD.with(|v| *v.borrow_mut() = self.session_length);
     }
     pub fn build(self) -> sp_io::TestExternalities {
-        let _ = env_logger::try_init();
         self.set_associated_constants();
         let mut storage = frame_system::GenesisConfig::default()
             .build_storage::<Test>()
