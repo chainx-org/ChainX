@@ -1,6 +1,6 @@
 [package]
 name = "xp-gateway-bitcoin"
-version = "5.2.0"
+version = "5.2.1"
 authors = ["The ChainX Authors"]
 edition = "2021"
 
