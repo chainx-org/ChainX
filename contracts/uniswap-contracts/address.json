@@ -1,11 +1,11 @@
 {
    "chainx-testnet": {
-      "WETH": "0x75AE064C1395b54820E6df1406935870d3B6c021",
-      "Factory": "0xbC507Bb066417fA9612652D5529dcE2bABd4D2f2",
+      "WETH": "0x51abb19F1ebc7B64040aFd0ef3C789d75C8707e0",
+      "Factory": "0xe922A087CA192ffdaA32eCB6A3ad3320bfFDd83b",
       "Factory Feeto": "0xcAF084133CBdBE27490d3afB0Da220a40C32E307",
-      "RouterV02": "0x401c9bD89643CC5A4F0777004E0327cd4DfbaF3F",
-      "Multicall": "0x0ADDf58B2e43463E0D527A0BD01F6E2E5b5964AF",
-      "ENSRegistry": "0x8F8F6B104190a4A24CcFf7B4006Ea7A59baeAf81",
+      "RouterV02": "0x990e95C5CddAf60785ad92caF86Dea6c83F6f867",
+      "Multicall": "0x784ea1566D3820DaE6aa220eA8C5a0836297fcD3",
+      "ENSRegistry": "0x21b782d2357797D78D48813048033F187AAa2F9C",
       "init_code_hash": "0x01429e880a7972ebfbba904a5bbe32a816e78273e4b38ffa6bdeaebce8adba7c"
    },
    "chainx-mainnet": {

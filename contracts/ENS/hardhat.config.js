@@ -49,12 +49,12 @@ module.exports = {
     chainx_testnet: {
       url: `https://testnet3.chainx.org/rpc`,
       chainId: 1502,
-      accounts: [process.env.privateKey],
+      accounts: [process.env.PRIVKEY],
     },
     chainx_mainnet: {
       url: `https://mainnet.chainx.org/rpc`,
       chainId: 1501,
-      accounts: [process.env.privateKey],
+      accounts: [process.env.PRIVKEY],
     }
   },
   mocha: {
