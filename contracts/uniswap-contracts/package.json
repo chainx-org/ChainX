@@ -6,6 +6,6 @@
     "@uniswap/lib": "^4.0.1-alpha",
     "@uniswap/v2-core": "^1.0.1",
     "ethers": "^5.0.31",
-    "hardhat": "^2.0.10"
+    "hardhat": "^2.19.2"
   }
 }
