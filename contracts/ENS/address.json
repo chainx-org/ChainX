@@ -1,0 +1,20 @@
+{
+  "chainx-testnet": {
+    "ENSRegistry": "0x21b782d2357797D78D48813048033F187AAa2F9C",
+    "StablePriceOracle": "0xe4c19e1ad3aE361d79982c1563fb46a624997d7F",
+    "PublicResolver": "0x881568956304d287EDa7cCF73722809E071680D9",
+    "BaseRegistrarImplementation": "0x343d912715bFf7cD505722BD3Fbdcba766fD1177",
+    "ETHRegistrarController": "0xcB64504DDd945ee1C153a2A4F2128607333e07A7",
+    "defaultReverseResolver": "0x36D14A1BCE8334dd87aA4851218DDc157d988d37",
+    "reverseRegistrar": "0x855cfc5D1DA8dEb03E8e420EFBAF43e9D6Eeb772"
+  },
+  "chainx-mainnet": {
+    "ENSRegistry": "0x8F8F6B104190a4A24CcFf7B4006Ea7A59baeAf81",
+    "StablePriceOracle": "0x3311A4609cdD0C7Ce8D2Dfa592BA4aDD23FeC578",
+    "PublicResolver": "0x0ACE27B4403E77Fd3FAC7B73Fc8eaB146C1ddcD3",
+    "BaseRegistrarImplementation": "0xfc776c74F4f992c0C9064EFe05b56a4a0370258B",
+    "ETHRegistrarController": "0x6FEC48FF7988b0F3c793a102BF30E850186e250B",
+    "defaultReverseResolver": "0x4179e3216477a2fE3E8e40103444a26e042B3986",
+    "reverseRegistrar": "0x55a3843eB30133Cea03e83eaDF533C94806AF8b2"
+  }
+}

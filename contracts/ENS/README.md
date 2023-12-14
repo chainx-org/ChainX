@@ -166,3 +166,9 @@ yarn test
 ```
 yarn pub
 ```
+
+### How to deploy
+```bash
+export PRIVKEY=
+npx hardhat run --network chainx_testnet scripts/deploy.js
+```
