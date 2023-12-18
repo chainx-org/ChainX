@@ -54,7 +54,36 @@ TODO
 TODO
 
 ### 2.3 PCX(bevm -> chainx)
-TODO
+ChainXBridge(mainnet): **0xd1543A52d770D32854fc5f5F076a74033D49D41f**
+
+通过remix调用ChainXBridge合约中的**withdrawPCX**
+```solidity
+function withdrawPCX(
+        uint256 value,
+        bytes32 chainxPubkey
+    ) external autoIncreaseNonce returns (bool) {
+        return SystemWithdraw.withdrawPCX(value, chainxPubkey);
+    }
+```
+
+下载ChainX源码,启动remixd
+```bash
+$ git clone https://github.com/chainx-org/ChainX.git
+$ cd ChainX
+$ bash scripts/remix.sh
+```
+
+metamask连接chainx-evm
+![img.png](remix-chainx-bridge.png)
+
+在"At Address": 填入chainx bridge合约地址 **0xd1543A52d770D32854fc5f5F076a74033D49D41f** 
+
+调用 "withdrawPCX": 第一个参数填pcx balance(decimals=8), 第二个参数填chainx账户的公钥
+
+
+chainx账户转公钥可用下面的工具: https://scan.chainx.org/tools/SS58
+![img.png](account-convert.png)
+
 
 ## 3. Query balance
 
