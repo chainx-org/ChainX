@@ -6,8 +6,8 @@ edition = "2021"
 
 [dependencies]
 # Substrate primitives
-sp-arithmetic = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix", default-features = false }
-sp-runtime = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix", default-features = false }
+sp-arithmetic = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2", default-features = false }
+sp-runtime = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2", default-features = false }
 
 # ChainX primitives
 chainx-primitives = { path = "../../../primitives", default-features = false }

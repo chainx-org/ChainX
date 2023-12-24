@@ -16,13 +16,13 @@ smallvec = "1.4.1"
 static_assertions = "1.1.0"
 
 # Substrate primitives
-sp-runtime = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix", default-features = false }
+sp-runtime = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2", default-features = false }
 
 # Substrate pallets
-frame-support = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix", default-features = false }
-frame-system = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix", default-features = false }
-pallet-balances = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix", default-features = false }
-pallet-transaction-payment = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix", default-features = false }
+frame-support = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2", default-features = false }
+frame-system = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2", default-features = false }
+pallet-balances = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2", default-features = false }
+pallet-transaction-payment = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2", default-features = false }
 
 # ChainX primitives
 chainx-primitives = { path = "../../primitives", default-features = false }

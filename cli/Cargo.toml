@@ -18,38 +18,38 @@ serde_json = "1.0"
 clap = { version = "3.0", features = ["derive"] }
 
 # Substrate client
-sc-authority-discovery = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sc-basic-authorship = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sc-chain-spec = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sc-client-api = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sc-consensus = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sc-consensus-babe = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sc-consensus-slots = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sc-executor = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sc-finality-grandpa = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sc-network = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sc-rpc = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sc-sync-state-rpc = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sc-transaction-pool = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sc-telemetry = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
+sc-authority-discovery = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sc-basic-authorship = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sc-chain-spec = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sc-client-api = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sc-consensus = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sc-consensus-babe = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sc-consensus-slots = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sc-executor = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sc-finality-grandpa = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sc-network = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sc-rpc = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sc-sync-state-rpc = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sc-transaction-pool = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sc-telemetry = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
 
-frame-benchmarking-cli = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix", optional = true }
-sc-cli = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix", optional = true }
-sc-service = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix", optional = true }
-try-runtime-cli = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix", optional = true }
+frame-benchmarking-cli = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2", optional = true }
+sc-cli = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2", optional = true }
+sc-service = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2", optional = true }
+try-runtime-cli = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2", optional = true }
 
 # Substrate primitives
-sp-authority-discovery = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sp-core = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sp-consensus = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sp-consensus-babe = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sp-finality-grandpa = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sp-inherents = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sp-runtime = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sp-transaction-pool = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
+sp-authority-discovery = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sp-core = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sp-consensus = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sp-consensus-babe = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sp-finality-grandpa = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sp-inherents = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sp-runtime = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sp-transaction-pool = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
 
 # Substrate pallets
-pallet-im-online = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
+pallet-im-online = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
 
 chainx-executor = { path = "../executor" }
 chainx-primitives = { path = "../primitives" }
@@ -67,7 +67,7 @@ xpallet-gateway-common = { path = "../xpallets/gateway/common" }
 xpallet-btc-ledger = { path = "../xpallets/btc-ledger" }
 
 [build-dependencies]
-substrate-build-script-utils = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
+substrate-build-script-utils = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
 
 [features]
 default = ["cli"]

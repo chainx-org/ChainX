@@ -10,34 +10,34 @@ jsonrpc-core = "18.0.0"
 jsonrpc-pubsub = "18.0.0"
 
 # Substrate client
-sc-chain-spec = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sc-client-api = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sc-consensus-babe = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sc-consensus-babe-rpc = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sc-consensus-epochs = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sc-finality-grandpa = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sc-finality-grandpa-rpc = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sc-keystore = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sc-rpc = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sc-rpc-api = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sc-service = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix", features = ["test-helpers"] }
-sc-sync-state-rpc = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
+sc-chain-spec = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sc-client-api = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sc-consensus-babe = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sc-consensus-babe-rpc = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sc-consensus-epochs = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sc-finality-grandpa = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sc-finality-grandpa-rpc = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sc-keystore = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sc-rpc = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sc-rpc-api = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sc-service = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2", features = ["test-helpers"] }
+sc-sync-state-rpc = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
 
 # Substrate primitives
-sp-api = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sp-blockchain = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sp-block-builder = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sp-consensus = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sp-consensus-babe = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sp-keystore = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sp-runtime = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sp-state-machine = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sc-transaction-pool-api = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
+sp-api = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sp-blockchain = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sp-block-builder = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sp-consensus = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sp-consensus-babe = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sp-keystore = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sp-runtime = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sp-state-machine = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sc-transaction-pool-api = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
 
 # Substrate pallets
-frame-support = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-pallet-transaction-payment-rpc = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-substrate-frame-rpc-system = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
+frame-support = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+pallet-transaction-payment-rpc = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+substrate-frame-rpc-system = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
 
 # ChainX primitives
 chainx-primitives = { path = "../primitives" }
@@ -65,10 +65,10 @@ xpallet-btc-ledger-runtime-api = { path = "../xpallets/btc-ledger/rpc/runtime-ap
 
 
 # EVM
-fc-db = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc-fix" }
-fc-rpc = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc-fix", features = ["rpc_binary_search_estimate", "chainx-adaptor"] }
-fc-rpc-core = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc-fix" }
-fp-rpc = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc-fix" }
-fp-storage = { git="https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc-fix" }
-sc-transaction-pool = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sc-network = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
+fc-db = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc-fix2" }
+fc-rpc = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc-fix2", features = ["rpc_binary_search_estimate", "chainx-adaptor"] }
+fc-rpc-core = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc-fix2" }
+fp-rpc = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc-fix2" }
+fp-storage = { git="https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc-fix2" }
+sc-transaction-pool = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sc-network = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }

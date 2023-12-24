@@ -15,13 +15,13 @@ jsonrpc-derive = "18.0.0"
 serde = { version = "1.0", features = ["derive"] }
 
 # Substrate primitives
-sp-api = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sp-blockchain = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sp-core = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
-sp-runtime = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
+sp-api = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sp-blockchain = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sp-core = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sp-runtime = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
 
 # Substrate pallets
-pallet-transaction-payment-rpc = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
+pallet-transaction-payment-rpc = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
 
 xp-rpc = { path = "../../../primitives/rpc" }
 
