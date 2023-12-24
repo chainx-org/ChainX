@@ -11,18 +11,18 @@ scale-info = { version = "2.0.1", default-features = false, features = ["derive"
 micromath = { version="2.0.0", default-features = false }
 
 # Substrate primitives
-sp-arithmetic = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18", default-features = false }
-sp-core = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18", default-features = false }
-sp-runtime = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18", default-features = false }
-sp-staking = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18", default-features = false }
-sp-std = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18", default-features = false }
+sp-arithmetic = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix", default-features = false }
+sp-core = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix", default-features = false }
+sp-runtime = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix", default-features = false }
+sp-staking = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix", default-features = false }
+sp-std = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix", default-features = false }
 
 # Substrate pallets
-frame-benchmarking = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18", default-features = false, optional = true }
-frame-support = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18", default-features = false }
-frame-system = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18", default-features = false }
-pallet-balances =  { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18", default-features = false }
-pallet-session = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18", default-features = false }
+frame-benchmarking = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix", default-features = false, optional = true }
+frame-support = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix", default-features = false }
+frame-system = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix", default-features = false }
+pallet-balances =  { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix", default-features = false }
+pallet-session = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix", default-features = false }
 
 # ChainX primitives
 chainx-primitives = { path = "../../../primitives", default-features = false }
@@ -36,11 +36,11 @@ xp-runtime = { path = "../../../primitives/runtime", default-features = false }
 xpallet-support = { path = "../../support", default-features = false }
 
 [dev-dependencies]
-sp-core = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18" }
-sp-io = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18" }
+sp-core = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
+sp-io = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
 xp-protocol = { path = "../../../primitives/protocol" }
-frame-benchmarking = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18" }
-pallet-timestamp = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18" }
+frame-benchmarking = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
+pallet-timestamp = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix" }
 
 [features]
 default = ["std"]

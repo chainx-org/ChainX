@@ -9,8 +9,8 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 serde = { version = "1.0.136", optional = true }
 scale-info = { version = "2.0.1", default-features = false, features = ["derive"] }
 
-frame-support = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18", default-features = false }
-frame-system = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18", default-features = false }
+frame-support = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix", default-features = false }
+frame-system = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix", default-features = false }
 
 [features]
 default = ["std"]
