@@ -11,8 +11,8 @@ hex = { version = "0.4", default-features = false }
 scale-info = { version = "2.0.1", default-features = false, features = ["derive"] }
 
 # Substrate primitives
-sp-core = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18", default-features = false }
-frame-support = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18", default-features = false }
+sp-core = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2", default-features = false }
+frame-support = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2", default-features = false }
 
 # ChainX primitives
 xp-io = { path = "../../io", default-features = false, optional = true }
