@@ -379,18 +379,19 @@ where
         prometheus_registry.clone(),
     ));
 
+    let justification_stream = grandpa_link.justification_stream();
+    let shared_authority_set = grandpa_link.shared_authority_set().clone();
+    let shared_voter_state = sc_finality_grandpa::SharedVoterState::empty();
+    let finality_proof_provider = GrandpaFinalityProofProvider::new_for_service(
+        backend.clone(),
+        Some(shared_authority_set.clone()),
+    );
+    let rpc_setup = shared_voter_state.clone();
+
+    let shared_epoch_changes = babe_link.epoch_changes().clone();
+    let babe_config = babe_link.config().clone();
+
     let rpc_extensions_builder = {
-        let justification_stream = grandpa_link.justification_stream();
-        let shared_authority_set = grandpa_link.shared_authority_set().clone();
-
-        let finality_proof_provider = GrandpaFinalityProofProvider::new_for_service(
-            backend.clone(),
-            Some(shared_authority_set.clone()),
-        );
-
-        let babe_config = babe_link.config().clone();
-        let shared_epoch_changes = babe_link.epoch_changes().clone();
-
         let client = client.clone();
         let pool = transaction_pool.clone();
         let select_chain = select_chain.clone();
@@ -419,7 +420,7 @@ where
                     keystore: keystore.clone(),
                 },
                 grandpa: chainx_rpc::GrandpaDeps {
-                    shared_voter_state: sc_finality_grandpa::SharedVoterState::empty(),
+                    shared_voter_state: shared_voter_state.clone(),
                     shared_authority_set: shared_authority_set.clone(),
                     justification_stream: justification_stream.clone(),
                     subscription_executor,
@@ -625,7 +626,7 @@ where
             telemetry: telemetry.as_ref().map(|x| x.handle()),
             voting_rule: sc_finality_grandpa::VotingRulesBuilder::default().build(),
             prometheus_registry,
-            shared_voter_state: sc_finality_grandpa::SharedVoterState::empty(),
+            shared_voter_state: rpc_setup,
         };
 
         // the GRANDPA voter task is considered infallible, i.e.
