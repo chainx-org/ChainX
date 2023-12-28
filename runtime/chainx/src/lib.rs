@@ -1126,7 +1126,6 @@ pub const WEIGHT_PER_GAS: u64 = 60_000;
 /// Maximum weight per block
 pub const MAXIMUM_BLOCK_WEIGHT: Weight = 2 * WEIGHT_PER_SECOND;
 
-
 parameter_types! {
     // 2_500_000
     pub BlockGasLimit: U256
