@@ -1127,7 +1127,7 @@ pub const WEIGHT_PER_GAS: u64 = 75_000;
 pub const MAXIMUM_BLOCK_WEIGHT: Weight = 2 * WEIGHT_PER_SECOND;
 
 parameter_types! {
-    // 2_000_000
+    // 20_000_000
     pub BlockGasLimit: U256
         = U256::from(NORMAL_DISPATCH_RATIO * MAXIMUM_BLOCK_WEIGHT / WEIGHT_PER_GAS);
     pub PrecompilesValue: ChainXPrecompiles<Runtime> = ChainXPrecompiles::<_>::new();
