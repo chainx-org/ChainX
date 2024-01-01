@@ -1,11 +1,6 @@
 // Copyright 2019-2023 ChainX Project Authors. Licensed under GPL-3.0.
 
-use std::str::FromStr;
-use std::sync::Arc;
-
-use sp_runtime::traits::{Block as BlockT, Header as HeaderT, NumberFor};
-use sc_client_api::{Backend, UsageProvider};
-use sc_cli::{CliConfiguration, KeySubcommand, SharedParams, SignCmd, VanityCmd, VerifyCmd, Result, SubstrateCli};
+use sc_cli::{CliConfiguration, KeySubcommand, SharedParams, PruningParams, SignCmd, VanityCmd, VerifyCmd, Result, SubstrateCli};
 use sc_client_api::AuxStore;
 
 
@@ -67,6 +62,7 @@ pub enum Subcommand {
 
     /// Revert the chain to a previous state.
     Revert(sc_cli::RevertCmd),
+
     #[clap(subcommand)]
     FixBabeEpoch(FixEpochSubCommand)
 }
@@ -92,6 +88,10 @@ pub struct FixEpochDumpCommand {
     #[allow(missing_docs)]
     #[clap(flatten)]
     pub shared_params: SharedParams,
+
+    #[allow(missing_docs)]
+    #[clap(flatten)]
+    pub pruning_params: PruningParams,
 }
 const BABE_EPOCH_CHANGES_KEY: &[u8] = b"babe_epoch_changes";
 use sc_consensus_babe::{Epoch};
@@ -104,7 +104,7 @@ impl FixEpochDumpCommand {
         runner.sync_run(|mut config| {
             let components = new_partial::<
                 chainx_runtime::RuntimeApi,
-                chainx_executor::MalanExecutor
+                chainx_executor::ChainXExecutor
             >(
                 &mut config,
             )?;
@@ -126,6 +126,10 @@ pub struct FixEpochOverrideommand {
     #[clap(flatten)]
     pub shared_params: SharedParams,
 
+    #[allow(missing_docs)]
+    #[clap(flatten)]
+    pub pruning_params: PruningParams,
+
     #[clap(long)]
     pub bytes: String
 }
@@ -136,7 +140,7 @@ impl FixEpochOverrideommand {
         runner.sync_run(|mut config| {
             let components = new_partial::<
                 chainx_runtime::RuntimeApi,
-                chainx_executor::MalanExecutor
+                chainx_executor::ChainXExecutor
             >(
                 &mut config,
             )?;
@@ -158,11 +162,19 @@ impl CliConfiguration for FixEpochDumpCommand {
     fn shared_params(&self) -> &SharedParams {
         &self.shared_params
     }
+
+    fn pruning_params(&self) -> Option<&PruningParams> {
+        Some(&self.pruning_params)
+    }
 }
 
 impl CliConfiguration for FixEpochOverrideommand {
     fn shared_params(&self) -> &SharedParams {
         &self.shared_params
+    }
+
+    fn pruning_params(&self) -> Option<&PruningParams> {
+        Some(&self.pruning_params)
     }
 }
 
