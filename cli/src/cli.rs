@@ -1,8 +1,10 @@
 // Copyright 2019-2023 ChainX Project Authors. Licensed under GPL-3.0.
 
-use sc_cli::{CliConfiguration, KeySubcommand, SharedParams, PruningParams, SignCmd, VanityCmd, VerifyCmd, Result, SubstrateCli};
+use sc_cli::{
+    CliConfiguration, KeySubcommand, PruningParams, Result, SharedParams, SignCmd, SubstrateCli,
+    VanityCmd, VerifyCmd,
+};
 use sc_client_api::AuxStore;
-
 
 use chainx_service::new_partial;
 
@@ -64,13 +66,13 @@ pub enum Subcommand {
     Revert(sc_cli::RevertCmd),
 
     #[clap(subcommand)]
-    FixBabeEpoch(FixEpochSubCommand)
+    FixBabeEpoch(FixEpochSubCommand),
 }
 
 #[derive(Debug, clap::Subcommand)]
 pub enum FixEpochSubCommand {
     Dump(FixEpochDumpCommand),
-    Override(FixEpochOverrideommand)
+    Override(FixEpochOverrideommand),
 }
 
 impl FixEpochSubCommand {
@@ -94,9 +96,9 @@ pub struct FixEpochDumpCommand {
     pub pruning_params: PruningParams,
 }
 const BABE_EPOCH_CHANGES_KEY: &[u8] = b"babe_epoch_changes";
-use sc_consensus_babe::{Epoch};
+use codec::{Decode, Encode};
+use sc_consensus_babe::Epoch;
 use sc_consensus_epochs::EpochChangesFor;
-use codec::{Encode, Decode};
 
 impl FixEpochDumpCommand {
     pub fn run<C: SubstrateCli>(&self, cli: &C) -> Result<()> {
@@ -104,12 +106,13 @@ impl FixEpochDumpCommand {
         runner.sync_run(|mut config| {
             let components = new_partial::<
                 chainx_runtime::RuntimeApi,
-                chainx_executor::ChainXExecutor
-            >(
-                &mut config,
-            )?;
+                chainx_executor::ChainXExecutor,
+            >(&mut config)?;
             let client = components.client;
-            let bytes = client.get_aux(BABE_EPOCH_CHANGES_KEY).expect("Access DB should success").expect("value must exist");
+            let bytes = client
+                .get_aux(BABE_EPOCH_CHANGES_KEY)
+                .expect("Access DB should success")
+                .expect("value must exist");
             let hex_str = hex::encode(&bytes);
             println!("{}", hex_str);
             let epoch: EpochChangesFor<chainx_runtime::Block, Epoch> =
@@ -131,7 +134,7 @@ pub struct FixEpochOverrideommand {
     pub pruning_params: PruningParams,
 
     #[clap(long)]
-    pub bytes: String
+    pub bytes: String,
 }
 
 impl FixEpochOverrideommand {
@@ -140,10 +143,8 @@ impl FixEpochOverrideommand {
         runner.sync_run(|mut config| {
             let components = new_partial::<
                 chainx_runtime::RuntimeApi,
-                chainx_executor::ChainXExecutor
-            >(
-                &mut config,
-            )?;
+                chainx_executor::ChainXExecutor,
+            >(&mut config)?;
             let client = components.client;
 
             let bytes = hex::decode(&self.bytes).expect("require hex string without 0x");
@@ -151,12 +152,13 @@ impl FixEpochOverrideommand {
                 Decode::decode(&mut &bytes[..]).expect("Decode must success");
             println!("epoch: {:?}", epoch);
 
-            client.insert_aux(&[(BABE_EPOCH_CHANGES_KEY, &epoch.encode()[..])], &[]).expect("Insert to db must success");
+            client
+                .insert_aux(&[(BABE_EPOCH_CHANGES_KEY, &epoch.encode()[..])], &[])
+                .expect("Insert to db must success");
             Ok(())
         })
     }
 }
-
 
 impl CliConfiguration for FixEpochDumpCommand {
     fn shared_params(&self) -> &SharedParams {
