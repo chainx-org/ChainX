@@ -14,6 +14,7 @@ cli = { package = "chainx-cli", path = "cli", features = ["wasmtime"] }
 [workspace]
 members = [
   "cli",
+  "client/rpc/finality",
   "executor",
   "primitives",
   "primitives/assets-registrar",
