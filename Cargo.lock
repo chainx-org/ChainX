@@ -400,6 +400,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevm-finality-rpc"
+version = "5.2.2"
+dependencies = [
+ "fc-db",
+ "fc-rpc",
+ "futures 0.3.21",
+ "jsonrpc-core",
+ "jsonrpc-derive",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-blockchain",
+ "sp-core",
+ "sp-runtime",
+ "tokio",
+]
+
+[[package]]
 name = "bimap"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -861,6 +878,7 @@ dependencies = [
 name = "chainx-rpc"
 version = "5.2.2"
 dependencies = [
+ "bevm-finality-rpc",
  "chainx-primitives",
  "fc-db",
  "fc-rpc",

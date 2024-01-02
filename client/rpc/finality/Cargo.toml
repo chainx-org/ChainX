@@ -1,0 +1,21 @@
+[package]
+name = "bevm-finality-rpc"
+description = "An experimental RPC to check for block and transaction finality in the bevm chain"
+version = "5.2.2"
+authors = ["The ChainX Authors"]
+edition = "2021"
+
+[dependencies]
+futures = { version = "0.3", features = [ "compat" ] }
+jsonrpc-core = "18.0.0"
+jsonrpc-derive = "18.0.0"
+parity-scale-codec = "3.0.0"
+tokio = { version = "1.12.0", features = [ "sync", "time" ] }
+
+fc-db = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc-fix2" }
+fc-rpc = { git = "https://github.com/chainx-org/frontier", branch = "polkadot-v0.9.18-btc-fix2" }
+sp-api = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sp-blockchain = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sp-core = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+sp-runtime = { git = "https://github.com/chainx-org/substrate", branch = "polkadot-v0.9.18-fix2" }
+

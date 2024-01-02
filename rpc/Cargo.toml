@@ -43,6 +43,9 @@ substrate-frame-rpc-system = { git = "https://github.com/chainx-org/substrate", 
 chainx-primitives = { path = "../primitives" }
 xp-runtime = { path = "../primitives/runtime" }
 
+# Finality-rpc
+bevm-finality-rpc = { path = "../client/rpc/finality" }
+
 # ChainX pallets
 xpallet-assets-rpc = { path = "../xpallets/assets/rpc" }
 xpallet-assets-rpc-runtime-api = { path = "../xpallets/assets/rpc/runtime-api" }
