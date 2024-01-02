@@ -65,18 +65,21 @@ pub enum Subcommand {
     /// Revert the chain to a previous state.
     Revert(sc_cli::RevertCmd),
 
+    /// Dump or override babe epoch change config
     #[clap(subcommand)]
     FixBabeEpoch(FixEpochSubCommand),
 }
 
 #[derive(Debug, clap::Subcommand)]
 pub enum FixEpochSubCommand {
+    /// Dump current babe epoch change config
     Dump(FixEpochDumpCommand),
+    /// Override current babe epoch change config by the specified raw config data(bytes)
     Override(FixEpochOverrideommand),
 }
 
 impl FixEpochSubCommand {
-    /// Run the revert command
+    /// Run the command
     pub fn run<C: SubstrateCli>(&self, cli: &C) -> Result<()> {
         match self {
             FixEpochSubCommand::Dump(cmd) => cmd.run(cli),
