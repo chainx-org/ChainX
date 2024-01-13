@@ -1,5 +1,5 @@
 # BEVM
-<img width="800" alt="WechatIMG475" src="https://github.com/btclayer2/BEVM/assets/9285062/eca6798f-b52c-45d1-8e7a-8d4c5c64890c">
+<img width="800" alt="WechatIMG475" src="https://github.com/btclayer2/BEVM/assets/9285062/a1e76f9f-0e9a-4cfc-9f43-ad0c8f51b619">
 
 ## [An EVM-compatible Bitcoin Layer 2 with BTC as gas](https://github.com/btclayer2/BEVM-white-paper)
 ### Technical features:
