@@ -46,11 +46,11 @@ Any kinds of contribution are highly welcome. Feel free to submit an issue if yo
 
 ## Metamask config for BTC
 ```
-Network name: BEVM
-RPC URL: https://mainnet.bevm.io/rpc
+Network name: BEVM Canary network
+RPC URL: https://rpc-2.bevm.io
 Chain ID: 1501
 Currency symbol: BTC
-Block explorer URL (Optional): https://evm.bevm.io/
+Block explorer URL (Optional): https://scan.bevm.io/
 ```
 
 ## License
