@@ -1,6 +1,6 @@
 [package]
 name = "xpallet-btc-ledger-runtime-api"
-version = "5.2.2"
+version = "5.2.3"
 authors = ["The ChainX Authors"]
 edition = "2021"
 
