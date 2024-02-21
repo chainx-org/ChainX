@@ -206,6 +206,7 @@ where
     B::State: sc_client_api::backend::StateBackend<sp_runtime::traits::HashFor<Block>>,
     A: ChainApi<Block = Block> + 'static,
 {
+    use bevm_finality_rpc::{BevmFinality, BevmFinalityApi};
     use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
     use substrate_frame_rpc_system::{FullSystem, SystemApi};
     use xpallet_assets_rpc::{Assets, XAssetsApi};
@@ -336,6 +337,11 @@ where
             fc_rpc::format::Geth,
             fee_history_limit,
             fee_history_cache,
+        )));
+
+        io.extend_with(BevmFinalityApi::to_delegate(BevmFinality::new(
+            client.clone(),
+            backend.clone(),
         )));
 
         if let Some(filter_pool) = filter_pool {
