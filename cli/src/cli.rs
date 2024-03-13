@@ -1,6 +1,12 @@
 // Copyright 2019-2023 ChainX Project Authors. Licensed under GPL-3.0.
 
-use sc_cli::{CliConfiguration, KeySubcommand, SignCmd, VanityCmd, VerifyCmd};
+use sc_cli::{
+    CliConfiguration, KeySubcommand, PruningParams, Result, SharedParams, SignCmd, SubstrateCli,
+    VanityCmd, VerifyCmd,
+};
+use sc_client_api::AuxStore;
+
+use chainx_service::new_partial;
 
 #[derive(Debug, clap::Parser)]
 pub struct Cli {
@@ -58,6 +64,123 @@ pub enum Subcommand {
 
     /// Revert the chain to a previous state.
     Revert(sc_cli::RevertCmd),
+
+    /// Dump or override babe epoch change config
+    #[clap(subcommand)]
+    FixBabeEpoch(FixEpochSubCommand),
+}
+
+#[derive(Debug, clap::Subcommand)]
+pub enum FixEpochSubCommand {
+    /// Dump current babe epoch change config
+    Dump(FixEpochDumpCommand),
+    /// Override current babe epoch change config by the specified raw config data(bytes)
+    Override(FixEpochOverrideommand),
+}
+
+impl FixEpochSubCommand {
+    /// Run the command
+    pub fn run<C: SubstrateCli>(&self, cli: &C) -> Result<()> {
+        match self {
+            FixEpochSubCommand::Dump(cmd) => cmd.run(cli),
+            FixEpochSubCommand::Override(cmd) => cmd.run(cli),
+        }
+    }
+}
+
+#[derive(Debug, clap::Parser)]
+pub struct FixEpochDumpCommand {
+    #[allow(missing_docs)]
+    #[clap(flatten)]
+    pub shared_params: SharedParams,
+
+    #[allow(missing_docs)]
+    #[clap(flatten)]
+    pub pruning_params: PruningParams,
+}
+const BABE_EPOCH_CHANGES_KEY: &[u8] = b"babe_epoch_changes";
+use codec::{Decode, Encode};
+use sc_consensus_babe::Epoch;
+use sc_consensus_epochs::EpochChangesFor;
+
+impl FixEpochDumpCommand {
+    pub fn run<C: SubstrateCli>(&self, cli: &C) -> Result<()> {
+        let runner = cli.create_runner(self)?;
+        runner.sync_run(|mut config| {
+            let components = new_partial::<
+                chainx_runtime::RuntimeApi,
+                chainx_executor::ChainXExecutor,
+            >(&mut config)?;
+            let client = components.client;
+            let bytes = client
+                .get_aux(BABE_EPOCH_CHANGES_KEY)
+                .expect("Access DB should success")
+                .expect("value must exist");
+            let hex_str = hex::encode(&bytes);
+            println!("{}", hex_str);
+            let epoch: EpochChangesFor<chainx_runtime::Block, Epoch> =
+                codec::Decode::decode(&mut &bytes[..]).expect("Decode must success");
+            println!("epoch: {:?}", epoch);
+            Ok(())
+        })
+    }
+}
+
+#[derive(Debug, clap::Parser)]
+pub struct FixEpochOverrideommand {
+    #[allow(missing_docs)]
+    #[clap(flatten)]
+    pub shared_params: SharedParams,
+
+    #[allow(missing_docs)]
+    #[clap(flatten)]
+    pub pruning_params: PruningParams,
+
+    #[clap(long)]
+    pub bytes: String,
+}
+
+impl FixEpochOverrideommand {
+    pub fn run<C: SubstrateCli>(&self, cli: &C) -> Result<()> {
+        let runner = cli.create_runner(self)?;
+        runner.sync_run(|mut config| {
+            let components = new_partial::<
+                chainx_runtime::RuntimeApi,
+                chainx_executor::ChainXExecutor,
+            >(&mut config)?;
+            let client = components.client;
+
+            let bytes = hex::decode(&self.bytes).expect("require hex string without 0x");
+            let epoch: EpochChangesFor<chainx_runtime::Block, Epoch> =
+                Decode::decode(&mut &bytes[..]).expect("Decode must success");
+            println!("epoch: {:?}", epoch);
+
+            client
+                .insert_aux(&[(BABE_EPOCH_CHANGES_KEY, &epoch.encode()[..])], &[])
+                .expect("Insert to db must success");
+            Ok(())
+        })
+    }
+}
+
+impl CliConfiguration for FixEpochDumpCommand {
+    fn shared_params(&self) -> &SharedParams {
+        &self.shared_params
+    }
+
+    fn pruning_params(&self) -> Option<&PruningParams> {
+        Some(&self.pruning_params)
+    }
+}
+
+impl CliConfiguration for FixEpochOverrideommand {
+    fn shared_params(&self) -> &SharedParams {
+        &self.shared_params
+    }
+
+    fn pruning_params(&self) -> Option<&PruningParams> {
+        Some(&self.pruning_params)
+    }
 }
 
 #[allow(missing_docs)]
