@@ -125,10 +125,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("chainx"),
     impl_name: create_runtime_str!("chainx-net"),
     authoring_version: 1,
-    spec_version: 34,
+    spec_version: 35,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 7,
+    transaction_version: 8,
     state_version: 0,
 };
 
@@ -687,8 +687,8 @@ parameter_types! {
     pub const VotingBondFactor: Balance = deposit(0, 32);
     pub const VotingBond: Balance = DOLLARS;
     pub const TermDuration: BlockNumber = DAYS;
-    pub const DesiredMembers: u32 = 11;
-    pub const DesiredRunnersUp: u32 = 7;
+    pub const DesiredMembers: u32 = 6;
+    pub const DesiredRunnersUp: u32 = 0;
     pub const ElectionsPhragmenPalletId: LockIdentifier = *b"pcx/phre";
 }
 
