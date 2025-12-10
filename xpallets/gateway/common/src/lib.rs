@@ -488,11 +488,7 @@ pub mod pallet {
         ///
         /// This is called by the council or root.
         #[pallet::weight(0u64)]
-        pub fn set_trustee_count(
-            origin: OriginFor<T>,
-            chain: Chain,
-            count: u32,
-        ) -> DispatchResult {
+        pub fn set_trustee_count(origin: OriginFor<T>, chain: Chain, count: u32) -> DispatchResult {
             T::CouncilOrigin::try_origin(origin)
                 .map(|_| ())
                 .or_else(ensure_root)?;
@@ -808,7 +804,7 @@ pub mod pallet {
 
     #[pallet::type_value]
     pub fn DefaultForTrusteeCount() -> u32 {
-        0  // Default 0 means use DesiredMembers - 1 (original logic)
+        0 // Default 0 means use DesiredMembers - 1 (original logic)
     }
 
     /// Members not participating in trustee elections.
