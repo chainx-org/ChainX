@@ -481,6 +481,32 @@ pub mod pallet {
             Ok(())
         }
 
+        /// Set the desired number of trustees for a chain.
+        ///
+        /// This allows dynamically adjusting the trustee count (e.g., from 10 to 6).
+        /// The signature threshold will be automatically calculated as 2/3 of the trustee count.
+        ///
+        /// This is called by the council or root.
+        #[pallet::weight(0u64)]
+        pub fn set_trustee_count(
+            origin: OriginFor<T>,
+            chain: Chain,
+            count: u32,
+        ) -> DispatchResult {
+            T::CouncilOrigin::try_origin(origin)
+                .map(|_| ())
+                .or_else(ensure_root)?;
+
+            let config = Self::trustee_info_config_of(chain);
+            ensure!(
+                count >= config.min_trustee_count && count <= config.max_trustee_count,
+                Error::<T>::TrusteeMembersNotEnough
+            );
+
+            TrusteeCount::<T>::insert(chain, count);
+            Ok(())
+        }
+
         /// Set dst chain proxy address
         ///
         /// Used to proxy the address of a certain target chain and help
@@ -773,6 +799,18 @@ pub mod pallet {
     pub(crate) type TrusteeTransitionStatus<T: Config> =
         StorageMap<_, Twox64Concat, Chain, bool, ValueQuery>;
 
+    /// The desired number of trustees for each chain.
+    /// Default is 10 to maintain compatibility with the current mainnet.
+    #[pallet::storage]
+    #[pallet::getter(fn trustee_count)]
+    pub(crate) type TrusteeCount<T: Config> =
+        StorageMap<_, Twox64Concat, Chain, u32, ValueQuery, DefaultForTrusteeCount>;
+
+    #[pallet::type_value]
+    pub fn DefaultForTrusteeCount() -> u32 {
+        0  // Default 0 means use DesiredMembers - 1 (original logic)
+    }
+
     /// Members not participating in trustee elections.
     ///
     /// The current trustee members did not conduct multiple signings and put the members in the
@@ -1012,8 +1050,15 @@ impl<T: Config> Pallet<T> {
             })
             .collect::<Vec<_>>();
 
-        let desired_members =
-            (<T as pallet_elections_phragmen::Config>::DesiredMembers::get() - 1) as usize;
+        // Use TrusteeCount storage if set, otherwise fallback to DesiredMembers - 1
+        let desired_members = {
+            let count = Self::trustee_count(chain);
+            if count > 0 {
+                count as usize
+            } else {
+                (<T as pallet_elections_phragmen::Config>::DesiredMembers::get() - 1) as usize
+            }
+        };
 
         ensure!(
             new_trustee_pool.len() >= desired_members,
