@@ -688,7 +688,7 @@ parameter_types! {
     pub const VotingBond: Balance = DOLLARS;
     pub const TermDuration: BlockNumber = DAYS;
     pub const DesiredMembers: u32 = 6;
-    pub const DesiredRunnersUp: u32 = 0;
+    pub const DesiredRunnersUp: u32 = 3;
     pub const ElectionsPhragmenPalletId: LockIdentifier = *b"pcx/phre";
 }
 
