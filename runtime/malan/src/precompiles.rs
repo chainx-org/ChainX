@@ -40,7 +40,8 @@ impl<R> PrecompileSet for ChainXPrecompiles<R>
 where
     R: xpallet_assets_bridge::Config
         + xpallet_gateway_common::Config
-        + xpallet_gateway_records::Config,
+        + xpallet_gateway_records::Config
+        + pallet_evm_rent::Config,
     Dispatch<R>: Precompile,
 {
     fn execute(

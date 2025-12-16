@@ -1330,24 +1330,7 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
-    AssetsBridgeMigration,
 >;
-
-pub struct AssetsBridgeMigration;
-impl OnRuntimeUpgrade for AssetsBridgeMigration {
-    fn on_runtime_upgrade() -> Weight {
-        use frame_support::storage::migration;
-
-        frame_support::log::info!("🔍️ AssetsBridgeMigration start");
-
-        // Remove the storage value `HotAccount` from  pallet `XAssetsBridge`
-        migration::remove_storage_prefix(b"XAssetsBridge", b"HotAccount", b"");
-
-        frame_support::log::info!("🚀 AssetsBridgeMigration end");
-
-        <Runtime as frame_system::Config>::DbWeight::get().writes(1)
-    }
-}
 
 pub struct TransactionConverter;
 impl fp_rpc::ConvertTransaction<UncheckedExtrinsic> for TransactionConverter {
