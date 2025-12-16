@@ -1,7 +1,7 @@
 [package]
 name = "bevm-finality-rpc"
 description = "An experimental RPC to check for block and transaction finality in the bevm chain"
-version = "5.2.2"
+version = "5.2.4"
 authors = ["The ChainX Authors"]
 edition = "2021"
 
