@@ -1,10 +1,9 @@
-#![cfg_attr(not(feature = "std"), no_std)]
-
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
 use fp_evm::{
     Context, ExitRevert, ExitSucceed, PrecompileFailure, PrecompileOutput, PrecompileResult,
 };
+use fp_rent::EvmRentCalculator;
 use frame_support::log;
 use pallet_evm::{AddressMapping, Precompile};
 use sp_core::{hexdisplay::HexDisplay, H160, U256};
@@ -14,10 +13,18 @@ use sp_std::vec;
 const MIN_BTC_TRANSFER_VALUE: u128 = 10_000_000_000;
 const BASE_GAS_COST: u64 = 100_000;
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum ReturnType {
+    WithdrawBTC,
+    WithdrawPCX,
+    EstimateRent(u128, u64),
+}
+
 pub struct Withdraw<
     T: xpallet_assets_bridge::Config
         + xpallet_gateway_common::Config
-        + xpallet_gateway_records::Config,
+        + xpallet_gateway_records::Config
+        + pallet_evm_rent::Config,
 > {
     _marker: PhantomData<T>,
 }
@@ -25,10 +32,11 @@ pub struct Withdraw<
 impl<
         T: xpallet_assets_bridge::Config
             + xpallet_gateway_common::Config
-            + xpallet_gateway_records::Config,
+            + xpallet_gateway_records::Config
+            + pallet_evm_rent::Config,
     > Withdraw<T>
 {
-    fn process(caller: &H160, input: &[u8]) -> Result<(), PrecompileFailure> {
+    fn process(caller: &H160, input: &[u8]) -> Result<ReturnType, PrecompileFailure> {
         match input.first() {
             // Withdraw BTC
             Some(&0) if input.len() >= 67 && input.len() <= 95 => {
@@ -43,7 +51,7 @@ impl<
 
                 log::debug!(target: "evm-withdraw", "btc: success");
 
-                Ok(())
+                Ok(ReturnType::WithdrawBTC)
             }
             // Withdraw PCX
             Some(&1) if input.len() == 65 => {
@@ -58,7 +66,21 @@ impl<
 
                 log::debug!(target: "evm-withdraw", "pcx: success");
 
-                Ok(())
+                Ok(ReturnType::WithdrawPCX)
+            }
+            // EstimateRent
+            Some(&2) if input.len() == 20 => {
+                // input = (flag, 1 byte) + evm_account(20 bytes)
+
+                log::debug!(target: "evm-withdraw", "estimateRent: call");
+                let (rent_balance, days) =
+                    Self::process_estimate_rent(&input[1..]).map_err(|err| {
+                        log::warn!(target: "evm-withdraw", "estimateRent: err = {:?}", err);
+                        err
+                    })?;
+                log::debug!(target: "evm-withdraw", "estimateRent: success");
+
+                Ok(ReturnType::EstimateRent(rent_balance, days))
             }
             _ => {
                 log::warn!(target: "evm-withdraw", "invalid input: {:?}", input);
@@ -207,13 +229,23 @@ impl<
 
         Ok(())
     }
+
+    fn process_estimate_rent(input: &[u8]) -> Result<(u128, u64), PrecompileFailure> {
+        let evm_account = H160::from_slice(&input[0..20]);
+
+        let (rent_balance, days) =
+            <pallet_evm_rent::Pallet<T> as EvmRentCalculator>::estimate_rent(evm_account);
+
+        Ok((rent_balance, days))
+    }
 }
 
 impl<T> Precompile for Withdraw<T>
 where
     T: xpallet_assets_bridge::Config
         + xpallet_gateway_common::Config
-        + xpallet_gateway_records::Config,
+        + xpallet_gateway_records::Config
+        + pallet_evm_rent::Config,
     T::AccountId: Decode,
 {
     fn execute(
@@ -224,17 +256,33 @@ where
     ) -> PrecompileResult {
         log::debug!(target: "evm-withdraw", "caller: {:?}", context.caller);
 
-        Self::process(&context.caller, input).map(|_| {
-            // Refer: https://github.com/rust-ethereum/ethabi/blob/master/ethabi/src/encoder.rs#L144
-            let mut out = vec![0u8; 32];
-            out[31] = 1u8;
+        Self::process(&context.caller, input).map(|r| {
+            match r {
+                ReturnType::WithdrawBTC | ReturnType::WithdrawPCX => {
+                    // Refer: https://github.com/rust-ethereum/ethabi/blob/master/ethabi/src/encoder.rs#L144
+                    let mut out = vec![0u8; 32];
+                    out[31] = 1u8;
 
-            Ok(PrecompileOutput {
-                exit_status: ExitSucceed::Returned,
-                cost: BASE_GAS_COST,
-                output: out.to_vec(),
-                logs: Default::default(),
-            })
+                    Ok(PrecompileOutput {
+                        exit_status: ExitSucceed::Returned,
+                        cost: BASE_GAS_COST,
+                        output: out.to_vec(),
+                        logs: Default::default(),
+                    })
+                }
+                ReturnType::EstimateRent(rent_balance, days) => {
+                    let mut padded = [0u8; 64];
+                    padded[16..32].copy_from_slice(rent_balance.to_be_bytes().as_slice());
+                    padded[56..64].copy_from_slice(days.to_be_bytes().as_slice());
+
+                    Ok(PrecompileOutput {
+                        exit_status: ExitSucceed::Returned,
+                        cost: BASE_GAS_COST,
+                        output: padded.to_vec(),
+                        logs: Default::default(),
+                    })
+                }
+            }
         })?
     }
 }
