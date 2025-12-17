@@ -18,6 +18,7 @@ enum ReturnType {
     WithdrawBTC,
     WithdrawPCX,
     EstimateRent(u128, u64),
+    RentSettings(u128, u64),
 }
 
 pub struct Withdraw<
@@ -81,6 +82,21 @@ impl<
                 log::debug!(target: "evm-withdraw", "estimateRent: success");
 
                 Ok(ReturnType::EstimateRent(rent_balance, days))
+            }
+
+            // Get Rent Settings
+            Some(&3) if input.len() == 1 => {
+                // input = (flag, 1 byte)
+
+                log::debug!(target: "evm-withdraw", "rentSettings: call");
+                let (daily_rent, active_timestamp) =
+                    Self::process_rent_settings().map_err(|err| {
+                        log::warn!(target: "evm-withdraw", "rentSettings: err = {:?}", err);
+                        err
+                    })?;
+                log::debug!(target: "evm-withdraw", "rentSettings: success");
+
+                Ok(ReturnType::RentSettings(daily_rent, active_timestamp))
             }
             _ => {
                 log::warn!(target: "evm-withdraw", "invalid input: {:?}", input);
@@ -238,6 +254,13 @@ impl<
 
         Ok((rent_balance, days))
     }
+
+    fn process_rent_settings() -> Result<(u128, u64), PrecompileFailure> {
+        let daily_rent: u128 = pallet_evm_rent::Pallet::<T>::daily_rent();
+        let active_timestamp: u64 = pallet_evm_rent::Pallet::<T>::active_timestamp();
+
+        Ok((daily_rent, active_timestamp))
+    }
 }
 
 impl<T> Precompile for Withdraw<T>
@@ -270,10 +293,11 @@ where
                         logs: Default::default(),
                     })
                 }
-                ReturnType::EstimateRent(rent_balance, days) => {
+                ReturnType::EstimateRent(balance, time)
+                | ReturnType::RentSettings(balance, time) => {
                     let mut padded = [0u8; 64];
-                    padded[16..32].copy_from_slice(rent_balance.to_be_bytes().as_slice());
-                    padded[56..64].copy_from_slice(days.to_be_bytes().as_slice());
+                    padded[16..32].copy_from_slice(balance.to_be_bytes().as_slice());
+                    padded[56..64].copy_from_slice(time.to_be_bytes().as_slice());
 
                     Ok(PrecompileOutput {
                         exit_status: ExitSucceed::Returned,
