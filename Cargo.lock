@@ -2068,7 +2068,7 @@ dependencies = [
 [[package]]
 name = "fc-consensus"
 version = "2.0.0-dev"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#3925a4d27bb30310212c86d2ced940b789cbc406"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#13c467ebb1b43a590dd6d4ca42a3e467d4affad7"
 dependencies = [
  "async-trait",
  "fc-db",
@@ -2087,7 +2087,7 @@ dependencies = [
 [[package]]
 name = "fc-db"
 version = "2.0.0-dev"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#3925a4d27bb30310212c86d2ced940b789cbc406"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#13c467ebb1b43a590dd6d4ca42a3e467d4affad7"
 dependencies = [
  "fp-storage",
  "kvdb-rocksdb",
@@ -2101,7 +2101,7 @@ dependencies = [
 [[package]]
 name = "fc-mapping-sync"
 version = "2.0.0-dev"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#3925a4d27bb30310212c86d2ced940b789cbc406"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#13c467ebb1b43a590dd6d4ca42a3e467d4affad7"
 dependencies = [
  "fc-db",
  "fp-consensus",
@@ -2118,7 +2118,7 @@ dependencies = [
 [[package]]
 name = "fc-rpc"
 version = "2.0.0-dev"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#3925a4d27bb30310212c86d2ced940b789cbc406"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#13c467ebb1b43a590dd6d4ca42a3e467d4affad7"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -2160,7 +2160,7 @@ dependencies = [
 [[package]]
 name = "fc-rpc-core"
 version = "1.1.0-dev"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#3925a4d27bb30310212c86d2ced940b789cbc406"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#13c467ebb1b43a590dd6d4ca42a3e467d4affad7"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -2267,7 +2267,7 @@ dependencies = [
 [[package]]
 name = "fp-consensus"
 version = "2.0.0-dev"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#3925a4d27bb30310212c86d2ced940b789cbc406"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#13c467ebb1b43a590dd6d4ca42a3e467d4affad7"
 dependencies = [
  "ethereum",
  "parity-scale-codec",
@@ -2279,7 +2279,7 @@ dependencies = [
 [[package]]
 name = "fp-evm"
 version = "3.0.0-dev"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#3925a4d27bb30310212c86d2ced940b789cbc406"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#13c467ebb1b43a590dd6d4ca42a3e467d4affad7"
 dependencies = [
  "evm",
  "parity-scale-codec",
@@ -2291,7 +2291,7 @@ dependencies = [
 [[package]]
 name = "fp-rent"
 version = "2.0.0-dev"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#3925a4d27bb30310212c86d2ced940b789cbc406"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#13c467ebb1b43a590dd6d4ca42a3e467d4affad7"
 dependencies = [
  "sp-core",
 ]
@@ -2299,7 +2299,7 @@ dependencies = [
 [[package]]
 name = "fp-rpc"
 version = "3.0.0-dev"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#3925a4d27bb30310212c86d2ced940b789cbc406"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#13c467ebb1b43a590dd6d4ca42a3e467d4affad7"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -2316,7 +2316,7 @@ dependencies = [
 [[package]]
 name = "fp-self-contained"
 version = "1.0.0-dev"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#3925a4d27bb30310212c86d2ced940b789cbc406"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#13c467ebb1b43a590dd6d4ca42a3e467d4affad7"
 dependencies = [
  "ethereum",
  "frame-support",
@@ -2332,7 +2332,7 @@ dependencies = [
 [[package]]
 name = "fp-storage"
 version = "2.0.0"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#3925a4d27bb30310212c86d2ced940b789cbc406"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#13c467ebb1b43a590dd6d4ca42a3e467d4affad7"
 dependencies = [
  "parity-scale-codec",
 ]
@@ -5310,7 +5310,7 @@ dependencies = [
 [[package]]
 name = "pallet-base-fee"
 version = "1.0.0"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#3925a4d27bb30310212c86d2ced940b789cbc406"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#13c467ebb1b43a590dd6d4ca42a3e467d4affad7"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5392,7 +5392,7 @@ dependencies = [
 [[package]]
 name = "pallet-ethereum"
 version = "4.0.0-dev"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#3925a4d27bb30310212c86d2ced940b789cbc406"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#13c467ebb1b43a590dd6d4ca42a3e467d4affad7"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -5422,7 +5422,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm"
 version = "6.0.0-dev"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#3925a4d27bb30310212c86d2ced940b789cbc406"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#13c467ebb1b43a590dd6d4ca42a3e467d4affad7"
 dependencies = [
  "evm",
  "fp-evm",
@@ -5449,7 +5449,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-blake2"
 version = "2.0.0-dev"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#3925a4d27bb30310212c86d2ced940b789cbc406"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#13c467ebb1b43a590dd6d4ca42a3e467d4affad7"
 dependencies = [
  "fp-evm",
 ]
@@ -5457,7 +5457,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-bn128"
 version = "2.0.0-dev"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#3925a4d27bb30310212c86d2ced940b789cbc406"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#13c467ebb1b43a590dd6d4ca42a3e467d4affad7"
 dependencies = [
  "fp-evm",
  "sp-core",
@@ -5467,7 +5467,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-dispatch"
 version = "2.0.0-dev"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#3925a4d27bb30310212c86d2ced940b789cbc406"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#13c467ebb1b43a590dd6d4ca42a3e467d4affad7"
 dependencies = [
  "fp-evm",
  "frame-support",
@@ -5477,7 +5477,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-modexp"
 version = "2.0.0-dev"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#3925a4d27bb30310212c86d2ced940b789cbc406"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#13c467ebb1b43a590dd6d4ca42a3e467d4affad7"
 dependencies = [
  "fp-evm",
  "num",
@@ -5486,7 +5486,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-sha3fips"
 version = "2.0.0-dev"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#3925a4d27bb30310212c86d2ced940b789cbc406"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#13c467ebb1b43a590dd6d4ca42a3e467d4affad7"
 dependencies = [
  "fp-evm",
  "tiny-keccak",
@@ -5495,7 +5495,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-simple"
 version = "2.0.0-dev"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#3925a4d27bb30310212c86d2ced940b789cbc406"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#13c467ebb1b43a590dd6d4ca42a3e467d4affad7"
 dependencies = [
  "fp-evm",
  "ripemd",
@@ -5505,7 +5505,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-rent"
 version = "1.0.0"
-source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#3925a4d27bb30310212c86d2ced940b789cbc406"
+source = "git+https://github.com/chainx-org/frontier?branch=polkadot-v0.9.18-btc-fix2#13c467ebb1b43a590dd6d4ca42a3e467d4affad7"
 dependencies = [
  "fp-rent",
  "frame-support",
