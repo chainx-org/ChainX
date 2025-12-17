@@ -43,8 +43,8 @@ impl<'a, T: Config> AssetLedgerWrapper<'a, T> {
 /// Mining weight properties of asset miners.
 ///
 /// Aside from the mining weight information, this struct also contains
-/// the `last_claim` field, for it's not neccessary to use another
-/// storeage item due to the claim restrictions of asset miners.
+/// the `last_claim` field, for it's not necessary to use another
+/// storage item due to the claim restrictions of asset miners.
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]

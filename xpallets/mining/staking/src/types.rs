@@ -178,7 +178,7 @@ impl MiningDistribution {
     /// Return a tuple (m1, m2) for comparing whether asset_mining_power are reaching the upper limit.
     ///
     /// If m1 >= m2, the asset mining cap has reached, all the reward calculated by the shares go to
-    /// the mining assets, but its unit mining power starts to decrease compared to the inital FixedPower.
+    /// the mining assets, but its unit mining power starts to decrease compared to the initial FixedPower.
     fn asset_mining_vs_staking<T: Config>(&self) -> (u128, u128) {
         let total_staking_power =
             crate::Pallet::<T>::total_staked().saturated_into::<MiningPower>();

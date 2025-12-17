@@ -109,7 +109,7 @@ impl<T: Config> Pallet<T> {
     }
 
     /// Issue new PCX to the action intentions and cross mining asset entities
-    /// accroding to DistributionRatio.
+    /// according to DistributionRatio.
     fn distribute_mining_rewards(
         total: BalanceOf<T>,
         treasury_account: &T::AccountId,
