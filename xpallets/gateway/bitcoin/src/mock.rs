@@ -272,6 +272,7 @@ impl pallet_evm::Config for Test {
     type OnChargeTransaction = ();
     type BlockHashMapping = pallet_evm::SubstrateBlockHashMapping<Self>;
     type FindAuthor = ();
+    type EvmRentCalculator = ();
     type WeightInfo = ();
 }
 
