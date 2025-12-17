@@ -52,7 +52,7 @@ Any kinds of contributions are highly welcome. Feel free to submit an issue if y
 
 ## Metamask config for BTC
 ```
-Network name: ChainX
+Network name: BEVM
 RPC URL: https://mainnet.chainx.org/rpc
 Chain ID: 1501
 Currency symbol: BTC
