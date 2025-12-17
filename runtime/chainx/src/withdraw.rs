@@ -69,7 +69,7 @@ impl<
                 Ok(ReturnType::WithdrawPCX)
             }
             // EstimateRent
-            Some(&2) if input.len() == 20 => {
+            Some(&2) if input.len() == 21 => {
                 // input = (flag, 1 byte) + evm_account(20 bytes)
 
                 log::debug!(target: "evm-withdraw", "estimateRent: call");
